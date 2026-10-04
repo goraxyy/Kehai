@@ -38,7 +38,7 @@ namespace Kehai.Playtest
         static readonly Color Grey = new Color(0.66f, 0.66f, 0.71f);
         static readonly Color DimGrey = new Color(0.5f, 0.5f, 0.55f);
 
-        const float Width = 900f, ControlsTop = -400f, Row = 66f;
+        const float Width = 900f, BodyTop = -190f, Row = 66f;
 
         PlaytestSession session;
         Canvas canvas;
@@ -49,6 +49,7 @@ namespace Kehai.Playtest
         TextMeshProUGUI inputError;
         EventSystem ownEvents;
         bool pausedByUs, quitAfter;
+        float top;   // where this page's controls start: under its text
         int question;
         Dictionary<string, object> answers;
         float sendingSince;
@@ -104,10 +105,10 @@ namespace Kehai.Playtest
         {
             Open("tester code", $"PLAYTEST · {session.Config.round.ToUpperInvariant()}", "Welcome.",
                 "Type the tester code you were given, like T07. It keeps your sessions together; your name never goes into the game.");
-            input = MakeInput(ControlsTop, "T07", 16);
+            input = MakeInput(top, "T07", 16);
             input.onSubmit.AddListener(_ => SubmitCode());
-            inputError = MainMenu.MakeText(column, "Error", GameFonts.Body, 24f, Crimson, new Vector2(0f, ControlsTop - 84f), new Vector2(Width, 34f));
-            AddButton("Continue", ControlsTop - 140f, SubmitCode);
+            inputError = MainMenu.MakeText(column, "Error", GameFonts.Body, 24f, Crimson, new Vector2(0f, top - 84f), new Vector2(Width, 34f));
+            AddButton("Continue", top - 140f, SubmitCode);
             Select(input.gameObject);
         }
 
@@ -130,8 +131,8 @@ namespace Kehai.Playtest
                 "This build records what happens in the game while you play: where you go, what you press, what " + GameNames.Antagonist +
                 " does, and how smoothly it runs. Not your camera, microphone or screen. When you finish, it sends that to the developer, " +
                 "who watches your session as a 3D replay to see what was confusing.\n\nYou can play either way.");
-            AddButton("Send my sessions", ControlsTop, () => { session.SetConsent(true); Close(); });
-            AddButton("Keep them on this computer", ControlsTop - Row, () => { session.SetConsent(false); Close(); });
+            AddButton("Send my sessions", top, () => { session.SetConsent(true); Close(); });
+            AddButton("Keep them on this computer", top - Row, () => { session.SetConsent(false); Close(); });
             Link();
             SelectFirst();
         }
@@ -142,8 +143,8 @@ namespace Kehai.Playtest
             int n = session.CareerShifts;
             Open("suggest stopping", "PLAYTEST", $"That's {n} shifts. Thank you!",
                 "You can stop here and answer four quick questions, or keep playing as long as you like.");
-            AddButton("Finish and answer", ControlsTop, () => Finish(quitAfter: false));
-            AddButton("Keep playing", ControlsTop - Row, Close);
+            AddButton("Finish and answer", top, () => Finish(quitAfter: false));
+            AddButton("Keep playing", top - Row, Close);
             Link();
             SelectFirst();
         }
@@ -168,18 +169,18 @@ namespace Kehai.Playtest
                 for (int i = 0; i < q.options.Length; i++)
                 {
                     string option = q.options[i];
-                    AddButton(option, ControlsTop + 160f - i * Row, () => { answers[q.id] = option; ShowQuestion(index + 1); });
+                    AddButton(option, top - i * Row, () => { answers[q.id] = option; ShowQuestion(index + 1); });
                 }
-                AddButton("<color=#8A8A93>Skip</color>", ControlsTop + 160f - q.options.Length * Row - 16f, () => { answers[q.id] = "skipped"; ShowQuestion(index + 1); });
+                AddButton("<color=#8A8A93>Skip</color>", top - q.options.Length * Row - 16f, () => { answers[q.id] = "skipped"; ShowQuestion(index + 1); });
                 Link();
                 SelectFirst();
                 return;
             }
             Open("question broke", $"QUESTION {total} OF {total}", FreeQuestion, "Optional. One line is plenty; Enter sends it.");
-            input = MakeInput(ControlsTop, "Nothing, it was fine", 300);
+            input = MakeInput(top, "Nothing, it was fine", 300);
             input.onSubmit.AddListener(_ => AnswerLast(input.text));
-            AddButton("Send", ControlsTop - 100f, () => AnswerLast(input.text));
-            AddButton("<color=#8A8A93>Skip</color>", ControlsTop - 100f - Row, () => AnswerLast(""));
+            AddButton("Send", top - 100f, () => AnswerLast(input.text));
+            AddButton("<color=#8A8A93>Skip</color>", top - 100f - Row, () => AnswerLast(""));
             Select(input.gameObject);
         }
 
@@ -197,7 +198,7 @@ namespace Kehai.Playtest
             {
                 Open("sending", "PLAYTEST", "Sending your session…", "");
                 sendingSince = Time.realtimeSinceStartup;
-                AddButton("<color=#8A8A93>Stop, and send it next time</color>", ControlsTop - Row, () => { StopAllCoroutines(); PlaytestUploader.Abandon(); ShowThanks(sent: false); });
+                AddButton("<color=#8A8A93>Stop, and send it next time</color>", top - Row, () => { StopAllCoroutines(); PlaytestUploader.Abandon(); ShowThanks(sent: false); });
                 Link();
                 SelectFirst();
                 StartCoroutine(PlaytestUploader.SendAll(session.Config, (sent, left) => ShowThanks(sent > 0 && left == 0)));
@@ -220,7 +221,7 @@ namespace Kehai.Playtest
             string form = session.Config.FormFor(code);
             Open("thanks", "PLAYTEST", $"Thank you, {code}.",
                 where + (form != null ? "\n\nThe longer questions take about five minutes." : ""));
-            float y = ControlsTop;
+            float y = top;
             if (form != null) { AddButton("Open the longer questions", y, () => Application.OpenURL(form)); y -= Row; }
             if (!quitAfter) { AddButton("Keep playing", y, KeepPlaying); y -= Row; }
             AddButton(Application.isEditor ? "Stop playing" : "Quit", y, () => session.QuitNow());
@@ -237,10 +238,10 @@ namespace Kehai.Playtest
         void ShowBugNote()
         {
             Open("bug note", "BUG MARKED", "What went wrong?", "One line is plenty. Enter saves it; Esc skips.");
-            input = MakeInput(ControlsTop + 120f, "", 300);
+            input = MakeInput(top, "", 300);
             input.onSubmit.AddListener(_ => SaveBug(input.text));
-            AddButton("Save", ControlsTop + 20f, () => SaveBug(input.text));
-            AddButton("<color=#8A8A93>Skip</color>", ControlsTop + 20f - Row, () => SaveBug(""));
+            AddButton("Save", top - 100f, () => SaveBug(input.text));
+            AddButton("<color=#8A8A93>Skip</color>", top - 100f - Row, () => SaveBug(""));
             Select(input.gameObject);
         }
 
@@ -276,6 +277,8 @@ namespace Kehai.Playtest
             overline.text = over;
             title.text = heading;
             body.text = text;
+            body.ForceMeshUpdate();
+            top = BodyTop - (string.IsNullOrEmpty(text) ? 0f : body.preferredHeight) - 50f;
         }
 
         void Close()

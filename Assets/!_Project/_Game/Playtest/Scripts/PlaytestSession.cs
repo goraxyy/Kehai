@@ -159,6 +159,10 @@ namespace Kehai.Playtest
         {
             if (log == null) return LastPackage;
             Note("end", new Dictionary<string, object> { ["reason"] = reason, ["shifts"] = ShiftsThisSession, ["careerShifts"] = CareerShifts });
+            // Finish what's being recorded, so the package has it: a shift quit halfway, or the
+            // stretch since the last clock-out (a new one starts if they keep playing).
+            if (ShiftRecorder.Instance != null) ShiftRecorder.Instance.FinishNow();
+            if (ReplayRecorder.Instance != null) ReplayRecorder.Instance.Cut();
             log.Dispose();
             log = null;
             LastPackage = Pack(Folder, startedUtc, Stamp, crashed: false);

@@ -221,6 +221,15 @@ namespace Kehai.Replay
             LastTickTime = Now;
         }
 
+        // Finishes the file being written now (the playtest is packing). A stretch between shifts
+        // starts again by itself; a shift doesn't.
+        public string Cut()
+        {
+            if (writer == null) return null;
+            bool keep = !interlude || Now >= ShortestInterlude;
+            return Close(Now, false, keep);
+        }
+
         // Ends the recording now and returns the finished file (the round-trip test uses it).
         public string EndRecording()
         {
