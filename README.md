@@ -209,8 +209,8 @@ build gets a `build.txt` beside it with the version and commit, and a
   `build.txt`. It is signed only ad hoc (no Apple developer account), so on another Mac macOS
   blocks its first launch: **System Settings → Privacy & Security → Open Anyway**.
 - **Windows** (64-bit; needs Windows Build Support (Mono) added to the editor in Unity Hub):
-  `Builds/Windows/Kehai.exe` with `Kehai_Data`, `MonoBleedingEdge`, `UnityPlayer.dll` and
-  `UnityCrashHandler64.exe` beside it. Zip the folder without the DoNotShip one. It isn't
+  `Builds/Windows/Kehai.exe`, which needs the rest of that folder beside it (`Kehai_Data`,
+  `UnityPlayer.dll` and the others). Zip the whole folder except the DoNotShip one. It isn't
   code-signed, so Windows SmartScreen warns on first launch: **More info → Run anyway**. There is
   no webcam helper for Windows yet, so blinking there is the keyboard's **B**.
 
