@@ -1,0 +1,9 @@
+{
+  "name": "kehai-playtest-worker",
+  "private": true,
+  "type": "module",
+  "description": "The playtest upload service: a Cloudflare Worker in front of a private R2 bucket. See README.md.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

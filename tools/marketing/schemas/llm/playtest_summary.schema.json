@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/goraxyy/Kehai/tools/marketing/schemas/llm/playtest_summary.schema.json",
+  "title": "A playtest session, summarised (what Claude writes)",
+  "description": "km/playtest/summary.py: one tester's session read for the developer, and each of their bug notes written as a public GitHub issue for the developer to approve.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["headline", "understood", "confusions", "aiko", "bugs", "suggestions"],
+  "properties": {
+    "headline": { "type": "string", "description": "One line, under 140 characters: the most useful thing this session shows." },
+    "understood": { "type": "string", "description": "Two or three sentences: did they work out what to do, and how long it took." },
+    "confusions": {
+      "type": "array",
+      "description": "Up to six moments that look like confusion, from the timeline.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["when", "what"],
+        "properties": {
+          "when": { "type": "string", "description": "Session time as m:ss, and the shift if there was one." },
+          "what": { "type": "string", "description": "What happened and why it looks like confusion, in one or two sentences." }
+        }
+      }
+    },
+    "aiko": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "why"],
+      "properties": {
+        "verdict": { "enum": ["too harsh", "about right", "too soft", "unclear"] },
+        "why": { "type": "string", "description": "Two sentences at most, from the numbers and the tester's answer." }
+      }
+    },
+    "bugs": {
+      "type": "array",
+      "description": "One entry per bug note, in the same order, with `i` copied from the note.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["i", "title", "body"],
+        "properties": {
+          "i": { "type": "integer" },
+          "title": { "type": "string", "description": "An issue title under 80 characters, neutral, no tester code." },
+          "body": { "type": "string", "description": "The issue body in Markdown: what happened, where and when in the shift, the build and platform. Neutral wording; never the tester code, a name, or a link." }
+        }
+      }
+    },
+    "suggestions": { "type": "array", "description": "Up to five concrete changes this session points to.", "items": { "type": "string" } }
+  }
+}

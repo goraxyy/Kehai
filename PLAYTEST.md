@@ -3,8 +3,10 @@
 How strangers play Kehai and what comes back: the loop, what a tester sees, what's recorded,
 where it goes, and the steps to run a round. Decided with the owner on 2026-10-04.
 
-> **Status:** step 1 (the playtest mode in the game) is built. Steps 2–4 are next; see
-> [Building it](#building-it).
+> **Status:** all four steps are built, and tested on this Mac with stand-ins (a local upload
+> server, Telegram's outbox, Claude's replayed answers, a stand-in `gh`). What's left needs you:
+> a Cloudflare account to deploy the upload service, the two keys for Telegram and Claude, the
+> itch.io page and the Google Form. See [What you set up](#what-you-set-up).
 
 ---
 
@@ -116,10 +118,29 @@ your Mac (the scheduled "work" job, every 5 minutes) ◄── pulls new session
 The build carries an upload key that can only add sessions, never read them. The Worker (step 2)
 will take only zips, under 50 MB.
 
+## What you set up
+
+Once, in this order. Each step says what it unlocks.
+
+1. **`tools/playtest/.env`:** copy `tools/playtest/.env.example` (git ignores the copy).
+2. **The upload service** (Cloudflare, a few minutes): [tools/playtest/README.md](tools/playtest/README.md#setting-up-the-upload-service-once).
+   *Unlocks:* builds that send sessions, and your Mac pulling them.
+3. **The Google Form** from the draft above, and its pre-filled link in `KEHAI_PLAYTEST_FORM_URL`.
+   *Unlocks:* the "longer questions" button and the link in the tester messages.
+4. **The itch.io page:** [tools/playtest/ITCH_PAGE.md](tools/playtest/ITCH_PAGE.md); its address and
+   password in `.env`. Or skip it and use direct links (`KEHAI_PLAYTEST_MAC_LINK`,
+   `KEHAI_PLAYTEST_WINDOWS_LINK`).
+5. **Telegram and Claude:** `TELEGRAM_BOT_TOKEN` and `ANTHROPIC_API_KEY` in `tools/marketing/.env`,
+   the same two the marketing pipeline waits for. *Unlocks:* the messages on your phone and the
+   summaries. Without them, messages queue in the marketing outbox and sessions are reported
+   without a summary.
+6. **Filing issues** works now: `gh` is signed in on this Mac. Issues go to `KEHAI_ISSUES_REPO`
+   (`goraxyy/Kehai`) with the label `playtest`; while the pipeline is in trial mode
+   (`KEHAI_DRY_RUN=1` in `~/TokenLimit/n8n/env`), a tap says what it would file instead.
+
 ## Running a round
 
-1. **Settings.** Copy `tools/playtest/.env.example` to `tools/playtest/.env` (it stays out of
-   git) and fill in the round, the upload address and key (step 2), and the form link.
+1. **Settings:** the round in `tools/playtest/.env` (`KEHAI_PLAYTEST_ROUND=round1`).
 2. **Build.** **Kehai → Build → Playtest → macOS** and **→ Windows**, or headless with the editor
    closed:
 
@@ -129,10 +150,30 @@ will take only zips, under 50 MB.
    ```
 
    Each lands in `Builds/playtest-round1/` with a zip beside it to hand out.
-3. **Hand out** the zips (itch.io restricted page, or a direct link), a tester code each, and
-   the form link.
-4. **Watch them arrive** (step 3): Telegram, the combined report, the replays.
-5. **Fix, and start `round2`** with new testers.
+3. **Tester codes and messages:**
+
+   ```bash
+   python3 tools/playtest/make_codes.py --round round1 --names Ana Ben Chloe
+   ```
+
+   Codes go into `~/TokenLimit/playtests/testers.csv` (who has which, on your Mac only), and a
+   ready-to-send message per tester into `~/TokenLimit/playtests/messages/round1/`.
+4. **Hand out** the zips (upload them to the itch page, or wherever the direct links point) and
+   send each tester their message.
+5. **Watch them arrive.** Every five minutes the scheduled `work` job pulls new sessions into
+   `~/TokenLimit/playtests/<round>/<code>/<launch>/`, Telegram tells you about each, and the
+   combined report updates. By hand, from `tools/marketing`:
+
+   ```bash
+   uv run playtest.py status         # what's here, and what's set up
+   uv run playtest.py pull           # what the scheduled job does
+   uv run playtest.py report --open  # the combined report
+   uv run playtest.py import <zip>   # a session a tester sent as a file
+   ```
+
+   To watch a session: in Unity, **Kehai → Replay → Open Shift…** and pick a `.krec` from its
+   `shifts/` folder.
+6. **Fix, and start `round2`** with new testers.
 
 **Trying it yourself:** in the editor, **Kehai → Playtest → Simulate a Playtest Build in the
 Editor** runs the playtest mode in play mode (no upload; sessions are packed into the outbox),
@@ -145,12 +186,15 @@ A built game takes `-playtest-config <file>` to use a different `playtest.json`.
 - [x] **1. The playtest mode in the game:** `PlaytestConfig`, `PlaytestSession`,
   `PlaytestScreens`, `PlaytestFiles` (`_Game/Playtest/`); interludes in `ReplayRecorder`;
   `KehaiBuild -playtest <round>`.
-- [ ] **2. The upload service:** a Cloudflare Worker and a private R2 bucket
-  (`tools/playtest/worker`). *Needs: a Cloudflare account and an API token.*
-- [ ] **3. Your Mac's side:** pull new sessions in the scheduled `work` job, the combined report,
-  Telegram, Claude's summaries, bug notes to approve as GitHub issues. *Needs:
-  `TELEGRAM_BOT_TOKEN` and `ANTHROPIC_API_KEY` in `tools/marketing/.env`.*
-- [ ] **4. The page and the form:** itch.io page text, the Google Form, the tester brief.
+- [x] **2. The upload service:** a Cloudflare Worker and a private R2 bucket
+  (`tools/playtest/worker`), tested against a stand-in for R2. *Deploying it needs your
+  Cloudflare account.*
+- [x] **3. Your Mac's side:** `tools/marketing/km/playtest/` and `playtest.py`. The scheduled
+  `work` job pulls new sessions; each is read into facts and summarised (the
+  `playtest_summary` step), announced in Telegram, and added to the combined report; bug notes
+  wait for your tap before `gh` files them. *Live once the keys are in.*
+- [x] **4. The page, the form and the brief:** `tools/playtest/ITCH_PAGE.md`, the form draft
+  above, `TESTER_MESSAGE.md` and `make_codes.py`. *The page and the form are yours to make.*
 
 ## Decisions
 

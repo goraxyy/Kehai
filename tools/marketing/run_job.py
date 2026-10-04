@@ -4,7 +4,7 @@ scheduled job; it prints what it did and ends with one JSON line for n8n.
 
     uv run run_job.py produce [--week 2026-W40] [--pick-now] [--dry-run]   new shifts, the week's picks, each short along its steps
     uv run run_job.py telegram                                             the owner's taps and replies; alerts out
-    uv run run_job.py work [--max 3]                                       queued jobs: revisions, undos, the long video's stages
+    uv run run_job.py work [--max 3]                                       queued jobs: revisions, undos, the long video's stages; new playtest sessions
     uv run run_job.py publish [--force] [--dry-run]                        a posting day: the next approved short out
     uv run run_job.py housekeeping [--apply | --report-only]               Buffer statuses, archive, retention, storage
     uv run run_job.py report                                               the weekly report, to Telegram
@@ -142,6 +142,9 @@ def work(root, store, bot, approvals, most: int) -> None:
             if vid and store.video(vid):
                 store.update(vid, status="failed", error=text)
         say(f"job {job['id']} {job['kind']} {vid or ''}: {what}: {text}")
+    from km import playtest                         # PLAYTEST.md: sessions from the upload service
+    for line in playtest.cycle(root, bot):
+        say(line)
 
 
 # ---- the rest -------------------------------------------------------------------------------
