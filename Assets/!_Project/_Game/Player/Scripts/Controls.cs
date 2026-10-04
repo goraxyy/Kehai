@@ -93,7 +93,7 @@ public static class Controls
             K("Backspace", "Leave the replay")),
         new Section("Clips",
             K("F7", "Mark this moment for a clip; a tick shows for a second"),
-            K("Left Shift + F7", "Mark a bug at this moment")),
+            K("Left Shift + F7", "Mark a bug at this moment (in a playtest build, then say what went wrong)")),
         new Section("For testing",
             K("L", "Cut the power to the whole store")),
     };

@@ -179,6 +179,11 @@ public sealed class MainMenu : MonoBehaviour
         }
         if (settings || busy) return;
 
+        // A playtest screen is over the menu: it answers nothing until that's done.
+        bool covered = Kehai.Playtest.PlaytestScreens.Covering;
+        if (content.interactable == covered) content.interactable = !covered;
+        if (covered) return;
+
         if (confirming && Input.GetKeyDown(KeyCode.Escape)) ShowChoices();
         GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
         if (selected == null && Input.anyKeyDown) Select(null);
@@ -188,7 +193,7 @@ public sealed class MainMenu : MonoBehaviour
     void HideOtherCanvases()
     {
         foreach (Canvas c in FindObjectsByType<Canvas>())
-            if (c != canvas && c.enabled && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay)
+            if (c != canvas && c.enabled && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay && c.sortingOrder < canvas.sortingOrder)
             {
                 c.enabled = false;
                 steppedAside.Add(c);
@@ -196,6 +201,14 @@ public sealed class MainMenu : MonoBehaviour
     }
 
     static bool EnterPressed => Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+
+    // Read the career again (the playtest has just given this tester a fresh one).
+    public void RefreshCareer()
+    {
+        if (!visible || confirming || busy) return;
+        careerRead = false;
+        framesWaited = 0;
+    }
 
     // Aiko loads her ledger in her Start, which may come after ours.
     void ReadCareer()

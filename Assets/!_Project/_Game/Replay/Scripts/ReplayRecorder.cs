@@ -14,6 +14,10 @@ namespace Kehai.Replay
     // shelf units, her props, spills, bins, bags, tools and every item off its shelf 30 times a
     // second, the lights and the shelf slots as they change, what was heard and said, her
     // thought log, and her belief map twice a second. Only listens; changes nothing.
+    //
+    // Playtest builds also record the stretches between shifts, before the first clock-in and
+    // after each clock-out, as <shift records>/interlude_<next shift>_<time>.krec: where the
+    // tester went and what they looked at while working out what to do.
     [DefaultExecutionOrder(900)]   // after the store has moved this frame
     public sealed class ReplayRecorder : MonoBehaviour
     {
@@ -22,8 +26,16 @@ namespace Kehai.Replay
         // The last recording finished this session (the review screen offers to watch it).
         public static string LastFinished { get; private set; }
 
+        // Set by the playtest: record the time between shifts too.
+        public static bool RecordInterludes;
+        const float ShortestInterlude = 3f;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => LastFinished = null;
+        static void ResetStatics()
+        {
+            LastFinished = null;
+            RecordInterludes = false;
+        }
 
         public sealed class Tracked
         {
@@ -37,6 +49,9 @@ namespace Kehai.Replay
 
         public bool Recording => writer != null;
         public string CurrentPath => writer != null ? writer.Path : null;
+        // The file being written (as it will be named when finished) and the time in it.
+        public string CurrentFile => writer != null ? finalPath : null;
+        public float RecordingTime => writer != null ? Now : -1f;
         public float LastTickTime { get; private set; } = -1f;
         public IReadOnlyList<Tracked> Entities => tracked;
 
@@ -48,6 +63,10 @@ namespace Kehai.Replay
         KrecWriter writer;
         string finalPath;
         bool stopped;
+        bool interlude;               // recording the time between shifts, not a shift
+        float interludeStartedAt;
+        string stem, started;         // what the file is called and when it began
+        int shiftNumber;
 
         readonly List<Tracked> tracked = new List<Tracked>();
         readonly Dictionary<Object, Tracked> byOwner = new Dictionary<Object, Tracked>();
@@ -93,7 +112,7 @@ namespace Kehai.Replay
             AikoNarrator.Said -= OnStory;
             ShiftRecorder.Finishing -= OnFinishing;
             Unhook();
-            if (writer != null) Close(shift != null ? shift.ShiftTime : LastTickTime, false, keep: true);
+            if (writer != null) Close(Now, false, keep: !interlude || Now >= ShortestInterlude);
         }
 
         void OnDestroy()
@@ -101,18 +120,21 @@ namespace Kehai.Replay
             if (Instance == this) Instance = null;
         }
 
-        float Now => shift.ShiftTime;
+        float Now => interlude ? Time.time - interludeStartedAt : shift.ShiftTime;
 
         void LateUpdate()
         {
             if (shift == null) return;
             if (shift.Current != recordingOf)
             {
-                if (writer != null) Close(LastTickTime, false, keep: true);
+                if (writer != null) Close(LastTickTime, false, keep: !interlude || LastTickTime >= ShortestInterlude);
                 recordingOf = shift.Current;
                 stopped = false;
                 if (recordingOf != null) Begin();
             }
+            else if (recordingOf == null && writer == null && RecordInterludes && StoreMap.Current != null &&
+                     ReplayPlayer.Instance == null && GameObject.FindGameObjectWithTag("Player") != null)
+                BeginInterlude();
             if (writer == null) return;
             Hook();
 
@@ -149,7 +171,29 @@ namespace Kehai.Replay
         void Begin()
         {
             if (stopped || string.IsNullOrEmpty(shift.Stem)) return;
-            finalPath = shift.Stem + ".krec";
+            interlude = false;
+            stem = shift.Stem;
+            shiftNumber = recordingOf.ShiftNumber;
+            started = recordingOf.StartedAt;
+            StartWriter();
+        }
+
+        // The time between shifts, until the next clock-in (or the store unloads).
+        void BeginInterlude()
+        {
+            ShiftManager manager = FindAnyObjectByType<ShiftManager>();
+            shiftNumber = (manager != null ? manager.ShiftNumber : 0) + 1;
+            interlude = true;
+            interludeStartedAt = Time.time;
+            stem = Path.Combine(ShiftRecorder.Folder, $"interlude_{shiftNumber:00}_{System.DateTime.Now:yyyyMMdd_HHmmss}");
+            started = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            Directory.CreateDirectory(ShiftRecorder.Folder);
+            StartWriter();
+        }
+
+        void StartWriter()
+        {
+            finalPath = stem + ".krec";
             try
             {
                 writer = new KrecWriter(finalPath + ".part");
@@ -226,9 +270,9 @@ namespace Kehai.Replay
         {
             var h = new KrecHeader
             {
-                Stem = Path.GetFileName(shift.Stem),
-                Shift = recordingOf.ShiftNumber,
-                Started = recordingOf.StartedAt,
+                Stem = Path.GetFileName(stem),
+                Shift = shiftNumber,
+                Started = started,
                 Scene = SceneManager.GetActiveScene().path,
                 Seed = brain != null && brain.Rng != null ? brain.Rng.Seed : 0,
                 Rung = brain != null ? brain.config.rung.ToString() : ""

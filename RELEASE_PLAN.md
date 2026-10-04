@@ -213,8 +213,9 @@ watching for confusion, not crashes.
 - [ ] Play your own build every week, start to finish
 - [ ] Keep a running list of "things I explained out loud" — every one is a design bug
 - [~] Instrument the build: shift completion times, task failure rates, deaths
-      *every shift is recorded (positions, events, an HTML report, the 3D replay) on the
-      machine it was played on; nothing is sent back from a playtester's computer yet*
+      *every shift is recorded (positions, events, an HTML report, the 3D replay). Playtest
+      builds record the whole session and pack it to send (PLAYTEST.md, step 1); the upload
+      service and the reports on the developer's side are steps 2–3*
 
 ### External
 - [ ] 5 first-time players, watched over the shoulder, no help given

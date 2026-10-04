@@ -20,6 +20,7 @@ public class TaskListUI : MonoBehaviour
     public string headerWhenIdle = "OFF SHIFT";
 
     bool visible = true;
+    public bool Visible => visible;
     readonly StringBuilder builder = new StringBuilder();
     int lastWholeSecond = -1;
 
