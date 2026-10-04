@@ -106,12 +106,26 @@ leaves the computer.
   are in [CONTROLS.md](CONTROLS.md#3d-replay). Shots render unattended with
   `tools/marketing/render_shot.sh` (the editor closed; ffmpeg for video files).
 
+## Main menu
+
+The game opens on a title screen over the store, with time stopped:
+
+- **Continue** picks your career up at its next shift. Aiko saves it, and what she has learned
+  about you, after every shift; a shift you leave halfway isn't saved.
+- **New career** wipes what she has learned (it asks first); your settings stay.
+- **Settings** and **Controls** open the Esc menu's own pages.
+
+You get back to it from the Esc menu, and with Enter after a career ends. It stays out of the way
+of the eval harness and the 3D replay; `-skip-menu` on the command line skips it, and so does
+**Kehai → Main Menu → Skip It When Playing in the Editor**.
+
 ## Settings (Esc)
 
 Esc pauses the game and opens the settings:
 
 - **Restart this shift:** the store resets, you go back to where you start, and the same shift
   begins again. Aiko still remembers earlier shifts.
+- **Main menu:** leave the shift for the title screen.
 - **Volume** for everything, and separately for sound effects, Aiko, the radio and the PA.
 - **Mouse sensitivity**, and **Aiko's floor cone** on or off.
 - **Webcam blinking:** on or off, calibrate, and the blink test.
@@ -139,7 +153,7 @@ says why, and what to test next.
 ## Controls
 
 The essentials (the full list is in [`CONTROLS.md`](CONTROLS.md), and in the game under
-**Esc → Keys**):
+**Esc → Keys** or **Controls** in the main menu):
 
 | Key | Action |
 |---|---|
@@ -150,7 +164,7 @@ The essentials (the full list is in [`CONTROLS.md`](CONTROLS.md), and in the gam
 | Q / hold Q | Put down / throw |
 | 1–4, mouse wheel | Hand slot |
 | C | Task list |
-| Esc | Settings: restart the shift, volume by kind of sound, mouse, Aiko's floor cone, webcam |
+| Esc | Pause: restart the shift, the main menu, volume by kind of sound, mouse, Aiko's floor cone, webcam |
 | F1 / F2 | Live map / replay |
 | F8 / F9 / F10 / B | Webcam blink on-off / calibrate / test panel / keyboard blink |
 | F7 / Left Shift + F7 | Mark a clip moment / mark a bug |
@@ -160,8 +174,9 @@ The essentials (the full list is in [`CONTROLS.md`](CONTROLS.md), and in the gam
 With the project closed in the editor (Unity allows one instance per project):
 
 ```bash
-# 76 EditMode tests: AI rules, fairness, Aiko's speed cap, the belief map, shift records, the key list,
-# the save migration from the game's old name, clip markers, the replay recording and the 3D replay
+# 83 EditMode tests: AI rules, fairness, Aiko's speed cap, the belief map, shift records, the key list,
+# the save migration from the game's old name, clip markers, the replay recording and the 3D replay,
+# the main menu's choices and the build's scene list
 # (two of them load the store and play a few seconds of a bot shift; without -nographics the
 # replay test also checks what the cameras draw)
 Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults results.xml
@@ -176,11 +191,34 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play \
 
 The full ablation command and its analysis script are in [`AIKO_RESULTS.md`](AIKO_RESULTS.md).
 
+## Building the game
+
+**Kehai → Build → macOS** in the editor, or headless with the editor closed:
+
+```bash
+Unity -batchmode -nographics -projectPath . -executeMethod KehaiBuild.MacOS
+```
+
+The app lands in `Builds/macOS/Kehai.app` (`-kehai-build-out <path>` to choose,
+`-kehai-build-dev` for a development build). Beside it go the webcam blink helper, if
+`tools/blink/mac/build.sh` has built it, and `build.txt` with the version and commit. To share
+it, zip those three; the `_BurstDebugInformation_DoNotShip` folder is for reading crash logs and
+stays with you. The app
+is signed only ad hoc (no Apple developer account), so on another Mac macOS blocks its first
+launch: **System Settings → Privacy & Security → Open Anyway**. The built game runs the eval
+headless too:
+
+```bash
+Builds/macOS/Kehai.app/Contents/MacOS/Kehai -batchmode -nographics -kehai-ablation \
+  -ablation-careers 1 -ablation-shifts 1 -ablation-rungs F -ablation-profiles efficient
+```
+
 ## Repository layout
 
 ```
 Assets/!_Project/
-├── _Core/Scripts/Runtime/     shift, tasks, burnout, events, settings, pause, restart, JSON
+├── _Core/Scripts/Runtime/     shift, tasks, burnout, events, settings, pause, restart, fonts, JSON
+├── _Core/Editor/              the build script
 ├── _Game/
 │   ├── AI/Scripts/
 │   │   ├── Core/              Aiko's brain, body, Director, Ledger, config, bootstrap
@@ -195,7 +233,7 @@ Assets/!_Project/
 │   ├── Level/                 shelves, planogram, doors, power, radio, bins, spills, audio
 │   ├── Characters/            customers, requests for directions, speech bubbles
 │   ├── Items/                 items, tools and their homes, flashlight
-│   └── Player/                movement, interaction, inventory, controls, settings menu
+│   └── Player/                movement, interaction, inventory, controls, main menu, settings menu
 └── _Tests/Editor/             EditMode tests
 tools/
 ├── blink/                     webcam helpers (Swift / Apple Vision, Python / MediaPipe), training path

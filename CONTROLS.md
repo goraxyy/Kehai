@@ -1,8 +1,16 @@
 # Controls
 
-Every key in Kehai. The same list is in the game: press **Esc**, then **Keys**.
+Every key in Kehai. The same list is in the game: **Controls** in the main menu, or **Esc**, then **Keys**.
 
 Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only work while that panel is open.
+
+## Main menu
+
+| Key | What it does |
+|---|---|
+| Up / Down, mouse | Choose |
+| Enter / click | Select |
+| Esc (main menu) | Back, from a question or a settings page |
 
 ## Moving
 
@@ -37,7 +45,7 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| Esc | Settings: volume, mouse, Aiko's floor cone, webcam; closes any open panel |
+| Esc | Pause: restart the shift or leave for the main menu, volume, mouse, Aiko's floor cone, webcam; closes any open panel |
 | F1 | Live map of the store and what Aiko is doing, in plain words |
 | H (on the F1 map) | Aiko's guess of where you are, as a heat map |
 | T (on the F1 map) | Technical view: goal scores and her thought log |
@@ -68,6 +76,7 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 | O | Open the shift report in your browser |
 | R | Watch the shift again in 3D |
 | Q | Hand in your notice (from shift 5) |
+| Enter (after a career ends) | Back to the main menu |
 
 ## 3D replay
 

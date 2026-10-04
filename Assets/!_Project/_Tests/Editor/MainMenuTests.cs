@@ -1,0 +1,54 @@
+using System.IO;
+using NUnit.Framework;
+using Choice = MainMenu.Choice;
+
+// What the main menu offers depends on the career Aiko has on file, and the build has to
+// contain the store.
+public class MainMenuTests
+{
+    [Test]
+    public void ANewEmployee_StartsTheirFirstShift()
+    {
+        var choices = MainMenu.ChoicesFor(0, careerOver: false);
+        Assert.AreEqual(Choice.FirstShift, choices[0]);
+        CollectionAssert.DoesNotContain(choices, Choice.Continue);
+        CollectionAssert.DoesNotContain(choices, Choice.NewCareer);
+    }
+
+    [Test]
+    public void ACareerOnFile_ComesFirst_AndCanBeStartedOver()
+    {
+        var choices = MainMenu.ChoicesFor(6, careerOver: false);
+        Assert.AreEqual(Choice.Continue, choices[0]);
+        Assert.AreEqual(Choice.NewCareer, choices[1]);
+        CollectionAssert.DoesNotContain(choices, Choice.FirstShift);
+    }
+
+    [Test]
+    public void AnEndedCareer_CanOnlyBeStartedOver()
+    {
+        var choices = MainMenu.ChoicesFor(14, careerOver: true);
+        Assert.AreEqual(Choice.NewCareer, choices[0]);
+        CollectionAssert.DoesNotContain(choices, Choice.Continue);
+    }
+
+    [Test]
+    public void EveryMenu_EndsWithSettingsControlsAndQuit()
+    {
+        foreach ((int shifts, bool over) in new[] { (0, false), (3, false), (9, true) })
+        {
+            var choices = MainMenu.ChoicesFor(shifts, over);
+            CollectionAssert.AreEqual(new[] { Choice.Settings, Choice.Controls, Choice.Quit },
+                choices.GetRange(choices.Count - 3, 3), $"{shifts} shifts, over: {over}");
+        }
+    }
+
+    [Test]
+    public void TheBuild_OpensOnTheStore()
+    {
+        string[] scenes = KehaiBuild.Scenes;
+        Assert.IsNotEmpty(scenes, "no scenes in the build list");
+        foreach (string scene in scenes) Assert.IsTrue(File.Exists(scene), scene);
+        StringAssert.EndsWith("SampleScene.unity", scenes[0], "the first scene is the one the game opens with");
+    }
+}

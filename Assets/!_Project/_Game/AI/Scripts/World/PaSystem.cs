@@ -92,6 +92,7 @@ namespace Kehai.Aiko
 
         public void Banner(string text, float seconds)
         {
+            banner.font = GameFonts.ForText(text, TMP_Settings.defaultFontAsset);
             banner.text = text;
             bannerUntil = Time.unscaledTime + seconds;
         }

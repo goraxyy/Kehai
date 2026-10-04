@@ -4,9 +4,10 @@ using Kehai.Blink;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Esc: the settings. Restart the shift, volume for each kind of sound, mouse sensitivity,
-// Aiko's floor cone, the webcam, and a Keys tab listing every key in the game. The game
-// pauses while it's open, and everything chosen here is remembered.
+// Esc: the settings. Restart the shift or leave it for the main menu, volume for each kind of
+// sound, mouse sensitivity, Aiko's floor cone, the webcam, and a Keys tab listing every key in
+// the game. The game pauses while it's open, and everything chosen here is remembered. The
+// main menu opens the same pages, without the shift.
 public sealed class SettingsMenu : MonoBehaviour
 {
     public static SettingsMenu Instance { get; private set; }
@@ -20,7 +21,8 @@ public sealed class SettingsMenu : MonoBehaviour
     float labelWidth;
     int slider;              // numbers the sliders as they're drawn
     int dragging = -1;       // the slider the mouse is holding
-    bool confirmingRestart, restartNow;
+    bool confirmingRestart, restartNow, confirmingMenu, menuNow;
+    bool fromMainMenu;       // opened from the main menu: no shift to restart, and Back returns there
     AudioSource preview;
 
     const string SensitivityKey = "Kehai.MouseSensitivity";
@@ -60,6 +62,13 @@ public sealed class SettingsMenu : MonoBehaviour
             ShiftRestart.Restart();
             return;
         }
+        if (menuNow)
+        {
+            menuNow = false;
+            Close();
+            MainMenu.ReturnToMenu();
+            return;
+        }
         if (!Input.GetKeyDown(KeyCode.Escape)) return;
         if (Visible) { Close(); return; }
         // Esc closes whatever else is open first: the map, the replay, the blink test, the
@@ -72,11 +81,20 @@ public sealed class SettingsMenu : MonoBehaviour
     public void Open()
     {
         Visible = true;
-        confirmingRestart = false;
+        confirmingRestart = confirmingMenu = false;
+        fromMainMenu = false;
         tab = Tab.Settings;
         scroll = Vector2.zero;
         FullScreenPanel.Set(this, true);
         GamePause.Set(true);
+    }
+
+    // The main menu's Settings and Controls: the same pages, and the game stays paused after.
+    public void OpenFromMainMenu(bool keys)
+    {
+        Open();
+        fromMainMenu = true;
+        tab = keys ? Tab.Keys : Tab.Settings;
     }
 
     public void Close()
@@ -84,7 +102,8 @@ public sealed class SettingsMenu : MonoBehaviour
         Visible = false;
         dragging = -1;
         FullScreenPanel.Set(this, false);
-        GamePause.Set(false);
+        if (!fromMainMenu) GamePause.Set(false);
+        fromMainMenu = false;
         PlayerPrefs.Save();
     }
 
@@ -103,7 +122,7 @@ public sealed class SettingsMenu : MonoBehaviour
         Fill(panel, new Color(0.07f, 0.075f, 0.095f, 0.98f));
         var inner = new Rect(panel.x + size, panel.y + size * 0.8f, panel.width - size * 2f, panel.height - size * 1.6f);
 
-        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.5f, size * 2.2f), "Paused", title);
+        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.5f, size * 2.2f), fromMainMenu ? "Settings" : "Paused", title);
         float tabWidth = size * 7f;
         if (Tab_(new Rect(inner.xMax - tabWidth * 2f - size * 0.5f, inner.y, tabWidth, size * 2f), "Settings", tab == Tab.Settings)) { tab = Tab.Settings; scroll = Vector2.zero; }
         if (Tab_(new Rect(inner.xMax - tabWidth, inner.y, tabWidth, size * 2f), "Keys", tab == Tab.Keys)) { tab = Tab.Keys; scroll = Vector2.zero; }
@@ -118,26 +137,13 @@ public sealed class SettingsMenu : MonoBehaviour
         GUILayout.EndArea();
 
         float y = inner.yMax - size * 2.2f;
-        if (GUI.Button(new Rect(inner.x, y, size * 9f, size * 2.2f), "Resume  (Esc)", button)) Close();
-        if (GUI.Button(new Rect(inner.xMax - size * 9f, y, size * 9f, size * 2.2f), Application.isEditor ? "Stop playing" : "Quit the game", button)) Quit();
+        if (GUI.Button(new Rect(inner.x, y, size * 9f, size * 2.2f), fromMainMenu ? "Back  (Esc)" : "Resume  (Esc)", button)) Close();
+        if (!fromMainMenu && GUI.Button(new Rect(inner.xMax - size * 9f, y, size * 9f, size * 2.2f), Application.isEditor ? "Stop playing" : "Quit the game", button)) Quit();
     }
 
     void DrawSettings()
     {
-        Heading("Shift");
-        if (!confirmingRestart)
-        {
-            if (GUILayout.Button("Restart this shift", button, GUILayout.Width(size * 11f))) confirmingRestart = true;
-            GUILayout.Label("Starts the shift again from the beginning: the store resets and you go back to where you start.", small);
-        }
-        else
-        {
-            GUILayout.Label("Restart this shift? What you've done so far in it is lost; " + GameNames.Antagonist + " remembers earlier shifts.", body);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Yes, restart", button, GUILayout.Width(size * 8f))) restartNow = true;
-            if (GUILayout.Button("No", button, GUILayout.Width(size * 5f))) confirmingRestart = false;
-            GUILayout.EndHorizontal();
-        }
+        if (!fromMainMenu) DrawShift();
 
         Heading("Volume");
         float master = Slider("Everything", SoundSettings.Master, out bool masterDone);
@@ -168,6 +174,11 @@ public sealed class SettingsMenu : MonoBehaviour
             : tracker != null && tracker.WebcamLive ? $"On, reading your eyes through {BlinkSidecar.Which}." + (tracker.Calibrated ? " Calibrated." : " Not calibrated yet: press Calibrate.")
             : "On, but no signal from the camera yet. Open the blink test to see why.";
         GUILayout.Label(status, body);
+        if (fromMainMenu)
+        {
+            GUILayout.Label("Turn it on, calibrate it and test it from this menu once you're in the store (Esc).", small);
+            return;
+        }
         GUILayout.BeginHorizontal();
         if (tracker != null)
         {
@@ -188,6 +199,35 @@ public sealed class SettingsMenu : MonoBehaviour
             }
         }
         GUILayout.EndHorizontal();
+    }
+
+    void DrawShift()
+    {
+        Heading("Shift");
+        if (confirmingRestart)
+        {
+            GUILayout.Label("Restart this shift? What you've done so far in it is lost; " + GameNames.Antagonist + " remembers earlier shifts.", body);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Yes, restart", button, GUILayout.Width(size * 8f))) restartNow = true;
+            if (GUILayout.Button("No", button, GUILayout.Width(size * 5f))) confirmingRestart = false;
+            GUILayout.EndHorizontal();
+        }
+        else if (confirmingMenu)
+        {
+            GUILayout.Label("Leave for the main menu? The shift under way, if there is one, is lost; " + GameNames.Antagonist + " remembers earlier shifts.", body);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Yes, main menu", button, GUILayout.Width(size * 9f))) menuNow = true;
+            if (GUILayout.Button("No", button, GUILayout.Width(size * 5f))) confirmingMenu = false;
+            GUILayout.EndHorizontal();
+        }
+        else
+        {
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Restart this shift", button, GUILayout.Width(size * 11f))) confirmingRestart = true;
+            if (GUILayout.Button("Main menu", button, GUILayout.Width(size * 8f))) confirmingMenu = true;
+            GUILayout.EndHorizontal();
+            GUILayout.Label("Restart starts the shift again from the beginning: the store resets and you go back to where you start.", small);
+        }
     }
 
     void DrawKeys()

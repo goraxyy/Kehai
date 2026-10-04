@@ -24,6 +24,10 @@ public static class Controls
 
     public static readonly Section[] All =
     {
+        new Section("Main menu",
+            K("Up / Down, mouse", "Choose"),
+            K("Enter / click", "Select"),
+            K("Esc (main menu)", "Back, from a question or a settings page")),
         new Section("Moving",
             K("W A S D", "Walk"),
             K("Mouse", "Look around"),
@@ -42,7 +46,7 @@ public static class Controls
             K("Up / Down", "Choose an answer when a customer asks you something"),
             K("E / Enter", "Give that answer")),
         new Section("Menus and maps",
-            K("Esc", "Settings: volume, mouse, " + GameNames.Antagonist + "'s floor cone, webcam; closes any open panel"),
+            K("Esc", "Pause: restart the shift or leave for the main menu, volume, mouse, " + GameNames.Antagonist + "'s floor cone, webcam; closes any open panel"),
             K("F1", "Live map of the store and what " + GameNames.Antagonist + " is doing, in plain words"),
             K("H (on the F1 map)", GameNames.Antagonist + "'s guess of where you are, as a heat map"),
             K("T (on the F1 map)", "Technical view: goal scores and her thought log"),
@@ -64,7 +68,8 @@ public static class Controls
             K("Enter", "Continue"),
             K("O", "Open the shift report in your browser"),
             K("R", "Watch the shift again in 3D"),
-            K("Q", "Hand in your notice (from shift 5)")),
+            K("Q", "Hand in your notice (from shift 5)"),
+            K("Enter (after a career ends)", "Back to the main menu")),
         new Section(ReplaySection,
             K("Space", "Play or pause"),
             K("Left / Right", "Back or forward 5 seconds"),

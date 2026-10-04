@@ -10,6 +10,13 @@ namespace Kehai.Aiko
     {
         public static bool LectureRunning { get; private set; }
 
+        // A career has ended and its last screen is up: Enter goes to the main menu.
+        public static bool CareerOver { get; internal set; }
+        const string ToTheMenu = "\n\n<size=40%>[Enter] main menu</size>";
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => CareerOver = false;
+
         static readonly string[] LectureLines =
         {
             "This is a formal conversation about your performance.",
@@ -60,7 +67,8 @@ namespace Kehai.Aiko
             yield return new WaitForSecondsRealtime(6.5f);
             AikoScreen screen = AikoScreen.Ensure();
             screen.SetFade(1f);
-            screen.Banner("<size=160%>過労死</size>\nBURNED OUT\n\n<size=50%>" + brain.Review.EndingText("burnout") + "</size>", 9999f);
+            screen.Banner("<size=160%>過労死</size>\nBURNED OUT\n\n<size=50%>" + brain.Review.EndingText("burnout") + "</size>" + ToTheMenu, 9999f);
+            CareerOver = true;
         }
 
         public static void QuitEnding(AikoBrain brain, string review)
@@ -70,7 +78,8 @@ namespace Kehai.Aiko
             AikoScreen screen = AikoScreen.Ensure();
             screen.SetFade(0.92f);
             string kind = brain.Review.BrokeHer ? "broke" : "quit";
-            screen.Banner("<size=120%>NOTICE ACCEPTED</size>\n\n<size=50%>" + brain.Review.EndingText(kind) + "</size>", 9999f);
+            screen.Banner("<size=120%>NOTICE ACCEPTED</size>\n\n<size=50%>" + brain.Review.EndingText(kind) + "</size>" + ToTheMenu, 9999f);
+            CareerOver = true;
         }
     }
 }
