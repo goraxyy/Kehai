@@ -37,6 +37,7 @@ STEPS = {s.name: s for s in [
     Step("long_edit", "high", 64000, 24000),
     Step("package", "low", 16000, 3000),
     Step("weekly_report", "low", 16000, 3000),
+    Step("playtest_summary", "medium", 16000, 4000),
 ]}
 
 

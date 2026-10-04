@@ -1,0 +1,11 @@
+# The playtest upload service. Deploy steps: README.md. Secrets (never in this file):
+#   npx wrangler secret put UPLOAD_KEY     (the same value as KEHAI_PLAYTEST_UPLOAD_KEY)
+#   npx wrangler secret put ADMIN_KEY      (the same value as KEHAI_PLAYTEST_ADMIN_KEY)
+name = "kehai-playtest"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "SESSIONS"
+bucket_name = "kehai-playtests"

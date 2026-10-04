@@ -86,6 +86,14 @@ with estimated word timings). The voices per language and role are in `brand.jso
 are cached by what's said and who says it, so a revision only speaks what changed; characters per
 month are logged to `logs/tts_usage.csv` and capped per backend.
 
+## Playtests (`km/playtest/`, `playtest.py`)
+
+Not marketing, but it shares this pipeline's Telegram, Claude client and schedule: the `work`
+job also pulls new playtest sessions from the upload service, reads and summarises them (the
+`playtest_summary` step), announces them in Telegram, and rebuilds the combined report; a bug
+note becomes a GitHub issue only when you tap 📝 (`pt:` buttons). `uv run playtest.py status`
+shows what's set up. The whole loop is in [`PLAYTEST.md`](../../PLAYTEST.md).
+
 ## Exit codes (every script)
 
 0 done or a dry run · 1 something failed (try again later) · 2 bad input, or an answer still

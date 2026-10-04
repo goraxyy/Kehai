@@ -133,6 +133,9 @@ class Approvals:
         if act == "lg":
             from .longform import Long
             return Long(self.root, self.store, self.bot).tap(cb, parts)
+        if act == "pt":
+            from .playtest import notify
+            return notify.tap(self.bot, cb, parts)
         if act == "pd" and len(parts) == 4:
             from .publishing import NAMES, mark_posted
             _, vid, service, lang = parts
