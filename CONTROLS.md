@@ -111,7 +111,7 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 | Key | What it does |
 |---|---|
 | F7 | Mark this moment for a clip; a tick shows for a second |
-| Left Shift + F7 | Mark a bug at this moment |
+| Left Shift + F7 | Mark a bug at this moment (in a playtest build, then say what went wrong) |
 
 ## For testing
 

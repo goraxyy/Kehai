@@ -221,6 +221,13 @@ Builds/macOS/Kehai.app/Contents/MacOS/Kehai -batchmode -nographics -kehai-ablati
   -ablation-careers 1 -ablation-shifts 1 -ablation-rungs F -ablation-profiles efficient
 ```
 
+## Playtesting
+
+Playtest builds (`KehaiBuild … -playtest round1`) record a tester's whole session, from launch
+to quitting, as 3D replays plus a log of every menu, key and frame-rate dip. After the tester
+agrees, they send it back. In-game questions and a Google Form cover what they thought. The
+loop, what's recorded and how to run a round are in [`PLAYTEST.md`](PLAYTEST.md).
+
 ## Repository layout
 
 ```
@@ -236,6 +243,7 @@ Assets/!_Project/
 │   │   ├── World/             what she does to the store: lights, PA, props, maze, floor cone
 │   │   └── Diagnostics/       F1 map, narrator, shift recorder and analysis, HTML report
 │   ├── Blink/Scripts/         blink sources, tracker, calibration, helper launcher, F10 panel
+│   ├── Playtest/Scripts/      playtest builds: the session log, consent, questions, packing, upload
 │   ├── Eval/                  headless env, simulated players, ablation runner, batch entry
 │   ├── Map/                   store map, floor plan, NavMesh walls
 │   ├── Level/                 shelves, planogram, doors, power, radio, bins, spills, audio
@@ -264,6 +272,7 @@ tools/
 | [`AIKO_RESULTS.md`](AIKO_RESULTS.md) | The ablation results |
 | [`CONTROLS.md`](CONTROLS.md) | Every key |
 | [`RELEASE_PLAN.md`](RELEASE_PLAN.md) | Milestones to a Steam release |
+| [`PLAYTEST.md`](PLAYTEST.md) | How playtests work: the loop, what's recorded, running a round |
 | [`MARKETING.md`](MARKETING.md) | Devlog, platforms and getting early players |
 | [`STORE_CATALOG.md`](STORE_CATALOG.md), [`STORE_MAP.md`](STORE_MAP.md) | The planogram and the store's map |
 | [`CHANGELOG.md`](CHANGELOG.md) | Changes that affect players' saves or settings |

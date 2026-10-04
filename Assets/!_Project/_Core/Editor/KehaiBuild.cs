@@ -26,6 +26,11 @@ using Debug = UnityEngine.Debug;
 //     asks on the game's behalf, and stops an app that opens a camera without one.
 // Windows builds need Windows Build Support (Mono) added to the editor in Unity Hub; they have
 // no webcam helper yet, so blinking there is the keyboard's (B).
+//
+// Playtest builds (PLAYTEST.md): add -playtest <round>, or Kehai → Build → Playtest, which
+// takes the round from tools/playtest/.env. They go to Builds/playtest-<round>/, carry
+// StreamingAssets/playtest.json (the round, where to send sessions and the form link, from
+// tools/playtest/.env or the environment), and come zipped for testers beside that folder.
 public static class KehaiBuild
 {
     // GuideMarker's rings and beacons, and Aiko's fog.
@@ -40,9 +45,15 @@ public static class KehaiBuild
     [MenuItem("Kehai/Build/Windows")]
     static void WindowsFromMenu() => FromMenu(BuildTarget.StandaloneWindows64);
 
-    static void FromMenu(BuildTarget target)
+    [MenuItem("Kehai/Build/Playtest/macOS")]
+    static void PlaytestMacOSFromMenu() => FromMenu(BuildTarget.StandaloneOSX, PlaytestSettings().round);
+
+    [MenuItem("Kehai/Build/Playtest/Windows")]
+    static void PlaytestWindowsFromMenu() => FromMenu(BuildTarget.StandaloneWindows64, PlaytestSettings().round);
+
+    static void FromMenu(BuildTarget target, string playtest = null)
     {
-        BuildReport report = Build(target, DefaultPath(target), development: false);
+        BuildReport report = Build(target, DefaultPath(target, playtest), development: false, playtest);
         if (report != null && report.summary.result == BuildResult.Succeeded) EditorUtility.RevealInFinder(report.summary.outputPath);
     }
 
@@ -53,22 +64,27 @@ public static class KehaiBuild
 
     static void FromCommandLine(BuildTarget target)
     {
-        BuildReport report = Build(target, Arg("-kehai-build-out") ?? DefaultPath(target), Environment.GetCommandLineArgs().Contains("-kehai-build-dev"));
+        string playtest = Arg("-playtest");
+        BuildReport report = Build(target, Arg("-kehai-build-out") ?? DefaultPath(target, playtest), Environment.GetCommandLineArgs().Contains("-kehai-build-dev"), playtest);
         EditorApplication.Exit(report != null && report.summary.result == BuildResult.Succeeded ? 0 : 1);
     }
 
     public static string ProjectRoot => Directory.GetParent(UnityEngine.Application.dataPath).FullName;
 
-    public static string DefaultPath(BuildTarget target) => target == BuildTarget.StandaloneOSX
-        ? Path.Combine(ProjectRoot, "Builds", "macOS", PlayerSettings.productName + ".app")
-        : Path.Combine(ProjectRoot, "Builds", "Windows", PlayerSettings.productName + ".exe");
+    public static string DefaultPath(BuildTarget target, string playtest = null)
+    {
+        string folder = string.IsNullOrEmpty(playtest)
+            ? Path.Combine(ProjectRoot, "Builds", PlatformName(target))
+            : Path.Combine(ProjectRoot, "Builds", "playtest-" + playtest, $"{PlayerSettings.productName}-playtest-{playtest}-{PlatformName(target)}");
+        return Path.Combine(folder, PlayerSettings.productName + (target == BuildTarget.StandaloneOSX ? ".app" : ".exe"));
+    }
 
     static string PlatformName(BuildTarget target) => target == BuildTarget.StandaloneOSX ? "macOS" : "Windows";
 
     // The scenes in File → Build Profiles, in order; the first is the one the game opens.
     public static string[] Scenes => EditorBuildSettings.scenes.Where(s => s.enabled && File.Exists(s.path)).Select(s => s.path).ToArray();
 
-    public static BuildReport Build(BuildTarget target, string appPath, bool development)
+    public static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest = null)
     {
         string[] scenes = Scenes;
         if (scenes.Length == 0)
@@ -98,13 +114,15 @@ public static class KehaiBuild
                   $"{s.totalErrors} errors, {s.totalWarnings} warnings");
         if (s.result != BuildResult.Succeeded) return report;
 
+        Kehai.Playtest.PlaytestConfig config = string.IsNullOrEmpty(playtest) ? null : WritePlaytestConfig(target, appPath, playtest);
         if (target == BuildTarget.StandaloneOSX)
         {
             AddCameraReason(appPath);
             CopyBlinkHelper(appPath);
             Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
         }
-        WriteBuildInfo(appPath, target, development);
+        WriteBuildInfo(appPath, target, development, config);
+        if (config != null) ZipForTesters(appPath);
         return report;
     }
 
@@ -151,7 +169,67 @@ public static class KehaiBuild
         Run("/bin/chmod", $"+x \"{beside}\"", "making the blink helper runnable");
     }
 
-    static void WriteBuildInfo(string appPath, BuildTarget target, bool development)
+    // ---- playtest builds ----------------------------------------------------------------------
+
+    // tools/playtest/.env (KEY=value lines, not in git), with the environment taking precedence.
+    public static Kehai.Playtest.PlaytestConfig PlaytestSettings(string round = null)
+    {
+        var values = ReadEnvFile(Path.Combine(ProjectRoot, "tools", "playtest", ".env"));
+        string Get(string key) => Environment.GetEnvironmentVariable(key) is string v && v.Length > 0 ? v : values.TryGetValue(key, out string f) ? f : "";
+        return new Kehai.Playtest.PlaytestConfig
+        {
+            round = round ?? (Get("KEHAI_PLAYTEST_ROUND") is string r && r.Length > 0 ? r : "round1"),
+            uploadUrl = Get("KEHAI_PLAYTEST_UPLOAD_URL").TrimEnd('/'),
+            uploadKey = Get("KEHAI_PLAYTEST_UPLOAD_KEY"),
+            formUrl = Get("KEHAI_PLAYTEST_FORM_URL"),
+            suggestFinishAfter = int.TryParse(Get("KEHAI_PLAYTEST_SUGGEST_AFTER"), out int n) && n > 0 ? n : 3,
+        };
+    }
+
+    public static Dictionary<string, string> ReadEnvFile(string path)
+    {
+        var values = new Dictionary<string, string>();
+        if (!File.Exists(path)) return values;
+        foreach (string raw in File.ReadAllLines(path))
+        {
+            string line = raw.Trim();
+            int eq = line.IndexOf('=');
+            if (line.Length == 0 || line.StartsWith("#") || eq <= 0) continue;
+            values[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim().Trim('"', '\'');
+        }
+        return values;
+    }
+
+    // The built game's StreamingAssets folder.
+    public static string StreamingAssetsOf(BuildTarget target, string appPath) => target == BuildTarget.StandaloneOSX
+        ? Path.Combine(appPath, "Contents", "Resources", "Data", "StreamingAssets")
+        : Path.Combine(Path.GetDirectoryName(appPath), Path.GetFileNameWithoutExtension(appPath) + "_Data", "StreamingAssets");
+
+    static Kehai.Playtest.PlaytestConfig WritePlaytestConfig(BuildTarget target, string appPath, string round)
+    {
+        Kehai.Playtest.PlaytestConfig config = PlaytestSettings(round);
+        string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
+        config.build = $"{PlayerSettings.bundleVersion} {commit}".Trim();
+        string folder = StreamingAssetsOf(target, appPath);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, Kehai.Playtest.PlaytestConfig.FileName), UnityEngine.JsonUtility.ToJson(config, true));
+        Debug.Log($"Kehai build: playtest {config.round}, " + (config.Uploads ? "sending sessions to " + config.uploadUrl : "keeping sessions on the tester's computer (no KEHAI_PLAYTEST_UPLOAD_URL)") +
+                  (string.IsNullOrEmpty(config.formUrl) ? ", no form link" : ", form " + config.formUrl));
+        return config;
+    }
+
+    // <folder>.zip beside the build's folder, without the crash-debugging symbols.
+    static void ZipForTesters(string appPath)
+    {
+        string folder = Path.GetDirectoryName(appPath);
+        string zip = folder + ".zip";
+        if (File.Exists(zip)) File.Delete(zip);
+        string name = Path.GetFileName(folder);
+        Run("/bin/sh", $"-c \"cd '{Path.GetDirectoryName(folder)}' && zip -q -r -y -X '{name}.zip' '{name}' -x '*_DoNotShip/*' '*.DS_Store'\"", "zipping the build for testers");
+        if (File.Exists(zip)) Debug.Log($"Kehai build: {zip} ({new FileInfo(zip).Length / 1048576f:0} MB) is the one to send");
+    }
+
+    static void WriteBuildInfo(string appPath, BuildTarget target, bool development, Kehai.Playtest.PlaytestConfig playtest = null)
     {
         string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
         string branch = Run("git", $"-C \"{ProjectRoot}\" rev-parse --abbrev-ref HEAD", null)?.Trim();
@@ -161,7 +239,8 @@ public static class KehaiBuild
               (string.IsNullOrWhiteSpace(changes) ? "" : " with local changes");
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build.txt"),
             $"{PlayerSettings.productName} {PlayerSettings.bundleVersion} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
-            $"Built {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n");
+            $"Built {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n" +
+            (playtest == null ? "" : $"Playtest {playtest.round}: " + (playtest.Uploads ? "sends sessions after the tester agrees." : "keeps sessions on the tester's computer.") + "\n"));
     }
 
     // Runs a tool and returns what it printed, or null if it failed (with a warning, when `what` says what it was for).

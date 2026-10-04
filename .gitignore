@@ -95,3 +95,6 @@ Assets/Low Poly Cartoon Food and Groceries Pack.meta
 Assets/Pandazole_Ultimate_Pack.meta
 Assets/Scalable Grid Prototype Materials.meta
 My project/
+
+# Playtest settings (upload key)
+tools/playtest/.env

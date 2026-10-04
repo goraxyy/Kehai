@@ -134,6 +134,12 @@ namespace Kehai.Aiko
             Add("store", "The shift started.", Vector3.zero, false, "the store");
         }
 
+        // The playtest wraps up mid-shift (the tester is quitting): write what there is now.
+        public void FinishNow()
+        {
+            if (Current != null) Finish(false);
+        }
+
         void Finish(bool clockedOut)
         {
             ShiftRecording r = Current;
