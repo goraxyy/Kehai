@@ -51,4 +51,12 @@ public class MainMenuTests
         foreach (string scene in scenes) Assert.IsTrue(File.Exists(scene), scene);
         StringAssert.EndsWith("SampleScene.unity", scenes[0], "the first scene is the one the game opens with");
     }
+
+    [Test]
+    public void EachPlatform_BuildsIntoItsOwnFolder()
+    {
+        string name = UnityEditor.PlayerSettings.productName;
+        StringAssert.EndsWith(Path.Combine("Builds", "macOS", name + ".app"), KehaiBuild.DefaultPath(UnityEditor.BuildTarget.StandaloneOSX));
+        StringAssert.EndsWith(Path.Combine("Builds", "Windows", name + ".exe"), KehaiBuild.DefaultPath(UnityEditor.BuildTarget.StandaloneWindows64));
+    }
 }

@@ -1,7 +1,7 @@
 # Kehai — Release Plan
 
 > Working title: **Kehai** · Studio: **TokenLimit** · Engine: Unity 6 (URP)
-> Current version: `0.1.0` · Build target: StandaloneOSX · Plan last updated: 2026-10-02
+> Current version: `0.1.0` · Build targets: StandaloneOSX, StandaloneWindows64 · Plan last updated: 2026-10-04
 
 A milestone-by-milestone route from the current prototype to a Steam release. Each
 milestone has an **exit test** — a single question that has to be answerable with "yes"
@@ -160,8 +160,9 @@ it is about one slice being *finished*.
       (the build script now always includes them); the webcam helper beside the app, and the
       camera line macOS needs in Info.plist; Japanese text in banners. Still to see with a
       person at the screen: the menus in a window, webcam blinking, frame rate*
-- [ ] Windows build target added alongside macOS
-      *needs Windows Build Support (Mono) added to the editor in Unity Hub*
+- [x] Windows build target added alongside macOS
+      *2026-10-04: `KehaiBuild.Windows` (64-bit, Mono), built from the Mac. Not yet run on a
+      Windows PC; no webcam helper there yet (keyboard blink only)*
 - [~] Set `applicationIdentifier` (currently empty) and a real version scheme
       *identifier `com.tokenlimit.kehai`; the version is still 0.1.0, and every build writes
       the commit it came from to `build.txt`*

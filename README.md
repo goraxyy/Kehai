@@ -193,20 +193,28 @@ The full ablation command and its analysis script are in [`AIKO_RESULTS.md`](AIK
 
 ## Building the game
 
-**Kehai → Build → macOS** in the editor, or headless with the editor closed:
+**Kehai → Build → macOS** or **→ Windows** in the editor, or headless with the editor closed:
 
 ```bash
 Unity -batchmode -nographics -projectPath . -executeMethod KehaiBuild.MacOS
+Unity -batchmode -nographics -projectPath . -buildTarget Win64 -executeMethod KehaiBuild.Windows
 ```
 
-The app lands in `Builds/macOS/Kehai.app` (`-kehai-build-out <path>` to choose,
-`-kehai-build-dev` for a development build). Beside it go the webcam blink helper, if
-`tools/blink/mac/build.sh` has built it, and `build.txt` with the version and commit. To share
-it, zip those three; the `_BurstDebugInformation_DoNotShip` folder is for reading crash logs and
-stays with you. The app
-is signed only ad hoc (no Apple developer account), so on another Mac macOS blocks its first
-launch: **System Settings → Privacy & Security → Open Anyway**. The built game runs the eval
-headless too:
+`-kehai-build-out <path>` chooses where, `-kehai-build-dev` makes a development build. Each
+build gets a `build.txt` beside it with the version and commit, and a
+`_BurstDebugInformation_DoNotShip` folder that is for reading crash logs and stays with you.
+
+- **macOS:** `Builds/macOS/Kehai.app`, with the webcam blink helper beside it if
+  `tools/blink/mac/build.sh` has built it. To share it, zip the app, `BlinkVision` and
+  `build.txt`. It is signed only ad hoc (no Apple developer account), so on another Mac macOS
+  blocks its first launch: **System Settings → Privacy & Security → Open Anyway**.
+- **Windows** (64-bit; needs Windows Build Support (Mono) added to the editor in Unity Hub):
+  `Builds/Windows/Kehai.exe`, which needs the rest of that folder beside it (`Kehai_Data`,
+  `UnityPlayer.dll` and the others). Zip the whole folder except the DoNotShip one. It isn't
+  code-signed, so Windows SmartScreen warns on first launch: **More info → Run anyway**. There is
+  no webcam helper for Windows yet, so blinking there is the keyboard's **B**.
+
+The built game runs the eval headless too:
 
 ```bash
 Builds/macOS/Kehai.app/Contents/MacOS/Kehai -batchmode -nographics -kehai-ablation \
@@ -218,7 +226,7 @@ Builds/macOS/Kehai.app/Contents/MacOS/Kehai -batchmode -nographics -kehai-ablati
 ```
 Assets/!_Project/
 ├── _Core/Scripts/Runtime/     shift, tasks, burnout, events, settings, pause, restart, fonts, JSON
-├── _Core/Editor/              the build script
+├── _Core/Editor/              the build script (macOS, Windows), opening the store on launch
 ├── _Game/
 │   ├── AI/Scripts/
 │   │   ├── Core/              Aiko's brain, body, Director, Ledger, config, bootstrap

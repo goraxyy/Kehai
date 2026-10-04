@@ -8,19 +8,24 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using Debug = UnityEngine.Debug;
 
-// Builds the game: Kehai → Build → macOS in the editor, or headless with the editor closed:
+// Builds the game: Kehai → Build → macOS or Windows in the editor, or headless with the editor closed:
 //
 //   Unity -batchmode -nographics -projectPath . -executeMethod KehaiBuild.MacOS
-//         [-kehai-build-out <folder/Kehai.app>] [-kehai-build-dev]
+//   Unity -batchmode -nographics -projectPath . -buildTarget Win64 -executeMethod KehaiBuild.Windows
+//         [-kehai-build-out <folder/Kehai.app or folder/Kehai.exe>] [-kehai-build-dev]
 //
-// The app goes to Builds/macOS/ unless told otherwise, and gets what the editor never needed:
+// The game goes to Builds/macOS/ or Builds/Windows/ unless told otherwise, and gets what the
+// editor never needed:
 //   - the shaders the game makes materials from by name (Shader.Find) but no material in the
 //     project uses: a build leaves those out, so they're added to Always Included Shaders;
+//   - build.txt beside it, with the version and the commit, for playtesters' bug reports;
+// and on macOS:
 //   - the webcam blink helper beside the app, where the game looks for it outside the editor
 //     (tools/blink/mac/build/BlinkVision, if it has been built);
 //   - a camera line in the app's Info.plist: the helper is the game's child process, so macOS
-//     asks on the game's behalf, and stops an app that opens a camera without one;
-//   - build.txt beside it, with the version and the commit, for playtesters' bug reports.
+//     asks on the game's behalf, and stops an app that opens a camera without one.
+// Windows builds need Windows Build Support (Mono) added to the editor in Unity Hub; they have
+// no webcam helper yet, so blinking there is the keyboard's (B).
 public static class KehaiBuild
 {
     // GuideMarker's rings and beacons, and Aiko's fog.
@@ -30,32 +35,50 @@ public static class KehaiBuild
                                 "in its settings. Nothing is recorded, and nothing leaves this computer.";
 
     [MenuItem("Kehai/Build/macOS")]
-    static void MacOSFromMenu()
+    static void MacOSFromMenu() => FromMenu(BuildTarget.StandaloneOSX);
+
+    [MenuItem("Kehai/Build/Windows")]
+    static void WindowsFromMenu() => FromMenu(BuildTarget.StandaloneWindows64);
+
+    static void FromMenu(BuildTarget target)
     {
-        BuildReport report = Build(DefaultMacPath, development: false);
+        BuildReport report = Build(target, DefaultPath(target), development: false);
         if (report != null && report.summary.result == BuildResult.Succeeded) EditorUtility.RevealInFinder(report.summary.outputPath);
     }
 
-    // The batch-mode entry. Exits 0 when the build succeeded.
-    public static void MacOS()
+    // The batch-mode entries. Each exits 0 when the build succeeded.
+    public static void MacOS() => FromCommandLine(BuildTarget.StandaloneOSX);
+
+    public static void Windows() => FromCommandLine(BuildTarget.StandaloneWindows64);
+
+    static void FromCommandLine(BuildTarget target)
     {
-        BuildReport report = Build(Arg("-kehai-build-out") ?? DefaultMacPath, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"));
+        BuildReport report = Build(target, Arg("-kehai-build-out") ?? DefaultPath(target), Environment.GetCommandLineArgs().Contains("-kehai-build-dev"));
         EditorApplication.Exit(report != null && report.summary.result == BuildResult.Succeeded ? 0 : 1);
     }
 
     public static string ProjectRoot => Directory.GetParent(UnityEngine.Application.dataPath).FullName;
 
-    public static string DefaultMacPath => Path.Combine(ProjectRoot, "Builds", "macOS", PlayerSettings.productName + ".app");
+    public static string DefaultPath(BuildTarget target) => target == BuildTarget.StandaloneOSX
+        ? Path.Combine(ProjectRoot, "Builds", "macOS", PlayerSettings.productName + ".app")
+        : Path.Combine(ProjectRoot, "Builds", "Windows", PlayerSettings.productName + ".exe");
+
+    static string PlatformName(BuildTarget target) => target == BuildTarget.StandaloneOSX ? "macOS" : "Windows";
 
     // The scenes in File → Build Profiles, in order; the first is the one the game opens.
     public static string[] Scenes => EditorBuildSettings.scenes.Where(s => s.enabled && File.Exists(s.path)).Select(s => s.path).ToArray();
 
-    public static BuildReport Build(string appPath, bool development)
+    public static BuildReport Build(BuildTarget target, string appPath, bool development)
     {
         string[] scenes = Scenes;
         if (scenes.Length == 0)
         {
             Debug.LogError("Kehai build: no scenes in the build list (File → Build Profiles).");
+            return null;
+        }
+        if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
+        {
+            Debug.LogError($"Kehai build: this editor can't build for {PlatformName(target)}. Add its Build Support module in Unity Hub (Installs → ⚙ → Add modules).");
             return null;
         }
 
@@ -66,7 +89,7 @@ public static class KehaiBuild
         {
             scenes = scenes,
             locationPathName = appPath,
-            target = BuildTarget.StandaloneOSX,
+            target = target,
             targetGroup = BuildTargetGroup.Standalone,
             options = development ? BuildOptions.Development : BuildOptions.None,
         });
@@ -75,10 +98,13 @@ public static class KehaiBuild
                   $"{s.totalErrors} errors, {s.totalWarnings} warnings");
         if (s.result != BuildResult.Succeeded) return report;
 
-        AddCameraReason(appPath);
-        CopyBlinkHelper(appPath);
-        Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
-        WriteBuildInfo(appPath, development);
+        if (target == BuildTarget.StandaloneOSX)
+        {
+            AddCameraReason(appPath);
+            CopyBlinkHelper(appPath);
+            Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
+        }
+        WriteBuildInfo(appPath, target, development);
         return report;
     }
 
@@ -125,7 +151,7 @@ public static class KehaiBuild
         Run("/bin/chmod", $"+x \"{beside}\"", "making the blink helper runnable");
     }
 
-    static void WriteBuildInfo(string appPath, bool development)
+    static void WriteBuildInfo(string appPath, BuildTarget target, bool development)
     {
         string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
         string branch = Run("git", $"-C \"{ProjectRoot}\" rev-parse --abbrev-ref HEAD", null)?.Trim();
@@ -134,7 +160,7 @@ public static class KehaiBuild
             : $"commit {commit}" + (string.IsNullOrEmpty(branch) || branch == "HEAD" ? "" : $" ({branch})") +
               (string.IsNullOrWhiteSpace(changes) ? "" : " with local changes");
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build.txt"),
-            $"{PlayerSettings.productName} {PlayerSettings.bundleVersion} for macOS{(development ? ", development build" : "")}\n" +
+            $"{PlayerSettings.productName} {PlayerSettings.bundleVersion} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
             $"Built {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n");
     }
 
