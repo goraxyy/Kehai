@@ -29,3 +29,17 @@ shot's start), and the asset library. Write the short as a draft.
   (at its speed) can't run past the shot's end.
 - `id`: a few words for what it is (`sprint-heard`), lowercase with dashes.
 - Captions: `words` unless the brief says otherwise.
+
+**When the brief has a pattern** (learnt from a video the developer sent as a reference), the
+short follows it, as closely as the footage and the editor allow:
+- **Structure and pacing:** its hook kind in the same first seconds, its beats in the same order
+  with about the same timing (scale them to this short's length), its rhythm of cuts and its
+  average shot length, its ending.
+- **Format:** rebuild its layout, text (how much, where, when, what kind), captions, motion and
+  transitions with the editor features its `recipe` names, at the positions and timings it gives.
+  Where `missing` says the editor can't, use the closest it names.
+- **Everything said and shown is {{game}}'s own:** new words about this moment, never its lines
+  or jokes; nothing from its `avoid` list. Follow the developer's `owner_note` first: it says what
+  they liked.
+- The rules above still hold (the hook at 0, the safe area, lengths, timing); when the pattern and
+  a rule disagree, keep the rule and the pattern's spirit.

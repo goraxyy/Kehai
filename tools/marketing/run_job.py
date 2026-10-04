@@ -4,7 +4,7 @@ scheduled job; it prints what it did and ends with one JSON line for n8n.
 
     uv run run_job.py produce [--week 2026-W40] [--pick-now] [--dry-run]   new shifts, the week's picks, each short along its steps
     uv run run_job.py telegram                                             the owner's taps and replies; alerts out
-    uv run run_job.py work [--max 3]                                       queued jobs: revisions, undos, the long video's stages; new playtest sessions
+    uv run run_job.py work [--max 3]                                       queued jobs: revisions, undos, the long video's stages, reference videos to study; new playtest sessions
     uv run run_job.py publish [--force] [--dry-run]                        a posting day: the next approved short out
     uv run run_job.py housekeeping [--apply | --report-only]               Buffer statuses, archive, retention, storage
     uv run run_job.py report                                               the weekly report, to Telegram
@@ -12,6 +12,7 @@ scheduled job; it prints what it did and ends with one JSON line for n8n.
     uv run run_job.py status
     uv run run_job.py telegram-setup                                       who has written to the bot (for TELEGRAM_CHAT_ID)
     uv run run_job.py fake tap <data> --message N | fake text "…" [--reply-to N]   play the owner without a bot
+    uv run run_job.py fake video <file> [--caption "…"]                    send a reference video without a bot
 
 KEHAI_PICK_NOW=1 picks the week's shorts on the next produce whatever the day; KEHAI_PIPELINE
 points at another settings file (trial runs). produce, work and long keep the Mac awake while
@@ -26,8 +27,9 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
-from km import alerts, edits, housekeeping, lock, moments, paths, production
+from km import alerts, edits, housekeeping, lock, moments, paths, production, references
 from km.approvals import Approvals, send_alerts
 from km.cli import BadInput, run
 from km.longform import Long, due
@@ -88,10 +90,16 @@ def produce(root, store, bot, approvals, week: str | None, pick_now: bool, dry_r
                          "shorts. Play a shift or two, then /status.")
             say(f"{label}: only {count} moments; no picks")
         else:
-            r = production.script(root, "pick_moments.py", "--week", label, "--shorts", str(s["shorts_per_week"]), dry_run=dry_run)
+            waiting = references.due(root, store)      # references the owner sent: one of the shorts follows each
+            given = [arg for ref in waiting for arg in ("--pattern", ref["pattern"])]
+            r = production.script(root, "pick_moments.py", "--week", label, "--shorts", str(s["shorts_per_week"]), *given,
+                                  dry_run=dry_run)
             say(f"{label}: pick_moments exit {r.code}: {r.output.splitlines()[-1] if r.output else ''}")
             if not r.ok and not dry_run:
                 alerts.alert(root, "pick", f"Picking {label}'s shorts stopped: {r.output.splitlines()[-1] if r.output else r.code}")
+            if r.ok and not dry_run and plan.exists():
+                for line in references.after_pick(root, store, bot, json.loads(plan.read_text(encoding="utf-8")), label, waiting):
+                    say(line)
     if plan.exists():
         for pick in json.loads(plan.read_text(encoding="utf-8"))["answer"]["shorts"]:
             if not store.video_for_pick(label, pick["name"]):
@@ -128,11 +136,18 @@ def work(root, store, bot, approvals, most: int) -> None:
                 video = store.video(vid)
                 plan_path = root / "plans" / (video["week"] or "") / "picks.json"
                 text = production.advance(root, store, bot, video, plan_path if plan_path.exists() else None, approvals.present)
+        elif job["kind"] == "reference":
+            code, text = references.work(root, store, bot, job)
         else:
             code, text = 2, f"unknown job {job['kind']}"
         what = production.outcome(code, job["kind"])
         if what == "ok":
             store.finish_job(job["id"])
+        elif what == "blocked" and job["kind"] == "reference":   # no key, or the cap: it waits; the owner hears once a day
+            store.finish_job(job["id"], error=text, retry_at=(dt.datetime.now() + dt.timedelta(hours=6)).isoformat(timespec="seconds"))
+            if store.get("blocked.reference") != dt.date.today().isoformat():
+                store.set("blocked.reference", dt.date.today().isoformat())
+                alerts.alert(root, "blocked", f"Reference videos wait to be studied: {text}")
         elif what == "later" or (what == "failed" and job["attempts"] <= retries):
             later = (dt.datetime.now() + dt.timedelta(minutes=15 if what == "later" else 30)).isoformat(timespec="seconds")
             store.finish_job(job["id"], error=text, retry_at=later)
@@ -141,6 +156,8 @@ def work(root, store, bot, approvals, most: int) -> None:
             alerts.alert(root, "job", f"The {job['kind']} of {vid} stopped: {text}", job=job["id"])
             if vid and store.video(vid):
                 store.update(vid, status="failed", error=text)
+            if job["kind"] == "reference" and vid and store.ref(vid):
+                store.update_ref(vid, status="failed", error=text)
         say(f"job {job['id']} {job['kind']} {vid or ''}: {what}: {text}")
     from km import playtest                         # PLAYTEST.md: sessions from the upload service
     for line in playtest.cycle(root, bot):
@@ -221,10 +238,11 @@ def main() -> int:
     sub.add_parser("status", parents=[common])
     sub.add_parser("telegram-setup", parents=[common])
     p = sub.add_parser("fake", parents=[common])
-    p.add_argument("what", choices=("tap", "text"))
+    p.add_argument("what", choices=("tap", "text", "video"))
     p.add_argument("value")
     p.add_argument("--message", type=int)
     p.add_argument("--reply-to", type=int)
+    p.add_argument("--caption", default="", help="with video: the note sent with it")
     a = ap.parse_args()
 
     root = paths.root(a.root)
@@ -269,7 +287,15 @@ def main() -> int:
         elif a.cmd == "fake":
             if bot.live:
                 raise BadInput("fake updates are for the outbox mode (no TELEGRAM_BOT_TOKEN)")
-            u = bot.fake_tap(a.value, a.message) if a.what == "tap" else bot.fake_text(a.value, a.reply_to)
+            if a.what == "tap":
+                u = bot.fake_tap(a.value, a.message)
+            elif a.what == "text":
+                u = bot.fake_text(a.value, a.reply_to)
+            else:
+                film = Path(a.value).expanduser()
+                if not film.is_file():
+                    raise BadInput(f"no video at {film}")
+                u = bot.fake_video(film, a.caption)
             say(f"queued a fake update {u['update_id']}: run `run_job.py telegram` to handle it")
     finally:
         print(json.dumps({"job": a.cmd, "code": code, "live_telegram": bot.live, "summary": SUMMARY[-20:]}, ensure_ascii=False))

@@ -12,3 +12,7 @@ the note applied.
   works and keep the rest.
 - Keep the same id. All the rules of a short (or a long video) still hold: the hook at 0, lengths,
   timing, the shot lengths.
+- A `pattern` that comes with the note is a recipe learnt from a reference video. If the note names
+  it, rebuild the video in that pattern (its hook, beats, pacing and format, as write_short does);
+  if it's the pattern the video already follows, keep to it unless the note says otherwise. Never
+  copy the reference's own lines, jokes or sounds.

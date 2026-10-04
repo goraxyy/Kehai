@@ -24,6 +24,7 @@ uv run pytest                             # the tests (no keys needed)
 | `package.py <id>` | Claude writes the titles, captions and posts per platform and language | `edits/<id>/package.json` |
 | `revise.py <id> --note "…"` / `--undo` | Claude applies the owner's note; the old version is kept | the edit, `versions/` |
 | `weekly_report.py` | the week's numbers, and Claude's short read of them | `reports/<week>.md` |
+| `study_reference.py <video> --note "…"` | Claude studies a video the owner liked into a pattern (below) | `references/<id>/`, `patterns/<name>.json` |
 
 Once a month, `long_video.py outline | script | voice | edit --month 2026-10` makes the long
 video in stages the owner approves one by one (the shots for the outline go through
@@ -57,6 +58,28 @@ macOS's launchd (or n8n, if you'd rather keep it running) starts `run_job.py` jo
 
 `pipeline.json` holds the schedule's settings: shorts per week, the pick day, posting days and
 channels, YouTube and Instagram post settings, retention, the storage budget.
+
+## Reference videos and patterns (Phase 8)
+
+Send the bot a video you liked on social media (as a video, under 20 MB: Telegram compresses it),
+with what you like about it as the caption. Within a few minutes it comes back as a **pattern**:
+what the video does second by second, why it works, and the recipe for doing the same with Kehai's
+footage. ✏️ under it studies it again with your correction; ❌ drops it. `/patterns` lists the
+library.
+
+- **Reading it** (`km/watch.py`, `km/stt.py`): Claude can't watch video, so it gets frames (close
+  through the hook, then about one a second, and each shot's first moment), the cuts and the
+  sound's level measured from the file, and a transcript from Azure when that's set up.
+- **The pattern** (`patterns/<name>.json`): hook, beats, pacing, format, the editor features that
+  rebuild each part (`recipe`), the replay cameras it needs, what the editor can't do yet, the kind
+  of shift moment it needs, and what must never be copied (their lines, jokes, sound, branding).
+- **The short:** on the pick day the oldest waiting reference takes one of the week's shorts
+  (`pipeline.json` → `references.per_week`). The picking gives it a moment that suits it and films
+  it with the cameras the pattern needs, or tells you what to play if nothing that week fits. The
+  writer follows the recipe; the preview says "Pattern: …". Name a pattern in a ✏️ note to rebuild
+  any video in it.
+- **Kept:** the reference video, its frames and its audio for 30 days (`retention.references_days`;
+  never archived), the pattern for good. About $0.19 to study a 20-second video.
 
 ## How the Claude steps work (`km/llm/`)
 

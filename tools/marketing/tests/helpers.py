@@ -128,3 +128,22 @@ def replay(folder: Path, answers: dict[str, object]) -> Path:
     for name, answer in answers.items():
         (folder / f"{name}.json").write_text(json.dumps(answer, ensure_ascii=False), encoding="utf-8")
     return folder
+
+
+# A reference video's study (dark for 2 s, then bright), as Claude would answer it.
+STUDY = {
+    "name": "dark-then-light", "title": "Dark, then light",
+    "summary": "A dark screen snaps to bright at two seconds.",
+    "why_it_works": ["The snap is a surprise."],
+    "hook": {"until": 2.0, "kind": "visual-shock", "on_screen": "", "spoken": "", "picture": "A dark frame."},
+    "beats": [{"from": 0, "to": 2.0, "role": "hook", "picture": "dark", "on_screen": "", "spoken": "", "edit": "a hold"},
+              {"from": 2.0, "to": 4.0, "role": "payoff", "picture": "bright", "on_screen": "", "spoken": "", "edit": "a hard cut"}],
+    "pacing": {"length": 4.0, "shots": 2, "average_shot": 2.0, "rhythm": "one hard cut"},
+    "format": {"layout": "Full frame.", "text": "None.", "captions": "None.", "motion": "None.", "transitions": "A hard cut.",
+               "sound": "A steady tone.", "ending": "On the bright frame."},
+    "recipe": [{"element": "the hard cut", "editor": "cut", "how": "cut at 2 s"}],
+    "shots": [{"camera": "cctv", "subject": "aiko", "layers": [], "use": "the reveal"}],
+    "missing": [],
+    "kehai": {"moments": "a blackout that ends with her close", "tags": ["blackout"], "idea": "The lights come back and she is there."},
+    "avoid": ["its tone"],
+}

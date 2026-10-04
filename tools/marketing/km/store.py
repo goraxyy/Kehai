@@ -7,6 +7,9 @@ from tripping over each other, and every change is one short transaction.
 A video moves: writing → awaiting (the owner's ✅/❌/✏️ in Telegram) → approved → scheduled
 (in Buffer's queue) → posted; or rejected; revising while a note is applied; failed when a step
 gave up (the owner is told).
+
+A reference video the owner sent moves: studying → ready (its pattern is in the library) → used (a
+week's short follows it); or dropped (❌), or failed.
 """
 from __future__ import annotations
 
@@ -17,6 +20,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 STATUSES = ("writing", "awaiting", "revising", "approved", "scheduled", "posted", "rejected", "failed")
+REF_STATUSES = ("studying", "ready", "used", "dropped", "failed")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS videos (
@@ -39,6 +43,10 @@ CREATE TABLE IF NOT EXISTS prompts (
     message_id INTEGER PRIMARY KEY, video TEXT NOT NULL, purpose TEXT NOT NULL, created TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS refs (
+    id TEXT PRIMARY KEY, status TEXT NOT NULL, note TEXT, pattern TEXT, week TEXT, pick TEXT,
+    message_id INTEGER, error TEXT, created TEXT NOT NULL, updated TEXT NOT NULL
+);
 """
 
 
@@ -168,6 +176,32 @@ class Store:
                 cols = ", ".join(f"{k} = ?" for k in fields)
                 db.execute(f"UPDATE posts SET {cols} WHERE video = ? AND platform = ? AND lang = ?",
                            (*fields.values(), video, platform, lang))
+
+    # ---- reference videos ------------------------------------------------------------------
+
+    def add_ref(self, rid: str, note: str = "") -> None:
+        now = stamp()
+        with self.tx() as db:
+            db.execute("INSERT OR IGNORE INTO refs (id, status, note, created, updated) VALUES (?,?,?,?,?)",
+                       (rid, "studying", note, now, now))
+
+    def ref(self, rid: str) -> dict | None:
+        row = self.db.execute("SELECT * FROM refs WHERE id = ?", (rid,)).fetchone()
+        return dict(row) if row else None
+
+    def refs(self, *statuses: str) -> list[dict]:
+        q, args = "SELECT * FROM refs", list(statuses)
+        if statuses:
+            q += f" WHERE status IN ({','.join('?' * len(statuses))})"
+        return [dict(r) for r in self.db.execute(q + " ORDER BY created, id", args)]
+
+    def update_ref(self, rid: str, **fields) -> None:
+        if "status" in fields and fields["status"] not in REF_STATUSES:
+            raise ValueError(f"unknown reference status {fields['status']!r}")
+        fields["updated"] = stamp()
+        cols = ", ".join(f"{k} = ?" for k in fields)
+        with self.tx() as db:
+            db.execute(f"UPDATE refs SET {cols} WHERE id = ?", (*fields.values(), rid))
 
     # ---- Telegram --------------------------------------------------------------------------
 

@@ -6,19 +6,23 @@ everything that would be sent is appended to <root>/state/telegram_outbox.jsonl,
 read from <root>/state/telegram_inbox.jsonl (what `run_job.py fake …` and the tests write), so the
 whole approval flow runs without a bot.
 
-Only the owner's chat is listened to; anything else is ignored.
+Only the owner's chat is listened to; anything else is ignored. Videos the owner sends (reference
+videos) are fetched with getFile, which bots may only do up to 20 MB.
 """
 from __future__ import annotations
 
 import datetime as dt
 import html
 import json
+import shutil
 import time
 from pathlib import Path
 
 from . import env
 
 API = "https://api.telegram.org/bot{token}/{method}"
+FILES = "https://api.telegram.org/file/bot{token}/{path}"
+DOWNLOAD_MB = 20                 # the Bot API's getFile limit
 CAPTION = 1024
 TEXT = 4096
 
@@ -129,6 +133,23 @@ class Bot:
         except TelegramError:
             pass
 
+    def download(self, file_id: str, out: Path) -> Path:
+        """A file the owner sent, saved to `out` (in outbox mode, `fake:<path>` is copied)."""
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if file_id.startswith("fake:"):
+            shutil.copyfile(file_id.removeprefix("fake:"), out)
+            return out
+        if not self.live:
+            raise TelegramError("no bot to download from")
+        info = self.call("getFile", {"file_id": file_id})
+        with self.http.stream("GET", FILES.format(token=self.token, path=info["file_path"])) as r:
+            if r.status_code != 200:
+                raise TelegramError(f"download: {r.status_code}")
+            with out.open("wb") as f:
+                for chunk in r.iter_bytes():
+                    f.write(chunk)
+        return out
+
     # ---- what the owner sends --------------------------------------------------------------
 
     def updates(self) -> list[dict]:
@@ -177,6 +198,15 @@ class Bot:
         msg = {"message_id": int(time.time() * 1000) % 10**9, "chat": chat, "from": chat, "text": text}
         if reply_to:
             msg["reply_to_message"] = {"message_id": reply_to, "chat": chat}
+        return self.fake({"message": msg})
+
+    def fake_video(self, path: Path, caption: str = "", seconds: int = 0) -> dict:
+        chat = {"id": self.chat or "owner"}
+        msg = {"message_id": int(time.time() * 1000) % 10**9, "chat": chat, "from": chat,
+               "video": {"file_id": f"fake:{path.resolve()}", "file_unique_id": path.name, "duration": seconds,
+                         "mime_type": "video/mp4", "file_size": path.stat().st_size}}
+        if caption:
+            msg["caption"] = caption
         return self.fake({"message": msg})
 
     def sent(self) -> list[dict]:

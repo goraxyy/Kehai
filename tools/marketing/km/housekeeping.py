@@ -5,8 +5,10 @@
 - Public copies (for Buffer) come down a few days after their post went out.
 - Retention: rejected videos go after `rejected_days`; posted ones' media after `posted_days`
   once archived; shots after `shots_days` once their video is decided; recordings `krec_days`
-  after archiving; logs after `logs_days`. Nothing that isn't archived is deleted, except
-  rejects. With `retention.apply` false (until the owner answers Q12) this only reports.
+  after archiving; reference videos (with their frames and audio, not their study or pattern)
+  `references_days` after they arrived, never archived (they're someone else's); logs after
+  `logs_days`. Nothing else that isn't archived is deleted, except rejects. With
+  `retention.apply` false (until the owner answers Q12) this only reports.
 - Storage: the working folder against its budget, the disk against its floor; the owner hears
   when either is crossed, and production waits (`too_full`).
 """
@@ -157,6 +159,11 @@ class Keeper:
             stem, when = stem_key
             if older(when, r["krec_days"], self.today):
                 self.remove(moments.records() / f"{stem}.krec", f"archived {when[:10]}")
+        for ref in self.store.refs("ready", "used", "dropped", "failed"):
+            if older(ref["created"], r.get("references_days", 30), self.today):
+                here = self.root / "references" / ref["id"]
+                for part in [*here.glob("source.*"), here / "frames", here / "audio.wav"]:
+                    self.remove(part, f"a reference from {ref['created'][:10]}")
         for log in [*self.root.glob("logs/jobs/*.log"), *self.root.glob("logs/scheduled/*.log"),
                     *self.root.glob("logs/render_*.log"), *self.root.glob("logs/llm_requests/*.json"),
                     *self.root.glob("logs/buffer_requests/*.json")]:

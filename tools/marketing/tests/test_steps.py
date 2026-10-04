@@ -14,28 +14,29 @@ import revise
 import translate
 import weekly_report
 import write_short
-from km import edits, schemas
-from km.llm import ledger
+from km import edits, patterns, schemas
+from km.llm import client, ledger
 
-from helpers import FIXTURES, STEM, draft, library, replay, shot, track
+from helpers import FIXTURES, STEM, STUDY, draft, library, replay, shot, track
 
 WEEK = "2026-W40"
 PICKS = {
     "week_theme": "She hunts by ear.",
     "shorts": [
-        {"name": "one-sprint", "moment": f"{STEM}#1", "angle": "One sprint was enough.", "hook_idea": "One sprint.",
+        {"name": "one-sprint", "moment": f"{STEM}#1", "pattern": "", "angle": "One sprint was enough.", "hook_idea": "One sprint.",
          "why": "A catch with a turn.", "shots": [
              {"name": "top", "camera": "topdown", "subject": "aiko", "layers": ["cone", "sound"], "alpha": False,
               "start_offset": 0, "end_offset": 0},
              {"name": "mind", "camera": "topdown", "subject": "aiko", "layers": ["belief", "guess"], "alpha": True,
               "start_offset": 0, "end_offset": 0}]},
-        {"name": "borrowed", "moment": f"{STEM}#3", "angle": "That customer isn't shopping.", "hook_idea": "Look again.",
+        {"name": "borrowed", "moment": f"{STEM}#3", "pattern": "", "angle": "That customer isn't shopping.", "hook_idea": "Look again.",
          "why": "Marked good.", "shots": [
              {"name": "pov", "camera": "pov", "subject": "you", "layers": [], "alpha": False, "start_offset": -2, "end_offset": 0}]},
-        {"name": "got-away", "moment": f"{STEM}#2", "angle": "She can't outrun a sprint.", "hook_idea": "Run.",
+        {"name": "got-away", "moment": f"{STEM}#2", "pattern": "", "angle": "She can't outrun a sprint.", "hook_idea": "Run.",
          "why": "Fairness.", "shots": [
              {"name": "chase", "camera": "chase", "subject": "aiko", "layers": [], "alpha": False, "start_offset": 0, "end_offset": 0}]},
     ],
+    "pattern_fit": [],
     "kept": [{"moment": f"{STEM}#3", "use": "short", "reason": "Picked."},
              {"moment": f"{STEM}#7", "use": "bug", "reason": "Shift+F7."}],
 }
@@ -296,3 +297,45 @@ def test_the_long_video_is_voiced_then_cut_to_its_voice(world, tmp_path, monkeyp
     from km import voicing
     p = voicing.plan(world, edit, "en", json.loads((schemas.paths.BRAND).read_text()), "say")
     assert p.to_speak == [], "the edit's lines are the ones already voiced"
+
+
+def test_a_short_follows_its_pattern_and_a_note_can_name_another(world, tmp_path, monkeypatch):
+    patterns.save(world, STUDY, "ref-1", "steal the snap", {})
+    patterns.save(world, {**STUDY, "name": "slow-reveal", "title": "Slow reveal"}, "ref-2", "", {})
+    for name, alpha in (("top", False), ("pov", False), ("cctv", False), ("mind", True)):
+        shot(world, "shots/sample", name, seconds=20.13, alpha=alpha, with_track=track(20.13) if name == "top" else None)
+    replay(tmp_path / "replay", {"write_short": draft(), "revise": draft()})
+    asked = []
+    real = client.ask
+    monkeypatch.setattr(client, "ask", lambda request, *a, **k: (asked.append(request), real(request, *a, **k))[1])
+    assert run(write_short, monkeypatch, "--shots", str(world / "shots/sample"), "--brief", "One sprint was enough",
+               "--moment", f"{STEM}#1", "--pattern", "dark-then-light", "--root", str(world)) == 0
+    assert '"name":"dark-then-light"' in asked[0].user and '"owner_note":"steal the snap"' in asked[0].user
+    folder = world / "edits" / "one-sprint"
+    assert json.loads((folder / "context.json").read_text())["pattern"] == "dark-then-light"
+    assert "Pattern: Dark, then light" in json.loads((folder / "edit.json").read_text())["source"]["notes"]
+    assert patterns.load(world, "dark-then-light")["used_by"] == ["one-sprint"]
+
+    assert run(revise, monkeypatch, "one-sprint", "--note", "make it a Slow reveal", "--root", str(world)) == 0
+    assert '"name":"slow-reveal"' in asked[1].user and '"name":"dark-then-light"' in asked[1].user
+    assert json.loads((folder / "context.json").read_text())["pattern"] == "slow-reveal"
+    assert patterns.load(world, "slow-reveal")["used_by"] == ["one-sprint"]
+
+
+def test_pick_moments_gives_a_must_use_pattern_to_one_short(world, tmp_path, monkeypatch, capsys):
+    patterns.save(world, STUDY, "ref-1", "", {})
+    picks = json.loads(json.dumps(PICKS))
+    picks["shorts"][0]["pattern"] = "dark-then-light"
+    picks["pattern_fit"] = [{"pattern": "dark-then-light", "fits": True, "play": ""}]
+    replay(tmp_path / "replay", {"pick_moments": picks})
+    asked = []
+    real = client.ask
+    monkeypatch.setattr(client, "ask", lambda request, *a, **k: (asked.append(request), real(request, *a, **k))[1])
+    assert run(pick_moments, monkeypatch, "--week", WEEK, "--pattern", "dark-then-light", "--root", str(world)) == 0
+    assert '"must_use":["dark-then-light"]' in asked[0].user and "<patterns>" in asked[0].user
+    plan = json.loads((world / "plans" / WEEK / "picks.json").read_text())
+    assert plan["answer"]["shorts"][0]["pattern"] == "dark-then-light"
+    assert "pattern dark-then-light" in capsys.readouterr().out
+    from km.cli import BadInput
+    with pytest.raises(BadInput, match="no active pattern 'nope'"):
+        run(pick_moments, monkeypatch, "--week", WEEK, "--pattern", "nope", "--root", str(world))

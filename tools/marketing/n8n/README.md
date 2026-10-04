@@ -6,7 +6,7 @@ every message to the owner goes through Telegram, and nothing here holds a secre
 | Job | When | What |
 |---|---|---|
 | telegram | every minute | the owner's taps and replies; alerts out |
-| work | every 5 minutes | queued revisions, undos, the long video's stages |
+| work | every 5 minutes | queued revisions, undos, the long video's stages, reference videos to study |
 | produce | 1, 3 and 5 a.m. | new shifts announced; the week's picks (on `pick_day`, or the first run after it that week); every short along its steps; Unity renders only while the editor is closed |
 | publish | 9 a.m. | on posting days: the next approved short to Buffer, TikTok by hand |
 | housekeeping | 4:30 a.m. | Buffer statuses, the Drive archive, retention, storage |
