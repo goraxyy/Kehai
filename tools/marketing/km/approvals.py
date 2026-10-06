@@ -6,7 +6,10 @@ from) · 🇷🇺 the Russian version; ↩️ puts back the previous version onc
 carry the version they were sent with, so tapping an old preview does nothing. Every decision is
 logged to <root>/state/approvals.jsonl (the weekly report counts them).
 
-Commands: /status, /report, /costs, /retry <id>, /help.
+A video the owner sends is a reference to learn from (km/references.py): it's studied into a
+pattern, and one of the next week's shorts follows it.
+
+Commands: /status, /patterns, /report, /costs, /retry <id>, /help.
 """
 from __future__ import annotations
 
@@ -14,7 +17,7 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from . import alerts, edits, timeline
+from . import alerts, edits, references, timeline
 from .llm import ledger
 from .media import NotSetUp, megabytes, preview
 from .production import draft_file, edit_path
@@ -23,8 +26,11 @@ from .telegram import buttons, esc
 
 HELP = ("<b>Kehai marketing</b>\n"
         "Previews come here with ✅ ❌ ✏️ 🇷🇺 ↩️. ✏️ asks what to change: reply to that message with your note "
-        "(any language).\n/status: what's in progress · /report: the latest weekly report · /costs: this month's "
-        "spend · /retry &lt;id&gt;: try a failed video again")
+        "(any language).\n"
+        "Send me a video from social media to learn from (as a video, under 20 MB; the caption is your note): it "
+        "becomes a pattern, and one of the next week's shorts follows it.\n"
+        "/status: what's in progress · /patterns: the pattern library · /report: the latest weekly report · "
+        "/costs: this month's spend · /retry &lt;id&gt;: try a failed video again")
 
 
 def log_decision(root: Path, video: str, decision: str, version: int, note: str = "") -> None:
@@ -113,6 +119,8 @@ class Approvals:
         if "callback_query" in update:
             return self.tap(update["callback_query"])
         msg = update.get("message") or {}
+        if references.media_of(msg):
+            return references.receive(self.root, self.store, self.bot, msg)
         reply_to = (msg.get("reply_to_message") or {}).get("message_id")
         text = (msg.get("text") or "").strip()
         if reply_to:
@@ -136,6 +144,8 @@ class Approvals:
         if act == "pt":
             from .playtest import notify
             return notify.tap(self.bot, cb, parts)
+        if act == "rf":
+            return references.tap(self.root, self.store, self.bot, cb, parts)
         if act == "pd" and len(parts) == 4:
             from .publishing import NAMES, mark_posted
             _, vid, service, lang = parts
@@ -205,6 +215,8 @@ class Approvals:
         if prompt["purpose"].startswith("long:"):
             from .longform import Long
             return Long(self.root, self.store, self.bot).note(prompt, text)
+        if prompt["purpose"] == "ref":
+            return references.note(self.root, self.store, self.bot, prompt, text)
         video = self.store.video(vid)
         if not video or video["status"] != "awaiting":
             self.bot.text(f"<b>{esc(vid)}</b> isn't waiting for changes any more ({video['status'] if video else 'gone'}).")
@@ -224,6 +236,8 @@ class Approvals:
             self.bot.text(HELP)
         elif cmd == "/status":
             self.bot.text(self.status())
+        elif cmd == "/patterns":
+            self.bot.text(references.library_text(self.root))
         elif cmd == "/costs":
             self.bot.text(f"Claude this month: ${ledger.month_spent(self.root):.2f} of ${ledger.cap():.2f}")
         elif cmd == "/report":
@@ -248,6 +262,9 @@ class Approvals:
             lines.append(f"• <code>{esc(v['id'])}</code> {v['status']}{extra}{err}")
         if len(lines) == 1:
             lines.append("nothing")
+        studying, ready = self.store.refs("studying"), self.store.refs("ready")
+        if studying or ready:
+            lines.append(f"References: {len(studying)} being studied, {len(ready)} waiting for a week's short")
         queued = self.store.jobs("queued", "running")
         if queued:
             lines.append(f"Jobs waiting: {len(queued)}")

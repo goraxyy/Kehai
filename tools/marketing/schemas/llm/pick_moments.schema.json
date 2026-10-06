@@ -2,23 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/goraxyy/Kehai/tools/marketing/schemas/llm/pick_moments.schema.json",
   "title": "The week's picks (what Claude writes)",
-  "description": "pick_moments.py: which clip moments become shorts, with the shots to render for each, and a decision for every moment marked kept (F7). Structured-outputs subset: every field required.",
+  "description": "pick_moments.py: which clip moments become shorts, with the shots to render for each and the pattern each follows (if any), whether each pattern the week must use fits, and a decision for every moment marked kept (F7). Structured-outputs subset: every field required.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["week_theme", "shorts", "kept"],
+  "required": ["week_theme", "shorts", "pattern_fit", "kept"],
   "properties": {
     "week_theme": { "type": "string", "description": "One line: what this week's footage is about." },
     "shorts": { "type": "array", "description": "Best first.", "items": { "$ref": "#/$defs/pick" } },
+    "pattern_fit": { "type": "array", "description": "One entry for each pattern in the brief's must_use ([] when there are none).", "items": { "$ref": "#/$defs/patternFit" } },
     "kept": { "type": "array", "description": "One entry for every moment marked kept, including those picked for shorts.", "items": { "$ref": "#/$defs/keptDecision" } }
   },
   "$defs": {
     "pick": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "moment", "angle", "hook_idea", "why", "shots"],
+      "required": ["name", "moment", "pattern", "angle", "hook_idea", "why", "shots"],
       "properties": {
         "name": { "type": "string", "description": "Lowercase words joined by dashes, unique this week, e.g. sprint-heard." },
         "moment": { "type": "string", "description": "The moment's ref from the digest: <stem>#<rank>." },
+        "pattern": { "type": "string", "description": "The name of the library pattern this short follows, or \"\" for none." },
         "angle": { "type": "string", "description": "The one idea the short is about." },
         "hook_idea": { "type": "string", "description": "The first two seconds, on screen and spoken." },
         "why": { "type": "string", "description": "Why this moment, in a sentence." },
@@ -37,6 +39,16 @@
         "alpha": { "type": "boolean", "description": "Her mind alone on a transparent background, for a picture in picture (needs layers)." },
         "start_offset": { "type": "number", "description": "Seconds added to the moment's start (negative starts earlier); 0 to start with the moment." },
         "end_offset": { "type": "number", "description": "Seconds added to the moment's end; 0 to end with it." }
+      }
+    },
+    "patternFit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "fits", "play"],
+      "properties": {
+        "pattern": { "type": "string", "description": "A must_use pattern's name." },
+        "fits": { "type": "boolean", "description": "true when one of the shorts follows it." },
+        "play": { "type": "string", "description": "When it doesn't fit: the moment to play for it, a sentence to the developer (\"\" when it fits)." }
       }
     },
     "keptDecision": {

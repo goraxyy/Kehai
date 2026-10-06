@@ -10,9 +10,12 @@
 - Dry run: the request is written to logs/llm_requests/ with its estimated cost; nothing is sent.
 - KEHAI_LLM_REPLAY=<folder> answers from files instead of the API (<step>.json, or <step>.1.json,
   <step>.2.json… in order), for tests and for running the pipeline without a key.
+- Pictures (a reference video's frames) go before the text, each after a line saying what it is;
+  a dry run logs their paths, not their bytes.
 """
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import json
 import sys
@@ -62,13 +65,26 @@ class Request:
     schema: dict
     ref: str = ""
     max_tokens: int | None = None
+    # [{"label": "frame at 1.5 s", "path": "/…/x.jpg", "width": 384, "height": 682}]
+    images: list[dict] = field(default_factory=list)
 
-    def params(self, fallback: bool) -> dict:
+    def content(self, inline: bool = True) -> str | list[dict]:
+        if not self.images:
+            return self.user
+        blocks: list[dict] = []
+        for im in self.images:
+            data = base64.b64encode(Path(im["path"]).read_bytes()).decode("ascii") if inline else f"<{im['path']}>"
+            blocks.append({"type": "text", "text": im["label"]})
+            blocks.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": data}})
+        blocks.append({"type": "text", "text": self.user})
+        return blocks
+
+    def params(self, fallback: bool, inline: bool = True) -> dict:
         p = {
             "model": self.step.resolved_model(),
             "max_tokens": self.max_tokens or self.step.max_tokens,
             "system": self.system,
-            "messages": [{"role": "user", "content": self.user}],
+            "messages": [{"role": "user", "content": self.content(inline)}],
             "output_config": {"effort": self.step.effort,
                               "format": {"type": "json_schema", "schema": self.schema}},
         }
@@ -80,8 +96,14 @@ class Request:
     def estimate(self) -> tuple[int, float]:
         """High guesses: input tokens, and dollars with no cache hits and the usual output."""
         text = "".join(b["text"] for b in self.system) + self.user + json.dumps(self.schema)
-        tokens = pricing.estimate_tokens(text)
+        text += "".join(im["label"] for im in self.images)
+        tokens = pricing.estimate_tokens(text) + sum(image_tokens(im["width"], im["height"]) for im in self.images)
         return tokens, pricing.cost(self.step.resolved_model(), tokens, self.step.expect)
+
+
+def image_tokens(width: int, height: int) -> int:
+    """About what a picture costs as input: width × height / 750."""
+    return max(1, round(width * height / 750))
 
 
 @dataclass
@@ -201,7 +223,7 @@ def call(request: Request, root: Path, transport=None, dry_run: bool = False) ->
     if dry_run:
         out = root / "logs" / "llm_requests" / f"{_stamp()}-{request.step.name}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(request.params(True), indent=2, ensure_ascii=False), encoding="utf-8")
+        out.write_text(json.dumps(request.params(True, inline=False), indent=2, ensure_ascii=False), encoding="utf-8")
         cached = pricing.estimate_tokens("".join(b["text"] for b in request.system))
         print(f"dry run: {request.step.name} on {model} (effort {request.step.effort}): about {tokens:,} input "
               f"tokens ({cached:,} of them the cached system prompt), up to {request.max_tokens or request.step.max_tokens:,} "

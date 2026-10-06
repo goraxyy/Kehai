@@ -40,6 +40,17 @@ def ffmpeg() -> Path:
     raise NotSetUp("no ffmpeg: run `npm install` in tools/marketing/editor")
 
 
+def ffprobe() -> Path:
+    """The ffprobe beside whichever ffmpeg is used (Remotion ships both)."""
+    exe = ffmpeg().with_name("ffprobe")
+    if exe.is_file():
+        return exe
+    system = shutil.which("ffprobe")
+    if system:
+        return Path(system)
+    raise NotSetUp("no ffprobe beside ffmpeg: run `npm install` in tools/marketing/editor")
+
+
 def preview(src: Path, dst: Path, width: int) -> Path:
     """A smaller copy of a video, for when the full one is too big to send."""
     exe = ffmpeg()

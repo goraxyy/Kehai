@@ -30,3 +30,12 @@ Offsets widen or narrow the moment: start a few seconds earlier to show the calm
 (`start_offset` −3), end later to land the consequence. Keep each shot 6 to 30 seconds.
 
 Write `angle` as the one idea, `hook_idea` as the opening line, `why` in a sentence.
+
+**Patterns** are recipes learnt from videos the developer sent as references (`patterns`: what
+each needs, its idea, the shots it uses). `must_use` lists the ones this week must use: give each
+to one short whose moment suits it (its `moments` and `tags`), and film that short the way the
+pattern needs (its `shots`: the same cameras and layers where the moment allows). If no moment this
+week can carry it, say so in `pattern_fit` (`fits` false) and write `play`: the moment the developer
+should play for it, in one sentence to them ("a shift where she corners you in the stockroom and
+you get away"). Any other short may follow a library pattern when it truly suits the moment; most
+won't (`pattern` ""). Don't give two shorts the same pattern in one week.

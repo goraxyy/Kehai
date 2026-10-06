@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/goraxyy/Kehai/tools/marketing/schemas/llm/reference_study.schema.json",
+  "title": "A reference video, studied (what Claude writes)",
+  "description": "study_reference.py: what a video the owner sent does second by second, why it works, and the recipe for doing the same with Kehai's footage in the editor. It is saved as a pattern (patterns/<name>.json). Structured-outputs subset: every field required.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "title", "summary", "why_it_works", "hook", "beats", "pacing", "format", "recipe", "shots", "missing", "kehai", "avoid"],
+  "properties": {
+    "name": { "type": "string", "description": "The pattern's name: 2 to 5 lowercase words joined by dashes that say what it is, e.g. pov-she-already-knew." },
+    "title": { "type": "string", "description": "The same in a few plain words, for Telegram." },
+    "summary": { "type": "string", "description": "Two or three sentences: what the video does and how." },
+    "why_it_works": { "type": "array", "description": "2 to 5 reasons, each a short sentence.", "items": { "type": "string" } },
+    "hook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["until", "kind", "on_screen", "spoken", "picture"],
+      "properties": {
+        "until": { "type": "number", "description": "Second the hook ends." },
+        "kind": { "enum": ["claim", "question", "pov", "challenge", "reaction", "mid-action", "text-bait", "visual-shock", "countdown", "other"] },
+        "on_screen": { "type": "string", "description": "The hook's text as it appears (\"\" if none)." },
+        "spoken": { "type": "string", "description": "What's said in it (\"\" if nothing)." },
+        "picture": { "type": "string", "description": "What we see." }
+      }
+    },
+    "beats": {
+      "type": "array",
+      "description": "The video in order, from 0 to its end, each beat a few seconds.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "role", "picture", "on_screen", "spoken", "edit"],
+        "properties": {
+          "from": { "type": "number" },
+          "to": { "type": "number" },
+          "role": { "enum": ["hook", "setup", "build", "turn", "payoff", "loop", "cta", "other"] },
+          "picture": { "type": "string", "description": "What we see." },
+          "on_screen": { "type": "string", "description": "Text on screen (\"\" if none)." },
+          "spoken": { "type": "string", "description": "Speech in this beat (\"\" if none)." },
+          "edit": { "type": "string", "description": "How it's cut and moved: cuts, zooms, speed, transitions, sound." }
+        }
+      }
+    },
+    "pacing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length", "shots", "average_shot", "rhythm"],
+      "properties": {
+        "length": { "type": "number", "description": "Seconds." },
+        "shots": { "type": "integer", "description": "How many shots, as you count them." },
+        "average_shot": { "type": "number", "description": "Seconds a shot lasts on average." },
+        "rhythm": { "type": "string", "description": "How the pace moves: steady, speeding up into the turn, a pause before the payoff…" }
+      }
+    },
+    "format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout", "text", "captions", "motion", "transitions", "sound", "ending"],
+      "properties": {
+        "layout": { "type": "string", "description": "Full frame, split, picture in picture, a meme layout…, and where things sit." },
+        "text": { "type": "string", "description": "On-screen text: how much, where, how big, its style and timing." },
+        "captions": { "type": "string", "description": "Captions of speech: word by word, lines, none; where; highlight." },
+        "motion": { "type": "string", "description": "Zooms, pans, speed changes, freezes, shakes." },
+        "transitions": { "type": "string", "description": "Hard cuts, or which transitions and where." },
+        "sound": { "type": "string", "description": "Voice-over, music (and where it hits), effects, silence. Read from the transcript and loudness." },
+        "ending": { "type": "string", "description": "How it ends: a payoff, a loop back to the start, a call to action." }
+      }
+    },
+    "recipe": {
+      "type": "array",
+      "description": "Each element of the format, rebuilt with the editor: what to use and how, precisely enough to follow.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["element", "editor", "how"],
+        "properties": {
+          "element": { "type": "string", "description": "The part of the reference's format." },
+          "editor": { "enum": ["shot", "trim", "speed", "speed-ramp", "zoom", "pan", "split-row", "split-column", "pip", "image", "colour-card", "cut", "transition-fade", "transition-slide", "transition-wipe", "transition-flip", "transition-clock", "hook", "label", "lower-third", "arrow", "circle", "meme-pov", "meme-top-bottom", "meme-nobody", "meme-caption-bar", "meme-expectation-reality", "image-overlay", "gif", "lottie", "captions-words", "captions-lines", "captions-off", "narrator", "aiko-voice", "music", "sfx", "game-sound", "end-card"] },
+          "how": { "type": "string", "description": "Exactly how: timing, position (x, y from the top left), size, text length, speed, zoom." }
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "description": "The replay shots this format needs (1 to 4), from the game's cameras.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["camera", "subject", "layers", "use"],
+        "properties": {
+          "camera": { "enum": ["pov", "cctv", "chase", "orbit", "topdown"] },
+          "subject": { "enum": ["aiko", "you"] },
+          "layers": { "type": "array", "items": { "enum": ["belief", "guess", "cone", "sound", "thoughts", "actors"] } },
+          "use": { "type": "string", "description": "Which part of the format this shot serves." }
+        }
+      }
+    },
+    "missing": {
+      "type": "array",
+      "description": "Parts of the format the editor can't do yet ([] if none), with the closest it can.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["element", "closest"],
+        "properties": {
+          "element": { "type": "string" },
+          "closest": { "type": "string" }
+        }
+      }
+    },
+    "kehai": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moments", "tags", "idea"],
+      "properties": {
+        "moments": { "type": "string", "description": "The kind of shift moment this needs, so the week's picking can find one." },
+        "tags": { "type": "array", "description": "Clip-marker tags that suit it (from the reference).", "items": { "type": "string" } },
+        "idea": { "type": "string", "description": "One concrete Kehai short in this pattern, in a sentence or two." }
+      }
+    },
+    "avoid": { "type": "array", "description": "What must not be copied from this video: its jokes, lines, characters, sounds, branding.", "items": { "type": "string" } }
+  }
+}

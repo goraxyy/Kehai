@@ -7,14 +7,15 @@
 
 Claude rewrites the draft with the note applied; the old draft and edit are kept as a version, and
 --undo puts the last version back. Translations and spoken lines that didn't change are reused,
-so after a revision translate.py and voice.py only redo what changed. Exit codes: see km/cli.py.
+so after a revision translate.py and voice.py only redo what changed. The video's pattern (if it
+follows one), and any library pattern the note names, come with the note. Exit codes: see km/cli.py.
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
 
-from km import context, drafts, edits, paths, timeline, writing
+from km import context, drafts, edits, paths, patterns, timeline, writing
 from km.cli import BadInput, read_json, run
 from km.llm import client, prompts
 from km.llm.steps import step
@@ -48,8 +49,14 @@ def main() -> int:
     ctx = read_json(folder / "context.json", "context")
     ctx["assets"] = context.assets_for(root)       # the library may have grown
     edit = edits.load(path)
+    named = patterns.named_in(root, a.note)
+    own = patterns.load(root, ctx.get("pattern", "")) if ctx.get("pattern") else None
+    follow = {p["name"]: p for p in ([own] if own else []) + named}
+    if named:
+        ctx["pattern"] = named[0]["name"]            # the note asks for this one now
     user = "\n\n".join([
         prompts.data_block("note", a.note.strip()),
+        *[prompts.data_block("pattern", patterns.brief(p)) for p in follow.values()],
         prompts.data_block("draft", draft),
         prompts.data_block("video", {"kind": ctx["kind"], "format": ctx["format"],
                                      "length_now": round(timeline.total(edit), 1), "languages": edit["languages"]}),
@@ -69,6 +76,8 @@ def main() -> int:
     if new is None:
         return 0
     saved, missing = writing.save(root, new, ctx, f"revised {dt.datetime.now():%Y-%m-%d %H:%M}: {a.note.strip()[:200]}")
+    for p in named:
+        patterns.used(root, p["name"], new["id"])
     old_lines = {l["text"] for l in draft["script"]}
     changed = sum(1 for l in new["script"] if l["text"] not in old_lines)
     print(f"revise: {new['id']}: {len(new['scenes'])} scenes, {timeline.total(read_json(saved, 'edit')):.1f}s; "

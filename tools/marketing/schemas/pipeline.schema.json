@@ -75,7 +75,17 @@
         "posted_days": { "type": "integer", "minimum": 0, "description": "Days after posting (and archiving) that a short's local files go." },
         "shots_days": { "type": "integer", "minimum": 0, "description": "Days after its video is approved or rejected that a shot goes." },
         "krec_days": { "type": "integer", "minimum": 0, "description": "Days after archiving that a .krec goes." },
+        "references_days": { "type": "integer", "minimum": 0, "description": "Days after a reference video arrived that it, its frames and its audio go (its study and its pattern stay). Default 30." },
         "logs_days": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "references": {
+      "type": "object",
+      "description": "Videos the owner sends in Telegram to learn from (km/references.py).",
+      "required": ["per_week"],
+      "additionalProperties": false,
+      "properties": {
+        "per_week": { "type": "integer", "minimum": 0, "maximum": 7, "description": "How many of the week's shorts follow a reference the owner sent (the oldest first). 0 keeps them as library patterns only. Default 1." }
       }
     },
     "long": {

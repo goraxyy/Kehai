@@ -8,10 +8,10 @@
 
 | | |
 |---|---|
-| **Current phase** | Phase 7 (n8n) built and verified end to end without keys — branch `feat/n8n`, worktree `~/Developer/kehai-n8n`, stacked on Phase 6 (PR #18), PR #19. All seven phases are built ✋. The schedule runs from launchd (owner, 2026-10-02), installed from the worktree, in dry runs |
-| **Next action** | Owner: merge #15 → #16 → #17 → #18 → #19; fill `tools/marketing/.env` (the checklist, step by step; the file is already there, in `~/Developer/Kehai`). Then Claude: `tools/marketing/n8n/setup.sh` from `~/Developer/Kehai` (it keeps launchd), remove the worktrees, the Telegram chat id, the voice samples, one trial short; then `KEHAI_DRY_RUN=0` in `~/TokenLimit/n8n/env` |
+| **Current phase** | Phase 8 (reference videos → patterns) built and tested without keys — branch `feat/references`, worktree `~/Developer/kehai-references` ✋. Phases 1–7 and the launchd schedule (#21) are merged; the schedule runs from `~/Developer/Kehai`, in dry runs |
+| **Next action** | Owner: merge the Phase 8 PR; fill `tools/marketing/.env` (the checklist, step by step; the file is in `~/Developer/Kehai`). Then Claude: the Telegram chat id, the voice samples, a first real reference study, one trial short; then `KEHAI_DRY_RUN=0` in `~/TokenLimit/n8n/env` |
 | **Blocked on owner** | The keys and accounts (Anthropic, Azure, Telegram bot, Buffer, a public host for Q8, rclone/Drive); answers to Q8–Q10, Q12, Q14 and Q16 |
-| **Last updated** | 2026-10-02 |
+| **Last updated** | 2026-10-04 |
 
 **How to resume (for a later session).**
 1. Read this file, then the memory notes for this project.
@@ -555,6 +555,55 @@ told once). `tools/marketing/README.md` and `n8n/README.md` explain it.
   launchd runs across sleep and wake, and a real Claude or Azure answer.
 - [x] PR #19, opened 2026-10-02 (not merged yet). ✋
 
+## Phase 8 — Reference videos → patterns (Python, `tools/marketing`) ✋
+
+Branch `feat/references`, worktree `~/Developer/kehai-references`, from `main`. The owner asked
+(2026-10-04): "i will going over some videos in socials medias and send reference videos, i need
+the workflow to read the video and make something inspired by them". Their answers: send them as
+**videos in Telegram**; each becomes **a saved pattern and a new short**; follow the **idea, the
+pacing and the format** (rebuilt as closely as the editor allows); a reference **takes one of the
+week's slots** (3 shorts a week stays).
+
+- [x] **Reading a video** (`km/watch.py`), with Remotion's ffmpeg only (it has no scene or loudness
+      filters, so both are worked out in Python): frames twice a second through the hook, then about
+      once a second, plus each shot's first moment (at most 48, 384 px wide); cuts from tiny grey
+      frames ten a second; the sound's level every half second with its jumps and drops; 16 kHz WAV.
+      A 16 s video reads in about 4 s.
+- [x] **What it says** (`km/stt.py`): Azure speech-to-text with the voices' key (F0: 5 audio hours a
+      month, `KEHAI_AZURE_STT_MONTHLY_SECONDS`), English or Russian detected, phrases with times.
+      Optional: without the key, over the quota or on an error, the study goes on without it.
+- [x] **Studying** (`study_reference.py`, step `study_reference`, Opus 5.5 at medium effort,
+      `schemas/llm/reference_study.schema.json`, `prompts/study_reference.md`): the frames go to
+      Claude as pictures (the client gained images; dry runs log their paths), with the cuts, the
+      loudness and the transcript. The answer: hook, beats second by second, pacing, format, the
+      **recipe** (each part of the format mapped to an editor feature, with timing and position),
+      the replay shots it needs, what the editor can't do yet, the kind of Kehai moment it needs,
+      and what must not be copied. Checked against the video (beats from 0 to its end, in order;
+      its length). Saved to `references/<id>/` and the library, `patterns/<name>.json`. About
+      **$0.19** for a 21 s video (28 frames, ~17.5k input tokens). Works on any local file too:
+      `uv run study_reference.py <video> --note "…"`.
+- [x] **Telegram** (`km/references.py`): a video (≤ 20 MB, the Bot API's limit; its caption is the
+      note) is saved and queued; the work job studies it and sends the pattern back with ✏️ (study
+      it again with a correction; the name stays) and ❌ (out of the library). `/patterns` lists the
+      library; `/status` counts references. Too big a file gets told how to send it.
+- [x] **The week's shorts:** on the pick day the oldest ready reference (`references.per_week`, 1)
+      goes to `pick_moments.py --pattern`: one short must follow it, filmed with the cameras it
+      needs, or the answer says no moment fits and what to play (the owner is told; it waits a
+      week). Any short may follow a library pattern when it suits. `write_short.py` gives the
+      writer the whole recipe and the owner's note ("Pattern: …" shows in the preview);
+      `revise.py` keeps a video's pattern, and a ✏️ note that names another brings it in.
+- [x] **Housekeeping:** a reference's video, frames and audio go `retention.references_days` (30)
+      after it arrived; its study and pattern stay; never archived to Drive (someone else's video).
+- [x] **Verified 2026-10-04:** `uv run pytest` **181** (a real 4-second test video made with
+      ffmpeg: the cut found at 2 s, the frames, the sound; pictures before text in the request; the
+      study saved and studied again under its name; the whole Telegram path in outbox mode with the
+      study as a subprocess; too big a video; ✏️ and ❌; the week's picks taking a reference or
+      saying what to play; the picks' new checks; a short written in a pattern and revised into
+      another; references' media retention). By hand: `run_job.py fake video` → `telegram` →
+      `work` → the pattern in the outbox with its buttons; a dry run on the 21 s sample short.
+- **Not verified yet:** a real Claude study (no key) and an Azure transcript (no key).
+- [ ] PR. ✋
+
 ## Architecture
 
 ```
@@ -566,6 +615,7 @@ Unity (C#)                           tools/marketing (Python 3.12 via uv)       
                ─► shot.mp4 + .json     pick_moments write_short translate revise
                   (with its track)     package long_video weekly_report   (km/llm: Claude)
                                        voice.py (km/tts: Azure, ElevenLabs, say)
+                                       study_reference (km/watch, km/stt) → patterns/
                                        km/telegram · km/buffer · km/media (Drive, public host)
                                        km/housekeeping · km/store (state/pipeline.db)
 ```
@@ -726,6 +776,8 @@ handles and links still to come).
 | 2026-10-02 | n8n only schedules: every decision is in run_job.py; posting falls back to Telegram by hand while Buffer isn't ready | Phase 7 (for review) |
 | 2026-10-02 | Picks on Saturday's 1 a.m. run, so the weekend is for approving; retention only reports until Q12 is answered | Phase 7 (for review) |
 | 2026-10-02 | The schedule runs from launchd, not a running n8n; n8n stays installed for looking and "Run now" | owner ("build option B") |
+| 2026-10-04 | Reference videos come as Telegram videos; each becomes a pattern and a short that follows its idea, pacing and format; one of the week's 3 slots | owner (Phase 8 questions) |
+| 2026-10-04 | No downloading from links (the platforms' terms); never their footage, words or sound in ours; reference videos aren't archived and go after 30 days | Phase 8 (for review) |
 | 2026-09-30 | Heavy jobs share one lock, `~/TokenLimit/marketing/state/heavy.lock` (a directory holding the owner's pid); a job that finds it held exits 75 | Phase 4 (for review) |
 
 ## Changelog
@@ -751,3 +803,5 @@ handles and links still to come).
 - 2026-10-02 — PR #19 opened. The owner made n8n's account, then chose launchd for the schedule
   (`n8n/launchd.py`, `setup.sh --launchd`, installed); `.env` made in `~/Developer/Kehai` for the
   keys, with step-by-step links in the checklist.
+- 2026-10-04 — Phase 8 built (`feat/references`): reference videos sent in Telegram are read (frames,
+  cuts, loudness, transcript), studied into patterns, and one of each week's shorts follows one.

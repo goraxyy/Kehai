@@ -24,7 +24,9 @@
     "posted_days": 3,
     "shots_days": 3,
     "krec_days": 30,
+    "references_days": 30,
     "logs_days": 90
   },
+  "references": { "per_week": 1 },
   "long": { "day": 1, "preview_scale": 0.4 }
 }
