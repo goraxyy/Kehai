@@ -109,7 +109,7 @@ public class TaskListUI : MonoBehaviour
         }
         else
         {
-            // Aiko can stand between the task list and your HUD (aiko.md §8.2).
+            // Aiko can stand between the task list and your HUD (AIKO.md §8.2).
             foreach (TaskManager.ShiftTask task in Kehai.Aiko.HudFeed.Shown(taskManager.Tasks))
             {
                 // TMP renders <s> as a strikethrough, which is how a finished task reads.

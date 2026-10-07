@@ -10,7 +10,7 @@ using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// The rules in aiko.md that can be checked without playing: that Aiko is blind to the
+// The rules in AIKO.md that can be checked without playing: that Aiko is blind to the
 // player except through her senses, that every tactic is telegraphed and leaves the player
 // something to do, that learning is reversible, that the pacing gates hold, and that the
 // harness's JSON survives a round trip.

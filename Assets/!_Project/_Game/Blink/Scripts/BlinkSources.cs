@@ -30,7 +30,7 @@ namespace Kehai.Blink
         public string Source;
     }
 
-    // ideas.md "Architecture": everything that can tell whether the eyes are shut.
+    // IDEAS.md "Architecture": everything that can tell whether the eyes are shut.
     //   Keyboard — dev and accessibility fallback
     //   Replay   — recorded or synthetic traces, so Aiko's blink behaviour can be tested
     //              without sitting in front of a camera blinking on cue

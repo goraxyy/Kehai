@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Aiko — the orchestrator (aiko.md §2, §6.1).
+    // Aiko — the orchestrator (AIKO.md §2, §6.1).
     //
     // Owns the three minds and runs them at their own rates:
     //
@@ -15,7 +15,7 @@ namespace Kehai.Aiko
     //   Director   5 Hz            panic, setpoint, tension, permissions
     //   Decide     2 Hz or event   goal by utility → tactic → plan (HTN, anytime)
     //
-    // The rung (ideas.md §2) decides how much of this is switched on. A and B are the old
+    // The rung (IDEAS.md §2) decides how much of this is switched on. A and B are the old
     // patrol-and-chase guard, kept as the ablation floor; C and up are Aiko.
     [DefaultExecutionOrder(100)]
     public sealed class AikoBrain : MonoBehaviour
@@ -1065,7 +1065,7 @@ namespace Kehai.Aiko
         float pacingSquaredError;
         int pacingSamples;
 
-        // The single healthiest metric (aiko.md §13): how well panic tracks its target.
+        // The single healthiest metric (AIKO.md §13): how well panic tracks its target.
         public float SetpointRmse => pacingSamples > 0 ? Mathf.Sqrt(pacingSquaredError / pacingSamples) : 0f;
 
         public void SamplePacing(float panic, float setpoint)

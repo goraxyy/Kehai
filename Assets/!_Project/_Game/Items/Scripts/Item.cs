@@ -46,17 +46,17 @@ public class Item : MonoBehaviour
     // otherwise.
     public string DisplayName => ProductCatalog.Label(type, productId);
 
-    // A shelf slot's snap point sits this far above its board (ShelfPrefabBuilder's
-    // ItemHalfHeight): half the height of the placeholder box, whose middle it holds.
+    // The old shelf prefabs' snap points sit this far above their board (ShelfPrefabBuilder's
+    // ItemHalfHeight): half the height of the placeholder box, whose middle they hold. The grid
+    // slots ShelfGrid builds sit on the board itself.
     public const float SnapHeight = 0.2f;
 
-    // From this item's origin, the centre of its box, down to the bottom of its mesh. A
-    // product shorter or taller than the placeholder is lifted or lowered by the difference so
-    // it stands on the board instead of floating over it or sinking into it.
+    // From this item's origin, the centre of its box, down to the bottom of its mesh.
     [System.NonSerialized] public float restHeight = SnapHeight;
 
-    // Where on its slot the item stands, when the slot shows a block of the product around it.
-    [System.NonSerialized] public Vector3 shelfPositionOffset;
+    // How far above the board the snap point it's standing on is (its slot's snapLift). The
+    // item is lifted by restHeight less this, so whatever its height it stands on the board.
+    [System.NonSerialized] public float shelfLift = SnapHeight;
 
     // Makes this a particular product: its section, its id, and — once the product has been
     // imported — its own model in place of the placeholder box.
@@ -160,7 +160,7 @@ public class Item : MonoBehaviour
 
     public void ApplyShelfTransform()
     {
-        transform.localPosition = shelfPositionOffset + Vector3.up * (restHeight - SnapHeight);
+        transform.localPosition = Vector3.up * (restHeight - shelfLift);
         transform.localRotation = Quaternion.Euler(shelfRotationOffset);
     }
 
@@ -204,13 +204,13 @@ public class Item : MonoBehaviour
     }
 
     // Called when placed on a shelf snap point
-    public void SetOnShelf(Transform snapPoint, Vector3 rotationOffset, Vector3 positionOffset = default)
+    public void SetOnShelf(Transform snapPoint, Vector3 rotationOffset, float snapLift = SnapHeight)
     {
         gameObject.SetActive(true);
         isCarried = false;
         isOnShelf = true;
         shelfRotationOffset = rotationOffset;
-        shelfPositionOffset = positionOffset;
+        shelfLift = snapLift;
 
         if (rb != null)
         {

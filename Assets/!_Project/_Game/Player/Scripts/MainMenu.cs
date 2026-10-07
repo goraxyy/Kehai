@@ -583,7 +583,9 @@ public sealed class MenuButton : Button
     protected override void DoStateTransition(SelectionState state, bool instant)
     {
         base.DoStateTransition(state, instant);
-        on = state == SelectionState.Selected || state == SelectionState.Highlighted || state == SelectionState.Pressed;
+        // Lit when selected, not merely pointed at: pointing selects anyway, and a cursor left
+        // resting on the first line kept it lit while the arrows moved the selection away.
+        on = state == SelectionState.Selected || state == SelectionState.Pressed;
         if (instant) { lit = on ? 1f : 0f; Apply(); }
     }
 

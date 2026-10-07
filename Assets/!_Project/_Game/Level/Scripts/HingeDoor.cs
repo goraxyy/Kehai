@@ -17,7 +17,7 @@ public class HingeDoor : MonoBehaviour
     [Range(0f, 1f)] public float creakVolume = 0.8f;
 
     [Tooltip("A door left open this long counts as propped: its sensor stops reporting and " +
-             "it no longer tells " + GameNames.Antagonist + " who passes (aiko.md §3.5).")]
+             "it no longer tells " + GameNames.Antagonist + " who passes (AIKO.md §3.5).")]
     public float proppedAfter = 30f;
 
     private Quaternion closedRot;
@@ -153,7 +153,7 @@ public class HingeDoor : MonoBehaviour
         OneShotAudio.PlayAt(isOpen ? openCreak : closeCreak, transform.position, creakVolume);
     }
 
-    // Aiko's door lock (aiko.md §8.4): the door swings shut and stops opening, and the
+    // Aiko's door lock (AIKO.md §8.4): the door swings shut and stops opening, and the
     // NavMesh is carved so shoppers route round it too.
     public void SetLocked(bool locked)
     {

@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Kehai.Eval
 {
-    // What an agent can see and name (ideas.md §1 "Observation").
+    // What an agent can see and name (IDEAS.md §1 "Observation").
     //
     // Text first, pixels later: a serialisable snapshot that isolates *planning* failure
     // from *perception* failure. Every object an action can target gets a stable id for the

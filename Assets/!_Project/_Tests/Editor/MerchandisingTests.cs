@@ -4,10 +4,10 @@ using NUnit.Framework;
 using UnityEngine;
 using Board = Planogram.Board;
 
-// The shop is merchandised the way a real supermarket is (Planogram), stocked in blocks that
-// fit their shelves (Backstock), divided into numbered aisles and named departments
-// (StoreLayout), and shopped by people with lists who ask for things the way people do
-// (ShoppingList, CustomerQuestion).
+// The shop is merchandised the way a real supermarket is (Planogram), its boards cut into
+// slots that fit what they sell (ShelfGrid), divided into numbered aisles (StoreLayout), and
+// shopped by people with lists who ask for things the way people do (ShoppingList,
+// CustomerQuestion).
 public class MerchandisingTests
 {
     static IEnumerable<(ItemType section, Planogram.Bay bay)> AllLayouts() =>
@@ -133,74 +133,136 @@ public class MerchandisingTests
                         Planogram.EndCapsFor(ItemType.Snacks).ToList());
     }
 
-    // ------------------------------------------------------------------ backstock blocks
+    // ------------------------------------------------------------------ the shelf grid
+
+    static List<ShelfGrid.Facing> FacingsOfBoard(float width, float depth, float z = 0f)
+    {
+        var bay = new GameObject("TestBay");
+        try
+        {
+            var board = new GameObject("Polka1");
+            board.transform.SetParent(bay.transform, false);
+            board.transform.localPosition = new Vector3(0f, 0.82f, z);
+            board.transform.localScale = new Vector3(width, 0.02f, depth);
+            return ShelfGrid.Facings(bay.transform);
+        }
+        finally { Object.DestroyImmediate(bay); }
+    }
 
     [Test]
-    public void EveryProduct_FitsItsBlock_InsideTheSlot()
+    public void Boards_AreCutIntoHalfMetreSquares()
     {
-        var footprints = new[] { new Vector2(0.62f, 0.44f), Backstock.DefaultFootprint, new Vector2(0.3f, 0.44f) };
+        // A two-sided 4 m board: 8 along each face, 16 in all.
+        List<ShelfGrid.Facing> two = FacingsOfBoard(4f, 1f);
+        Assert.AreEqual(2, two.Count, "a face each way");
+        Assert.AreEqual(16, two.Sum(f => f.Squares.Count));
+        Assert.IsTrue(two.All(f => f.Squares.Count == 8));
+        Assert.AreEqual(8, FacingsOfBoard(4f, 0.5f, -0.25f).Sum(f => f.Squares.Count), "one-sided");
+        Assert.AreEqual(4, FacingsOfBoard(1f, 1f).Sum(f => f.Squares.Count), "a pillar");
+        Assert.AreEqual(2, FacingsOfBoard(1f, 0.5f, -0.25f).Sum(f => f.Squares.Count), "a b pillar");
+        Assert.AreEqual(1, FacingsOfBoard(0.5f, 0.5f, -0.25f).Sum(f => f.Squares.Count), "a tail");
+    }
+
+    [Test]
+    public void ThickBases_AreNotBoards()
+    {
+        var bay = new GameObject("TestBay");
+        try
+        {
+            var block = new GameObject("Shelf_tail_polka2");
+            block.transform.SetParent(bay.transform, false);
+            block.transform.localScale = new Vector3(1f, 0.69f, 0.5f);
+            Assert.IsEmpty(ShelfGrid.Boards(bay.transform));
+        }
+        finally { Object.DestroyImmediate(bay); }
+    }
+
+    static Vector2Int Cells(string id) =>
+        ShelfGrid.CellsFor(ProductCatalog.Get(id), ShelfGrid.PackSize(ProductCatalog.Get(id)), new Vector2(0.5f, 0.5f));
+
+    [Test]
+    public void SmallPacks_GoFourToASquare()
+    {
+        Assert.AreEqual(new Vector2Int(2, 2), Cells("canned_tuna"));
+        Assert.AreEqual(new Vector2Int(2, 2), Cells("sweet_pokki"));
+    }
+
+    [Test]
+    public void LongPacks_GoTwoToASquare_TheWayTheyFit()
+    {
+        Assert.AreEqual(new Vector2Int(2, 1), Cells("bakery_sourdough"), "a loaf runs into the shelf");
+        Assert.AreEqual(new Vector2Int(1, 2), Cells("cereal_chocoloops"), "a cereal box is wide and shallow");
+    }
+
+    [Test]
+    public void Drinks_FillTheirSquare_ByWhatTheyTakeUp()
+    {
+        Vector2Int can = Cells("drink_kokakora");
+        Assert.Greater(can.x * can.y, 4, "cans pack tighter than four to a square");
+        Assert.LessOrEqual(can.x, ShelfGrid.MaxDrinksAcross);
+        Vector3 water = ShelfGrid.PackSize(ProductCatalog.Get("drink_aquapura"));
+        Vector2Int bottles = Cells("drink_aquapura");
+        Assert.LessOrEqual(bottles.x * (water.x + ShelfGrid.Gap), 0.5f + ShelfGrid.Gap, "the litre bottles fit across");
+    }
+
+    [Test]
+    public void EveryProduct_FitsItsCell_AndUnderTheBoardAbove()
+    {
+        var square = new Vector2(0.5f, 0.5f);
         foreach (ProductDef p in ProductCatalog.All)
-            foreach (Vector2 f in footprints)
+        {
+            Vector3 size = ShelfGrid.PackSize(p);
+            Vector2Int cells = ShelfGrid.CellsFor(p, size, square);
+            Assert.GreaterOrEqual(cells.x * cells.y, 1, p.Id);
+            if (cells != Vector2Int.one)
             {
-                Backstock.Block block = Backstock.Fit(p.Size, f);
-                Assert.GreaterOrEqual(block.Units, 1, p.Id);
-                Assert.LessOrEqual(block.Units, Backstock.MaxUnits, p.Id);
-                // Only a pack wider than the slot itself may overhang it.
-                if (p.Size.x <= f.x) Assert.LessOrEqual(block.Size.x + p.Size.x, f.x + 0.02f, $"{p.Id} too wide for {f}");
-                if (p.Size.z <= f.y) Assert.LessOrEqual(block.Size.z + p.Size.z, f.y + 0.02f, $"{p.Id} too deep for {f}");
-                Assert.LessOrEqual(block.Size.y + p.Size.y, 0.45f, $"{p.Id} stacked into the board above");
+                Assert.LessOrEqual(size.x, square.x / cells.x + 0.01f, $"{p.Id} too wide for {cells}");
+                Assert.LessOrEqual(size.z, square.y / cells.y + 0.01f, $"{p.Id} too deep for {cells}");
             }
+            Assert.LessOrEqual(size.y, ProductLook.MaxDisplayHeight + 0.01f, $"{p.Id} pokes into the board above");
+        }
     }
 
     [Test]
-    public void SmallTins_AreStacked_TallBottlesAreNot()
+    public void Products_AreShownBigger_ButTheTallestFit()
     {
-        Assert.Greater(Backstock.Fit(ProductCatalog.Get("canned_tuna").Size, Backstock.DefaultFootprint).Stack, 1);
-        Assert.AreEqual(1, Backstock.Fit(ProductCatalog.Get("drink_aquapura").Size, Backstock.DefaultFootprint).Stack);
-    }
-
-    [Test]
-    public void TheItemsOwnCell_IsPartOfTheBlock()
-    {
-        Backstock.Block block = Backstock.Fit(ProductCatalog.Get("drink_kokakora").Size, new Vector2(0.62f, 0.44f));
-        Assert.AreEqual(block.CellAt(block.Across / 2, block.Deep / 2, 0), block.ItemCell);
-        Assert.LessOrEqual(Mathf.Abs(block.ItemCell.x), block.Pitch.x);
+        Assert.AreEqual(ProductLook.DisplayScale, ProductLook.ScaleFor(ProductCatalog.Get("drink_kokakora")), 1e-4f);
+        ProductDef daikon = ProductCatalog.Get("produce_daikon");
+        Assert.Less(ProductLook.ScaleFor(daikon), ProductLook.DisplayScale);
+        Assert.LessOrEqual(daikon.Size.y * ProductLook.ScaleFor(daikon), ProductLook.MaxDisplayHeight + 1e-4f);
     }
 
     // ------------------------------------------------------------------ aisles
 
     [Test]
-    public void TheMiddleOfTheShop_IsAisles1To7_AndTheEdgeIsNamedDepartments()
+    public void TheWholeShop_IsAisles1To13_InWalkingOrder()
     {
-        var aisles = StoreLayout.Zones.Where(z => z.IsAisle).Select(z => z.Aisle).OrderBy(n => n).ToArray();
-        CollectionAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6, 7 }, aisles);
+        var aisles = StoreLayout.Zones.Select(z => z.Aisle).OrderBy(n => n).ToArray();
+        CollectionAssert.AreEqual(Enumerable.Range(1, StoreLayout.Zones.Length).ToArray(), aisles);
         foreach (StoreLayout.Zone z in StoreLayout.Zones)
         {
             Assert.IsFalse(string.IsNullOrEmpty(z.Name), z.Sign);
             Assert.IsFalse(string.IsNullOrEmpty(z.Japanese), z.Sign);
             StringAssert.StartsWith("the ", z.Spoken, z.Sign);
-            if (z.IsAisle) StringAssert.StartsWith($"Aisle {z.Aisle} ", z.Sign);
-            Assert.AreEqual(z.IsAisle ? $"AISLE {z.Aisle}" : z.Name.ToUpperInvariant(), AisleSigns.Title(z));
+            StringAssert.StartsWith($"Aisle {z.Aisle} ", z.Sign);
+            Assert.AreEqual($"AISLE {z.Aisle}", AisleSigns.Title(z));
+            Assert.AreEqual(z.Aisle, StoreLayout.WalkOrder(z.Section));
         }
+        Assert.AreEqual(1, StoreLayout.ZoneOf(ItemType.Produce).Aisle, "fresh food by the door");
+        Assert.AreEqual(StoreLayout.Zones.Length, StoreLayout.ZoneOf(ItemType.Confectionery).Aisle, "sweets at the tills");
     }
 
     // ------------------------------------------------------------------ customers
 
     [Test]
-    public void AisleQuestions_NameTheAisle_DepartmentQuestionsDont()
+    public void AisleQuestions_NameTheAisle()
     {
-        ProductDef tuna = ProductCatalog.Get("canned_tuna");
-        StoreLayout.Zone tins = StoreLayout.ZoneOf(ItemType.Canned);
-        for (int pick = 0; pick < 3; pick++)
-            StringAssert.Contains("aisle 3", CustomerQuestion.Ask(CustomerQuestion.Kind.Aisle, tuna, tins, pick).ToLowerInvariant());
-
-        ProductDef bread = ProductCatalog.Get("bakery_shokupan");
-        StoreLayout.Zone bakery = StoreLayout.ZoneOf(ItemType.Bakery);
-        for (int pick = 0; pick < 3; pick++)
+        foreach (StoreLayout.Zone zone in StoreLayout.Zones)
         {
-            string line = CustomerQuestion.Ask(CustomerQuestion.Kind.Department, bread, bakery, pick);
-            StringAssert.Contains("the bakery", line);
-            StringAssert.DoesNotContain("aisle", line.ToLowerInvariant());
+            ProductDef p = ProductCatalog.InSection(zone.Section)[0];
+            for (int pick = 0; pick < 3; pick++)
+                StringAssert.Contains($"aisle {zone.Aisle}", CustomerQuestion.Ask(CustomerQuestion.Kind.Aisle, p, zone, pick).ToLowerInvariant());
+            StringAssert.Contains($"Aisle {zone.Aisle}", CustomerQuestion.Thanks(CustomerQuestion.Kind.Aisle, p, zone));
         }
     }
 
@@ -213,19 +275,16 @@ public class MerchandisingTests
             for (int pick = 0; pick < 5; pick++)
                 StringAssert.Contains("Pipisi Zero", CustomerQuestion.Ask(kind, p, z, pick));
         StringAssert.Contains("Pipisi Zero", CustomerQuestion.Thanks(CustomerQuestion.Kind.Product, p, z));
-        StringAssert.Contains("Aisle 1", CustomerQuestion.Thanks(CustomerQuestion.Kind.Aisle, p, z));
+        StringAssert.Contains("Aisle 3", CustomerQuestion.Thanks(CustomerQuestion.Kind.Aisle, p, z));
     }
 
     [Test]
-    public void ADepartment_IsNeverAskedForByNumber()
+    public void EveryKindOfQuestion_GetsAsked()
     {
         StoreLayout.Zone dairy = StoreLayout.ZoneOf(ItemType.Dairy);
-        for (float roll = 0f; roll < 1f; roll += 0.05f)
-        {
-            CustomerQuestion.Kind kind = CustomerQuestion.Choose(roll, false, dairy);
-            Assert.AreNotEqual(CustomerQuestion.Kind.Aisle, kind);
-            Assert.AreNotEqual(CustomerQuestion.Kind.WhichAisle, kind);
-        }
+        var kinds = new HashSet<CustomerQuestion.Kind>();
+        for (float roll = 0f; roll < 1f; roll += 0.05f) kinds.Add(CustomerQuestion.Choose(roll, false, dairy));
+        CollectionAssert.AreEquivalent(new[] { CustomerQuestion.Kind.Product, CustomerQuestion.Kind.WhichAisle, CustomerQuestion.Kind.Aisle }, kinds);
         Assert.AreEqual(CustomerQuestion.Kind.Missing, CustomerQuestion.Choose(0.1f, true, dairy));
     }
 

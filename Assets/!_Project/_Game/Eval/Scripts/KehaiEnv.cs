@@ -46,7 +46,7 @@ namespace Kehai.Eval
         }
     }
 
-    // Kehai as an agent-eval environment (ideas.md §1).
+    // Kehai as an agent-eval environment (IDEAS.md §1).
     //
     //   reset(config) — reload the store, seed everything, fix the time step, clock in
     //   step(action)  — run one macro-action to completion through the real body and hands

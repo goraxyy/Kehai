@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // One entry in the tactic library (aiko.md §8).
+    // One entry in the tactic library (AIKO.md §8).
     //
     // The spec asks for ScriptableObject assets; this repository carries code only, so a
     // tactic is a class instead — with exactly the same contract. Adding a scare is adding a
@@ -119,7 +119,7 @@ namespace Kehai.Aiko
                 new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
                 // §8.6 you
                 new StalkTactic(), new AmbushTactic(), new ChaseTactic(), new FollowTactic(), new FavourTactic(),
-                // ideas.md blink channel
+                // IDEAS.md blink channel
                 new BlinkAdvanceTactic()
             };
         }

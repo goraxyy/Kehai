@@ -5,7 +5,7 @@ using Kehai.Eval;
 using UnityEditor;
 using UnityEngine;
 
-// The eval harness from the editor (ideas.md §1–2). Each command enters play mode if
+// The eval harness from the editor (IDEAS.md §1–2). Each command enters play mode if
 // needed, then starts the server or the ablation once the store has loaded.
 [InitializeOnLoad]
 public static class EvalMenu

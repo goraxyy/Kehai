@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude works a shift at Kehai (ideas.md §1: the store as an agent eval).
+"""Claude works a shift at Kehai (IDEAS.md §1: the store as an agent eval).
 
 Each turn Claude reads the observation as prose and calls one tool, `act`, with one macro
 action; the game runs it through the real body and hands back the next observation. It is

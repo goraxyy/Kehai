@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record a small eye dataset for training your own blink model (ideas.md "Own training path").
+"""Record a small eye dataset for training your own blink model (IDEAS.md "Own training path").
 
 Distillation: MediaPipe labels every frame for you (eye aspect ratio, or the FaceLandmarker
 blink blendshapes if you have the model), so you don't hand-label thousands of crops. Hold

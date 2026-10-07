@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Kehai.Blink
 {
-    // Turns whichever blink source is live into one clean signal (ideas.md "Architecture"):
+    // Turns whichever blink source is live into one clean signal (IDEAS.md "Architecture"):
     //
     //   IBlinkSource → BlinkTracker (calibration, smoothing, confidence)
     //                       ├─→ Eyelids.Closed01            the player's own eyes, mirrored
@@ -91,7 +91,7 @@ namespace Kehai.Blink
         int nextMark;
         Eyelids lids;
 
-        // Calibration (ideas.md "Per-player calibration"), guided so nobody has to guess what
+        // Calibration (IDEAS.md "Per-player calibration"), guided so nobody has to guess what
         // "blink normally" means: eyes open for a few seconds, then shut until a beep, then
         // three ordinary blinks to check the result. The player's own open and shut readings
         // normalise everything after, and are remembered for each camera helper.

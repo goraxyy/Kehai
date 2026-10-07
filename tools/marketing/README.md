@@ -115,7 +115,7 @@ Not marketing, but it shares this pipeline's Telegram, Claude client and schedul
 job also pulls new playtest sessions from the upload service, reads and summarises them (the
 `playtest_summary` step), announces them in Telegram, and rebuilds the combined report; a bug
 note becomes a GitHub issue only when you tap 📝 (`pt:` buttons). `uv run playtest.py status`
-shows what's set up. The whole loop is in [`PLAYTEST.md`](../../PLAYTEST.md).
+shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/production/PLAYTEST.md).
 
 ## Exit codes (every script)
 

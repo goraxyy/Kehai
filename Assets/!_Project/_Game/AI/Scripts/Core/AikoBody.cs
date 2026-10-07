@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 namespace Kehai.Aiko
 {
-    // Aiko's body: a NavMeshAgent with eyes, feet and hands (aiko.md §2.1).
+    // Aiko's body: a NavMeshAgent with eyes, feet and hands (AIKO.md §2.1).
     //
     // What it has is as important as what it hasn't. It has no reference to the player at
     // all — that single missing reference is the difference between a stalker and an

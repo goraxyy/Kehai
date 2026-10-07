@@ -1102,7 +1102,7 @@ Sanity checks that fail loudly in CI:
 
 Everything in §§2–13 is built. This section maps the design onto the code and says where the
 code departs from the plan above. Results of the ablation ladder are in
-[`AIKO_RESULTS.md`](AIKO_RESULTS.md); how to run things is in [`tools/eval/README.md`](tools/eval/README.md).
+[`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
 
@@ -1118,8 +1118,8 @@ code departs from the plan above. Results of the ablation ladder are in
 | §8 tactic library | `AI/Scripts/Decision/Tactics/` — 35 tactics across tiers 0–4 |
 | §8 the building's levers | `AI/Scripts/World/` — `AikoWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `AikoProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
 | §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/AikoTests.cs` |
-| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `ideas.md` §§1–2 |
-| blink channel | `Blink/Scripts/` + `tools/blink/` (see `ideas.md` → Blink) |
+| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` §§1–2 |
+| blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md` → Blink) |
 
 Aiko is installed from code when the store loads (`AikoBootstrap`), since the scene is not in
 version control. `-noaiko`, `-aiko-rung <A-F>` and `-aiko-seed <n>` work on the command line.
@@ -1195,10 +1195,10 @@ the wall colliders, so the map is the store as it actually is.
   Across the final ablation (216 shifts, `AIKO_RESULTS.md`) the guard recorded none.
 - **A written warning always comes with a release window** (lecture + 15 s with no second catch), at
   every rung — without it the simplest rungs could catch you again the moment a lecture ended.
-- **Learning scope per rung** follows `ideas.md` §2 exactly: C uses the authored prior, D learns
+- **Learning scope per rung** follows `IDEAS.md` §2 exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
   two shifts), F adds the blink channel.
-- **Not built:** the infinite maze (`ideas.md`), a second Aiko body (§14), and the Sentis in-engine
+- **Not built:** the infinite maze (`IDEAS.md`), a second Aiko body (§14), and the Sentis in-engine
   blink model is written but only compiles once the `com.unity.ai.inference` package is added and
   `AIKO_SENTIS` is defined.
 

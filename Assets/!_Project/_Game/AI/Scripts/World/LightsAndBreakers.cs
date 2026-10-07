@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // The store's lights, split into the circuits Aiko can trip (aiko.md §8.1).
+    // The store's lights, split into the circuits Aiko can trip (AIKO.md §8.1).
     public enum LightCircuit { East, West, Back }
 
     public sealed class LightControl : MonoBehaviour
@@ -106,7 +106,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // The breaker box out in the backstreet, rebuilt as a puzzle (aiko.md §8.1, §3.5).
+    // The breaker box out in the backstreet, rebuilt as a puzzle (AIKO.md §8.1, §3.5).
     //
     // Three light circuits, each with its own hum when you look at it. After a blackout
     // they have to go back on in rising pitch — low, middle, high — in the dark, by ear.

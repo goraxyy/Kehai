@@ -29,11 +29,11 @@ units, 240 ceiling lights and 64 speakers. Plus the burnout meter, the mains/bla
 system, the store radio, the flashlight, and a first SFX pass.
 
 **The three biggest gaps.** There is no antagonist in the level (`EnemyAI.cs` exists but
-has zero scene instances, and `aiko.md` is a design spec with no implementation). There
+has zero scene instances, and `AIKO.md` is a design spec with no implementation). There
 are no menus of any kind — no main menu, pause, or options. And **no build has ever been
 produced**, so nothing has been tested outside the editor.
 
-*Update — the antagonist gap is closed:* Aiko (`aiko.md`, all of it; status in §15 there)
+*Update — the antagonist gap is closed:* Aiko (`AIKO.md`, all of it; status in §15 there)
 now installs into the store when it loads and replaces `EnemyAI.cs`. She has been exercised
 headless by simulated players across every ablation rung (`AIKO_RESULTS.md`), not yet by a
 person at the keyboard.
@@ -94,7 +94,7 @@ Status: **reached**.
 
 ### Pipeline
 - [x] Code-only GitHub mirror with PR workflow (#1–#6)
-- [x] `aiko.md` — 1,097-line design spec for the adaptive antagonist
+- [x] `AIKO.md` — 1,097-line design spec for the adaptive antagonist
 - [x] First SFX pass — door chime, till beep, door creaks, flashlight, item impacts,
       pickup, power-down
 
@@ -118,7 +118,7 @@ it is about one slice being *finished*.
       *graded sight, a noise bus with per-action loudness, and a tell before every tactic*
 - [x] A losing state — what actually happens when it catches you
       *a written warning: a 30 s lecture, overtime, and a recovery window; burnout ending*
-- [x] Pick the Aiko scope: full `aiko.md` architecture, or a cut-down version for ship
+- [x] Pick the Aiko scope: full `AIKO.md` architecture, or a cut-down version for ship
       *Decided: the full architecture, every rung switchable for the ablation*
 - [ ] Play-test and tune Aiko with people — so far she has only been measured against
       scripted players
@@ -371,7 +371,7 @@ Ordered by how much damage each can still do.
    *(Addressed 2026-10-02: the first macOS build, with a bot shift played in it.)*
 3. **The antagonist is the game's hook and it is not in the level.** Everything built so
    far is the chore loop. The chore loop is not the pitch. *(Addressed: Aiko is in.)*
-4. **`aiko.md` is much larger than the rest of the project.** It is a genuinely good
+4. **`AIKO.md` is much larger than the rest of the project.** It is a genuinely good
    design document, and implementing it fully is a bigger job than everything already
    built. Decide deliberately how much of it ships. *(Built in full; the open question is
    now tuning, which needs human play-testers.)*

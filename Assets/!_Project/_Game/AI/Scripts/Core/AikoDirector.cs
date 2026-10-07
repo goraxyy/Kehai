@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // The Director (aiko.md §2.2, §7.3–7.4). Sees everything, controls nothing directly.
+    // The Director (AIKO.md §2.2, §7.3–7.4). Sees everything, controls nothing directly.
     //
     // It measures fear by its motor consequences — the Panic Index — and runs a PI
     // controller against a *setpoint*, not a maximum: quiet is something it schedules, not
@@ -291,7 +291,7 @@ namespace Kehai.Aiko
         float lastThreat = -999f;
 
         // The player model is built from the truth, which is the Director's to see: where
-        // the employee spends time, where they hide, how they move (aiko.md §7.1).
+        // the employee spends time, where they hide, how they move (AIKO.md §7.1).
         public void ObserveForLedger(AikoContext c, float dt)
         {
             PlayerPresence player = PlayerPresence.Current;
@@ -347,7 +347,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // The Panic Index (aiko.md §7.3): fear measured by what it does to your hands.
+    // The Panic Index (AIKO.md §7.3): fear measured by what it does to your hands.
     public sealed class PanicIndex
     {
         public const int Features = 8;

@@ -145,7 +145,7 @@ namespace Kehai.Aiko
             }
         }
 
-        // aiko.md §3.1 motion salience.
+        // AIKO.md §3.1 motion salience.
         public float MotionSalience
         {
             get
@@ -178,7 +178,7 @@ namespace Kehai.Aiko
         public bool Owns(Collider c) => c != null && (c == controller || c.transform.IsChildOf(transform));
 
         // Walking into stock left on the floor — the noise carpet Aiko lays with a shelf
-        // sweep (aiko.md §8.2).
+        // sweep (AIKO.md §8.2).
         void OnControllerColliderHit(ControllerColliderHit hit)
         {
             if (hit.collider == null || hit.collider.attachedRigidbody == null) return;

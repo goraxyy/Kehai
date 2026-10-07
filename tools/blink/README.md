@@ -1,6 +1,6 @@
 # Blink sidecar
 
-The webcam half of Aiko's blink channel (see `ideas.md` → *Blink*, and `BlinkTracker.cs`).
+The webcam half of Aiko's blink channel (see `IDEAS.md` → *Blink*, and `BlinkTracker.cs`).
 A small helper process owns the camera, decides how shut your eyes are, and sends one JSON
 packet per frame to the game on `127.0.0.1:5066`. The game does the rest: calibration,
 hysteresis, predicting when your eyes will reopen, and what Aiko does with the window.

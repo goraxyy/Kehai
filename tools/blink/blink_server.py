@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Blink sidecar for Kehai (ideas.md "Blink": webcam path).
+"""Blink sidecar for Kehai (IDEAS.md "Blink": webcam path).
 
 Owns the camera, decides how shut your eyes are, and sends one small JSON packet per frame
 to the game over UDP on 127.0.0.1 — nothing else. It never records, never saves a frame,

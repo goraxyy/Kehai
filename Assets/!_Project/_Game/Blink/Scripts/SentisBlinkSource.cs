@@ -1,4 +1,4 @@
-// The in-engine webcam path (ideas.md "Deployment: Export ONNX → Unity Sentis").
+// The in-engine webcam path (IDEAS.md "Deployment: Export ONNX → Unity Sentis").
 //
 // Compiled only when the project defines AIKO_SENTIS, because it needs the Unity Inference
 // Engine package (com.unity.ai.inference, formerly Sentis), which this project doesn't ship

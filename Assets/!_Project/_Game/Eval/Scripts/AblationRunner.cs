@@ -24,7 +24,7 @@ namespace Kehai.Eval
         public string outDirectory;
     }
 
-    // The ablation ladder (ideas.md §2), run end to end with simulated players.
+    // The ablation ladder (IDEAS.md §2), run end to end with simulated players.
     //
     // Paired design: for a given player profile and career, every rung sees the same seed —
     // the same customers, the same spills — so a difference between rungs is Aiko, not luck.
@@ -184,7 +184,7 @@ namespace Kehai.Eval
         static string Pct(int k, int n) => n == 0 ? "—" : $"{100f * k / n:0}%";
     }
 
-    // Command-line entry for builds (ideas.md §1 "Headless + time-scaled"):
+    // Command-line entry for builds (IDEAS.md §1 "Headless + time-scaled"):
     //
     //   Kehai -batchmode -nographics -kehai-env 5555
     //   Kehai -batchmode -nographics -kehai-ablation -ablation-careers 2 -ablation-shifts 4

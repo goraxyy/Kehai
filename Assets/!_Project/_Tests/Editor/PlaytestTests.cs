@@ -119,7 +119,7 @@ public class PlaytestTests
     [Test]
     public void PlaytestMd_HasTheQuestionsTheGameAsks()
     {
-        string md = File.ReadAllText(Path.Combine(Directory.GetParent(Application.dataPath).FullName, "PLAYTEST.md"));
+        string md = File.ReadAllText(Path.Combine(Directory.GetParent(Application.dataPath).FullName, "docs", "production", "PLAYTEST.md"));
         foreach ((string id, string text, string[] options) q in PlaytestScreens.Questions)
         {
             StringAssert.Contains(q.text, md, "PLAYTEST.md is missing a question");

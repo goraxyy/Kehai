@@ -7,7 +7,7 @@ using UnityEngine;
 // the scene every time the game runs; this only refreshes the readable copy in the repo.
 public static class StoreMapMenu
 {
-    const string MarkdownPath = "STORE_MAP.md";
+    const string MarkdownPath = "docs/design/STORE_MAP.md";
 
     [MenuItem("Kehai/Map/Export STORE_MAP.md")]
     public static void ExportMarkdown()

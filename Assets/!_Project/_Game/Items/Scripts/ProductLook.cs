@@ -13,6 +13,15 @@ public static class ProductLook
 {
     public const string ResourceFolder = "Products";
 
+    // The models are shown half as big again as the real thing, so a label reads from the
+    // aisle, except where that wouldn't fit under the board above (the daikon). The catalogue
+    // keeps real sizes; the importer scales each model by this.
+    public const float DisplayScale = 1.5f;
+    public const float MaxDisplayHeight = 0.5f;
+
+    public static float ScaleFor(ProductDef product) =>
+        product == null ? 1f : Mathf.Min(DisplayScale, MaxDisplayHeight / Mathf.Max(0.01f, product.Size.y));
+
     public readonly struct Look
     {
         public readonly Mesh Mesh;

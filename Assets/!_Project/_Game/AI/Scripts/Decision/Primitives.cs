@@ -6,7 +6,7 @@ namespace Kehai.Aiko
 {
     public enum Status { Running, Success, Failure }
 
-    // The leaves of a plan: things the body can actually do this frame (aiko.md §6.4).
+    // The leaves of a plan: things the body can actually do this frame (AIKO.md §6.4).
     // A primitive may carry a guard — a precondition that must stay true for the rest of
     // the plan to make sense. A violated guard aborts to the interrupt branch rather than
     // leaving the body frozen mid-plan.
@@ -372,7 +372,7 @@ namespace Kehai.Aiko
 
     // ---- the behaviour tree ---------------------------------------------------------
 
-    // A deliberately dumb behaviour tree (aiko.md §6.5): a selector whose first branch is
+    // A deliberately dumb behaviour tree (AIKO.md §6.5): a selector whose first branch is
     // the global interrupt check and whose second is the plan as a sequence. All the
     // intelligence is upstream; this only has to stop cleanly when told to.
     public abstract class BtNode
