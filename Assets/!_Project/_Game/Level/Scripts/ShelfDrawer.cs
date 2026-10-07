@@ -4,9 +4,10 @@ using UnityEngine.Rendering;
 
 // Draws the stock: what stands on every shelf slot, with no GameObject for any of it
 // (IDEAS.md, "Scaling", step 2). The floor is cut into 10 m cells. Each cell keeps, for each
-// product and room, where its items stand, and draws them with one instanced call per part
-// of the product's mesh, lit only by that room's lights (RoomLighting). Cells outside a
-// camera's view, or further off than anyone would make out a tin, aren't drawn for it.
+// product and room, where its items stand. For each camera, the cells in its view (and near
+// enough that anyone would make out a tin) put their lists together by product, and each
+// product is drawn with one instanced call per part of its mesh, lit only by its room's
+// lights (RoomLighting). Drawing each cell's lists separately took three times the calls.
 //
 // It draws in the editor too, from the planogram, so the shelves look stocked there with
 // nothing baked into the scene.
@@ -38,6 +39,16 @@ public class ShelfDrawer : MonoBehaviour
     }
 
     readonly Dictionary<Vector2Int, Cell> cells = new Dictionary<Vector2Int, Cell>();
+
+    // One camera's view of the stock: every visible cell's items of a product, in one list.
+    sealed class Gathered
+    {
+        public Batch Look;
+        public Bounds Bounds;
+        public readonly List<Matrix4x4> Matrices = new List<Matrix4x4>();
+    }
+
+    readonly Dictionary<(string id, uint mask), Gathered> gathered = new Dictionary<(string, uint), Gathered>();
     readonly Dictionary<ShelfSlot, Cell> cellOf = new Dictionary<ShelfSlot, Cell>();
     readonly Plane[] planes = new Plane[6];
     ShelfStock watching;
@@ -105,20 +116,31 @@ public class ShelfDrawer : MonoBehaviour
         GeometryUtility.CalculateFrustumPlanes(cam, planes);
         Vector3 eye = cam.transform.position;
         float far = DrawDistance * DrawDistance;
-        int drawn = 0;
+        foreach (Gathered g in gathered.Values) g.Matrices.Clear();
         foreach (Cell c in cells.Values)
         {
             if (c.Bounds.SqrDistance(eye) > far) continue;
             if (!GeometryUtility.TestPlanesAABB(planes, c.Bounds)) continue;
             if (c.Dirty) Refill(c);
-            foreach (Batch b in c.Batches.Values) drawn += Submit(b, c.Bounds, cam);
+            foreach (KeyValuePair<(string, uint), Batch> kv in c.Batches)
+            {
+                if (kv.Value.Matrices.Count == 0) continue;
+                if (!gathered.TryGetValue(kv.Key, out Gathered g))
+                    gathered[kv.Key] = g = new Gathered { Look = kv.Value };
+                if (g.Matrices.Count == 0) g.Bounds = c.Bounds;
+                else g.Bounds.Encapsulate(c.Bounds);
+                g.Matrices.AddRange(kv.Value.Matrices);
+            }
         }
+
+        int drawn = 0;
+        foreach (Gathered g in gathered.Values) drawn += Submit(g.Look, g.Matrices, g.Bounds, cam);
         LastDrawn = drawn;
     }
 
-    int Submit(Batch b, Bounds bounds, Camera cam)
+    int Submit(Batch b, List<Matrix4x4> matrices, Bounds bounds, Camera cam)
     {
-        int count = b.Matrices.Count;
+        int count = matrices.Count;
         if (count == 0) return 0;
         for (int sub = 0; sub < b.Mesh.subMeshCount; sub++)
         {
@@ -135,7 +157,7 @@ public class ShelfDrawer : MonoBehaviour
                 lightProbeUsage = LightProbeUsage.BlendProbes,
             };
             for (int start = 0; start < count; start += MaxPerCall)
-                Graphics.RenderMeshInstanced(rp, b.Mesh, sub, b.Matrices, Mathf.Min(MaxPerCall, count - start), start);
+                Graphics.RenderMeshInstanced(rp, b.Mesh, sub, matrices, Mathf.Min(MaxPerCall, count - start), start);
         }
         return count;
     }
@@ -145,6 +167,7 @@ public class ShelfDrawer : MonoBehaviour
         if (watching != null) watching.Changed -= OnChanged;
         watching = stock;
         if (watching != null) watching.Changed += OnChanged;
+        gathered.Clear();
     }
 
     void OnChanged(ShelfSlot slot)
