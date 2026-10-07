@@ -228,6 +228,52 @@ public static class Planogram
     // The bays at the ends of runs. The maze's end pieces are the "E" pillars.
     public static bool IsEndCap(Transform bay) => bay != null && bay.name.Contains("pillar_E");
 
+    // The layouts are written for a bay with three boards a side, and the shop's bays aren't
+    // all like that: the sweets are on one-sided bays, so their back faces never show, and
+    // health and beauty is mostly short bays without an eye-level board. A product its
+    // layouts only put where its section has no boards would never be on sale, so it takes a
+    // facing from whichever product of its section has the most: on a board it may go on,
+    // the one its layouts put it on if that's there.
+    // `ids` and `boards` are all of one section's facings, in a fixed order; `ids` is changed.
+    public static void GiveEveryProductAFacing(ItemType section, IList<string> ids, IList<Board> boards)
+    {
+        foreach (ProductDef p in ProductCatalog.InSection(section))
+        {
+            if (CountOf(ids, p.Id) > 0) continue;
+            int pick = -1, best = int.MinValue;
+            for (int i = ids.Count - 1; i >= 0; i--)
+            {
+                ProductDef donor = ProductCatalog.Get(ids[i]);
+                if (donor == null || donor.Category != section || !MayGoOn(p, boards[i])) continue;
+                int has = CountOf(ids, donor.Id);
+                if (has < 2) continue;                  // never leave the donor with none
+                int score = (PlannedOn(p.Id, boards[i]) ? 10000 : 0) + has;
+                if (score > best) { best = score; pick = i; }
+            }
+            if (pick >= 0) ids[pick] = p.Id;
+        }
+    }
+
+    // The rules the layouts keep: nothing heavy and nothing for children at eye level.
+    public static bool MayGoOn(ProductDef p, Board board) =>
+        board != Board.Eye || (p.Mass < HeavyKg && System.Array.IndexOf(KidsProducts, p.Id) < 0);
+
+    static bool PlannedOn(string id, Board board)
+    {
+        ProductDef p = ProductCatalog.Get(id);
+        if (p == null) return false;
+        foreach (Bay bay in LayoutsFor(p.Category))
+            if (bay.At(false, board) == id || bay.At(true, board) == id) return true;
+        return false;
+    }
+
+    static int CountOf(IList<string> ids, string id)
+    {
+        int n = 0;
+        foreach (string s in ids) if (s == id) n++;
+        return n;
+    }
+
     static int Mod(int a, int n) => ((a % n) + n) % n;
 
     // ------------------------------------------------------------------ the live shop

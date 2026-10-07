@@ -21,16 +21,26 @@ using UnityEngine.Rendering.Universal;
 //
 // Built at load. A light made later lights the default layer only, so moving things but not
 // the building: give it RoomLighting.Everything if it should.
+//
+// URP drops every bit of a light's layers that isn't a rendering layer named in Project
+// Settings > Tags and Layers, so the rooms use layers 1-5, which URP names "Light Layer 1-5"
+// out of the box. If they aren't named, nothing is split: a light through a wall beats a
+// shop lit by nothing.
 public static class RoomLighting
 {
-    public const int Outside = 1 << 8;
-    public const int SalesFloor = 1 << 9;
-    public const int Lobby = 1 << 10;
-    public const int Stockroom = 1 << 11;
-    public const int StaffRoom = 1 << 12;
+    public const int Outside = 1 << 1;
+    public const int SalesFloor = 1 << 2;
+    public const int Lobby = 1 << 3;
+    public const int Stockroom = 1 << 4;
+    public const int StaffRoom = 1 << 5;
+    public const int AllRooms = Outside | SalesFloor | Lobby | Stockroom | StaffRoom;
     public const uint Moving = 1;                       // the default layer
     public const uint Everything = 0xFFFFFFFF;
     public const string PatchesName = "RoomPatches";
+
+    // Whether URP will keep the rooms' layers on a light.
+    public static bool LayersDefined =>
+        (RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue() & (uint)AllRooms) == (uint)AllRooms;
 
     static readonly (string area, int bit)[] Rooms =
     {
@@ -56,6 +66,12 @@ public static class RoomLighting
 
     public static void Apply()
     {
+        if (!LayersDefined)
+        {
+            Debug.LogWarning("Room lighting: rendering layers 1-5 aren't named in Tags and Layers, so URP " +
+                             "would drop them and the rooms would go dark. Every light still lights every room.");
+            return;
+        }
         int lights = 0, still = 0;
         foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsInactive.Include))
         {
@@ -105,7 +121,7 @@ public static class RoomLighting
         if (whole == null) return;
         var filter = whole.GetComponent<MeshFilter>();
         // If the mesh can't be read, it stays lit by every room rather than by none.
-        whole.renderingLayerMask = (uint)(Outside | SalesFloor | Lobby | Stockroom | StaffRoom);
+        whole.renderingLayerMask = (uint)AllRooms;
         if (filter == null || filter.sharedMesh == null) return;
         if (!FitUv(filter, up, out Vector3 o, out Vector3 du, out Vector3 dv, out float y))
         {

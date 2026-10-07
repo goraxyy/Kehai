@@ -441,8 +441,8 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         // any more, so the offset sticks.
         float y = 0f;
         foreach (Item held in basket)
-            if (held != null) y += Mathf.Min(held.restHeight * 2f, carryStackSpacing) + 0.02f;
-        taken.transform.localPosition = new Vector3(0f, y + taken.restHeight - Item.SnapHeight, 0f);
+            if (held != null) y += Mathf.Min(held.RestHeight * 2f, carryStackSpacing) + 0.02f;
+        taken.transform.localPosition = new Vector3(0f, y + taken.RestHeight - Item.SnapHeight, 0f);
         taken.transform.localRotation = Quaternion.identity;
 
         basket.Add(taken);

@@ -68,6 +68,13 @@ board**, and the tests fail if a layout puts it there.
   the drinks'. A cross-merchandised slot keeps its product's own section, so the crisps' end
   cap only takes cola back.
 - **The till counter** has mints, the impulse buy every till in the world has.
+- **Everything is on sale somewhere.** The layouts are written for a bay with three boards a
+  side, and not every aisle has those. Sweets are on one-sided bays, so their back faces never
+  show. Health & beauty is mostly short bays with no eye-level board. A product whose layouts
+  only use boards its aisle doesn't have takes one facing from the product with the most in its
+  aisle. The facing it takes is on a board it's allowed on (nothing heavy and nothing for
+  children at eye level), and on the board its layouts give it if the aisle has that board.
+  Without this, Mochi Bites and the hand sanitiser were never on a shelf.
 
 ## 4. How a shelf is filled: the grid
 

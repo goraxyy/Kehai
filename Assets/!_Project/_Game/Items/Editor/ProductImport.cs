@@ -87,8 +87,8 @@ public static class ProductImport
         var materials = BuildMaterials();
         log.AppendLine($"  {materials.Count} materials");
 
-        // 4. Models: no cameras or animation, readable (the shelf back-stock combines them),
-        //    every Blender material remapped onto ours.
+        // 4. Models: no cameras or animation, not readable (nothing reads them on the CPU, so
+        //    there's no second copy in memory), every Blender material remapped onto ours.
         int remapped = 0;
         var unmapped = new HashSet<string>();
         foreach (ProductDef p in ProductCatalog.All)
@@ -101,7 +101,7 @@ public static class ProductImport
             mi.importAnimation = false;
             mi.animationType = ModelImporterAnimationType.None;
             mi.importBlendShapes = false;
-            mi.isReadable = true;
+            mi.isReadable = false;
             mi.meshCompression = ModelImporterMeshCompression.Off;
             mi.importNormals = ModelImporterNormals.Import;
             mi.importTangents = ModelImporterTangents.None;
