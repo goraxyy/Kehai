@@ -7,8 +7,10 @@ using UnityEngine.Rendering;
 // mesh and its materials, with no collider and no script, hidden and never saved. Copies come
 // from one template per product and room, so each is lit by its room's lights only
 // (RoomLighting), and the GPU Resident Drawer draws them. It culls them one by one, including
-// those hidden behind shelves. Over four test views the stock cost nothing measurable that
-// way (4.2 ms with it, 4.5 without), where one instanced call per product cost 5 ms more.
+// those hidden behind shelves. Over four test views the stock costs 2.4 ms that way (4.8 ms
+// with it, 2.4 without), where one instanced call per product cost 5 to 7 ms. The copies are
+// made one at a time with Instantiate: copies made by InstantiateAsync are never taken up by
+// the GPU Resident Drawer, and cost 17 ms drawn the ordinary way.
 //
 // A slot that empties or fills swaps its object through a pool, and a full rebuild (the shop
 // restocked, a bay moved) reuses the objects it has, so it's quick in the editor as well,
@@ -137,30 +139,24 @@ public class ShelfDrawer : MonoBehaviour
         foreach (var kv in wanted) Place(kv.Key, kv.Value);
     }
 
-    // Shows `slots`, all of one product in one room: pooled objects first, then the rest
-    // copied from the template in one go.
+    // Shows `slots`, all of one product in one room: pooled objects first, then copies of the
+    // template (Instantiate, not InstantiateAsync: see the top).
     void Place((string id, uint mask) key, List<ShelfSlot> slots)
     {
         Stack<GameObject> free = PoolOf(key);
         int i = 0;
         for (; i < slots.Count && free.Count > 0; i++) Show(slots[i], free.Pop(), key);
-        int rest = slots.Count - i;
-        if (rest == 0) return;
+        if (i == slots.Count) return;
 
         GameObject template = TemplateFor(key);
         if (template == null) return;
-        var positions = new Vector3[rest];
-        var rotations = new Quaternion[rest];
-        for (int k = 0; k < rest; k++) slots[i + k].Pose(key.id, out positions[k], out rotations[k]);
-        AsyncInstantiateOperation<GameObject> made = InstantiateAsync(template, rest, Root,
-            new System.ReadOnlySpan<Vector3>(positions), new System.ReadOnlySpan<Quaternion>(rotations));
-        made.WaitForCompletion();
-        GameObject[] copies = made.Result;
-        for (int k = 0; k < copies.Length; k++)
+        for (; i < slots.Count; i++)
         {
-            copies[k].hideFlags = Hidden;
-            copies[k].SetActive(true);
-            shown[slots[i + k]] = (copies[k], key);
+            slots[i].Pose(key.id, out Vector3 position, out Quaternion rotation);
+            GameObject copy = Instantiate(template, position, rotation, Root);
+            copy.hideFlags = Hidden;
+            copy.SetActive(true);
+            shown[slots[i]] = (copy, key);
         }
     }
 
@@ -254,6 +250,8 @@ public class ShelfDrawer : MonoBehaviour
         r.sharedMaterials = look.Value.Materials;
         r.shadowCastingMode = like != null ? like.shadowCastingMode : ShadowCastingMode.Off;
         r.receiveShadows = like == null || like.receiveShadows;
+        r.reflectionProbeUsage = like != null ? like.reflectionProbeUsage : ReflectionProbeUsage.Off;
+        r.motionVectorGenerationMode = like != null ? like.motionVectorGenerationMode : MotionVectorGenerationMode.ForceNoMotion;
         r.renderingLayerMask = key.mask;
         templates[key] = template;
         return template;
