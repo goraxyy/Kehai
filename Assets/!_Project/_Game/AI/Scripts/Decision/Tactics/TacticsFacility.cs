@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Kehai.Aiko
 {
     // Tactics where Aiko acts as the building rather than the body: the lights, the shelves,
-    // the bins, the HUD, the PA (AIKO.md §8.1–8.3).
+    // the bins, the HUD, the PA (Aiko.md §8.1–8.3).
 
     // ================================================================ §8.1 sight
 

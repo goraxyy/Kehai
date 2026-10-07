@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace Kehai.Aiko
 {
-    // The fairness contract (AIKO.md §9), enforced in code.
+    // The fairness contract (Aiko.md §9), enforced in code.
     //
     // Some of the checks need the truth — whether the employee could still finish the
     // shift, whether they can see her path — and this is the one place outside the Director

@@ -105,7 +105,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         outline = GetComponent<OutlineHighlight>();
         request = GetComponent<CustomerRequest>();
 
-        // Every shopper remembers the last time it saw the employee (AIKO.md §3.4).
+        // Every shopper remembers the last time it saw the employee (Aiko.md §3.4).
         if (GetComponent<Kehai.Aiko.CustomerMemory>() == null)
             gameObject.AddComponent<Kehai.Aiko.CustomerMemory>();
 
@@ -597,7 +597,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
             outline.SetHighlighted(hovered || forcedHighlight);
     }
 
-    // ---- Aiko's hooks (AIKO.md §8.5) ------------------------------------------------
+    // ---- Aiko's hooks (Aiko.md §8.5) ------------------------------------------------
 
     // A possessed shopper never queues; take it out of the till count if it was in it.
     public void ReleaseQueueSpot() => IsWaitingToBeServed = false;

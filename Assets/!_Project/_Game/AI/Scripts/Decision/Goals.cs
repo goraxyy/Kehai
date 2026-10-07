@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Goal selection by utility, not by state (AIKO.md §6.3). Every goal is scored every
+    // Goal selection by utility, not by state (Aiko.md §6.3). Every goal is scored every
     // decision; the best one wins, with hysteresis so she doesn't flap between two.
     //
     //   U(g) = w_conf·Fit(g) + w_stress·ExpectedPanicDelta(g)·sign(pressure)
@@ -188,7 +188,7 @@ namespace Kehai.Aiko
 
     // Turns a goal into a plan: pick one of the goal's tactics (by learned value where the
     // rung allows, by authored prior otherwise), then decompose it into primitives under a
-    // time budget (AIKO.md §6.4).
+    // time budget (Aiko.md §6.4).
     public static class HtnPlanner
     {
         // Tactics that could serve `goal` right now. Refusals are appended to `refusals`

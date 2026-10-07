@@ -63,7 +63,7 @@ namespace Kehai.Aiko
 
         // ---- task progress and the "never deny a nearly finished task" rule ----------
 
-        // True when sabotaging `target` would break rule 5 (AIKO.md §9.5): the task is past
+        // True when sabotaging `target` would break rule 5 (Aiko.md §9.5): the task is past
         // the configured completion *and* the target is the one she believes you're finishing.
         public static bool DenyVetoed(AikoContext c, TaskManager.TaskKind kind, Vector3 target, out string check)
         {

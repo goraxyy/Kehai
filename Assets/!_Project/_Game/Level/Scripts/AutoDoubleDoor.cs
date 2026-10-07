@@ -85,7 +85,7 @@ public class AutoDoubleDoor : MonoBehaviour
         if (playersInside == 0) isOpen = false;
     }
 
-    // The phantom chime (AIKO.md §8.3): the doors cycle with nobody there.
+    // The phantom chime (Aiko.md §8.3): the doors cycle with nobody there.
     public void PhantomCycle()
     {
         if (isOpen) return;

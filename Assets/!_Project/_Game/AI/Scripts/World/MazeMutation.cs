@@ -7,7 +7,7 @@ using UnityEngine.AI;
 
 namespace Kehai.Aiko
 {
-    // The shelving is on castors (AIKO.md §5.5). Between shifts Aiko rolls a few bays to a
+    // The shelving is on castors (Aiko.md §5.5). Between shifts Aiko rolls a few bays to a
     // new spot on the 5 m lattice, so the store you walk into is *wrong* and the route you
     // learned is no longer the route.
     //

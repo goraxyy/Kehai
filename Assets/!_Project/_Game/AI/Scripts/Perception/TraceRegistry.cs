@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // AIKO.md §3.3.
+    // Aiko.md §3.3.
     public enum TraceKind
     {
         WetFootprint,       // walked through a spill — has a heading

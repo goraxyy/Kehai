@@ -37,7 +37,7 @@ namespace Kehai.Aiko
             $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} blink={Blink}";
     }
 
-    // Every tunable in one place, with the AIKO.md section it comes from. Plain data so an
+    // Every tunable in one place, with the Aiko.md section it comes from. Plain data so an
     // eval run can override any of it from a JSON config without touching code.
     [System.Serializable]
     public class AikoConfig

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Testimony (AIKO.md §3.4). Every shopper keeps a tiny memory of the last time it saw
+    // Testimony (Aiko.md §3.4). Every shopper keeps a tiny memory of the last time it saw
     // the employee. Aiko can't read minds: her body has to walk up to a customer to "ask",
     // which costs her time and puts her in the open. A busy store is a dense sensor grid;
     // standing at the till puts you in front of the most reliable witness in the building.

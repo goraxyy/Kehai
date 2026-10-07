@@ -183,7 +183,7 @@ public class PlayerMotor : MonoBehaviour
     bool WantsToSprint() => !movementLocked && Input.GetKey(KeyCode.LeftShift) && (burnout == null || burnout.CanSprint);
 
     // Every step is a noise on the bus. Sprinting is loud and frequent, crouching is
-    // nearly silent — the whole stealth game is in these three numbers (AIKO.md §3.2).
+    // nearly silent — the whole stealth game is in these three numbers (Aiko.md §3.2).
     void HandleFootsteps()
     {
         if (!IsMoving || !controller.isGrounded)

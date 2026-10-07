@@ -19,7 +19,7 @@ namespace Kehai.Aiko
     // What Aiko believes about your energy — not the bar itself, which is yours. She
     // knows the store's policy (how fast a shift wears people down, how much a coffee
     // gives back) and she counts what she hears: sprinting, the coffee machine. Believing
-    // you're spent shrinks the area she searches (AIKO.md §4.2).
+    // you're spent shrinks the area she searches (Aiko.md §4.2).
     public sealed class EnergyBelief
     {
         public float Energy { get; private set; } = 1f;
@@ -227,7 +227,7 @@ namespace Kehai.Aiko
             }
         }
 
-        // Absence (AIKO.md §3.6): cells in view that turned out empty. Round-robin over the
+        // Absence (Aiko.md §3.6): cells in view that turned out empty. Round-robin over the
         // cone so a sweep costs a fixed number of raycasts per tick.
         void CollectSweep(SightSensor sight, Transform bodyRoot)
         {

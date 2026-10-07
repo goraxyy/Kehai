@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Tactics about space, people, and you (AIKO.md §8.4–8.6), plus the blink channel.
+    // Tactics about space, people, and you (Aiko.md §8.4–8.6), plus the blink channel.
 
     // ================================================================ §8.4 space
 

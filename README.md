@@ -41,7 +41,7 @@ store's planogram) is written in code so that it can be reviewed here.
 
 ## Aiko, the adaptive antagonist
 
-Designed in [`AIKO.md`](docs/design/AIKO.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
+Designed in [`Aiko.md`](docs/design/Aiko.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
 (about 11,500 lines of C#). She runs three minds:
 
 | Mind | Knows | Controls |
@@ -270,7 +270,7 @@ is the index.
 
 | File | What it is |
 |---|---|
-| [`docs/design/AIKO.md`](docs/design/AIKO.md) | Aiko's full design, and where the code departs from it |
+| [`docs/design/Aiko.md`](docs/design/Aiko.md) | Aiko's full design, and where the code departs from it |
 | [`docs/design/STORE_CATALOG.md`](docs/design/STORE_CATALOG.md) | The 80 products, the aisles, what customers say |
 | [`docs/design/MERCHANDISING.md`](docs/design/MERCHANDISING.md) | How the shelves are stocked, and why |
 | [`docs/design/STORE_MAP.md`](docs/design/STORE_MAP.md) | The store's map |

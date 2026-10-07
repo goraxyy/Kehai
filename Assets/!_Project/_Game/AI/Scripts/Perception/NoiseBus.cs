@@ -46,7 +46,7 @@ namespace Kehai.Aiko
     // Everything noisy in the store announces itself here. One static ring buffer, no
     // per-frame scanning: listeners keep a cursor and read what's new since they last looked.
     //
-    // Loudness follows AIKO.md §3.2 — sprint 0.9, walk 0.35, crouch 0.1 and so on — and
+    // Loudness follows Aiko.md §3.2 — sprint 0.9, walk 0.35, crouch 0.1 and so on — and
     // one unit carries CarryPerUnit metres *along the floor*: the listener measures the
     // walking distance to the source, not the straight line, so a noise two aisles over
     // around a corner is quieter than one straight down the aisle.

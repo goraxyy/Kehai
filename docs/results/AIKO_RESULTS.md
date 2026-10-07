@@ -14,7 +14,7 @@ Each rung adds one mechanism, so a difference between neighbouring rungs is that
 
 ## How it was run
 
-- **Players.** `SimulatedPlayer` in three profiles (`AIKO.md` §13): *efficient* (nearest job first,
+- **Players.** `SimulatedPlayer` in three profiles (`Aiko.md` §13): *efficient* (nearest job first,
   mostly ignores her), *skittish* (drops what it's doing when it sees or hears her, runs to the far
   end of the store and hides), *reckless* (sprints everywhere, helps everyone, ignores noise). They
   act through the same verbs and the same senses an external agent gets — Aiko only when in view,
@@ -53,7 +53,7 @@ by the player at D and F (+2.2 ± 1.3, +2.0 ± 1.0). Over a career, E's detectio
 against the efficient player) without a measurable effect.
 
 **3. The Ledger does not converge to a different tactic mix per player — the negative result
-`AIKO.md` §13 asks us to look for.** The Jensen–Shannon divergence between one profile's mix and
+`Aiko.md` §13 asks us to look for.** The Jensen–Shannon divergence between one profile's mix and
 the others' is no larger at the learning rungs (E: 0.016–0.068) than at C, where nothing is learnt
 (0.030–0.084). The likeliest reason is the players, not the bandit's arithmetic: the scripted bots
 react only to *seeing or hearing Aiko herself* (and only the skittish one does much about it); PA
