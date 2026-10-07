@@ -138,7 +138,10 @@ public class OutlineHighlight : MonoBehaviour
         shell.AddComponent<MeshFilter>().sharedMesh = mesh;
 
         MeshRenderer renderer = shell.AddComponent<MeshRenderer>();
-        renderer.sharedMaterial = material;
+        // One per submesh, so a product made of several materials is outlined all round.
+        var materials = new Material[Mathf.Max(1, mesh.subMeshCount)];
+        for (int i = 0; i < materials.Length; i++) materials[i] = material;
+        renderer.sharedMaterials = materials;
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         renderer.receiveShadows = false;
         renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
@@ -161,6 +164,21 @@ public class OutlineHighlight : MonoBehaviour
             if (Application.isPlaying) Destroy(temp); else DestroyImmediate(temp);
         }
         return cachedCube;
+    }
+
+    // The mesh underneath changed — a placeholder box dressed as its product — so the shells
+    // built for the old one are thrown away and the next highlight builds new ones.
+    public void Rebuild()
+    {
+        foreach (GameObject shell in outlineObjects)
+            if (shell != null) Destroy(shell);
+        outlineObjects.Clear();
+        built = false;
+
+        if (!isHighlighted) return;
+        EnsureBuilt();
+        foreach (GameObject shell in outlineObjects)
+            if (shell != null) shell.SetActive(true);
     }
 
     public void SetHighlighted(bool on)

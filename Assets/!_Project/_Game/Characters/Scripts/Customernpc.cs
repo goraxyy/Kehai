@@ -16,8 +16,13 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     public Transform exitPoint;
 
     [Header("Shopping Behaviour")]
+    [Tooltip("How many things are on a shopping list (or, with no planogram, shelves visited).")]
     public Vector2Int shelvesToVisitRange = new Vector2Int(2, 4);
     public Vector2 shelfStayDurationRange = new Vector2(3f, 8f);
+
+    [Range(0f, 1f)]
+    [Tooltip("Odds of grabbing something from the sweets by the till while queueing.")]
+    public float impulseChance = 0.35f;
 
     [Header("Mess & Trash")]
     public GameObject dirtPrefab;
@@ -74,6 +79,10 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     public static int WaitingCount { get; private set; }
 
     bool isWaitingToBeServed;
+
+    // What this shopper came in for, in the order they'll walk to it.
+    readonly List<ProductDef> shoppingList = new List<ProductDef>();
+    public IReadOnlyList<ProductDef> ShoppingListItems => shoppingList;
 
     // Nothing shops in the dark: a blackout parks every customer where they stand and
     // stops their timers until the breakers go back on.
@@ -161,6 +170,88 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
             yield break;
         }
 
+        // A stocked shop is shopped from a list; without a planogram (a test scene, an old
+        // layout) the shopper just browses shelves.
+        if (Planogram.HasStock) yield return ShopFromList();
+        else yield return BrowseRandomShelves();
+
+        CurrentActivity = Activity.HeadingToTill;
+        yield return MoveTo(cashierPoint.position);
+
+        // The sweets by the till are there for exactly this.
+        if (UnityEngine.Random.value < impulseChance) TakeImpulseBuy();
+
+        CurrentActivity = Activity.Queueing;
+        yield return WaitAtCashier();
+
+        CurrentActivity = Activity.Leaving;
+        yield return MoveTo(exitPoint.position);
+
+        Despawn();
+    }
+
+    // Walks the list in store order: to the nearest facing of each product, takes one, and
+    // moves on. An empty facing is when people ask; so, sometimes, is the next thing on the list.
+    IEnumerator ShopFromList()
+    {
+        int count = UnityEngine.Random.Range(shelvesToVisitRange.x, shelvesToVisitRange.y + 1);
+        shoppingList.Clear();
+        shoppingList.AddRange(ShoppingList.Pick(count, new System.Random(UnityEngine.Random.Range(int.MinValue, int.MaxValue))));
+
+        bool willUseBin = UnityEngine.Random.value <= trashcanVisitChance;
+        int binAfter = willUseBin && shoppingList.Count > 0 ? UnityEngine.Random.Range(0, shoppingList.Count) : -1;
+
+        for (int i = 0; i < shoppingList.Count; i++)
+        {
+            ProductDef want = shoppingList[i];
+            ShelfSlot target = Planogram.Nearest(want.Id, transform.position, mustBeFilled: false);
+            if (target == null) continue;
+
+            yield return MoveTo(StandPoint(target));
+
+            float browseTime = UnityEngine.Random.Range(shelfStayDurationRange.x, shelfStayDurationRange.y);
+            yield return Wait(browseTime * 0.5f);
+
+            bool got = TakeProduct(want.Id);
+            if (!got && request != null)
+            {
+                // The facing is bare. Ask, and if they're shown another, take one there.
+                ShelfSlot elsewhere = Planogram.Nearest(want.Id, transform.position, mustBeFilled: true, except: target);
+                if (elsewhere != null)
+                {
+                    yield return request.RunFor(want, elsewhere, missing: true);
+                    if (request.Helped)
+                    {
+                        yield return MoveTo(StandPoint(elsewhere));
+                        TakeProduct(want.Id);
+                    }
+                }
+            }
+            else if (got && request != null && i + 1 < shoppingList.Count)
+            {
+                // Some shoppers can't find the next thing on their list and stop to ask. The
+                // request owns the customer until it is resolved, so shopping waits here.
+                // Only when it's out of sight, though: nobody asks for the shelf beside them.
+                ProductDef next = shoppingList[i + 1];
+                ShelfSlot nextTarget = Planogram.Nearest(next.Id, transform.position, mustBeFilled: true);
+                if (nextTarget != null && (StandPoint(nextTarget) - transform.position).sqrMagnitude > AskBeyond * AskBeyond)
+                    yield return request.RunFor(next, nextTarget, missing: false);
+            }
+
+            yield return Wait(browseTime * 0.5f);
+
+            if (i == binAfter)
+            {
+                CurrentActivity = Activity.UsingBin;
+                yield return VisitTrashcan();
+                CurrentActivity = Activity.Shopping;
+            }
+        }
+    }
+
+    // The old way round the shop: a few random shelves, whatever is nearest on each.
+    IEnumerator BrowseRandomShelves()
+    {
         // Some shoppers get the urge to bin something partway round the store.
         List<Transform> route = PickRandomShelves();
         bool willUseBin = UnityEngine.Random.value <= trashcanVisitChance;
@@ -178,8 +269,6 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
 
             TakeItemFromNearbyShelf();
 
-            // Some shoppers can't find the next thing on their list and stop to ask.
-            // The request owns the customer until it is resolved, so shopping waits here.
             if (request != null)
                 yield return request.Run();
 
@@ -192,16 +281,17 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
                 CurrentActivity = Activity.Shopping;
             }
         }
+    }
 
-        CurrentActivity = Activity.HeadingToTill;
-        yield return MoveTo(cashierPoint.position);
-        CurrentActivity = Activity.Queueing;
-        yield return WaitAtCashier();
+    // Further than this and the next thing on the list is worth asking about.
+    const float AskBeyond = 8f;
 
-        CurrentActivity = Activity.Leaving;
-        yield return MoveTo(exitPoint.position);
-
-        Despawn();
+    // Where to stand to take something off a facing: the nearest walkable spot, which is the
+    // aisle in front of it.
+    static Vector3 StandPoint(ShelfSlot slot)
+    {
+        Vector3 p = slot.transform.position;
+        return NavMesh.SamplePosition(p, out NavMeshHit hit, 2.5f, NavMesh.AllAreas) ? hit.position : p;
     }
 
     IEnumerator WaitAtCashier()
@@ -329,29 +419,39 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
 
     // Takes one item from the nearest stocked slot within reach. The item leaves the shelf
     // (so the slot needs restocking) and hovers in front of the customer from then on.
-    void TakeItemFromNearbyShelf()
+    void TakeItemFromNearbyShelf() => TakeFrom(FindNearestStockedSlot());
+
+    // One of a particular product, from a facing of it within reach. False if there's none.
+    bool TakeProduct(string productId) => TakeFrom(FindNearestStockedSlot(s => s.productId == productId));
+
+    // Something from the sweets by the till.
+    void TakeImpulseBuy() => TakeFrom(FindNearestStockedSlot(s => s.requiredType == ItemType.Confectionery));
+
+    bool TakeFrom(ShelfSlot slot)
     {
-        if (basket.Count >= maxCarriedItems) return;
+        if (slot == null || basket.Count >= maxCarriedItems) return false;
 
-        ShelfSlot nearest = FindNearestStockedSlot();
-        if (nearest == null) return;
-
-        Item taken = nearest.TakeItem();
-        if (taken == null) return;
+        Item taken = slot.TakeItem();
+        if (taken == null) return false;
 
         Transform holder = carryPoint != null ? carryPoint : transform;
         taken.SetCarried(true, holder);
 
-        // Nothing re-applies this every frame any more, so the stacking offset sticks.
-        taken.transform.localPosition = new Vector3(0f, basket.Count * carryStackSpacing, 0f);
+        // Stacked one on another, each by its own height. Nothing re-applies this every frame
+        // any more, so the offset sticks.
+        float y = 0f;
+        foreach (Item held in basket)
+            if (held != null) y += Mathf.Min(held.restHeight * 2f, carryStackSpacing) + 0.02f;
+        taken.transform.localPosition = new Vector3(0f, y + taken.restHeight - Item.SnapHeight, 0f);
         taken.transform.localRotation = Quaternion.identity;
 
         basket.Add(taken);
 
         DropDirt();
+        return true;
     }
 
-    ShelfSlot FindNearestStockedSlot()
+    ShelfSlot FindNearestStockedSlot(System.Predicate<ShelfSlot> wanted = null)
     {
         var slots = ShelfSlot.All;
         ShelfSlot nearest = null;
@@ -362,6 +462,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         {
             ShelfSlot slot = slots[i];
             if (!slot.isFilled) continue;
+            if (wanted != null && !wanted(slot)) continue;
 
             float sqr = (position - slot.transform.position).sqrMagnitude;
             if (sqr >= nearestSqr) continue;

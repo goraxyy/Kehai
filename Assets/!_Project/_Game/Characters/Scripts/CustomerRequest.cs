@@ -2,10 +2,12 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
-// Some shoppers can't find what they came for. After taking something off a shelf a
-// customer may stop, light up, and wait to be asked what's wrong. Talk to them and they
-// name a product; agree to help and they follow you until you walk them to the right
-// shelf, which is marked with a beacon.
+// Some shoppers can't find what they came for. A customer may stop, light up, and wait to be
+// asked what's wrong. Talk to them and they ask for the next thing on their list — by name, by
+// aisle, by department, or because the shelf they found was empty (CustomerQuestion has the
+// lines); agree to help and they follow you until you walk them to the right shelf, which is
+// marked with a beacon. Asked for an aisle or a department, they're happy once you've got them
+// into it, and find the shelf themselves from there.
 //
 // The whole thing runs as one coroutine owned by CustomerNPC's routine, so while a request
 // is live the customer's normal shopping is simply paused.
@@ -16,8 +18,12 @@ public class CustomerRequest : MonoBehaviour
 
     [Header("Chance")]
     [Range(0f, 1f)]
-    [Tooltip("Odds of asking for help after taking an item off a shelf.")]
+    [Tooltip("Odds of asking for help with the next thing on the list.")]
     public float askChance = 0.5f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Odds of asking when the shelf they walked to is empty.")]
+    public float missingAskChance = 0.85f;
 
     [Tooltip("Give up and carry on shopping after this long unattended. 0 waits forever.")]
     public float patienceSeconds = 120f;
@@ -97,6 +103,14 @@ public class CustomerRequest : MonoBehaviour
     public string Wanted => wanted;
     public ShelfUnit DestinationShelf => destinationShelf;
 
+    // The product behind the question, and how it was asked. Null for the old free-form ask.
+    public ProductDef WantedProduct => wantedProduct;
+    public CustomerQuestion.Kind Kind => kind;
+    public string WantedAisle => wantedProduct != null ? wantedZone.Sign : null;
+
+    // Whether the last request ended with them where they wanted to be.
+    public bool Helped { get; private set; }
+
     // 0 = "Follow me", 1 = decline. Consumed by the conversation loop on its next frame.
     [System.NonSerialized] public int externalChoice = -1;
 
@@ -111,8 +125,12 @@ public class CustomerRequest : MonoBehaviour
     Vector3 homePosition;
     Vector3 destination;
     ShelfUnit destinationShelf;
+    ProductDef wantedProduct;
+    StoreLayout.Zone wantedZone;
+    CustomerQuestion.Kind kind;
     string question;
     string wanted;
+    string thanks;
     string[] options;
     bool talkRequested;
     bool counted;
@@ -126,11 +144,41 @@ public class CustomerRequest : MonoBehaviour
 
     // --- entry point, driven by CustomerNPC.RunRoutine ----------------------
 
+    // The free-form ask: a random shelf somewhere else in the store. Used when the shop has
+    // no planogram to shop from.
     public IEnumerator Run()
     {
-        if (!ShouldAsk()) yield break;
+        Helped = false;
+        if (!ShouldAsk(askChance)) yield break;
         if (!PickDestination()) yield break;
 
+        yield return Converse();
+    }
+
+    // Asks for one product off the customer's list, to be walked to `target`, a facing that
+    // stocks it. `missing` is the empty-shelf case.
+    public IEnumerator RunFor(ProductDef product, ShelfSlot target, bool missing)
+    {
+        Helped = false;
+        if (product == null || target == null) yield break;
+        if (!ShouldAsk(missing ? missingAskChance : askChance)) yield break;
+        if (!AimAt(target)) yield break;
+
+        wantedProduct = product;
+        wantedZone = StoreLayout.ZoneAt(target.transform.position);
+        kind = CustomerQuestion.Choose(Random.value, missing, wantedZone);
+        // Nobody stands in aisle 3 asking where aisle 3 is.
+        if (kind != CustomerQuestion.Kind.Missing && wantedZone.Contains(transform.position))
+            kind = CustomerQuestion.Kind.Product;
+        wanted = CustomerQuestion.Wanted(kind, product, wantedZone);
+        question = CustomerQuestion.Ask(kind, product, wantedZone, Random.Range(0, 1000));
+        thanks = CustomerQuestion.Thanks(kind, product, wantedZone);
+
+        yield return Converse();
+    }
+
+    IEnumerator Converse()
+    {
         Begin();
 
         // 1. Stand still and wait to be spoken to.
@@ -181,9 +229,12 @@ public class CustomerRequest : MonoBehaviour
         //    and turns back toward where it asked the moment they leave it. Nothing is
         //    reset by wandering off — walk back into the circle and it picks up again.
         yield return Escort();
+        Helped = AtDestination();
         GameEvents.RaiseDirectionsGiven(npc);
 
-        Finish(thanksLine.Contains("{0}") ? string.Format(thanksLine, wanted) : thanksLine, 1.6f);
+        string parting = !string.IsNullOrEmpty(thanks) ? thanks
+                       : thanksLine.Contains("{0}") ? string.Format(thanksLine, wanted) : thanksLine;
+        Finish(parting, 1.6f);
     }
 
     IEnumerator WaitToBeAsked()
@@ -250,6 +301,10 @@ public class CustomerRequest : MonoBehaviour
     // of the shelf — walking there alone doesn't count.
     bool AtDestination()
     {
+        // Asked for an aisle or a department, anywhere inside it will do.
+        if (wantedProduct != null && CustomerQuestion.ZoneIsEnough(kind) && wantedZone.Contains(transform.position))
+            return true;
+
         Vector3 here = transform.position;
         Vector3 there = destination;
         here.y = there.y = 0f;
@@ -258,13 +313,25 @@ public class CustomerRequest : MonoBehaviour
 
     // --- setup / teardown ---------------------------------------------------
 
-    bool ShouldAsk()
+    bool ShouldAsk(float chance)
     {
-        if (askChance <= 0f) return false;
+        if (chance <= 0f) return false;
         if (CurrentStage != Stage.None) return false;
         if (npc.PlayerTransform == null) return false;
         if (agent == null || !agent.isOnNavMesh) return false;
-        return Random.value <= askChance;
+        return Random.value <= chance;
+    }
+
+    // The spot in front of a facing, if they can walk there.
+    bool AimAt(ShelfSlot target)
+    {
+        if (!NavMesh.SamplePosition(target.transform.position, out NavMeshHit hit, 2.5f, NavMesh.AllAreas)) return false;
+        var path = new NavMeshPath();
+        if (!agent.CalculatePath(hit.position, path) || path.status != NavMeshPathStatus.PathComplete) return false;
+
+        destination = hit.position;
+        destinationShelf = target.owner;
+        return true;
     }
 
     // Picks a shelf somewhere else in the store that actually stocks something, and
@@ -292,6 +359,8 @@ public class CustomerRequest : MonoBehaviour
 
             destination = hit.position;
             destinationShelf = slot.owner;
+            wantedProduct = null;
+            thanks = null;
             wanted = WantedFrom(slot);
             question = string.Format(
                 questionTemplates.Length > 0 ? questionTemplates[Random.Range(0, questionTemplates.Length)] : "Where is {0}?",

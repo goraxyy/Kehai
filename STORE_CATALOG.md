@@ -8,6 +8,7 @@ This is the human-readable half of two files that must agree:
 |---|---|
 | `Assets/!_Project/_Game/Items/Scripts/ProductCatalog.cs` | the range — 80 products, their packaging and their materials |
 | `Assets/!_Project/_Game/Level/Scripts/StoreLayout.cs` | the plan — which section is sold on which piece of floor |
+| `Assets/!_Project/_Game/Level/Scripts/Planogram.cs` | the merchandising — which product goes on which board of a bay |
 
 Both are plain C#, so they live in version control alongside the rest of the game. The
 scene does not store any of it; the shop is stocked at load. Every number in this document
@@ -333,9 +334,11 @@ Every product has to fit the shelf slot it stands in. The slot's trigger is
 
 > **width ≤ 0.25 m · height ≤ 0.42 m · depth ≤ 0.25 m**
 
-Anything larger pokes through the facing next door. The current placeholder, `Item_def`, is a
+Anything larger pokes through the facing next door. The placeholder, `Item_def`, is a
 0.20 × 0.40 × 0.20 box; the tallest real product is the daikon at 0.40. The item's origin sits
-at the *centre* of the model, at the snap point — not at its base.
+at the *centre* of the model. The snap point is 0.20 above the board (the placeholder's middle),
+so a real product is lifted or lowered by the difference (`Item.restHeight`) and stands on the
+board whatever its height.
 
 ### Shapes
 
@@ -390,23 +393,194 @@ material can be generated without either.
 
 ## 7. How a bay gets stocked
 
-A **facing** is one platform on one side of a bay — the whole of the middle shelf, front
-side. That is how a real planogram is blocked out, and it is how this works too:
+A **facing** is one board on one side of a bay — the whole of the top board, front side. That
+is how a real planogram is blocked out, and it is how this works too:
 
-- A `ShelfTwoside` bay has 3 platforms × 2 sides × 6 columns = **36 slots in 6 facings**,
+- A `ShelfTwoside` bay has 3 boards × 2 sides × 6 slots = **36 slots in 6 facings**,
   so it shows six different products.
 - A one-sided bay or a tall pillar has **3 facings**.
 - A short pillar has **1**.
 
-The facing order is by height, then by side. Which product a bay starts on is a hash of its
-world position, so the plan is identical every run but neighbouring bays do not all open on
-the same product. Across the shop this puts all 80 products on a shelf somewhere.
+`StoreLayout` decides which section a bay belongs to; `Planogram` decides what each of its boards
+carries, from the board's height and the side it faces. The rules are the ones every
+supermarket chain works to:
+
+| rule | what it means here |
+|---|---|
+| **Eye level is buy level** | The top board (1.4 m) is where an adult's eye lands: brand leaders and the lines with the best margin. |
+| **Kids' eye level** | The middle board (0.8 m) is a child's eye level: Choco Loops, Honey Nutz, Gummy Gang and Pokki are never higher. |
+| **Heavy goes low** | Nothing over 0.8 kg is on the top board. Rice, kibble, the litre of water and the laundry box sit on the bottom board. |
+| **Vertical brand blocks** | A brand's lines share one face of a bay, one above the other (Krunchos, Pipisi, Moo-Moo, Ramyum, Kamado, Freezy, Nyan Nyan, Wan Wan), so a shopper walking the aisle passes every brand once. |
+| **Best sellers take more facings** | Bananas, whole milk and Ramyum cups appear in more of their section's bays than anything else in it. |
+| **End caps** | The ends of runs (the `Shelfpillar_E` pieces) carry the section's promotion, or a cross-merchandised partner: Pipisi on the crisps' end caps, Krunchos on the drinks'. A cross-merchandised facing keeps its own section, so the crisps' end cap still only takes cola. |
+| **Impulse at the till** | The facing on the till counter is Mintz, and shoppers sometimes grab sweets while queueing. |
+
+Each section has two layouts, alternated across its bays by position so neighbouring bays don't
+match. Short two-board bays use the waist and stoop rows.
+
+**Produce · Fruit & Veg**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a bag of salad mix | bananas | a bag of Fuji apples |
+| A | back | a tray of tomatoes | a net of mikan | a daikon radish |
+| B | front | a tray of tomatoes | bananas | a daikon radish |
+| B | back | a bag of salad mix | a net of mikan | a bag of Fuji apples |
+
+End cap: a net of mikan, bananas.
+
+**Bakery**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a melon pan | an anpan | a Shokupan white loaf |
+| A | back | a pack of croissants | a pack of sesame bagels | a Rye Rider sourdough |
+| B | front | a melon pan | a Shokupan white loaf | an anpan |
+| B | back | a pack of croissants | a pack of sesame bagels | a Rye Rider sourdough |
+
+End cap: a pack of croissants, a melon pan.
+
+**Back Wall · Dairy & Chilled**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Yogo strawberry yoghurt | Moo-Moo skimmed milk | Moo-Moo whole milk |
+| A | back | Butterfly salted butter | a box of eggs | Kumo cream cheese |
+| B | front | Kumo cream cheese | a box of eggs | Moo-Moo whole milk |
+| B | back | Yogo strawberry yoghurt | Butterfly salted butter | Moo-Moo whole milk |
+
+End cap: Yogo strawberry yoghurt.
+
+**Back Wall · Frozen**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Ice Dream vanilla | a bag of Freezy peas | a bag of frozen fries |
+| A | back | Gyoza Gang gyoza | Kaiten prawns | a Pizza Piccolo margherita |
+| B | front | Gyoza Gang gyoza | a Pizza Piccolo margherita | Kaiten prawns |
+| B | back | Ice Dream vanilla | a bag of Freezy peas | a bag of frozen fries |
+
+End cap: Ice Dream vanilla.
+
+**Aisle 4 · Cereal & Breakfast**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Bran Flakies | Choco Loops | Oatsy instant porridge |
+| A | back | Kafé instant coffee | Honey Nutz clusters | Morning Mochi granola |
+| B | front | Morning Mochi granola | Honey Nutz clusters | Bran Flakies |
+| B | back | Kafé instant coffee | Sencha teabags | Choco Loops |
+
+End cap: Kafé instant coffee, Choco Loops.
+
+**Aisle 2 · Snacks & Crisps**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Krunchos salted | Krunchos sour cream & onion | Popcorn Panic butter |
+| A | back | Nutzy mixed nuts | Wasabi Wave rice crackers | Pretzel Pals |
+| B | front | Nutzy mixed nuts | Krunchos salted | Krunchos sour cream & onion |
+| B | back | Wasabi Wave rice crackers | Popcorn Panic butter | Pretzel Pals |
+
+End cap: Pipisi, Krunchos salted.
+
+**Checkout · Sweets & Impulse**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a tin of Mintz | a Kitto Katsu bar | Gummy Gang bears |
+| A | back | a Chocobo milk bar | Pokki sticks | Mochi Bites |
+| B | front | a Chocobo milk bar | Gummy Gang bears | Pokki sticks |
+| B | back | Mochi Bites | a Kitto Katsu bar | Gummy Gang bears |
+
+End cap: a Kitto Katsu bar.
+
+**Aisle 1 · Soft Drinks**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Pipisi | Pipisi Zero | Aqua Pura water |
+| A | back | Koka-Kora | Fanto orange | Chakra green tea |
+| B | front | a Genki energy drink | Chakra green tea | Aqua Pura water |
+| B | back | Koka-Kora | Pipisi Zero | Pipisi |
+
+End cap: a Genki energy drink, Krunchos salted.
+
+**Aisle 3 · Tins & Jars**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a jar of nori paste | a tin of Tunatastic | Bean Machine baked beans |
+| A | back | a tin of Sardino | Corn Star sweetcorn | Miso Master miso |
+| B | front | a tin of Tunatastic | a tin of Sardino | Miso Master miso |
+| B | back | a jar of nori paste | Corn Star sweetcorn | Bean Machine baked beans |
+
+End cap: a tin of Tunatastic.
+
+**Aisle 5 · Noodles, Pasta & Rice**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a Ramyum cup noodle | a Ramyum spicy 5-pack | a bag of Kome King rice |
+| A | back | Udon Uno fresh udon | Soba Sensei dried soba | Pasta Basta spaghetti |
+| B | front | Udon Uno fresh udon | Pasta Basta spaghetti | a bag of Kome King rice |
+| B | back | a Ramyum cup noodle | Soba Sensei dried soba | a Ramyum spicy 5-pack |
+
+End cap: a Ramyum cup noodle.
+
+**Aisle 6 · Health & Beauty**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Silkstrand shampoo | Freshbreath toothpaste | pocket tissues |
+| A | back | Handy sanitiser gel | a box of plasters | a bar of Soapy Sudz |
+| B | front | Handy sanitiser gel | Freshbreath toothpaste | a bar of Soapy Sudz |
+| B | back | Silkstrand shampoo | a box of plasters | pocket tissues |
+
+End cap: Handy sanitiser gel.
+
+**Aisle 7 · Household & Cleaning**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | Sparkle Spray cleaner | Bubbles dish soap | Whitewash laundry powder |
+| A | back | a pack of sponges | a roll of bin bags | kitchen roll |
+| B | front | Bubbles dish soap | a pack of sponges | kitchen roll |
+| B | back | Sparkle Spray cleaner | a roll of bin bags | Whitewash laundry powder |
+
+End cap: kitchen roll.
+
+**Back Wall · Pet**
+
+| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
+|---|---|---|---|---|
+| A | front | a Nyan Nyan cat food pouch | a Nyan Nyan tuna tin | Hamu hamster bedding |
+| A | back | Birdy seed mix | a Wan Wan dog chunks tin | a bag of Wan Wan kibble |
+| B | front | Birdy seed mix | a Wan Wan dog chunks tin | a bag of Wan Wan kibble |
+| B | back | a Nyan Nyan cat food pouch | a Nyan Nyan tuna tin | Hamu hamster bedding |
+
+End cap: a Nyan Nyan cat food pouch.
+
+
+### The block on each slot
+
+A slot holds one item, the thing the player picks up and puts back, but a stocked shelf shows a
+block of the product: as many across as fit the slot, up to three deep, and flat tins and bars
+stacked. `Backstock` draws that block round the slot's item as one shared mesh per product and
+size, with no colliders and no shadows, and hides it while the slot is empty. A gap on the shelf
+still means "restock me", and the item itself stands in one of the block's cells.
 
 Restocking uses a single placeholder prefab for the whole building, so `ShelfSlot.FillWithNewItem`
-stamps the facing's section and product onto whatever it spawns. Without that, every restocked
-shelf in the building would fill up with cereal whatever its sign said.
+stamps the facing's section and product onto whatever it spawns, and `ProductLook` swaps the
+placeholder box for the product's model.
 
----
+### The aisles
+
+The middle of the shop is **Aisles 1–7**; the edge is named departments (Fruit & Veg, Bakery,
+Dairy & Chilled, Frozen, Pet, Sweets), as in any supermarket. `AisleSigns` hangs a four-sided
+sign over the middle of each zone's bays at 3 m, clear of the 2 m shelving: a numbered badge
+and the aisle's name for an aisle, the department's name for a department, with the Japanese
+underneath. It's built at load, like the stock.
 
 ## 8. Where this lives in code
 
@@ -414,8 +588,15 @@ shelf in the building would fill up with cereal whatever its sign said.
 |---|---|
 | `_Game/Items/Scripts/Item.cs` | `ItemType` (the 13 sections + 4 tools); `Item.productId`, `Item.DisplayName` |
 | `_Game/Items/Scripts/ProductCatalog.cs` | `ProductDef`, `PackShape`, `PackMaterial`, the 80-row table, lookups |
-| `_Game/Level/Scripts/StoreLayout.cs` | the zone table, `SectionAt`, `ApplyToScene`, `Describe` |
+| `_Game/Level/Scripts/StoreLayout.cs` | the zone table (aisle numbers, names, what customers call them), `SectionAt`, `ApplyToScene`, `Describe` |
+| `_Game/Level/Scripts/Planogram.cs` | the merchandising rules and layouts; which facings stock each product |
+| `_Game/Level/Scripts/Backstock.cs` | the block of product drawn round each slot's item |
+| `_Game/Level/Scripts/AisleSigns.cs` | the hanging aisle and department signs |
 | `_Game/Level/Scripts/ShelfSlot.cs` | `requiredType` + `productId` per facing; `Label`; stamps restocked items |
+| `_Game/Items/Scripts/ProductLook.cs` | dresses a placeholder item as its product's model |
+| `_Game/Items/Editor/ProductImport.cs` | `Kehai/Products/…`: imports the models and lays out the showcase on `Models_Island` |
+| `_Game/Characters/Scripts/ShoppingList.cs` | what a shopper came in for, in walking order |
+| `_Game/Characters/Scripts/CustomerQuestion.cs` | how they ask, and how they say thanks |
 | `_Game/Level/Scripts/ShelfUnit.cs` | `section` sign and `category` per bay |
 | `_Game/Characters/Scripts/CustomerRequest.cs` | asks for a product by name; the bubble's position |
 | `_Game/Level/Editor/StoreLayoutBuilder.cs` | `Kehai/Store/Report Layout` and `Kehai/Store/Apply Layout` |
@@ -437,28 +618,44 @@ The two menu items are for authoring:
 
 ## 9. What the customer says
 
-A shopper who stops to ask for directions takes the question from the facing they are being
-sent to, so the shelf the beacon lands on always genuinely stocks the thing they asked about.
+Shoppers come in with a **list**: two to four products, drawn by how often each section is
+shopped (milk, fruit, bread and drinks far more than plasters or hamster bedding) and by each
+product's share of its section's facings. The list is walked in store order: fresh food by the
+door, then the aisles, then the back wall. At each product they walk to the nearest facing that
+stocks it and take one. Waiting at the till, about one in three grabs something from the sweets.
 
-> *"Excuse me — I'm looking for Pipisi Zero."*
-> *"Sorry, I can't find a tin of Tunatastic anywhere."*
-> *"Hi! Do you still have Choco Loops?"*
-> *"Excuse me — where do you keep a bag of Wan Wan kibble?"*
-> *"I've been round twice and I still can't see the milk."*
+They ask for help in two situations:
 
-Product names are written as **object phrases** — `Pipisi Zero`, `a tin of Tunatastic` — so
-they drop into any template without a `the` in front. One question in five (`sectionQuestionChance`)
-asks for a whole section instead, which is the last line above.
+- **The shelf is empty.** They ask whether there's any more, and are walked to another facing
+  that has it.
+- **Sometimes, the next thing on the list.** They ask in one of four ways:
+
+| how they ask | example | done when |
+|---|---|---|
+| by name | *"Excuse me - I'm looking for Pipisi Zero."* | they reach the facing |
+| which aisle | *"Which aisle would I find a tin of Tunatastic in?"* | they reach the facing |
+| by aisle | *"Which way is aisle 5? I need the noodles."* | they're anywhere in the aisle |
+| by department | *"Where's the bakery?"* | they're anywhere in the department |
+
+A department has no number, so something sold round the edge of the shop is never asked for by
+aisle. Whatever is asked, the shelf the beacon lands on really stocks it. Product names are
+written as **object phrases** (`Pipisi Zero`, `a tin of Tunatastic`), so they drop into any
+line without a `the` in front.
+
+With no planogram (a test scene, an old layout), shoppers fall back to the old way: a few
+random shelves, and a request for whatever a random facing holds.
 
 The speech bubble hangs **0.4 m in front of the customer's legs and 0.25 m above the floor**,
 and grows upward from there.
 
----
-
 ## 10. Changing it
 
-**Add a product** — one `P(...)` row in `ProductCatalog.cs`. It appears on a shelf the next
-time the game runs; nothing else needs touching. Keep within the 0.25 × 0.42 × 0.25 envelope.
+**Add a product** — one `P(...)` row in `ProductCatalog.cs`, and a board for it in one of its
+section's layouts in `Planogram.cs` (a test fails until it has one). Keep within the
+0.25 × 0.42 × 0.25 envelope. Until its model is imported it shows as the placeholder box.
+
+**Re-merchandise a section** — edit its two layouts, or its end cap, in `Planogram.cs`. The tests
+hold the rules: nothing heavy at eye level, children's lines below it, a brand on one face.
 
 **Move a section** — edit its rectangle in `StoreLayout.Zones`. The zones must keep tiling the
 plane; `Report Layout` will show the new bay and facing counts straight away.
@@ -469,3 +666,24 @@ plane; `Report Layout` will show the new bay and facing counts straight away.
 **Re-balance a section that is too big or too small** — the bay counts in section 4 are the
 measurement. Produce is deliberately the largest at 29 bays; anything under about 6 bays will
 feel like a corner rather than a section.
+
+---
+
+## 11. The models
+
+The 80 products are low-poly models with their own printed labels. They're made outside the
+repository, in a Blender pipeline in `~/Desktop/KehaiRelated/Products` that reads the catalogue,
+draws the labels and builds the meshes. **Kehai/Products/1. Import Product Models** brings them
+in:
+
+| where | what |
+|---|---|
+| `Items/Products/Models/<id>.fbx` | the mesh: real size, origin at the centre of its box, front facing +Z |
+| `Items/Products/Labels/<id>.png` | its label: front panel, side panel and a strip of flat colours for caps and lids |
+| `Items/Products/Materials/` | URP Lit. One `L_<id>` per label (smoothness and metallic from the catalogue row, metallic capped at 0.35 because printed ink isn't bare metal), plus the shared ones: can tops, tin lids, bare metal, PET with the drink inside, film, the fruit nets |
+| `Items/Products/Resources/Products/<id>.prefab` | a variant of `Item_def` wearing the model, its collider sized to it and its mass from the catalogue |
+
+None of it is in version control (the repository holds scripts only), so a fresh checkout shows
+the placeholder boxes until the import is run. **Kehai/Products/2. Lay Out the Showcase on
+Models_Island** stands every product on display shelves along the north edge of the model
+island, one section per shelf in walking order, each with its name and price on the shelf edge.
