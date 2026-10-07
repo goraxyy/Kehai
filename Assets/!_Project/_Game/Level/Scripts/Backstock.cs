@@ -12,10 +12,15 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class Backstock : MonoBehaviour
 {
-    // How the block is cut. Wider and deeper than this is more mesh than anyone will notice.
+    // How the block is cut. Wider and deeper than this is more mesh than anyone will notice:
+    // at three deep and 24 units the shop's blocks came to ten million vertices, and doubled
+    // what an aisle cost to draw.
     public const int MaxAcross = 6;
-    public const int MaxDeep = 3;
-    public const int MaxUnits = 24;
+    public const int MaxDeep = 2;
+    public const int MaxUnits = 12;
+
+    // Under this much of the screen's height (about 20 m off for a slot's block) it isn't drawn.
+    public const float CullBelow = 0.02f;
     public const float Gap = 0.012f;          // between neighbouring packs
     public const float StackLimit = 0.24f;    // flat packs stack, up to this high
 
@@ -141,6 +146,7 @@ public class Backstock : MonoBehaviour
 
     MeshFilter filter;
     MeshRenderer meshRenderer;
+    LODGroup lod;
 
     public static Backstock On(ShelfSlot slot)
     {
@@ -155,6 +161,8 @@ public class Backstock : MonoBehaviour
         stock.meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         stock.meshRenderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
         stock.meshRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        stock.lod = go.AddComponent<LODGroup>();
+        stock.lod.SetLODs(new[] { new LOD(CullBelow, new Renderer[] { stock.meshRenderer }) });
         return stock;
     }
 
@@ -175,6 +183,7 @@ public class Backstock : MonoBehaviour
         {
             filter.sharedMesh = mesh;
             meshRenderer.sharedMaterials = look.Value.Materials;
+            if (lod != null && mesh != null) lod.RecalculateBounds();
         }
         meshRenderer.enabled = visible && mesh != null;
         return block.ItemCell;

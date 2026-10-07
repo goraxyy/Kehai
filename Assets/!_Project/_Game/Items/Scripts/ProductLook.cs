@@ -70,7 +70,11 @@ public static class ProductLook
         var filter = item.GetComponent<MeshFilter>();
         var renderer = item.GetComponent<MeshRenderer>();
         if (filter == null || renderer == null) return false;
-        if (filter.sharedMesh == look.Mesh) return true;
+        if (filter.sharedMesh == look.Mesh)
+        {
+            CullWhenTiny(item.gameObject, renderer);
+            return true;
+        }
 
         item.transform.localScale = Vector3.one;
         filter.sharedMesh = look.Mesh;
@@ -86,6 +90,19 @@ public static class ProductLook
 
         item.restHeight = look.RestHeight;
         if (item.isOnShelf) item.ApplyShelfTransform();
+        CullWhenTiny(item.gameObject, renderer);
         return true;
+    }
+
+    // A tin of tuna 20 m down an aisle is a few pixels; past that it isn't drawn. Most of the
+    // shop's 3,400 products are that far from wherever the player stands.
+    public const float CullBelow = 0.004f;
+
+    static void CullWhenTiny(GameObject go, Renderer renderer)
+    {
+        if (go.GetComponent<LODGroup>() != null) return;
+        var lod = go.AddComponent<LODGroup>();
+        lod.SetLODs(new[] { new LOD(CullBelow, new[] { renderer }) });
+        lod.RecalculateBounds();
     }
 }
