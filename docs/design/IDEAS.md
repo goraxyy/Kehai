@@ -15,7 +15,8 @@ aimed at a research audience.
 > ([`tools/blink/`](../../tools/blink/README.md)). The store itself is exported for people and
 > agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15. The infinite
 > maze, and far more stock, are planned in
-> [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): steps 1 and 2 of 3 are built.
+> [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): steps 1 and 2 of 3 are done, and
+> step 3's maze streams and can be walked, in a scene of its own.
 
 ---
 
@@ -255,7 +256,7 @@ Pictures with it on and off are identical, and the room lighting measures the sa
 memory, the scene's size and load time, the linear lookups. A streamed maze can't be made of
 33,000 hand-placed objects.
 
-### Step 2: shelves as data (built)
+### Step 2: shelves as data (done)
 
 Stock stops being GameObjects. A slot becomes a record:
 
@@ -309,9 +310,18 @@ Each bay owns its slots. The things that need GameObjects get them only while th
   and putting back, a bay counting its empty slots. Both replay tests pass too: a bot shift
   recorded and played back, and the 10-second round trip.
 
-Still to measure: the render cost against step 1's 4.5 ms, and a Play-mode check of the
-player, shoppers and Aiko's shelf sweep. The editor stopped answering the tools that drive it
-before those ran.
+- **Render cost.** Over the four views, measured again in a fresh Play session: 4.4 ms with
+  the stock and 2.2 ms without it (4.8 and 2.4 the first time), against step 1's 4.5 ms with
+  every item a GameObject. A picture with each run shows the stock drawn.
+- **In Play, on the store:**
+  - `ShelfAim` agreed with a brute-force test of every slot on all of 400 rays, and found
+    every one of the 172 slots at the front it was aimed at;
+  - the player took an item and put it back, and the slot, its bay's and shelf's counts and
+    the prompt all followed;
+  - Aiko's sweep knocked a box off: it fell to the floor, and the drawer showed one fewer;
+  - eight shoppers in 96 s at ×3 time filled their lists from the shelves (21 slots emptied)
+    and queued at the tills;
+  - the console stayed clear.
 
 ### Step 3: chunks, then a maze without an end
 
@@ -355,20 +365,35 @@ call for later, once it can be walked.
   - the same seed gives the same chunk.
 
   That comes to about 17 bays and 22 pillars a chunk.
-- **The streaming (3a, 3c) is written, but hasn't run yet.** `EndlessMaze` builds the chunks
-  within two of the player's (a 125 m square):
+- **The streaming (3a, 3c) runs.** `EndlessMaze` builds the chunks within two of the
+  player's (a 125 m square):
   - one chunk a frame, nearest first;
-  - shelf runs and pillars from pools, plus floor, ceiling, and 25 ceiling lights with their
-    lamps;
+  - shelf runs and pillars, and each chunk's shell (floor, ceiling, and 25 ceiling lights with
+    their lamps), all from pools;
   - each chunk's stock, as data, with one section per chunk.
 
-  A chunk more than three away comes down, keeping which slots changed, so it's rebuilt as it
-  was left. The NavMesh is rebuilt off the main thread over the built chunks whenever the
-  player has moved 10 m. *Kehai/Endless/Open an Endless Maze* makes its scene, with a simple
-  first-person walker; the game's player belongs to the store. The shelf code gained what
-  this needed: slots can leave the stock (`ShelfStock.Remove`); the drawer takes slots coming
-  and going a bay at a time instead of starting again; and each slot carries the light layer
-  it's lit by.
+  A chunk more than three away comes down, one a frame, keeping which slots changed, so it's
+  rebuilt as it was left. The NavMesh is rebuilt off the main thread over the built chunks,
+  once they've finished coming and going. *Kehai/Endless/Open an Endless Maze* makes its scene,
+  with a simple first-person walker; the game's player belongs to the store. The shelf code
+  gained what this needed:
+  - slots can leave the stock, a chunk's bays in one go (`ShelfStock.Remove`, with a test);
+  - the drawer shows and puts away stock coming and going with a chunk, 3 ms' worth a frame;
+  - each slot carries the light layer it's lit by.
+- **Walked in Play (2026-10-07).**
+  - 25 chunks around the walker hold 96,408 slots (six times the store's), all of them drawn,
+    with 626 lights. Rendering costs 9.2 ms at 1080p, the mean over four views from the walker.
+  - All of the 434 shelf runs stand on the middle of a standing wall, and all of the 557
+    pillars on a corner where walls meet.
+  - A chunk four away comes down and keeps its changes: a slot emptied there was empty again
+    when its chunk came back.
+  - NavMesh paths of 40 to 64 m across chunk borders all completed.
+  - Crossing a border into new ground first took 9 or 10 frames of 40 to 240 ms. Taking a chunk
+    down went over the whole stock once per bay (200 ms), five chunks came down in one frame,
+    and the NavMesh and every chunk's lights were rebuilt each time. Now, after the first
+    crossing, it's 0 to 4 frames of 35 to 55 ms. That's in the editor, on an 8 GB Mac that was
+    swapping. What's left is collecting the NavMesh's colliders (about 20 ms, once a crossing),
+    and the GPU Resident Drawer growing its buffers the first time out (130 to 210 ms, once).
 - **Not done yet:**
   - shoppers, Aiko and tasks in the generated maze;
   - aisle signs per chunk;
@@ -378,9 +403,9 @@ call for later, once it can be walked.
 ### Order
 
 1. ~~GPU Resident Drawer, with GPU occlusion culling~~ done, 18.9 → 4.5 ms
-2. ~~Shelves as data~~ built: the scene is 92 → 6.2 MB. Render cost and Play-mode check to come
-3. Chunks and a seeded maze: the generator is built and tested; the streaming is written and
-   waiting for its first run
+2. ~~Shelves as data~~ done: the scene is 92 → 6.2 MB, and the stock costs 2.2 to 2.4 ms to draw
+3. Chunks and a seeded maze: built and walked, in a scene of its own. Shoppers, Aiko, tasks,
+   signs and a floating origin in it are still to come
 
 ---
 
@@ -555,8 +580,8 @@ rung F's `blink_advance` tactic moves inside what's left of the closure.
    (partly: `MazeMutation` moves bays between shifts from shift 7, validated for reachability)
 5. ~~**Blink**: keyboard → replay → webcam~~ done
 6. Infinite streaming maze: wanted (2026-10-07), and planned in
-   [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end). Steps 1 and 2 are built; chunks
-   come next
+   [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end). Steps 1 and 2 are done, and
+   the maze streams and can be walked in a scene of its own
 
 The first three are the ones a research audience actually reads. Everything after is
 upside.

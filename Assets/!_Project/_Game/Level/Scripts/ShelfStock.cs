@@ -82,20 +82,42 @@ public sealed class ShelfStock
         Added?.Invoke(added);
     }
 
-    // Takes a bay's slots out (the endless maze, unloading a chunk). The slots after them
-    // move up, so a slot's Index changes.
-    public void Remove(Transform frame)
+    // Takes bays' slots out (the endless maze, unloading a chunk's forty or so bays at once).
+    // Each gap is filled by the last slot, so only the slots taken out and those moved into
+    // their places are touched, not the hundred thousand others; a moved slot's Index changes.
+    public void Remove(IEnumerable<Transform> bays)
     {
-        if (frame == null || !byFrame.TryGetValue(frame, out List<ShelfSlot> own)) return;
-        foreach (ShelfSlot slot in own) Unindex(slot);
-        byFrame.Remove(frame);
-        frames.Remove(frame);
-        Planogram.Forget(own);
-        var gone = new HashSet<ShelfSlot>(own);
-        slots.RemoveAll(gone.Contains);
-        pending.RemoveAll(gone.Contains);
-        for (int i = 0; i < slots.Count; i++) slots[i].Attach(this, i);
-        Removed?.Invoke(own);
+        var gone = new List<ShelfSlot>();
+        foreach (Transform frame in bays)
+        {
+            if (frame == null || !byFrame.TryGetValue(frame, out List<ShelfSlot> own)) continue;
+            foreach (ShelfSlot slot in own) Unindex(slot);
+            byFrame.Remove(frame);
+            frames.Remove(frame);
+            gone.AddRange(own);
+        }
+        if (gone.Count == 0) return;
+        Planogram.Forget(gone);
+
+        gone.Sort((a, b) => b.Index.CompareTo(a.Index));
+        foreach (ShelfSlot slot in gone)
+        {
+            int at = slot.Index, last = slots.Count - 1;
+            if (at < 0 || at > last || slots[at] != slot) continue;
+            if (at != last)
+            {
+                slots[at] = slots[last];
+                slots[at].Attach(this, at);
+            }
+            slots.RemoveAt(last);
+            slot.Attach(null, -1);
+        }
+        if (pending.Count > 0)
+        {
+            var set = new HashSet<ShelfSlot>(gone);
+            pending.RemoveAll(set.Contains);
+        }
+        Removed?.Invoke(gone);
     }
 
     internal void NotifyChanged(ShelfSlot slot) => Changed?.Invoke(slot);

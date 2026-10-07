@@ -173,4 +173,45 @@ public class ShelfStockTests
         Assert.That(Vector3.Dot(front.Outward, Vector3.back), Is.GreaterThan(0.99f));
         Assert.That(Vector3.Dot(back.Outward, Vector3.forward), Is.GreaterThan(0.99f));
     }
+
+    // The endless maze takes a chunk's bays out at once. What's left is whole, every slot at its
+    // own Index, and nothing finds the ones taken out any more.
+    [Test]
+    public void BaysTakenOut_LeaveTheRestWhole()
+    {
+        var stock = new ShelfStock();
+        var bays = new List<Transform>();
+        var on = new Dictionary<Transform, List<ShelfSlot>>();
+        for (int b = 0; b < 6; b++)
+        {
+            Transform bay = Frame(Away + new Vector3(b * 3f, 0f, 0f));
+            bays.Add(bay);
+            on[bay] = new List<ShelfSlot>();
+            for (int i = 0; i < 5; i++)
+                on[bay].Add(Slot(stock, bay, new Vector3(i * 0.5f, 1f, 0f), b % 2 == 0 ? "canned_tuna" : "drink_genki"));
+        }
+        stock.Finish();
+        var told = new List<ShelfSlot>();
+        stock.Removed += removed => told.AddRange(removed);
+
+        stock.Remove(new[] { bays[1], bays[4] });
+
+        var gone = new List<ShelfSlot>(on[bays[1]]);
+        gone.AddRange(on[bays[4]]);
+        CollectionAssert.AreEquivalent(gone, told);
+        Assert.AreEqual(20, stock.Count);
+        for (int i = 0; i < stock.Count; i++) Assert.AreEqual(i, stock.Slots[i].Index, "a slot not at its Index");
+        foreach (ShelfSlot slot in gone)
+        {
+            CollectionAssert.DoesNotContain(stock.Slots, slot);
+            CollectionAssert.DoesNotContain(Planogram.FacingsOf(slot.productId), slot);
+        }
+        Assert.IsEmpty(stock.SlotsOn(bays[4]));
+        Assert.AreEqual(5, stock.SlotsOn(bays[3]).Count);
+
+        var near = new List<ShelfSlot>();
+        stock.Near(bays[4].position + Vector3.up, 4f, near);
+        Assert.IsNotEmpty(near, "the bays either side are still there");
+        foreach (ShelfSlot slot in near) CollectionAssert.DoesNotContain(gone, slot);
+    }
 }

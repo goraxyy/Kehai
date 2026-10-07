@@ -6,7 +6,8 @@ using UnityEngine.AI;
 // `radius` of the player's are built: their shelf runs and pillars, floor, ceiling, ceiling
 // lights and lamps, and their stock, as data. Chunks further than `radius + 1` are taken down,
 // keeping what changed on their shelves for when they come back, so a chunk is rebuilt just
-// as it was left. A NavMesh is built around the player as they go, off the main thread.
+// as it was left. Pieces and the floor, ceiling and lights are pooled, and moved from chunk to
+// chunk. A NavMesh is built over the chunks as they come, off the main thread.
 //
 // It runs in a scene of its own (Kehai/Endless/Open an Endless Maze); the hand-built store is
 // still the game's. How the two meet is a design decision for later (IDEAS.md).
@@ -34,13 +35,10 @@ public class EndlessMaze : MonoBehaviour
     public float lightRange = 17f;
     public float lightAngle = 80f;
 
-    [Header("NavMesh")]
-    [Tooltip("Rebuild the NavMesh around the player once they're this far from where it was last built.")]
-    public float navRebuildDistance = 10f;
-
     sealed class Built
     {
         public GameObject Root;
+        public GameObject Shell;
         public readonly List<(GameObject go, GameObject prefab)> Pieces = new List<(GameObject, GameObject)>();
         public readonly List<ShelfUnit> Bays = new List<ShelfUnit>();
         public List<ShelfSlot> Slots = new List<ShelfSlot>();
@@ -53,8 +51,11 @@ public class EndlessMaze : MonoBehaviour
     readonly Dictionary<Vector2Int, Dictionary<int, string>> kept = new Dictionary<Vector2Int, Dictionary<int, string>>();
 
     readonly Dictionary<GameObject, Stack<GameObject>> pool = new Dictionary<GameObject, Stack<GameObject>>();
+    readonly Stack<GameObject> shells = new Stack<GameObject>();
     readonly Queue<Vector2Int> toBuild = new Queue<Vector2Int>();
     readonly HashSet<Vector2Int> queued = new HashSet<Vector2Int>();
+    readonly Queue<Vector2Int> toTakeDown = new Queue<Vector2Int>();
+    readonly HashSet<Vector2Int> leaving = new HashSet<Vector2Int>();
     MazeWorld world;
     Vector2Int centre = new Vector2Int(int.MinValue, int.MinValue);
     Material lampBox, lampPanel;
@@ -62,7 +63,6 @@ public class EndlessMaze : MonoBehaviour
     NavMeshData navData;
     NavMeshDataInstance navInstance;
     AsyncOperation navBuilding;
-    Vector3 navBuiltAround = new Vector3(float.MaxValue, 0f, 0f);
     bool navDirty;
     readonly List<NavMeshBuildSource> navSources = new List<NavMeshBuildSource>();
 
@@ -102,7 +102,8 @@ public class EndlessMaze : MonoBehaviour
             Plan();
         }
 
-        // One chunk a frame, nearest first, so walking over a border doesn't stall a frame.
+        // One chunk a frame, so walking over a border doesn't stall a frame: the nearest missing
+        // chunk is built, or when none is missing, one too far away is taken down.
         if (toBuild.Count > 0)
         {
             Vector2Int next = toBuild.Dequeue();
@@ -110,6 +111,16 @@ public class EndlessMaze : MonoBehaviour
             if (!built.ContainsKey(next) && Chebyshev(next, centre) <= radius)
             {
                 Build(next);
+                navDirty = true;
+            }
+        }
+        else if (toTakeDown.Count > 0)
+        {
+            Vector2Int next = toTakeDown.Dequeue();
+            leaving.Remove(next);
+            if (Chebyshev(next, centre) > radius + 1)
+            {
+                TakeDown(next);
                 navDirty = true;
             }
         }
@@ -122,11 +133,8 @@ public class EndlessMaze : MonoBehaviour
     // What should be built around the player, nearest first, and what's too far to keep.
     void Plan()
     {
-        var far = new List<Vector2Int>();
         foreach (Vector2Int k in built.Keys)
-            if (Chebyshev(k, centre) > radius + 1) far.Add(k);
-        foreach (Vector2Int k in far) TakeDown(k);
-        if (far.Count > 0) navDirty = true;
+            if (Chebyshev(k, centre) > radius + 1 && leaving.Add(k)) toTakeDown.Enqueue(k);
 
         var wanted = new List<Vector2Int>();
         for (int dx = -radius; dx <= radius; dx++)
@@ -144,7 +152,8 @@ public class EndlessMaze : MonoBehaviour
         world.Forget(centre, radius + 2);
     }
 
-    // Builds every chunk around the player now, not one a frame: for tests and for the start.
+    // Builds every chunk around the player now, and takes down those too far away, not one a
+    // frame: for tests and for the start.
     public void BuildAllNow()
     {
         if (player == null) return;
@@ -155,6 +164,12 @@ public class EndlessMaze : MonoBehaviour
             Vector2Int k = toBuild.Dequeue();
             queued.Remove(k);
             if (!built.ContainsKey(k)) Build(k);
+        }
+        while (toTakeDown.Count > 0)
+        {
+            Vector2Int k = toTakeDown.Dequeue();
+            leaving.Remove(k);
+            if (Chebyshev(k, centre) > radius + 1) TakeDown(k);
         }
         navDirty = true;
     }
@@ -181,11 +196,9 @@ public class EndlessMaze : MonoBehaviour
             if (go.TryGetComponent(out ShelfUnit unit)) b.Bays.Add(unit);
         }
 
-        Surface(b.Root.transform, "Floor", origin, 0f, true);
-        Surface(b.Root.transform, "Ceiling", origin, ceilingHeight, false);
-        for (int i = 0; i < MazeGenerator.Cells; i++)
-            for (int j = 0; j < MazeGenerator.Cells; j++)
-                CeilingLight(b.Root.transform, origin + new Vector3((i + 0.5f) * MazeGenerator.CellSize, 0f, (j + 0.5f) * MazeGenerator.CellSize));
+        b.Shell = TakeShell();
+        b.Shell.transform.SetParent(b.Root.transform, false);
+        b.Shell.transform.position = origin;
 
         ItemType section = MazeGenerator.SectionOf(world.Seed, k.x, k.y);
         b.Slots = StoreLayout.StockBays(b.Bays, section, ProductCatalog.SectionName(section), ShelfStock.Current);
@@ -211,20 +224,53 @@ public class EndlessMaze : MonoBehaviour
         if (changes.Count > 0) kept[k] = changes;
         else kept.Remove(k);
 
-        foreach (ShelfUnit unit in b.Bays) ShelfStock.Current.Remove(unit.transform);
+        var bays = new List<Transform>(b.Bays.Count);
+        foreach (ShelfUnit unit in b.Bays) bays.Add(unit.transform);
+        ShelfStock.Current.Remove(bays);
         foreach ((GameObject go, GameObject prefab) in b.Pieces) Give(go, prefab);
+        GiveShell(b.Shell);
         Destroy(b.Root);
         built.Remove(k);
     }
 
-    void Surface(Transform parent, string name, Vector3 origin, float height, bool floor)
+    // ---------------------------------------------------------------- a chunk's shell
+
+    // A chunk's floor, ceiling, and ceiling lights with their lamps, from its south-west
+    // corner: made once, then moved from chunk to chunk.
+    GameObject TakeShell()
+    {
+        GameObject shell = shells.Count > 0 ? shells.Pop() : MakeShell();
+        shell.SetActive(true);
+        return shell;
+    }
+
+    void GiveShell(GameObject shell)
+    {
+        if (shell == null) return;
+        shell.SetActive(false);
+        shell.transform.SetParent(transform, false);
+        shells.Push(shell);
+    }
+
+    GameObject MakeShell()
+    {
+        var shell = new GameObject("Shell");
+        Surface(shell.transform, "Floor", 0f, true);
+        Surface(shell.transform, "Ceiling", ceilingHeight, false);
+        for (int i = 0; i < MazeGenerator.Cells; i++)
+            for (int j = 0; j < MazeGenerator.Cells; j++)
+                CeilingLight(shell.transform, new Vector3((i + 0.5f) * MazeGenerator.CellSize, 0f, (j + 0.5f) * MazeGenerator.CellSize));
+        return shell;
+    }
+
+    void Surface(Transform shell, string name, float height, bool floor)
     {
         GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
         quad.name = name;
         Destroy(quad.GetComponent<Collider>());
-        quad.transform.SetParent(parent, false);
+        quad.transform.SetParent(shell, false);
         float half = MazeGenerator.ChunkSize * 0.5f;
-        quad.transform.SetPositionAndRotation(origin + new Vector3(half, height, half), Quaternion.Euler(floor ? 90f : -90f, 0f, 0f));
+        quad.transform.SetLocalPositionAndRotation(new Vector3(half, height, half), Quaternion.Euler(floor ? 90f : -90f, 0f, 0f));
         quad.transform.localScale = new Vector3(MazeGenerator.ChunkSize, MazeGenerator.ChunkSize, 1f);
         Material m = floor ? floorMaterial : ceilingMaterial;
         if (m != null) quad.GetComponent<MeshRenderer>().sharedMaterial = m;
@@ -233,16 +279,16 @@ public class EndlessMaze : MonoBehaviour
         if (!floor) return;
         // Something solid to stand on, and for the NavMesh to find.
         var solid = new GameObject("Floor collider");
-        solid.transform.SetParent(parent, false);
-        solid.transform.position = origin + new Vector3(half, -0.1f, half);
+        solid.transform.SetParent(shell, false);
+        solid.transform.localPosition = new Vector3(half, -0.1f, half);
         solid.AddComponent<BoxCollider>().size = new Vector3(MazeGenerator.ChunkSize, 0.2f, MazeGenerator.ChunkSize);
     }
 
-    void CeilingLight(Transform parent, Vector3 below)
+    void CeilingLight(Transform shell, Vector3 below)
     {
         var go = new GameObject("Ceiling light");
-        go.transform.SetParent(parent, false);
-        go.transform.SetPositionAndRotation(below + Vector3.up * lightHeight, Quaternion.Euler(90f, 0f, 0f));
+        go.transform.SetParent(shell, false);
+        go.transform.SetLocalPositionAndRotation(below + Vector3.up * lightHeight, Quaternion.Euler(90f, 0f, 0f));
         Light light = go.AddComponent<Light>();
         light.type = LightType.Spot;
         light.color = lightColour;
@@ -318,16 +364,15 @@ public class EndlessMaze : MonoBehaviour
 
     // ---------------------------------------------------------------- the NavMesh
 
-    // Over the chunks that are built, rebuilt off the main thread once the player has moved far
-    // enough or chunks have come and gone. One build at a time.
+    // Over the chunks that are built, rebuilt off the main thread once chunks have finished
+    // coming and going: what's on this thread (collecting the colliders, and their meshes) costs
+    // 25 to 45 ms, so it's done once a border crossed, not once a chunk. One build at a time.
     void UpdateNavMesh()
     {
         if (navBuilding != null && !navBuilding.isDone) return;
         navBuilding = null;
-        bool moved = (player.position - navBuiltAround).sqrMagnitude > navRebuildDistance * navRebuildDistance;
-        if (!navDirty && !moved) return;
+        if (!navDirty || toBuild.Count > 0 || toTakeDown.Count > 0) return;
         navDirty = false;
-        navBuiltAround = player.position;
 
         float size = (radius * 2 + 1) * MazeGenerator.ChunkSize;
         Vector3 middle = new Vector3((centre.x + 0.5f) * MazeGenerator.ChunkSize, 2f, (centre.y + 0.5f) * MazeGenerator.ChunkSize);

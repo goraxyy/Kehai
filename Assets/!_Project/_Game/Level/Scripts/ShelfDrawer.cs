@@ -14,7 +14,10 @@ using UnityEngine.Rendering;
 //
 // A slot that empties or fills swaps its object through a pool, and a full rebuild (the shop
 // restocked, a bay moved) reuses the objects it has, so it's quick in the editor as well,
-// where it shows the planogram's stock with nothing baked into the scene.
+// where it shows the planogram's stock with nothing baked into the scene. Slots that arrive or
+// leave a bay at a time (the endless maze's chunks, a few thousand at once) are shown or put
+// away a few milliseconds' worth a frame, so a chunk coming or going doesn't stall one. They're
+// chunks away from the player, so nobody sees them fill in or linger.
 [ExecuteAlways]
 public class ShelfDrawer : MonoBehaviour
 {
@@ -27,6 +30,10 @@ public class ShelfDrawer : MonoBehaviour
     readonly Dictionary<ShelfSlot, (GameObject go, (string id, uint mask) key)> shown =
         new Dictionary<ShelfSlot, (GameObject, (string, uint))>();
     readonly HashSet<ShelfSlot> dirty = new HashSet<ShelfSlot>();
+    readonly Queue<ShelfSlot> arriving = new Queue<ShelfSlot>();
+    readonly HashSet<ShelfSlot> stillArriving = new HashSet<ShelfSlot>();
+    readonly Queue<(GameObject go, (string id, uint mask) key)> leaving = new Queue<(GameObject, (string, uint))>();
+    const double ComingAndGoingMsAFrame = 3.0;
     ShelfStock watching;
     int builtVersion = -1;
 
@@ -66,6 +73,9 @@ public class ShelfDrawer : MonoBehaviour
         pool.Clear();
         shown.Clear();
         dirty.Clear();
+        arriving.Clear();
+        stillArriving.Clear();
+        leaving.Clear();
         builtVersion = -1;
     }
 
@@ -100,15 +110,30 @@ public class ShelfDrawer : MonoBehaviour
 #endif
 
     // Brings what's shown in line with the stock: everything again when it has been rebuilt
-    // or a bay has moved, otherwise just the slots that changed.
+    // or a bay has moved, otherwise the slots that changed, and some of those coming or going.
     void Sync()
     {
         ShelfStock stock = ShelfStock.Current;
         stock.SyncMoved();
         if (stock != watching || stock.Version != builtVersion) Rebuild(stock);
-        if (dirty.Count == 0) return;
-        foreach (ShelfSlot slot in dirty) Refresh(slot);
-        dirty.Clear();
+        if (dirty.Count > 0)
+        {
+            foreach (ShelfSlot slot in dirty) Refresh(slot);
+            dirty.Clear();
+        }
+        if (arriving.Count == 0 && leaving.Count == 0) return;
+        long until = System.Diagnostics.Stopwatch.GetTimestamp() +
+                     (long)(ComingAndGoingMsAFrame * System.Diagnostics.Stopwatch.Frequency / 1000.0);
+        while (leaving.Count > 0 && System.Diagnostics.Stopwatch.GetTimestamp() < until)
+        {
+            (GameObject go, (string id, uint mask) key) gone = leaving.Dequeue();
+            Give(gone.key, gone.go);
+        }
+        while (arriving.Count > 0 && System.Diagnostics.Stopwatch.GetTimestamp() < until)
+        {
+            ShelfSlot slot = arriving.Dequeue();
+            if (stillArriving.Remove(slot)) Refresh(slot);
+        }
     }
 
     void Watch(ShelfStock stock)
@@ -134,7 +159,11 @@ public class ShelfDrawer : MonoBehaviour
     void OnAdded(IReadOnlyList<ShelfSlot> added)
     {
         if (watching == null || watching.Version != builtVersion) return;   // all of it is redone anyway
-        foreach (ShelfSlot slot in added) dirty.Add(slot);
+        foreach (ShelfSlot slot in added)
+        {
+            dirty.Remove(slot);   // stocked as it was made, which told us it changed
+            if (stillArriving.Add(slot)) arriving.Enqueue(slot);
+        }
     }
 
     void OnRemoved(IReadOnlyList<ShelfSlot> removed)
@@ -142,8 +171,9 @@ public class ShelfDrawer : MonoBehaviour
         foreach (ShelfSlot slot in removed)
         {
             dirty.Remove(slot);
+            stillArriving.Remove(slot);
             if (!shown.TryGetValue(slot, out (GameObject go, (string id, uint mask) key) current)) continue;
-            Give(current.key, current.go);
+            leaving.Enqueue(current);
             shown.Remove(slot);
         }
     }
@@ -153,6 +183,13 @@ public class ShelfDrawer : MonoBehaviour
         Watch(stock);
         builtVersion = stock.Version;
         dirty.Clear();
+        arriving.Clear();
+        stillArriving.Clear();
+        while (leaving.Count > 0)
+        {
+            (GameObject go, (string id, uint mask) key) gone = leaving.Dequeue();
+            Give(gone.key, gone.go);
+        }
         foreach (var kv in shown) Give(kv.Value.key, kv.Value.go);
         shown.Clear();
 
