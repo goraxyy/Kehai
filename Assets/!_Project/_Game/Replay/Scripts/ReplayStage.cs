@@ -35,7 +35,6 @@ namespace Kehai.Replay
         sealed class SlotView
         {
             public ShelfSlot Slot;
-            public GameObject Stored, Copy;
             public bool Filled, Initial;
             public string Product;
             public readonly List<(float t, bool filled, string product)> Changes = new List<(float, bool, string)>();
@@ -97,11 +96,9 @@ namespace Kehai.Replay
             var bins = new List<Trashcan>(Object.FindObjectsByType<Trashcan>(FindObjectsInactive.Include));
             var spills = new List<Dirt>(Object.FindObjectsByType<Dirt>(FindObjectsInactive.Include));
             var bags = new List<TrashBag>(Object.FindObjectsByType<TrashBag>(FindObjectsInactive.Include));
-            var sceneSlots = new List<ShelfSlot>(Object.FindObjectsByType<ShelfSlot>(FindObjectsInactive.Include));
+            var sceneSlots = new List<ShelfSlot>(ShelfSlot.All);
             var items = new List<Item>(Object.FindObjectsByType<Item>(FindObjectsInactive.Include));
-            var stored = new HashSet<Item>();
-            foreach (ShelfSlot s in sceneSlots) if (s.storedItem != null) stored.Add(s.storedItem);
-            var loose = items.FindAll(i => !stored.Contains(i) && !i.isOnShelf);
+            var loose = items.FindAll(i => !i.isOnShelf);
 
             Neutralise(SceneManager.GetActiveScene());
             TakeCamera();
@@ -153,6 +150,7 @@ namespace Kehai.Replay
                     if (b == null || b.GetType().Assembly != game) continue;
                     if (b.GetType().Namespace == typeof(ReplayStage).Namespace) continue;
                     if (b is ParentMaterialController) continue;   // only paints the shelves, in Start
+                    if (b is ShelfDrawer) continue;                // draws the stock the replay sets
                     b.enabled = false;
                 }
                 foreach (NavMeshAgent a in go.GetComponentsInChildren<NavMeshAgent>(true)) a.enabled = false;
@@ -350,7 +348,6 @@ namespace Kehai.Replay
                 if (view.Slot != null)
                 {
                     taken.Add(view.Slot);
-                    view.Stored = view.Slot.storedItem != null ? view.Slot.storedItem.gameObject : null;
                     matched++;
                 }
                 slots.Add(view);
@@ -368,7 +365,7 @@ namespace Kehai.Replay
             return matched;
         }
 
-        static Vector3 SlotPoint(ShelfSlot s) => s.snapPoint != null ? s.snapPoint.position : s.transform.position;
+        static Vector3 SlotPoint(ShelfSlot s) => s.Position;
         static Vector3Int Cell(Vector3 p) => new Vector3Int(Mathf.FloorToInt(p.x * 2f), Mathf.FloorToInt(p.y * 2f), Mathf.FloorToInt(p.z * 2f));
 
         int MatchLights()
@@ -513,22 +510,11 @@ namespace Kehai.Replay
             a.ParticleAge = age;
         }
 
-        void ShowSlot(SlotView v, bool filled, string product)
+        // The stock is data: the slot is shown full or empty, and the drawer does the rest.
+        static void ShowSlot(SlotView v, bool filled, string product)
         {
             v.Filled = filled;
-            if (filled && v.Stored == null && v.Copy == null && v.Slot != null)
-            {
-                v.Copy = puppets.MakeItemFor(string.IsNullOrEmpty(product) ? v.Slot.productId : product, v.Slot.requiredType);
-                if (v.Copy != null)
-                {
-                    Transform at = v.Slot.snapPoint != null ? v.Slot.snapPoint : v.Slot.transform;
-                    v.Copy.transform.SetParent(at, false);
-                    v.Copy.transform.localPosition = Vector3.zero;
-                    v.Copy.transform.localRotation = Quaternion.Euler(v.Slot.snapRotationOffset);
-                }
-            }
-            if (v.Stored != null) v.Stored.SetActive(filled);
-            else if (v.Copy != null) v.Copy.SetActive(filled);
+            v.Slot?.Show(filled, product);
         }
 
         public void Dispose()

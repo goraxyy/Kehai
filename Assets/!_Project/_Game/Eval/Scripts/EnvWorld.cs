@@ -169,7 +169,7 @@ namespace Kehai.Eval
             {
                 Bay b = Map.Bays[i];
                 if (b.Unit == null || b.Unit.IsFull) continue;
-                int empty = b.Unit.GetComponentsInChildren<ShelfSlot>().Count(s => !s.isFilled);
+                int empty = b.Unit.EmptyCount;
                 Vector3 stand = TacticHelpers.StandIn(b.Unit);
                 bays.Add(new Dictionary<string, object> { ["id"] = BayId(i), ["section"] = b.Section, ["empty_slots"] = empty, ["region"] = Map.NameAt(stand), ["walk_m"] = Walk(stand) });
             }

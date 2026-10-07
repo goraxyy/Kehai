@@ -726,9 +726,8 @@ namespace Kehai.Aiko
             if (config.rung == AikoRung.B_ScriptedPatrol && Rng.Value < 0.002f)
             {
                 // The old random sabotage.
-                ShelfSlot slot = ShelfSlot.All.Where(s => s.isFilled)
-                    .OrderBy(s => (s.transform.position - Body.Position).sqrMagnitude).FirstOrDefault();
-                if (slot != null && Vector3.Distance(slot.transform.position, Body.Position) < 3f) slot.Eject();
+                ShelfSlot slot = ShelfStock.Current.Nearest(Body.Position, 3f, s => s.isFilled);
+                if (slot != null) slot.Eject();
             }
 
             if (!guardHasTarget || Body.Arrived(1.5f))

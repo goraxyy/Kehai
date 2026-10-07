@@ -12,9 +12,10 @@ using UnityEngine.SceneManagement;
 //
 // It runs at load rather than being baked into the scene, for two reasons. The scene is a
 // binary asset that isn't in version control, so a planogram stored in it could never be
-// reviewed or shared; and 3,400 facings baked as prefab overrides is a lot of scene to
-// carry for something a lookup answers in a millisecond. Kehai/Store/Apply Layout will
-// still write it into the scene when you want the Inspector to show the truth.
+// reviewed or shared; and 16,500 slots are a lot of scene to carry for something worked out
+// in a few milliseconds. The stock it makes is data (ShelfStock), drawn by ShelfDrawer, which
+// also shows it in the editor. Kehai/Store/Apply Layout writes each bay's aisle into the
+// scene when you want the Inspector to show it.
 //
 // STORE_CATALOG.md is this file written out in prose.
 public static class StoreLayout
@@ -125,10 +126,10 @@ public static class StoreLayout
     public static string SignAt(Vector3 position) => ZoneAt(position).Sign;
 
     // Stocking the store is the first thing that happens once the scene is up: every bay's
-    // boards are cut into ShelfGrid's slots and filled from the planogram (a scene that has
-    // been baked with Kehai/Store/Stock the Maze already has them, and is only checked). Then
-    // the aisle signs and the lamps go up, and each room's lights are kept in their room.
-    // Scenes loaded later (the eval harness reloads the store for every episode) get the same.
+    // boards are cut into ShelfGrid's slots and filled from the planogram, as data. Then the
+    // drawer that shows the stock, the aisle signs and the lamps go up, and each room's
+    // lights are kept in their room. Scenes loaded later (the eval harness reloads the store
+    // for every episode) get the same.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void StockOnLoad()
     {
@@ -142,23 +143,37 @@ public static class StoreLayout
     static void Dress()
     {
         ApplyToScene();
+        ShelfDrawer.Ensure();
         AisleSigns.Build();
         CeilingLamps.Ensure();
         RoomLighting.Apply();
     }
 
-    // Optional hooks so the editor pass can wrap each write in an Undo record and register
-    // the prefab override. At runtime both are null and this is a plain assignment.
+    // Stocks the shop (ShelfStock.Current) and writes each bay's aisle onto it. Optional
+    // hooks let the editor pass wrap each write in an Undo record and register the prefab
+    // override; at runtime both are null and this is a plain assignment.
     public static int ApplyToScene(System.Action<Object> beforeWrite = null,
-                                   System.Action<Object> afterWrite = null)
+                                   System.Action<Object> afterWrite = null) =>
+        Stock(true, beforeWrite, afterWrite);
+
+    // The stock the editor shows: the same, without touching the scene.
+    public static int BuildPreview() => Stock(false, null, null);
+
+    static int Stock(bool writeScene, System.Action<Object> beforeWrite, System.Action<Object> afterWrite)
     {
         Planogram.Clear();
-        return Walk(true, beforeWrite, afterWrite, null, null, null, null);
+        ShelfStock stock = ShelfStock.Current;
+        stock.Clear();
+        int slots = Walk(writeScene, stock, beforeWrite, afterWrite, null, null, null, null);
+        stock.Finish();
+        return slots;
     }
 
-    // One walk of the shop, used both to stock it and to count it. Counting takes the same
-    // path as stocking so a report can never describe a store the game doesn't build.
-    static int Walk(bool write,
+    // One walk of the shop, used both to stock it and to count it (`stock` null). Counting
+    // takes the same path as stocking so a report can never describe a store the game
+    // doesn't build.
+    static int Walk(bool writeScene,
+                    ShelfStock stock,
                     System.Action<Object> beforeWrite,
                     System.Action<Object> afterWrite,
                     Dictionary<string, int> facingsPerProduct,
@@ -182,7 +197,7 @@ public static class StoreLayout
             ShelfUnit unit = plan.Unit;
             Zone zone = plan.Zone;
 
-            if (write)
+            if (writeScene)
             {
                 beforeWrite?.Invoke(unit);
                 unit.section = zone.Sign;
@@ -190,7 +205,7 @@ public static class StoreLayout
                 afterWrite?.Invoke(unit);
             }
 
-            int n = StockBay(plan, write, beforeWrite, afterWrite, facingsPerProduct);
+            int n = StockBay(plan, writeScene, stock, facingsPerProduct);
             slots += n;
 
             Tally(baysPerSection, zone.Section, 1);
@@ -198,20 +213,21 @@ public static class StoreLayout
             Tally(slotsPerSection, zone.Section, n);
         }
 
-        // A facing sits loose in the scene rather than on a bay: the one on the till counter.
+        // A facing stands loose in the scene rather than on a bay: the one on the till counter.
         // It carries the impulse buy every till in the world has: mints.
-        var allSlots = Object.FindObjectsByType<ShelfSlot>(FindObjectsInactive.Include);
-        foreach (ShelfSlot slot in allSlots)
+        ProductDef counter = ProductCatalog.Get(Planogram.CounterProduct);
+        foreach (CounterFacing marker in Object.FindObjectsByType<CounterFacing>(FindObjectsInactive.Exclude))
         {
-            if (slot.GetComponentInParent<ShelfUnit>(true) != null) continue;
-
-            ProductDef counter = ProductCatalog.Get(Planogram.CounterProduct);
-            if (counter == null) continue;
+            if (counter == null) break;
             Tally(facingsPerProduct, counter.Id, 1);
             Tally(facingsPerSection, counter.Category, 1);
             Tally(slotsPerSection, counter.Category, 1);
-            if (write) Write(slot, counter.Category, counter.Id, beforeWrite, afterWrite);
             slots++;
+            if (stock == null) continue;
+            var slot = new ShelfSlot(null, marker.transform, Vector3.zero, false, marker.size,
+                                     ShelfGrid.PackSize(counter).y + 0.04f);
+            stock.Add(slot);
+            slot.Stock(counter.Category, counter.Id, filled: true);
         }
 
         return slots;
@@ -275,14 +291,14 @@ public static class StoreLayout
         return x != 0 ? x : a.z.CompareTo(b.z);
     }
 
-    // Stocks one bay from its plan; ShelfGrid cuts each board into slots for its product.
-    static int StockBay(BayPlan plan, bool write,
-                        System.Action<Object> beforeWrite, System.Action<Object> afterWrite,
-                        Dictionary<string, int> facingsPerProduct)
+    // Stocks one bay from its plan: ShelfGrid cuts each board into slots for its product, and
+    // each slot starts full. With no `stock` it only counts them.
+    static int StockBay(BayPlan plan, bool writeScene, ShelfStock stock, Dictionary<string, int> facingsPerProduct)
     {
         Transform bay = plan.Unit.transform;
         ShelfUnit unit = plan.Unit;
         Zone zone = plan.Zone;
+        var made = stock != null ? new List<ShelfSlot>() : null;
 
         int slots = 0;
         for (int f = 0; f < plan.Facings.Count; f++)
@@ -293,46 +309,31 @@ public static class StoreLayout
             // A cross-merchandised product keeps its own section: cola on the crisps' end cap
             // still only takes cola.
             ItemType section = product != null ? product.Category : zone.Section;
+            float height = product != null ? ShelfGrid.PackSize(product).y + 0.04f : 0.4f;
 
             if (!string.IsNullOrEmpty(id)) Tally(facingsPerProduct, id, 1);
-            slots += ShelfGrid.SlotsIn(facing, product);
-            if (!write) continue;
-
-            Transform group = bay.Find(ShelfGrid.RootName + "/Facing_" + facing.Key);
-            ShelfFacing built = group != null ? group.GetComponent<ShelfFacing>() : null;
-            if (built == null || built.productId != id)
+            foreach (ShelfGrid.Cell cell in ShelfGrid.CellsOf(facing, product))
             {
-                // Not baked, or baked for another product: build it now. The editor's pass
-                // only writes ids into what's there; Stock the Maze is what bakes.
-                if (!Application.isPlaying) continue;
-                group = ShelfGrid.Build(bay, facing, product, section, (prefab, parent) => Object.Instantiate(prefab, parent));
+                slots++;
+                if (stock == null) continue;
+                var slot = new ShelfSlot(unit, bay, cell.Centre, cell.Back, cell.Size, height);
+                stock.Add(slot);
+                slot.Stock(section, id, filled: true);
+                made.Add(slot);
             }
-            foreach (ShelfSlot slot in group.GetComponentsInChildren<ShelfSlot>(true))
-                Write(slot, section, id, beforeWrite, afterWrite);
         }
+        if (made != null) unit.SetSlots(made);
 
-        if (write && Application.isPlaying)
-        {
-            // The shelf prefab's own slots, six to a board, are superseded by the grid.
-            Transform old = bay.Find("Slots");
-            if (old != null && old.gameObject.activeSelf) old.gameObject.SetActive(false);
-            unit.Rebind();
-        }
+        // A scene from before stock was data still has the shelf prefab's own slots, six to a
+        // board, and the slots and items the old bake left: both are superseded (Kehai/Store/
+        // Migrate to Data Shelves clears them out).
+        if (writeScene && Application.isPlaying)
+            foreach (string legacy in new[] { "Slots", ShelfGrid.LegacyRootName })
+            {
+                Transform old = bay.Find(legacy);
+                if (old != null && old.gameObject.activeSelf) old.gameObject.SetActive(false);
+            }
         return slots;
-    }
-
-    static void Write(ShelfSlot slot, ItemType section, string id,
-                      System.Action<Object> beforeWrite, System.Action<Object> afterWrite)
-    {
-        beforeWrite?.Invoke(slot);
-        if (slot.storedItem != null) beforeWrite?.Invoke(slot.storedItem);
-
-        // The item already on the slot has to agree with it, or the player picks cereal off
-        // the drinks shelf and then can't put it back. Stock sees to that too.
-        slot.Stock(section, id);
-
-        afterWrite?.Invoke(slot);
-        if (slot.storedItem != null) afterWrite?.Invoke(slot.storedItem);
     }
 
     static void Tally<T>(Dictionary<T, int> counts, T key, int amount)
@@ -350,7 +351,7 @@ public static class StoreLayout
         var perProduct = new Dictionary<string, int>();
 
         // Counting is the same walk as stocking, so this can't drift from what ships.
-        int total = Walk(false, null, null, perProduct, bays, facings, slots);
+        int total = Walk(false, null, null, null, perProduct, bays, facings, slots);
 
         var sb = new StringBuilder();
         sb.AppendLine($"Store layout: {total} slots across {Zones.Length} aisles.");

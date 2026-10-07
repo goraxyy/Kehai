@@ -6,28 +6,25 @@ using UnityEngine;
 // It is never used up — one crate restocks the whole store.
 public class StockCrate : MonoBehaviour
 {
-    [Tooltip("Item spawned into empty shelf slots.")]
+    [Tooltip("The box an item is made from when its product hasn't been imported.")]
     public GameObject itemPrefab;
+
+    void Awake()
+    {
+        if (ShelfStock.Placeholder == null) ShelfStock.Placeholder = itemPrefab;
+    }
 
     // Returns how many slots were filled.
     public int StockShelf(ShelfSlot slot, PlayerInteract player)
     {
         if (slot == null) return 0;
 
-        if (itemPrefab == null)
-        {
-            Debug.LogWarning("StockCrate has no item prefab to stock with.", this);
-            return 0;
-        }
-
         // ShelfUnit refreshes its highlight and the task list as the slots fill.
-        int filled = slot.owner != null
-            ? slot.owner.FillAll(itemPrefab)
-            : (slot.FillWithNewItem(itemPrefab) ? 1 : 0);
+        int filled = slot.owner != null ? slot.owner.FillAll() : (slot.Fill() ? 1 : 0);
 
         if (filled > 0)
         {
-            NoiseBus.Emit(slot.transform.position, 0.45f, NoiseKind.Stocking, NoiseAuthor.Player);
+            NoiseBus.Emit(slot.Position, 0.45f, NoiseKind.Stocking, NoiseAuthor.Player);
             GameEvents.RaiseShelfRestocked(slot.owner, filled);
         }
         return filled;

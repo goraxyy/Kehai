@@ -190,8 +190,11 @@ public class PlayerInteract : MonoBehaviour
 
         Ray ray = new Ray(rayOrigin.position, rayOrigin.forward);
 
-        // Normal reach first.
-        if (Physics.Raycast(ray, out RaycastHit hit, interactRange, interactLayer))
+        // Normal reach first: things with colliders (an item on the floor, a shopper, a tool)
+        // and shelf slots, which are data and aimed at by ShelfAim. Whichever is nearer.
+        ShelfSlot slot = ShelfAim.Find(ray, interactRange, out float slotDistance);
+        if (Physics.Raycast(ray, out RaycastHit hit, interactRange, interactLayer) &&
+            (slot == null || hit.distance <= slotDistance))
         {
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
             if (interactable != null)
@@ -199,6 +202,11 @@ public class PlayerInteract : MonoBehaviour
                 SetTarget(interactable);
                 return;
             }
+        }
+        if (slot != null)
+        {
+            SetTarget(slot);
+            return;
         }
 
         // Then a longer probe that only customers answer, so they can be served from

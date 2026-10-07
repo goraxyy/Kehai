@@ -260,20 +260,17 @@ public class MerchandisingTests
         Assert.LessOrEqual(daikon.Size.y * ProductLook.ScaleFor(daikon), ProductLook.MaxDisplayHeight + 1e-4f);
     }
 
-    // Kehai/Store/Stock the Maze stands the shop's items up in the editor, where Awake never
-    // runs: they once all stood 0.2 m up, the placeholder box's half height, whatever their size.
+    // An item's rest height (from its origin down to its base) is measured from its mesh when
+    // first asked for, so it's right even where Awake hasn't run, as in the editor.
     [Test]
-    public void AnItem_StandsOnItsBoard_EvenInTheEditor()
+    public void AnItem_KnowsHowFarItStandsOffWhatItsOn_EvenInTheEditor()
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         try
         {
             go.transform.localScale = new Vector3(1f, 0.3f, 1f);
             var item = go.AddComponent<Item>();
-            item.shelfLift = 0f;
-            item.ApplyShelfTransform();
             Assert.AreEqual(0.15f, item.RestHeight, 1e-4f);
-            Assert.AreEqual(0.15f, go.transform.localPosition.y, 1e-4f, "the bottom of the box is on the board");
         }
         finally { Object.DestroyImmediate(go); }
     }

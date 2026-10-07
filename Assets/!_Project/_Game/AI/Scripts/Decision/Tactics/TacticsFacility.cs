@@ -204,7 +204,7 @@ namespace Kehai.Aiko
             plan.Add(new WaitUntil(k => !k.Brain.HeardPlayerWithin(10f, 3f), 10f, "wait for quiet"));
             plan.Add(new Tell(TellKind.ShelfRattle, _ => target.transform.position, 1f));
 
-            var slots = target.GetComponentsInChildren<ShelfSlot>().Where(s => s.isFilled).ToList();
+            var slots = target.Slots.Where(s => s.isFilled).ToList();
             int ejected = 0;
             float timer = 0f;
             plan.Add(new Process("strip " + plan.Target, (k, dt) =>

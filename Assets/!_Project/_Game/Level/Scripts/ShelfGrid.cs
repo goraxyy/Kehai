@@ -13,13 +13,16 @@ using UnityEngine;
 //
 // One slot holds one item, and the grid makes a full shelf look full. All the squares on one
 // board facing one aisle sell the same product: that's a facing, and Planogram picks it.
-// MERCHANDISING.md is this in prose.
+// The slots are data (ShelfSlot), drawn by ShelfDrawer. MERCHANDISING.md is this in prose.
 public static class ShelfGrid
 {
     public const float SquareSize = 0.5f;
     public const float Gap = 0.02f;          // air between neighbouring packs
     public const int MaxDrinksAcross = 3;
-    public const string RootName = "GridSlots";
+
+    // Where Kehai/Store/Stock the Maze used to bake each bay's slots and items into the scene,
+    // before stock was data. Kehai/Store/Migrate to Data Shelves clears it out.
+    public const string LegacyRootName = "GridSlots";
 
     // Same rule as ShelfPrefabBuilder: a board is a thin "polka" child of the bay; thicker
     // ones are structural bases.
@@ -150,82 +153,31 @@ public static class ShelfGrid
         return facing.Squares.Count * cells.x * cells.y;
     }
 
-    // ------------------------------------------------------------------ building slots
+    // ------------------------------------------------------------------ the slots
 
-    // Puts a facing's slots on the bay, each holding a fresh item of the product, under
-    // GridSlots/Facing_<key>. `spawn` makes the item: Instantiate in play, InstantiatePrefab
-    // when the editor bakes it into the scene.
-    public static Transform Build(Transform bay, Facing facing, ProductDef product, ItemType section,
-                                  System.Func<GameObject, Transform, GameObject> spawn,
-                                  System.Action<Object> created = null)
+    // One slot of a facing: the middle of its cell, bay-local, on the board, and the cell's
+    // floor (x along the bay, y across it).
+    public readonly struct Cell
     {
-        Transform root = bay.Find(RootName);
-        if (root == null)
-        {
-            root = new GameObject(RootName).transform;
-            root.SetParent(bay, false);
-            created?.Invoke(root.gameObject);
-        }
+        public readonly Vector3 Centre;
+        public readonly Vector2 Size;
+        public readonly bool Back;
 
-        string name = "Facing_" + facing.Key;
-        Transform old = root.Find(name);
-        if (old != null)
-        {
-            old.name += " (replaced)";       // Destroy waits for the end of the frame
-            if (Application.isPlaying) Object.Destroy(old.gameObject);
-            else Object.DestroyImmediate(old.gameObject);
-        }
+        public Cell(Vector3 centre, Vector2 size, bool back) { Centre = centre; Size = size; Back = back; }
+    }
 
-        var group = new GameObject(name);
-        group.transform.SetParent(root, false);
-        created?.Invoke(group);
-        var marker = group.AddComponent<ShelfFacing>();
-        marker.productId = product != null ? product.Id : string.Empty;
-
-        if (product == null) return group.transform;
-
-        GameObject prefab = ProductLook.Prefab(product.Id);
+    // A facing's slots for a product: every square cut into as many cells as the pack fits.
+    // StoreLayout makes a ShelfSlot of each.
+    public static IEnumerable<Cell> CellsOf(Facing facing, ProductDef product)
+    {
+        if (product == null) yield break;
         Vector3 pack = PackSize(product);
-        int interactable = LayerMask.NameToLayer("Interactable");
         foreach (Square sq in facing.Squares)
         {
             Vector2Int cells = CellsFor(product, pack, sq.Size);
-            var cellSize = new Vector2(sq.Size.x / cells.x, sq.Size.y / cells.y);
+            var size = new Vector2(sq.Size.x / cells.x, sq.Size.y / cells.y);
             foreach (Vector3 centre in CellCentres(sq, cells))
-            {
-                var go = new GameObject("Slot");
-                if (interactable >= 0) go.layer = interactable;
-                go.transform.SetParent(group.transform, false);
-                go.transform.localPosition = centre;
-
-                // The trigger the player aims at: the cell, as tall as what stands in it.
-                var box = go.AddComponent<BoxCollider>();
-                box.isTrigger = true;
-                box.size = new Vector3(cellSize.x - 0.01f, pack.y + 0.04f, cellSize.y - 0.01f);
-                box.center = new Vector3(0f, box.size.y * 0.5f, 0f);
-
-                var slot = go.AddComponent<ShelfSlot>();
-                slot.snapPoint = go.transform;     // the slot sits on the board itself
-                slot.snapLift = 0f;
-                slot.requiredType = section;
-                slot.productId = product.Id;
-
-                if (prefab == null || spawn == null) continue;
-                GameObject itemGo = spawn(prefab, go.transform);
-                var item = itemGo.GetComponent<Item>();
-                if (item == null) continue;
-                item.type = section;
-                item.productId = product.Id;
-                item.isOnShelf = true;
-                item.isCarried = false;
-                Mesh mesh = itemGo.GetComponent<MeshFilter>()?.sharedMesh;
-                float rest = mesh != null ? mesh.bounds.extents.y - mesh.bounds.center.y : 0f;
-                itemGo.transform.localPosition = new Vector3(0f, rest, 0f);
-                itemGo.transform.localRotation = Quaternion.identity;
-                slot.storedItem = item;
-                slot.isFilled = true;
-            }
+                yield return new Cell(centre, size, sq.Back);
         }
-        return group.transform;
     }
 }

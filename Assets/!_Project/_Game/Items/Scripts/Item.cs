@@ -46,14 +46,13 @@ public class Item : MonoBehaviour
     // otherwise.
     public string DisplayName => ProductCatalog.Label(type, productId);
 
-    // The old shelf prefabs' snap points sit this far above their board (ShelfPrefabBuilder's
-    // ItemHalfHeight): half the height of the placeholder box, whose middle they hold. The grid
-    // slots ShelfGrid builds sit on the board itself.
+    // Half the height of the placeholder box (Item_def), whose origin is its middle: how far
+    // it stands off whatever it's on.
     public const float SnapHeight = 0.2f;
 
     // From this item's origin down to the bottom of its mesh. Measured the first time it's
-    // asked for, not in Awake: Awake doesn't run in the editor, where Kehai/Store/Stock the Maze
-    // stands thousands of items on their boards. ProductLook sets it when it swaps the model.
+    // asked for, not in Awake, so it's right in the editor too. ProductLook sets it when it
+    // swaps the model.
     public float RestHeight
     {
         get
@@ -64,10 +63,6 @@ public class Item : MonoBehaviour
         set => restHeight = value;
     }
     [System.NonSerialized] float restHeight = float.NaN;
-
-    // How far above the board the snap point it's standing on is (its slot's snapLift). The
-    // item is lifted by RestHeight less this, so whatever its height it stands on the board.
-    [System.NonSerialized] public float shelfLift = SnapHeight;
 
     // Makes this a particular product: its section, its id, and — once the product has been
     // imported — its own model in place of the placeholder box.
@@ -100,8 +95,10 @@ public class Item : MonoBehaviour
     [System.NonSerialized] public NoiseAuthor lastAuthor = NoiseAuthor.World;
 
     [HideInInspector] public bool isCarried;
+
+    // Set on the product prefabs, which wait kinematic with their colliders off until a shelf
+    // slot hands one over. Stock on a shelf isn't a GameObject at all (ShelfSlot).
     [HideInInspector] public bool isOnShelf;
-    [HideInInspector] public Vector3 shelfRotationOffset;
 
     Rigidbody rb;
     Collider[] colliders;
@@ -171,12 +168,6 @@ public class Item : MonoBehaviour
         transform.localRotation = Quaternion.Euler(holdRotationOffset);
     }
 
-    public void ApplyShelfTransform()
-    {
-        transform.localPosition = Vector3.up * (RestHeight - shelfLift);
-        transform.localRotation = Quaternion.Euler(shelfRotationOffset);
-    }
-
 #if UNITY_EDITOR
     // Tweaking the offsets in the Inspector during play still updates immediately,
     // but costs nothing at runtime.
@@ -185,7 +176,6 @@ public class Item : MonoBehaviour
         if (!Application.isPlaying) return;
 
         if (isCarried) ApplyCarriedTransform();
-        else if (isOnShelf) ApplyShelfTransform();
     }
 #endif
 
@@ -214,28 +204,6 @@ public class Item : MonoBehaviour
         {
             transform.SetParent(null);
         }
-    }
-
-    // Called when placed on a shelf snap point
-    public void SetOnShelf(Transform snapPoint, Vector3 rotationOffset, float snapLift = SnapHeight)
-    {
-        gameObject.SetActive(true);
-        isCarried = false;
-        isOnShelf = true;
-        shelfRotationOffset = rotationOffset;
-        shelfLift = snapLift;
-
-        if (rb != null)
-        {
-            rb.isKinematic = true;
-            rb.useGravity = false;
-        }
-
-        // Keep colliders DISABLED on shelf — prevents pushing player
-        SetCollidersEnabled(false);
-
-        transform.SetParent(snapPoint);
-        ApplyShelfTransform();
     }
 
     // Called when item goes into a non-active inventory slot

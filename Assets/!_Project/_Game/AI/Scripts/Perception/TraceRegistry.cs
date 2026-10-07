@@ -128,14 +128,16 @@ namespace Kehai.Aiko
 
         static void OnPickedUp(Item item) => Resolve(TraceKind.DroppedItem, item);
 
+        // A slot is data, not a Unity object, so a gap is filed under its bay and found again by
+        // where it is.
         static void OnTook(ShelfSlot slot, Item item)
         {
-            if (slot != null) Add(TraceKind.ShelfGap, slot.transform.position, float.PositiveInfinity, default, slot);
+            if (slot != null) Add(TraceKind.ShelfGap, slot.Position, float.PositiveInfinity, default, slot.owner);
         }
 
         static void OnShelved(ShelfSlot slot, Item item)
         {
-            if (slot != null) Resolve(TraceKind.ShelfGap, slot);
+            if (slot != null) ResolveNear(TraceKind.ShelfGap, slot.Position, 0.02f);
         }
 
         static void OnBagged(Trashcan can)

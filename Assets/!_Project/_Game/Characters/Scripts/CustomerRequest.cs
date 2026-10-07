@@ -165,7 +165,7 @@ public class CustomerRequest : MonoBehaviour
         if (!AimAt(target)) yield break;
 
         wantedProduct = product;
-        wantedZone = StoreLayout.ZoneAt(target.transform.position);
+        wantedZone = StoreLayout.ZoneAt(target.Position);
         kind = CustomerQuestion.Choose(Random.value, missing, wantedZone);
         // Nobody stands in aisle 3 asking where aisle 3 is.
         if (kind != CustomerQuestion.Kind.Missing && wantedZone.Contains(transform.position))
@@ -325,7 +325,7 @@ public class CustomerRequest : MonoBehaviour
     // The spot in front of a facing, if they can walk there.
     bool AimAt(ShelfSlot target)
     {
-        if (!NavMesh.SamplePosition(target.transform.position, out NavMeshHit hit, 2.5f, NavMesh.AllAreas)) return false;
+        if (!NavMesh.SamplePosition(target.Position, out NavMeshHit hit, 2.5f, NavMesh.AllAreas)) return false;
         var path = new NavMeshPath();
         if (!agent.CalculatePath(hit.position, path) || path.status != NavMeshPathStatus.PathComplete) return false;
 
@@ -381,22 +381,7 @@ public class CustomerRequest : MonoBehaviour
         return slot.Label;
     }
 
-    static ShelfSlot NearestSlotTo(Vector3 position, float radius)
-    {
-        var slots = ShelfSlot.All;
-        ShelfSlot nearest = null;
-        float nearestSqr = radius * radius;
-
-        for (int i = 0; i < slots.Count; i++)
-        {
-            float sqr = (position - slots[i].transform.position).sqrMagnitude;
-            if (sqr >= nearestSqr) continue;
-            nearest = slots[i];
-            nearestSqr = sqr;
-        }
-
-        return nearest;
-    }
+    static ShelfSlot NearestSlotTo(Vector3 position, float radius) => ShelfStock.Current.Nearest(position, radius);
 
     void Begin()
     {
