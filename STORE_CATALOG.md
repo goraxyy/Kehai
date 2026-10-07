@@ -565,8 +565,9 @@ End cap: a Nyan Nyan cat food pouch.
 ### The block on each slot
 
 A slot holds one item, the thing the player picks up and puts back, but a stocked shelf shows a
-block of the product: as many across as fit the slot, up to three deep, and flat tins and bars
-stacked. `Backstock` draws that block round the slot's item as one shared mesh per product and
+block of the product: as many across as fit the slot (up to six), two deep, and flat tins and
+bars stacked, twelve at most. Blocks under 2% of the screen's height (about 20 m away) aren't
+drawn, and nor is a lone product once it's a few pixels tall. `Backstock` draws that block round the slot's item as one shared mesh per product and
 size, with no colliders and no shadows, and hides it while the slot is empty. A gap on the shelf
 still means "restock me", and the item itself stands in one of the block's cells.
 
