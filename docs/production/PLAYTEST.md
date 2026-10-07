@@ -123,11 +123,11 @@ will take only zips, under 50 MB.
 Once, in this order. Each step says what it unlocks.
 
 1. **`tools/playtest/.env`:** copy `tools/playtest/.env.example` (git ignores the copy).
-2. **The upload service** (Cloudflare, a few minutes): [tools/playtest/README.md](tools/playtest/README.md#setting-up-the-upload-service-once).
+2. **The upload service** (Cloudflare, a few minutes): [tools/playtest/README.md](../../tools/playtest/README.md#setting-up-the-upload-service-once).
    *Unlocks:* builds that send sessions, and your Mac pulling them.
 3. **The Google Form** from the draft above, and its pre-filled link in `KEHAI_PLAYTEST_FORM_URL`.
    *Unlocks:* the "longer questions" button and the link in the tester messages.
-4. **The itch.io page:** [tools/playtest/ITCH_PAGE.md](tools/playtest/ITCH_PAGE.md); its address and
+4. **The itch.io page:** [tools/playtest/ITCH_PAGE.md](../../tools/playtest/ITCH_PAGE.md); its address and
    password in `.env`. Or skip it and use direct links (`KEHAI_PLAYTEST_MAC_LINK`,
    `KEHAI_PLAYTEST_WINDOWS_LINK`).
 5. **Telegram and Claude:** `TELEGRAM_BOT_TOKEN` and `ANTHROPIC_API_KEY` in `tools/marketing/.env`,

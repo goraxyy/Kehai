@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Tactics about space, people, and you (aiko.md §8.4–8.6), plus the blink channel.
+    // Tactics about space, people, and you (AIKO.md §8.4–8.6), plus the blink channel.
 
     // ================================================================ §8.4 space
 
@@ -535,7 +535,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // ================================================================ ideas.md: blink
+    // ================================================================ IDEAS.md: blink
 
     // Exploit the window, don't chase the latency: a blink is ~300 ms and she learns of it
     // ~100 ms in, so she knows how long you have left with your eyes shut — and moves then.

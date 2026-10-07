@@ -13,10 +13,9 @@ using UnityEngine;
 // Baking is optional and costs something — every facing becomes a prefab override in a
 // scene file that is already a megabyte — so reach for the report first.
 //
-// "Stock the Maze with Product Prefabs" goes further and puts the real thing on every shelf:
-// each facing's placeholder box is replaced by its product's prefab, stood in its cell of the
-// block the game draws round it, and the aisle signs are hung. That is what the game does by
-// itself at load; baked, the editor shows the stocked shop too.
+// "Stock the Maze with Product Prefabs" goes further and bakes the stocked shop itself: every
+// board cut into ShelfGrid's slots with a product prefab in each, the aisle signs and the lamps.
+// That is what the game does by itself at load; baked, the editor shows it too.
 public static class StoreLayoutBuilder
 {
     [MenuItem("Kehai/Store/Report Layout")]
@@ -50,100 +49,93 @@ public static class StoreLayoutBuilder
                   StoreLayout.Describe());
     }
 
-    const string SignMaterials = "Assets/!_Project/_Game/Items/Products/Materials";
+    const string LevelMaterials = "Assets/!_Project/_Game/Level/Materials";
 
     [MenuItem("Kehai/Store/Stock the Maze with Product Prefabs")]
     public static void StockWithProductsMenu() => Debug.Log(StockWithProducts());
 
+    // Bakes the whole stocked shop into the scene: every bay's boards cut into ShelfGrid's
+    // slots, each slot holding its product's prefab, then the aisle signs and the lamps. The
+    // game builds all of this by itself at load when the scene doesn't have it; baked, the
+    // editor shows it. Rerunning replaces the last bake. It is not undoable (tens of thousands
+    // of objects): save before, and reopen the scene to throw it away.
     public static string StockWithProducts()
     {
-        ApplyLayout();
-
-        int group = Undo.GetCurrentGroup();
-        Undo.SetCurrentGroupName("Stock the maze");
-        int swapped = 0, already = 0, noModel = 0, hidden = 0;
-
-        foreach (ShelfSlot slot in Object.FindObjectsByType<ShelfSlot>(FindObjectsInactive.Include))
+        int bays = 0, slots = 0, items = 0, cleared = 0;
+        foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include))
         {
-            GameObject prefab = ProductLook.Prefab(slot.productId);
-            if (prefab == null) { noModel++; continue; }
+            Transform bay = unit.transform;
+            StoreLayout.Zone zone = StoreLayout.ZoneAt(bay.position);
 
-            Item old = slot.storedItem;
-            if (old != null && PrefabUtility.GetCorrespondingObjectFromSource(old.gameObject) == prefab)
-            {
-                already++;
-                continue;
-            }
-
-            Transform snap = slot.snapPoint != null ? slot.snapPoint : slot.transform;
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, snap);
-            Undo.RegisterCreatedObjectUndo(go, "Stock the maze");
-
-            // Stood the way the game stands it: on the board, in its cell of the block.
-            Mesh mesh = go.GetComponent<MeshFilter>().sharedMesh;
-            float rest = mesh.bounds.extents.y - mesh.bounds.center.y;
-            Vector3 cell = Backstock.Fit(mesh.bounds.size, slot.footprint).ItemCell;
-            go.transform.localPosition = cell + Vector3.up * (rest - Item.SnapHeight);
-            go.transform.localRotation = Quaternion.Euler(slot.snapRotationOffset);
-
-            // Shelved stock is kinematic with its colliders off, like ShelfPrefabBuilder's.
-            var item = go.GetComponent<Item>();
-            item.isOnShelf = true;
-            item.isCarried = false;
-            var body = go.GetComponent<Rigidbody>();
-            if (body != null) { body.isKinematic = true; body.useGravity = false; }
-            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) c.enabled = false;
-
-            Undo.RecordObject(slot, "Stock the maze");
-            slot.storedItem = item;
-            slot.isFilled = true;
-            if (PrefabUtility.IsPartOfPrefabInstance(slot)) PrefabUtility.RecordPrefabInstancePropertyModifications(slot);
-            else EditorUtility.SetDirty(slot);
-
+            // The prefab's own six-to-a-board slots: drop the product prefabs a previous bake
+            // put on them, then switch them off (one override per bay).
+            Transform old = bay.Find("Slots");
             if (old != null)
             {
-                // A placeholder inside a shelf prefab is removed as an override; if this
-                // editor won't remove it, it is switched off instead.
-                GameObject placeholder = old.gameObject;
-                try { Undo.DestroyObjectImmediate(placeholder); }
-                catch (System.Exception) { }
-                if (placeholder != null)
+                foreach (Item item in old.GetComponentsInChildren<Item>(true))
+                    if (PrefabUtility.IsAddedGameObjectOverride(item.gameObject)) { Object.DestroyImmediate(item.gameObject); cleared++; }
+                if (old.gameObject.activeSelf)
                 {
-                    Undo.RecordObject(placeholder, "Stock the maze");
-                    placeholder.SetActive(false);
-                    hidden++;
+                    old.gameObject.SetActive(false);
+                    if (PrefabUtility.IsPartOfPrefabInstance(old.gameObject))
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(old.gameObject);
                 }
             }
-            swapped++;
+
+            Transform grid = bay.Find(ShelfGrid.RootName);
+            if (grid != null) Object.DestroyImmediate(grid.gameObject);
+
+            int seed = Mathf.Abs(Mathf.RoundToInt(bay.position.x) * 73856093 ^ Mathf.RoundToInt(bay.position.z) * 19349663);
+            bool endCap = Planogram.IsEndCap(bay);
+            foreach (ShelfGrid.Facing facing in ShelfGrid.Facings(bay))
+            {
+                string id = Planogram.ProductFor(zone.Section, seed, facing.Back, Planogram.BoardAt(facing.Height), endCap);
+                ProductDef product = ProductCatalog.Get(id);
+                ItemType section = product != null ? product.Category : zone.Section;
+                Transform group = ShelfGrid.Build(bay, facing, product, section,
+                    (prefab, parent) => (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent));
+                foreach (ShelfSlot slot in group.GetComponentsInChildren<ShelfSlot>(true))
+                {
+                    slots++;
+                    if (slot.storedItem != null) items++;
+                }
+            }
+            bays++;
         }
 
-        int signs = AisleSigns.Build(SignMaterial("M_SignBoard", AisleSigns.BoardColour, 0.35f),
-                                     SignMaterial("M_SignBadge", AisleSigns.BadgeColour, 0.4f),
-                                     SignMaterial("M_SignWire", AisleSigns.WireColour, 0.5f),
-                                     TMP_Settings.defaultFontAsset, japanese: false);
-        var root = GameObject.Find(AisleSigns.RootName);
-        if (root != null) Undo.RegisterCreatedObjectUndo(root, "Stock the maze");
+        // Ids and each bay's section, through the usual pass.
+        ApplyLayout();
 
-        Undo.CollapseUndoOperations(group);
+        int signs = AisleSigns.Build(Asset("M_SignBoard", AisleSigns.BoardColour, 0.2f, false),
+                                     Asset("M_SignBadge", AisleSigns.BadgeColour, 0.2f, false),
+                                     Asset("M_SignWire", AisleSigns.WireColour, 0.3f, false),
+                                     TMP_Settings.defaultFontAsset, japanese: false);
+        CeilingLamps lamps = CeilingLamps.Build(Asset("M_LampBox", new Color(0.015f, 0.015f, 0.018f), 0.25f, false),
+                                                Asset("M_SignWire", AisleSigns.WireColour, 0.3f, false),
+                                                Asset("M_LampPanelOn", new Color(1f, 0.98f, 0.92f), 0f, true),
+                                                Asset("M_LampPanelOff", new Color(0.12f, 0.12f, 0.12f), 0.4f, false));
+
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        return $"Stocked the maze: {swapped} facings now hold their product's prefab ({already} already did, " +
-               $"{noModel} without a model{(hidden > 0 ? $", {hidden} placeholders switched off rather than removed" : "")}); " +
-               $"{signs} aisle signs hung.";
+        return $"Stocked the maze: {bays} bays, {slots} slots, {items} items" +
+               (cleared > 0 ? $" ({cleared} products from the last bake cleared)" : "") +
+               $"; {signs} aisle signs and {lamps.lamps.Count} lamps hung. Not saved yet.";
     }
 
-    // The signs' materials as assets, so the scene can keep them.
-    static Material SignMaterial(string name, Color color, float smoothness)
+    // A material as an asset, so the scene can keep it. `unlit` for the lamps' glowing panels.
+    static Material Asset(string name, Color color, float smoothness, bool unlit)
     {
-        string path = $"{SignMaterials}/{name}.mat";
+        string path = $"{LevelMaterials}/{name}.mat";
+        Shader shader = Shader.Find(unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit");
         var m = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (m == null)
         {
-            if (!AssetDatabase.IsValidFolder(SignMaterials)) return null;
-            m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (!AssetDatabase.IsValidFolder(LevelMaterials)) AssetDatabase.CreateFolder("Assets/!_Project/_Game/Level", "Materials");
+            m = new Material(shader);
             AssetDatabase.CreateAsset(m, path);
         }
+        else if (m.shader != shader) m.shader = shader;
         m.SetColor("_BaseColor", color);
-        m.SetFloat("_Smoothness", smoothness);
+        if (!unlit) m.SetFloat("_Smoothness", smoothness);
         EditorUtility.SetDirty(m);
         return m;
     }

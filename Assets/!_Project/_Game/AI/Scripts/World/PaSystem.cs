@@ -106,7 +106,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // The tannoy (aiko.md §8.3). Aiko owns it and is not obliged to be truthful. Plays
+    // The tannoy (AIKO.md §8.3). Aiko owns it and is not obliged to be truthful. Plays
     // through the store's own ceiling speakers — the ones nearest you — with a chime first,
     // ducks the radio underneath, and puts the words on screen. Jam it at the breaker box
     // and she has no voice.

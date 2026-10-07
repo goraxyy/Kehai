@@ -28,9 +28,7 @@ public static class StoreLayout
         public ItemType Section;
         public float XMin, XMax, ZMin, ZMax;
 
-        // The numbered aisles run through the middle of the shop; the departments round the
-        // edge (produce, bakery, the back wall, the tills) have names instead, as in any
-        // supermarket. 0 for a department.
+        // Its number, in the order a customer walks the shop.
         public int Aisle;
         public string Name;       // "Tins & Jars", printed on the hanging sign
         public string Japanese;   // its second line
@@ -47,41 +45,42 @@ public static class StoreLayout
     // goods greet them at the door, milk is at the far wall with the length of the shop
     // between it and the entrance, and sweets are the last thing they pass.
     //
-    // Aisle numbers climb with distance from the doors. First match wins, so the order
-    // matters: the front strip is claimed before the aisles that run behind it.
+    // Every part of the shop is a numbered aisle, numbered in that walking order: 1 by the
+    // doors, 13 at the tills. First match wins, so the order of this table matters: the front
+    // strip is claimed before the aisles that run behind it.
     public static readonly Zone[] Zones =
     {
         // --- the front of the shop, everything north of z = -142 ------------------
-        Z("Produce · Fruit & Veg",           ItemType.Produce,       58f,  Inf, -142f,  Inf,
-          0, "Fruit & Veg", "青果", "the fruit and veg"),
-        Z("Bakery",                          ItemType.Bakery,        42f,  58f, -142f,  Inf,
-          0, "Bakery", "ベーカリー", "the bakery"),
-        Z("Checkout · Sweets & Impulse",     ItemType.Confectionery, -Inf, 42f, -142f,  Inf,
-          0, "Sweets", "お菓子", "the sweets"),
+        Z("Aisle 1 · Fruit & Veg",            ItemType.Produce,       58f,  Inf, -142f,  Inf,
+          1, "Fruit & Veg", "青果", "the fruit and veg"),
+        Z("Aisle 2 · Bakery",                 ItemType.Bakery,        42f,  58f, -142f,  Inf,
+          2, "Bakery", "ベーカリー", "the bread"),
+        Z("Aisle 13 · Sweets",                ItemType.Confectionery, -Inf, 42f, -142f,  Inf,
+          13, "Sweets", "お菓子", "the sweets"),
 
-        // --- the aisles, working westward away from the doors ---------------------
-        Z("Aisle 1 · Soft Drinks",           ItemType.SoftDrinks,    76f,  Inf, -163f, -142f,
-          1, "Soft Drinks", "飲料", "the soft drinks"),
-        Z("Aisle 2 · Snacks & Crisps",       ItemType.Snacks,        60f,  76f, -153f, -142f,
-          2, "Snacks & Crisps", "スナック菓子", "the crisps"),
-        Z("Aisle 3 · Tins & Jars",           ItemType.Canned,        60f,  76f, -163f, -153f,
-          3, "Tins & Jars", "缶詰・瓶詰", "the tinned food"),
-        Z("Aisle 4 · Cereal & Breakfast",    ItemType.Cereal,        44f,  60f, -153f, -142f,
-          4, "Cereal & Breakfast", "シリアル・朝食", "the cereal"),
-        Z("Aisle 5 · Noodles, Pasta & Rice", ItemType.Noodles,       44f,  60f, -163f, -153f,
-          5, "Noodles, Pasta & Rice", "麺類・お米", "the noodles"),
-        Z("Aisle 6 · Health & Beauty",       ItemType.PersonalCare, -Inf,  44f, -153f, -142f,
-          6, "Health & Beauty", "ヘルス＆ビューティー", "the toiletries"),
-        Z("Aisle 7 · Household & Cleaning",  ItemType.Household,    -Inf,  44f, -163f, -153f,
-          7, "Household & Cleaning", "日用品", "the cleaning stuff"),
+        // --- the middle of the shop, working westward away from the doors ----------
+        Z("Aisle 3 · Soft Drinks",            ItemType.SoftDrinks,    76f,  Inf, -163f, -142f,
+          3, "Soft Drinks", "飲料", "the soft drinks"),
+        Z("Aisle 4 · Snacks & Crisps",        ItemType.Snacks,        60f,  76f, -153f, -142f,
+          4, "Snacks & Crisps", "スナック菓子", "the crisps"),
+        Z("Aisle 5 · Tins & Jars",            ItemType.Canned,        60f,  76f, -163f, -153f,
+          5, "Tins & Jars", "缶詰・瓶詰", "the tinned food"),
+        Z("Aisle 6 · Cereal & Breakfast",     ItemType.Cereal,        44f,  60f, -153f, -142f,
+          6, "Cereal & Breakfast", "シリアル・朝食", "the cereal"),
+        Z("Aisle 7 · Noodles, Pasta & Rice",  ItemType.Noodles,       44f,  60f, -163f, -153f,
+          7, "Noodles, Pasta & Rice", "麺類・お米", "the noodles"),
+        Z("Aisle 8 · Health & Beauty",        ItemType.PersonalCare, -Inf,  44f, -153f, -142f,
+          8, "Health & Beauty", "ヘルス＆ビューティー", "the toiletries"),
+        Z("Aisle 9 · Household & Cleaning",   ItemType.Household,    -Inf,  44f, -163f, -153f,
+          9, "Household & Cleaning", "日用品", "the cleaning stuff"),
 
         // --- the back wall, along the chillers ------------------------------------
-        Z("Back Wall · Dairy & Chilled",     ItemType.Dairy,         58f,  Inf, -Inf,  -163f,
-          0, "Dairy & Chilled", "乳製品", "the dairy"),
-        Z("Back Wall · Frozen",              ItemType.Frozen,        44f,  58f, -Inf,  -163f,
-          0, "Frozen", "冷凍食品", "the frozen food"),
-        Z("Back Wall · Pet",                 ItemType.PetFood,      -Inf,  44f, -Inf,  -163f,
-          0, "Pet", "ペット用品", "the pet food")
+        Z("Aisle 10 · Dairy & Chilled",       ItemType.Dairy,         58f,  Inf, -Inf,  -163f,
+          10, "Dairy & Chilled", "乳製品", "the dairy"),
+        Z("Aisle 11 · Frozen",                ItemType.Frozen,        44f,  58f, -Inf,  -163f,
+          11, "Frozen", "冷凍食品", "the frozen food"),
+        Z("Aisle 12 · Pet",                   ItemType.PetFood,      -Inf,  44f, -Inf,  -163f,
+          12, "Pet", "ペット用品", "the pet food")
     };
 
     static Zone Z(string sign, ItemType section, float xMin, float xMax, float zMin, float zMax,
@@ -102,27 +101,14 @@ public static class StoreLayout
         return Zones[0];
     }
 
-    // The order a shopper meets the sections in: fresh food at the door, the aisles, the back
-    // wall, and the sweets last, in the queue. A shopping list is walked in this order.
+    // The order a shopper meets the sections in, which is the aisle numbering: fresh food at
+    // the door, the middle of the shop, the back wall, and the sweets last, in the queue. A
+    // shopping list is walked in this order.
     public static int WalkOrder(ItemType section)
     {
-        switch (section)
-        {
-            case ItemType.Produce: return 0;
-            case ItemType.Bakery: return 1;
-            case ItemType.SoftDrinks: return 2;
-            case ItemType.Snacks: return 3;
-            case ItemType.Canned: return 4;
-            case ItemType.Cereal: return 5;
-            case ItemType.Noodles: return 6;
-            case ItemType.PersonalCare: return 7;
-            case ItemType.Household: return 8;
-            case ItemType.Dairy: return 9;
-            case ItemType.Frozen: return 10;
-            case ItemType.PetFood: return 11;
-            case ItemType.Confectionery: return 12;
-            default: return 13;
-        }
+        foreach (Zone zone in Zones)
+            if (zone.Section == section) return zone.Aisle;
+        return Zones.Length + 1;
     }
 
     public static Zone ZoneAt(Vector3 position)
@@ -138,22 +124,27 @@ public static class StoreLayout
     public static ItemType SectionAt(Vector3 position) => ZoneAt(position).Section;
     public static string SignAt(Vector3 position) => ZoneAt(position).Sign;
 
-    // Stocking the store is the first thing that happens once the scene is up: every bay
-    // is still holding the placeholder cereal it was built with until this runs. Scenes
-    // loaded later (the eval harness reloads the store for every episode) are stocked too.
+    // Stocking the store is the first thing that happens once the scene is up: every bay's
+    // boards are cut into ShelfGrid's slots and filled from the planogram (a scene that has
+    // been baked with Kehai/Store/Stock the Maze already has them, and is only checked). Then
+    // the aisle signs and the lamps go up, and each room's lights are kept in their room.
+    // Scenes loaded later (the eval harness reloads the store for every episode) get the same.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void StockOnLoad()
     {
-        ApplyToScene();
-        AisleSigns.Build();
+        Dress();
         SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
-    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Dress();
+
+    static void Dress()
     {
         ApplyToScene();
         AisleSigns.Build();
+        CeilingLamps.Ensure();
+        RoomLighting.Apply();
     }
 
     // Optional hooks so the editor pass can wrap each write in an Undo record and register
@@ -162,7 +153,7 @@ public static class StoreLayout
                                    System.Action<Object> afterWrite = null)
     {
         Planogram.Clear();
-        return Walk(true, beforeWrite, afterWrite, null, null, null);
+        return Walk(true, beforeWrite, afterWrite, null, null, null, null);
     }
 
     // One walk of the shop, used both to stock it and to count it. Counting takes the same
@@ -172,15 +163,15 @@ public static class StoreLayout
                     System.Action<Object> afterWrite,
                     Dictionary<string, int> facingsPerProduct,
                     Dictionary<ItemType, int> baysPerSection,
-                    Dictionary<ItemType, int> facingsPerSection)
+                    Dictionary<ItemType, int> facingsPerSection,
+                    Dictionary<ItemType, int> slotsPerSection)
     {
-        int touched = 0;
+        int slots = 0;
 
         var units = Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include);
         foreach (ShelfUnit unit in units)
         {
             Zone zone = ZoneAt(unit.transform.position);
-            ShelfSlot[] slots = unit.GetComponentsInChildren<ShelfSlot>(true);
 
             if (write)
             {
@@ -190,11 +181,13 @@ public static class StoreLayout
                 afterWrite?.Invoke(unit);
             }
 
-            Stock(slots, zone, unit.transform, write, beforeWrite, afterWrite, facingsPerProduct);
-            touched += slots.Length;
+            int facings;
+            int n = StockBay(unit, zone, write, beforeWrite, afterWrite, facingsPerProduct, out facings);
+            slots += n;
 
             Tally(baysPerSection, zone.Section, 1);
-            Tally(facingsPerSection, zone.Section, slots.Length);
+            Tally(facingsPerSection, zone.Section, facings);
+            Tally(slotsPerSection, zone.Section, n);
         }
 
         // A facing sits loose in the scene rather than on a bay: the one on the till counter.
@@ -202,50 +195,29 @@ public static class StoreLayout
         var allSlots = Object.FindObjectsByType<ShelfSlot>(FindObjectsInactive.Include);
         foreach (ShelfSlot slot in allSlots)
         {
-            if (slot.GetComponentInParent<ShelfUnit>() != null) continue;
+            if (slot.GetComponentInParent<ShelfUnit>(true) != null) continue;
 
             ProductDef counter = ProductCatalog.Get(Planogram.CounterProduct);
-            if (counter != null)
-            {
-                Tally(facingsPerProduct, counter.Id, 1);
-                if (write) Write(slot, counter.Category, counter.Id, Backstock.DefaultFootprint, beforeWrite, afterWrite);
-            }
-            touched++;
-
-            Tally(facingsPerSection, counter != null ? counter.Category : ZoneAt(slot.transform.position).Section, 1);
+            if (counter == null) continue;
+            Tally(facingsPerProduct, counter.Id, 1);
+            Tally(facingsPerSection, counter.Category, 1);
+            Tally(slotsPerSection, counter.Category, 1);
+            if (write) Write(slot, counter.Category, counter.Id, beforeWrite, afterWrite);
+            slots++;
         }
 
-        return touched;
+        return slots;
     }
 
     // Stocks one bay from the planogram. A facing is one board on one side of the bay — the
     // whole of the top board, front side, is Pipisi and nothing else — which is how a real
     // planogram is blocked out. Planogram picks the product for each board from its height
-    // (eye, waist or stoop level) and side, so every rule about where things go lives there.
-    static void Stock(IReadOnlyList<ShelfSlot> slots, Zone zone, Transform bay, bool write,
-                      System.Action<Object> beforeWrite, System.Action<Object> afterWrite,
-                      Dictionary<string, int> facingsPerProduct)
+    // (eye, waist or stoop level) and side; ShelfGrid cuts the board into slots for it.
+    static int StockBay(ShelfUnit unit, Zone zone, bool write,
+                        System.Action<Object> beforeWrite, System.Action<Object> afterWrite,
+                        Dictionary<string, int> facingsPerProduct, out int facingCount)
     {
-        // Facings are keyed by height and by which side of the bay they face, then sorted,
-        // so the order is the same however Unity happened to hand back the slots.
-        var facings = new Dictionary<long, List<ShelfSlot>>();
-        var keys = new List<long>();
-
-        foreach (ShelfSlot slot in slots)
-        {
-            Vector3 local = bay.InverseTransformPoint(slot.transform.position);
-            long key = (long)Mathf.RoundToInt(local.y * 100f) * 4L + (local.z >= 0f ? 1L : 0L);
-
-            if (!facings.TryGetValue(key, out List<ShelfSlot> facing))
-            {
-                facing = new List<ShelfSlot>();
-                facings[key] = facing;
-                keys.Add(key);
-            }
-            facing.Add(slot);
-        }
-
-        keys.Sort();
+        Transform bay = unit.transform;
 
         // Which of the section's layouts this bay gets. Derived from its position so the plan
         // is the same every run, and so neighbouring bays don't all look alike.
@@ -253,59 +225,56 @@ public static class StoreLayout
                              Mathf.RoundToInt(bay.position.z) * 19349663);
         bool endCap = Planogram.IsEndCap(bay);
 
-        foreach (long key in keys)
+        int slots = 0;
+        List<ShelfGrid.Facing> facings = ShelfGrid.Facings(bay);
+        facingCount = facings.Count;
+        foreach (ShelfGrid.Facing facing in facings)
         {
-            float height = (key >> 2) / 100f;
-            bool back = (key & 3L) == 1L;
-            Planogram.Board board = Planogram.BoardAt(height);
-
-            string id = Planogram.ProductFor(zone.Section, seed, back, board, endCap);
+            string id = Planogram.ProductFor(zone.Section, seed, facing.Back, Planogram.BoardAt(facing.Height), endCap);
             ProductDef product = ProductCatalog.Get(id);
             // A cross-merchandised product keeps its own section: cola on the crisps' end cap
             // still only takes cola.
             ItemType section = product != null ? product.Category : zone.Section;
 
             if (!string.IsNullOrEmpty(id)) Tally(facingsPerProduct, id, 1);
+            slots += ShelfGrid.SlotsIn(facing, product);
             if (!write) continue;
 
-            Vector2 footprint = FootprintOf(facings[key], bay);
-            foreach (ShelfSlot slot in facings[key])
-                Write(slot, section, id, footprint, beforeWrite, afterWrite);
+            Transform group = bay.Find(ShelfGrid.RootName + "/Facing_" + facing.Key);
+            ShelfFacing built = group != null ? group.GetComponent<ShelfFacing>() : null;
+            if (built == null || built.productId != id)
+            {
+                // Not baked, or baked for another product: build it now. The editor's pass
+                // only writes ids into what's there; Stock the Maze is what bakes.
+                if (!Application.isPlaying) continue;
+                group = ShelfGrid.Build(bay, facing, product, section, (prefab, parent) => Object.Instantiate(prefab, parent));
+            }
+            foreach (ShelfSlot slot in group.GetComponentsInChildren<ShelfSlot>(true))
+                Write(slot, section, id, beforeWrite, afterWrite);
         }
+
+        if (write && Application.isPlaying)
+        {
+            // The shelf prefab's own slots, six to a board, are superseded by the grid.
+            Transform old = bay.Find("Slots");
+            if (old != null && old.gameObject.activeSelf) old.gameObject.SetActive(false);
+            unit.Rebind();
+        }
+        return slots;
     }
 
-    static void Write(ShelfSlot slot, ItemType section, string id, Vector2 footprint,
+    static void Write(ShelfSlot slot, ItemType section, string id,
                       System.Action<Object> beforeWrite, System.Action<Object> afterWrite)
     {
         beforeWrite?.Invoke(slot);
         if (slot.storedItem != null) beforeWrite?.Invoke(slot.storedItem);
 
-        // The item already on the facing has to agree with it, or the player picks cereal off
+        // The item already on the slot has to agree with it, or the player picks cereal off
         // the drinks shelf and then can't put it back. Stock sees to that too.
-        slot.Stock(section, id, footprint);
+        slot.Stock(section, id);
 
         afterWrite?.Invoke(slot);
         if (slot.storedItem != null) afterWrite?.Invoke(slot.storedItem);
-    }
-
-    // How much board one slot of a facing has: the spacing between its slots along the board,
-    // less a little air. A facing with one slot (the pillar pieces) gets the default.
-    static Vector2 FootprintOf(List<ShelfSlot> facing, Transform bay)
-    {
-        if (facing.Count < 2) return Backstock.DefaultFootprint;
-
-        var xs = new List<float>(facing.Count);
-        foreach (ShelfSlot slot in facing) xs.Add(bay.InverseTransformPoint(slot.transform.position).x);
-        xs.Sort();
-
-        float pitch = float.MaxValue;
-        for (int i = 1; i < xs.Count; i++)
-        {
-            float d = xs[i] - xs[i - 1];
-            if (d > 0.05f && d < pitch) pitch = d;
-        }
-        if (pitch == float.MaxValue) return Backstock.DefaultFootprint;
-        return new Vector2(Mathf.Clamp(pitch - 0.05f, 0.3f, 0.62f), Backstock.DefaultFootprint.y);
     }
 
     static void Tally<T>(Dictionary<T, int> counts, T key, int amount)
@@ -319,21 +288,23 @@ public static class StoreLayout
     {
         var bays = new Dictionary<ItemType, int>();
         var facings = new Dictionary<ItemType, int>();
+        var slots = new Dictionary<ItemType, int>();
         var perProduct = new Dictionary<string, int>();
 
         // Counting is the same walk as stocking, so this can't drift from what ships.
-        int touched = Walk(false, null, null, perProduct, bays, facings);
+        int total = Walk(false, null, null, perProduct, bays, facings, slots);
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Store layout: {touched} facings across {Zones.Length} sections.");
+        sb.AppendLine($"Store layout: {total} slots across {Zones.Length} aisles.");
         sb.AppendLine();
-        sb.AppendLine("  section                              bays  facings  range");
+        sb.AppendLine("  aisle                                bays  facings  slots  range");
 
         foreach (Zone zone in Zones)
         {
             bays.TryGetValue(zone.Section, out int bayCount);
             facings.TryGetValue(zone.Section, out int facingCount);
-            sb.AppendLine($"  {zone.Sign,-36} {bayCount,4} {facingCount,8} {ProductCatalog.InSection(zone.Section).Count,6}");
+            slots.TryGetValue(zone.Section, out int slotCount);
+            sb.AppendLine($"  {zone.Sign,-36} {bayCount,4} {facingCount,8} {slotCount,6} {ProductCatalog.InSection(zone.Section).Count,6}");
         }
 
         var unstocked = new List<string>();

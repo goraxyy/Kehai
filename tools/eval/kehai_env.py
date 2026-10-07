@@ -1,4 +1,4 @@
-"""Client for the Kehai eval environment (ideas.md §1).
+"""Client for the Kehai eval environment (IDEAS.md §1).
 
 The game runs the server — in the editor (Kehai → Eval → Start Env Server) or a build:
 

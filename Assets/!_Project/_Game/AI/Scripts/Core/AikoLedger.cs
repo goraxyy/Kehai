@@ -41,7 +41,7 @@ namespace Kehai.Aiko
         public int lastShift;
     }
 
-    // The player model (aiko.md §7.1), serialised. Roughly forty numbers and a few
+    // The player model (AIKO.md §7.1), serialised. Roughly forty numbers and a few
     // histograms; survives death, quitting and new shifts.
     [System.Serializable]
     public class LedgerData
@@ -73,7 +73,7 @@ namespace Kehai.Aiko
         public List<CounterStat> counterplay = new List<CounterStat>();
     }
 
-    // The Ledger (aiko.md §2.3, §7). It does not decide what happens; it decides what Aiko
+    // The Ledger (AIKO.md §2.3, §7). It does not decide what happens; it decides what Aiko
     // is inclined to try, and what she expects of this particular employee.
     //
     //   Bandit    — every tactic is an arm. UCB (or Thompson) with a habituation penalty

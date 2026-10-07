@@ -105,7 +105,8 @@ public static class ProductImport
             mi.meshCompression = ModelImporterMeshCompression.Off;
             mi.importNormals = ModelImporterNormals.Import;
             mi.importTangents = ModelImporterTangents.None;
-            mi.globalScale = 1f;
+            // Shown half as big again as life so the labels read (ProductLook.ScaleFor).
+            mi.globalScale = ProductLook.ScaleFor(p);
             mi.useFileScale = true;
             mi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             mi.addCollider = false;
@@ -148,17 +149,28 @@ public static class ProductImport
                 var box = instance.GetComponent<BoxCollider>();
                 if (box != null) { box.center = b.center; box.size = b.size; }
 
+                // Shelf-ready: how a product spends most of its life, so the tens of thousands
+                // standing in the maze carry no overrides beyond where they stand. Picking one
+                // up or dropping it switches its physics on (Item.SetCarried).
                 var item = instance.GetComponent<Item>();
                 item.type = p.Category;
                 item.productId = p.Id;
+                item.isOnShelf = true;
+                item.isCarried = false;
 
                 var rb = instance.GetComponent<Rigidbody>();
-                if (rb != null) rb.mass = Mathf.Max(0.02f, p.Mass);
+                if (rb != null)
+                {
+                    rb.mass = Mathf.Max(0.02f, p.Mass);
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                }
+                foreach (Collider c in instance.GetComponentsInChildren<Collider>(true)) c.enabled = false;
 
                 PrefabUtility.SaveAsPrefabAsset(instance, $"{PrefabsFolder}/{p.Id}.prefab");
                 made++;
 
-                Vector3 d = b.size - p.Size;
+                Vector3 d = b.size - p.Size * ProductLook.ScaleFor(p);
                 if (Mathf.Abs(d.x) > 0.015f || Mathf.Abs(d.y) > 0.015f || Mathf.Abs(d.z) > 0.015f)
                     sizeLog.AppendLine($"    {p.Id}: mesh {b.size:F3} vs catalogue {p.Size:F3}");
             }
@@ -307,8 +319,8 @@ public static class ProductImport
     // each product's name and price on the floor in front of it. The island's test floor is
     // stretched north to fit when it has to be.
     public const string ShowcaseName = "Products_Showcase";
-    const float ProductPitch = 0.5f;      // across a row: wider than the widest pack (0.25)
-    const float RowPitch = 1.0f;          // between rows, with room for the name tags
+    const float ProductPitch = 0.55f;     // across a row: wider than the widest pack (0.375 at 1.5x)
+    const float RowPitch = 1.1f;          // between rows, with room for the name tags
     const float FrontRowGap = 1.6f;       // clear of the shelf models already on the island
 
     public static string BuildShowcase()

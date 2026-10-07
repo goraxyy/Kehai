@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Eval
 {
-    // Everything measured about one shift (ideas.md §1 "Metrics"), plus the action trace the
+    // Everything measured about one shift (IDEAS.md §1 "Metrics"), plus the action trace the
     // failure taxonomy reads.
     public sealed class EpisodeMetrics
     {
@@ -203,7 +203,7 @@ namespace Kehai.Eval
         };
     }
 
-    // ideas.md §1 "The artifact": a failure taxonomy. Each episode can carry several labels.
+    // IDEAS.md §1 "The artifact": a failure taxonomy. Each episode can carry several labels.
     public static class FailureTaxonomy
     {
         public const string Starvation = "starvation";

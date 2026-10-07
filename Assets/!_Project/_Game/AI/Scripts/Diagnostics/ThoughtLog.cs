@@ -14,14 +14,14 @@ namespace Kehai.Aiko
         public string Why;
     }
 
-    // One structured record per decision (ideas.md §4). Structured on purpose — sentences
+    // One structured record per decision (IDEAS.md §4). Structured on purpose — sentences
     // can't be plotted. `Because` is the one free-text field, and it names the mechanism.
     public sealed class ThoughtRecord : IJsonWritable
     {
         public float T;
         public int Shift;
         public string Kind;              // BELIEF GOAL PLAN SENSE DIRECTOR CHECK TELL EFFECT CAUGHT ...
-        public string Text;              // the human-readable line (aiko.md §6.6)
+        public string Text;              // the human-readable line (AIKO.md §6.6)
 
         public string Peak;
         public float Confidence;
@@ -78,7 +78,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // Aiko's running account of her own reasoning (aiko.md §6.6). A ring buffer in memory,
+    // Aiko's running account of her own reasoning (AIKO.md §6.6). A ring buffer in memory,
     // flushed to JSONL at the end of each shift; the debug overlay tails it, the replay
     // scrubber scrubs it, and the post-shift performance review quotes it back at you.
     public sealed class ThoughtLog

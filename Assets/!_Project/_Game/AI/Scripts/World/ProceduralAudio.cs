@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Every warning a tactic gives (aiko.md §9.3). Each is a distinct sound, so a player
+    // Every warning a tactic gives (AIKO.md §9.3). Each is a distinct sound, so a player
     // who learns them can read what is about to happen.
     public enum TellKind
     {

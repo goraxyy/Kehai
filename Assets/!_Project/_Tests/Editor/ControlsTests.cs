@@ -14,7 +14,7 @@ public class ControlsTests
     [Test]
     public void ControlsMd_MatchesTheInGameList()
     {
-        string md = File.ReadAllText(Path.Combine(Root, "CONTROLS.md"));
+        string md = File.ReadAllText(Path.Combine(Root, "docs", "design", "CONTROLS.md"));
         var missing = Controls.All.SelectMany(s => s.Entries)
             .Where(e => !md.Contains($"| {e.Keys} | {e.Action} |"))
             .Select(e => e.Keys).ToList();

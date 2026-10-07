@@ -46,6 +46,19 @@ public class ShelfUnit : MonoBehaviour
         Refresh();
     }
 
+    // ShelfGrid replaced this bay's slots: claim the new ones and take the census again.
+    public void Rebind()
+    {
+        emptyCount = 0;
+        foreach (ShelfSlot slot in GetComponentsInChildren<ShelfSlot>(false))
+        {
+            slot.owner = this;
+            if (!slot.isFilled) emptyCount++;
+        }
+        initialised = true;
+        Refresh();
+    }
+
     public void OnSlotFilled()
     {
         emptyCount = Mathf.Max(0, emptyCount - 1);
@@ -89,7 +102,7 @@ public class ShelfUnit : MonoBehaviour
     public int FillAll(GameObject itemPrefab)
     {
         int filled = 0;
-        foreach (ShelfSlot slot in GetComponentsInChildren<ShelfSlot>(true))
+        foreach (ShelfSlot slot in GetComponentsInChildren<ShelfSlot>(false))
         {
             if (slot.isFilled) continue;
             if (slot.FillWithNewItem(itemPrefab)) filled++;

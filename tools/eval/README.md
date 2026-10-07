@@ -1,6 +1,6 @@
 # Kehai as an agent eval
 
-The store is a long-horizon, interruption-heavy environment with an adversary (`ideas.md` §1).
+The store is a long-horizon, interruption-heavy environment with an adversary (`IDEAS.md` §1).
 These tools drive it over a local socket; the environment itself lives in
 `Assets/!_Project/_Game/Eval/`.
 

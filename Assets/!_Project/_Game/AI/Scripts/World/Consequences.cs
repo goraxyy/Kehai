@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Kehai.Aiko
 {
     // What happens to *you*. Being caught is not death — it's a written warning, a lecture
-    // and lost shift time (aiko.md §8.6). Kehai's fail state is the clock, not the claw.
+    // and lost shift time (AIKO.md §8.6). Kehai's fail state is the clock, not the claw.
     // And the three ways a career ends (§10.3).
     public static class Consequences
     {

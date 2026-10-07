@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Aiko's performance review of you, printed at the end of every shift (aiko.md §6.6).
+    // Aiko's performance review of you, printed at the end of every shift (AIKO.md §6.6).
     // A redacted version of her own thought log: being outplayed is only fun when you can
     // see the play. From shift five it also offers the way out.
     public sealed class PerformanceReview

@@ -26,8 +26,19 @@ namespace Kehai
             ("Meiryo", "Bold"), ("MS Gothic", "Regular"),
         };
 
-        static TMP_FontAsset heading, body, japanese;
-        static bool triedHeading, triedBody, triedJapanese;
+        // A softer, rounded face for signage, with a rounded Japanese one behind it.
+        static readonly (string family, string style)[] RoundedFaces =
+        {
+            ("Arial Rounded MT Bold", "Regular"), ("Hiragino Maru Gothic ProN", "W4"),
+            ("Segoe UI", "Semibold"), ("Arial", "Bold"),
+        };
+        static readonly (string family, string style)[] RoundedJapaneseFaces =
+        {
+            ("Hiragino Maru Gothic ProN", "W4"), ("Hiragino Sans", "W5"), ("Yu Gothic", "Bold"), ("Meiryo", "Bold"),
+        };
+
+        static TMP_FontAsset heading, body, japanese, rounded, roundedJapanese;
+        static bool triedHeading, triedBody, triedJapanese, triedRounded, triedRoundedJapanese;
 
         public static TMP_FontAsset Heading => WithJapanese(Find(ref heading, ref triedHeading, HeadingFaces)) ?? TMP_Settings.defaultFontAsset;
         public static TMP_FontAsset Body => WithJapanese(Find(ref body, ref triedBody, BodyFaces)) ?? TMP_Settings.defaultFontAsset;
@@ -35,11 +46,17 @@ namespace Kehai
         // Null when this computer has no Japanese font.
         public static TMP_FontAsset Japanese => Find(ref japanese, ref triedJapanese, JapaneseFaces);
 
+        // Rounded, for the aisle signs; its Japanese falls back to a rounded Japanese face.
+        public static TMP_FontAsset Rounded =>
+            WithFallback(Find(ref rounded, ref triedRounded, RoundedFaces),
+                         Find(ref roundedJapanese, ref triedRoundedJapanese, RoundedJapaneseFaces) ?? Japanese) ?? Heading;
+
         // A font that can draw `text`: `usual`, unless the text has Japanese in it (the burnout
         // ending's 過労死) and a Japanese font is there to draw it.
         public static TMP_FontAsset ForText(string text, TMP_FontAsset usual)
         {
             if (string.IsNullOrEmpty(text) || Japanese == null) return usual;
+            if (usual != null && usual == rounded) return usual;     // it has its own Japanese
             foreach (char c in text)
                 if ((c >= '\u3000' && c <= '\u9FFF') || (c >= '\uFF00' && c <= '\uFFEF')) return Body;
             return usual;
@@ -71,9 +88,10 @@ namespace Kehai
         }
 
         // A Latin font that also draws 気配 and 愛子 from the Japanese one.
-        static TMP_FontAsset WithJapanese(TMP_FontAsset font)
+        static TMP_FontAsset WithJapanese(TMP_FontAsset font) => WithFallback(font, Japanese);
+
+        static TMP_FontAsset WithFallback(TMP_FontAsset font, TMP_FontAsset jp)
         {
-            TMP_FontAsset jp = Japanese;
             if (font == null || jp == null || font == jp) return font;
             font.fallbackFontAssetTable ??= new System.Collections.Generic.List<TMP_FontAsset>();
             if (!font.fallbackFontAssetTable.Contains(jp)) font.fallbackFontAssetTable.Add(jp);
@@ -83,8 +101,8 @@ namespace Kehai
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
-            heading = body = japanese = null;
-            triedHeading = triedBody = triedJapanese = false;
+            heading = body = japanese = rounded = roundedJapanese = null;
+            triedHeading = triedBody = triedJapanese = triedRounded = triedRoundedJapanese = false;
         }
     }
 }

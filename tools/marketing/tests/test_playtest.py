@@ -255,7 +255,7 @@ def test_the_report_totals_answers_and_shows_each_session(world):
 
 
 def test_the_report_asks_the_questions_playtest_md_lists():
-    md = (paths.REPO / "PLAYTEST.md").read_text(encoding="utf-8")
+    md = (paths.REPO / "docs" / "production" / "PLAYTEST.md").read_text(encoding="utf-8")
     for _, question, options in report.QUESTIONS:
         row = next((l for l in md.splitlines() if question in l), "")
         assert row, f"PLAYTEST.md doesn't list {question!r}"

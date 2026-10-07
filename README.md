@@ -11,8 +11,8 @@ overtime.
 > *"Employee wellbeing is a tracked metric. I am optimising it."*
 
 **Status:** prototype on its way to a vertical slice; not released yet. The plan to a Steam
-release is in [`RELEASE_PLAN.md`](RELEASE_PLAN.md), and the devlog and early-player plan is in
-[`MARKETING.md`](MARKETING.md).
+release is in [`RELEASE_PLAN.md`](docs/production/RELEASE_PLAN.md), and the devlog and early-player plan is in
+[`MARKETING.md`](docs/production/MARKETING.md).
 
 ---
 
@@ -41,7 +41,7 @@ store's planogram) is written in code so that it can be reviewed here.
 
 ## Aiko, the adaptive antagonist
 
-Designed in [`aiko.md`](aiko.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
+Designed in [`AIKO.md`](docs/design/AIKO.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
 (about 11,500 lines of C#). She runs three minds:
 
 | Mind | Knows | Controls |
@@ -103,7 +103,7 @@ leaves the computer.
   the store: play, scrub, 0.1–4×, the clip moments on the timeline; your eyes, a CCTV corner, a
   chase camera, an orbit, top down, or a free camera; **K** saves camera keyframes as a smooth
   path; her mind drawn in (belief map, her guess, view cone, sound rings, thought log). The keys
-  are in [CONTROLS.md](CONTROLS.md#3d-replay). Shots render unattended with
+  are in [CONTROLS.md](docs/design/CONTROLS.md#3d-replay). Shots render unattended with
   `tools/marketing/render_shot.sh` (the editor closed; ffmpeg for video files).
 
 ## Main menu
@@ -144,7 +144,7 @@ Aiko is measured, not just tuned by feel (`Assets/!_Project/_Game/Eval/`, [`tool
 - An **ablation ladder**: six versions of Aiko, from a random patrol (A) up to the full system
   with learning and the blink channel (F), on paired seeds.
 
-Results are in [`AIKO_RESULTS.md`](AIKO_RESULTS.md). Across 216 simulated shifts, the belief map
+Results are in [`AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md). Across 216 simulated shifts, the belief map
 and planner found players twice as fast as the patrols (first detection 51 s against about
 100 s) with about 11 more detections a shift, and the fairness rules held with 0 violations. The
 learning rungs did not separate from the non-learning one against scripted players; the write-up
@@ -152,7 +152,7 @@ says why, and what to test next.
 
 ## Controls
 
-The essentials (the full list is in [`CONTROLS.md`](CONTROLS.md), and in the game under
+The essentials (the full list is in [`CONTROLS.md`](docs/design/CONTROLS.md), and in the game under
 **Esc → Keys** or **Controls** in the main menu):
 
 | Key | Action |
@@ -189,7 +189,7 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play \
   -kehai-ablation -ablation-careers 1 -ablation-shifts 1 -ablation-rungs F -ablation-profiles efficient
 ```
 
-The full ablation command and its analysis script are in [`AIKO_RESULTS.md`](AIKO_RESULTS.md).
+The full ablation command and its analysis script are in [`AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md).
 
 ## Building the game
 
@@ -226,7 +226,7 @@ Builds/macOS/Kehai.app/Contents/MacOS/Kehai -batchmode -nographics -kehai-ablati
 Playtest builds (`KehaiBuild … -playtest round1`) record a tester's whole session, from launch
 to quitting, as 3D replays plus a log of every menu, key and frame-rate dip. After the tester
 agrees, they send it back. In-game questions and a Google Form cover what they thought. The
-loop, what's recorded and how to run a round are in [`PLAYTEST.md`](PLAYTEST.md).
+loop, what's recorded and how to run a round are in [`PLAYTEST.md`](docs/production/PLAYTEST.md).
 
 ## Repository layout
 
@@ -265,15 +265,20 @@ tools/
 
 ## Documents
 
+Everything is in [`docs/`](docs/README.md), sorted by what it's for; [`docs/README.md`](docs/README.md)
+is the index.
+
 | File | What it is |
 |---|---|
-| [`aiko.md`](aiko.md) | Aiko's full design, and where the code departs from it |
-| [`ideas.md`](ideas.md) | Research ideas: the agent-eval environment, the ablation ladder, the thought log, the blink channel |
-| [`AIKO_RESULTS.md`](AIKO_RESULTS.md) | The ablation results |
-| [`CONTROLS.md`](CONTROLS.md) | Every key |
-| [`RELEASE_PLAN.md`](RELEASE_PLAN.md) | Milestones to a Steam release |
-| [`PLAYTEST.md`](PLAYTEST.md) | How playtests work: the loop, what's recorded, running a round |
-| [`MARKETING.md`](MARKETING.md) | Devlog, platforms and getting early players |
-| [`STORE_CATALOG.md`](STORE_CATALOG.md), [`STORE_MAP.md`](STORE_MAP.md) | The planogram and the store's map |
+| [`docs/design/AIKO.md`](docs/design/AIKO.md) | Aiko's full design, and where the code departs from it |
+| [`docs/design/STORE_CATALOG.md`](docs/design/STORE_CATALOG.md) | The 80 products, the aisles, what customers say |
+| [`docs/design/MERCHANDISING.md`](docs/design/MERCHANDISING.md) | How the shelves are stocked, and why |
+| [`docs/design/STORE_MAP.md`](docs/design/STORE_MAP.md) | The store's map |
+| [`docs/design/CONTROLS.md`](docs/design/CONTROLS.md) | Every key |
+| [`docs/design/IDEAS.md`](docs/design/IDEAS.md) | Research ideas: the agent-eval environment, the ablation ladder, the thought log, the blink channel |
+| [`docs/production/RELEASE_PLAN.md`](docs/production/RELEASE_PLAN.md) | Milestones to a Steam release |
+| [`docs/production/PLAYTEST.md`](docs/production/PLAYTEST.md) | How playtests work: the loop, what's recorded, running a round |
+| [`docs/production/MARKETING.md`](docs/production/MARKETING.md) | Devlog, platforms and getting early players |
+| [`docs/results/AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md) | The ablation results |
 | [`CHANGELOG.md`](CHANGELOG.md) | Changes that affect players' saves or settings |
 | [`tools/blink/README.md`](tools/blink/README.md), [`tools/eval/README.md`](tools/eval/README.md) | Tool setup |

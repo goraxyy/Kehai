@@ -1,7 +1,6 @@
 // What a lost shopper says, and what they say when you get them there. Shoppers ask the way
 // people really do: by name ("I'm looking for Pipisi Zero"), by aisle ("which aisle is the
-// tuna in?", "where's aisle 5?"), by department ("where's the bakery?"), or because the shelf in
-// front of them is empty ("is there any more Kafé coffee?").
+// tuna in?", "where's aisle 5?"), or because the shelf in front of them is empty.
 public static class CustomerQuestion
 {
     public enum Kind
@@ -9,27 +8,23 @@ public static class CustomerQuestion
         Product,      // walked to the facing
         WhichAisle,   // walked to the facing; they learn the aisle on the way
         Aisle,        // walked to the aisle: anywhere in it will do
-        Department,   // walked to the department, likewise
         Missing,      // the facing they found was empty: walked to one that isn't
     }
 
-    // How often each kind is asked when nothing is missing. Departments have no number, so a
-    // product sold round the edge of the shop is asked for by department instead of aisle.
-    public const float ProductChance = 0.45f;
-    public const float WhichAisleChance = 0.2f;
-    public const float PlaceChance = 0.25f;     // the rest asks for the section ("the milk")
+    // How often each kind is asked when nothing is missing; the rest ask for the aisle.
+    public const float ProductChance = 0.5f;
+    public const float WhichAisleChance = 0.25f;
 
     public static Kind Choose(float roll, bool missing, StoreLayout.Zone zone)
     {
         if (missing) return Kind.Missing;
         if (roll < ProductChance) return Kind.Product;
-        if (roll < ProductChance + WhichAisleChance) return zone.IsAisle ? Kind.WhichAisle : Kind.Product;
-        if (roll < ProductChance + WhichAisleChance + PlaceChance) return zone.IsAisle ? Kind.Aisle : Kind.Department;
-        return Kind.Department;
+        if (roll < ProductChance + WhichAisleChance) return Kind.WhichAisle;
+        return Kind.Aisle;
     }
 
-    // True when getting them anywhere into the zone answers the question.
-    public static bool ZoneIsEnough(Kind kind) => kind == Kind.Aisle || kind == Kind.Department;
+    // True when getting them anywhere into the aisle answers the question.
+    public static bool ZoneIsEnough(Kind kind) => kind == Kind.Aisle;
 
     static readonly string[] productLines =
     {
@@ -51,12 +46,6 @@ public static class CustomerQuestion
         "Which way is aisle {1}? I need {2}.",
         "I'm looking for aisle {1} - {3}?",
     };
-    static readonly string[] departmentLines =
-    {
-        "Where's {2}?",
-        "Excuse me - which way to {2}?",
-        "Sorry, where do you keep {2}?",
-    };
     static readonly string[] missingLines =
     {
         "That shelf's empty. Have you got {0} anywhere else?",
@@ -73,7 +62,6 @@ public static class CustomerQuestion
         {
             case Kind.WhichAisle: lines = whichAisleLines; break;
             case Kind.Aisle: lines = aisleLines; break;
-            case Kind.Department: lines = departmentLines; break;
             case Kind.Missing: lines = missingLines; break;
             default: lines = productLines; break;
         }
@@ -86,7 +74,6 @@ public static class CustomerQuestion
         {
             case Kind.WhichAisle: return Fill("Aisle {1} - got it. Thanks!", product, zone);
             case Kind.Aisle: return Fill("Aisle {1} - lovely, I'll find it from here.", product, zone);
-            case Kind.Department: return Fill("Ah, {2}! Thank you.", product, zone);
             case Kind.Missing: return Fill("Oh, there's {0}! You're a star.", product, zone);
             default: return Fill("Oh, {0}. There it is - thanks!", product, zone);
         }
@@ -98,7 +85,6 @@ public static class CustomerQuestion
         switch (kind)
         {
             case Kind.Aisle: return "aisle " + zone.Aisle;
-            case Kind.Department: return zone.Spoken;
             default: return product != null ? product.Name : zone.Spoken;
         }
     }

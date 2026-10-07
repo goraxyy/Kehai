@@ -103,13 +103,13 @@ top of the map and the chillers are along the bottom.
 ```
 
 ```
-P  Produce · Fruit & Veg          C  Aisle 4 · Cereal & Breakfast
-B  Bakery                         N  Aisle 5 · Noodles, Pasta & Rice
-W  Checkout · Sweets & Impulse    H  Aisle 6 · Health & Beauty
-D  Aisle 1 · Soft Drinks          K  Aisle 7 · Household & Cleaning
-S  Aisle 2 · Snacks & Crisps      M  Back Wall · Dairy & Chilled
-T  Aisle 3 · Tins & Jars          F  Back Wall · Frozen
-                                  A  Back Wall · Pet
+P  Aisle 1 · Fruit & Veg           C  Aisle 6 · Cereal & Breakfast
+B  Aisle 2 · Bakery                N  Aisle 7 · Noodles, Pasta & Rice
+D  Aisle 3 · Soft Drinks           H  Aisle 8 · Health & Beauty
+S  Aisle 4 · Snacks & Crisps       K  Aisle 9 · Household & Cleaning
+T  Aisle 5 · Tins & Jars           M  Aisle 10 · Dairy & Chilled
+W  Aisle 13 · Sweets               F  Aisle 11 · Frozen
+                                   A  Aisle 12 · Pet
 ```
 
 The gaps are the maze. Shelving is not laid out in parallel runs — it doubles back, dead-ends
@@ -124,25 +124,27 @@ middle and the plan survives a shelf being nudged.
 Bounds are half-open: `xMin ≤ x < xMax`, `zMin ≤ z < zMax`. They tile the whole plane, so
 nothing can fall through. First match wins, which is why the front strip is listed first.
 
-| Sign | `ItemType` | x | z | bays | facings | range |
+| Sign | `ItemType` | x | z | bays | old slots | range |
 |---|---|---|---|---|---|---|
-| Produce · Fruit & Veg | `Produce` | ≥ 58 | ≥ −142 | 29 | 577 | 6 |
-| Bakery | `Bakery` | 42…58 | ≥ −142 | 19 | 381 | 6 |
-| Checkout · Sweets & Impulse | `Confectionery` | < 42 | ≥ −142 | 6 | 57 | 6 |
-| Aisle 1 · Soft Drinks | `SoftDrinks` | ≥ 76 | −163…−142 | 20 | 299 | 7 |
-| Aisle 2 · Snacks & Crisps | `Snacks` | 60…76 | −153…−142 | 15 | 258 | 6 |
-| Aisle 3 · Tins & Jars | `Canned` | 60…76 | −163…−153 | 12 | 252 | 6 |
-| Aisle 4 · Cereal & Breakfast | `Cereal` | 44…60 | −153…−142 | 16 | 332 | 7 |
-| Aisle 5 · Noodles, Pasta & Rice | `Noodles` | 44…60 | −163…−153 | 10 | 206 | 6 |
-| Aisle 6 · Health & Beauty | `PersonalCare` | < 44 | −153…−142 | 13 | 162 | 6 |
-| Aisle 7 · Household & Cleaning | `Household` | < 44 | −163…−153 | 17 | 338 | 6 |
-| Back Wall · Dairy & Chilled | `Dairy` | ≥ 58 | < −163 | 12 | 207 | 6 |
-| Back Wall · Frozen | `Frozen` | 44…58 | < −163 | 10 | 165 | 6 |
-| Back Wall · Pet | `PetFood` | < 44 | < −163 | 10 | 165 | 6 |
+| Aisle 1 · Fruit & Veg | `Produce` | ≥ 58 | ≥ −142 | 29 | 577 | 6 |
+| Aisle 2 · Bakery | `Bakery` | 42…58 | ≥ −142 | 19 | 381 | 6 |
+| Aisle 13 · Sweets | `Confectionery` | < 42 | ≥ −142 | 6 | 57 | 6 |
+| Aisle 3 · Soft Drinks | `SoftDrinks` | ≥ 76 | −163…−142 | 20 | 299 | 7 |
+| Aisle 4 · Snacks & Crisps | `Snacks` | 60…76 | −153…−142 | 15 | 258 | 6 |
+| Aisle 5 · Tins & Jars | `Canned` | 60…76 | −163…−153 | 12 | 252 | 6 |
+| Aisle 6 · Cereal & Breakfast | `Cereal` | 44…60 | −153…−142 | 16 | 332 | 7 |
+| Aisle 7 · Noodles, Pasta & Rice | `Noodles` | 44…60 | −163…−153 | 10 | 206 | 6 |
+| Aisle 8 · Health & Beauty | `PersonalCare` | < 44 | −153…−142 | 13 | 162 | 6 |
+| Aisle 9 · Household & Cleaning | `Household` | < 44 | −163…−153 | 17 | 338 | 6 |
+| Aisle 10 · Dairy & Chilled | `Dairy` | ≥ 58 | < −163 | 12 | 207 | 6 |
+| Aisle 11 · Frozen | `Frozen` | 44…58 | < −163 | 10 | 165 | 6 |
+| Aisle 12 · Pet | `PetFood` | < 44 | < −163 | 10 | 165 | 6 |
 | | | | **total** | **189** | **3 399** | **80** |
 
-Aisle numbers climb with distance from the doors, so a customer who has walked to Aisle 7 has
-crossed the whole shop.
+Every part of the shop is a numbered aisle, numbered in the order a customer walks it: Aisle 1
+is the fruit and veg by the door, Aisle 13 the sweets at the tills. The "old slots" column is
+what the shelf prefabs carried before ShelfGrid. **Kehai/Store/Report Layout** prints the
+current bays, facings and slots per aisle.
 
 ### Why it sits this way
 
@@ -175,7 +177,7 @@ Each placement is a real supermarket convention, not decoration:
 the shelf**. Mass is kilograms, for the `Rigidbody`. Colours and the smoothness/metallic pair
 feed straight into a URP Lit material.
 
-### Produce · Fruit & Veg
+### Aisle 1 · Fruit & Veg
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -186,7 +188,7 @@ feed straight into a URP Lit material.
 | `produce_saladmix` | a bag of salad mix | Leafy Lane | Bag | PlasticFilm | 0.22×0.26×0.08 | 0.20 | 290 | `#58D68D` | `#1E8449` | 0.60 | 0.00 |
 | `produce_mikan` | a net of mikan | Orchard Row | Net | Mesh | 0.18×0.20×0.14 | 1.00 | 420 | `#E67E22` | `#2E7D32` | 0.30 | 0.00 |
 
-### Bakery
+### Aisle 2 · Bakery
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -197,7 +199,7 @@ feed straight into a URP Lit material.
 | `bakery_croissants` | a pack of croissants | Beurre Bros | Tray | PlasticFilm | 0.24×0.09×0.16 | 0.28 | 390 | `#E0A64B` | `#8B1A1A` | 0.58 | 0.00 |
 | `bakery_bagels` | a pack of sesame bagels | Beurre Bros | Bag | PlasticFilm | 0.17×0.20×0.11 | 0.48 | 420 | `#C89F63` | `#283593` | 0.60 | 0.00 |
 
-### Back Wall · Dairy & Chilled
+### Aisle 10 · Dairy & Chilled
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -208,7 +210,7 @@ feed straight into a URP Lit material.
 | `dairy_butter` | Butterfly salted butter | Butterfly | Box | FoilLaminate | 0.11×0.05×0.06 | 0.23 | 430 | `#FFE082` | `#37474F` | 0.52 | 0.00 |
 | `dairy_eggs` | a box of eggs | Hinata Farm | Tray | Paperboard | 0.24×0.07×0.11 | 0.65 | 280 | `#E0E0E0` | `#F9A825` | 0.20 | 0.00 |
 
-### Back Wall · Frozen
+### Aisle 11 · Frozen
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -219,7 +221,7 @@ feed straight into a URP Lit material.
 | `frozen_prawns` | Kaiten prawns | Kaiten | Bag | FoilLaminate | 0.19×0.23×0.06 | 0.35 | 680 | `#EF6C00` | `#0D47A1` | 0.50 | 0.00 |
 | `frozen_pizza` | a Pizza Piccolo margherita | Pizza Piccolo | Box | Paperboard | 0.25×0.04×0.25 | 0.42 | 450 | `#D32F2F` | `#1B5E20` | 0.28 | 0.00 |
 
-### Aisle 4 · Cereal & Breakfast
+### Aisle 6 · Cereal & Breakfast
 
 Coffee and tea live here, next to the cereal, the way a breakfast aisle is blocked in a real
 store.
@@ -234,7 +236,7 @@ store.
 | `cereal_kafe` | Kafé instant coffee | Kafé | Jar | Glass | 0.09×0.16×0.09 | 0.32 | 620 | `#3E2723` | `#C62828` | 0.85 | 0.00 |
 | `cereal_sencha` | Sencha teabags | Chakra | Box | Paperboard | 0.13×0.17×0.08 | 0.14 | 380 | `#2E7D32` | `#F1F8E9` | 0.26 | 0.00 |
 
-### Aisle 2 · Snacks & Crisps
+### Aisle 4 · Snacks & Crisps
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -245,7 +247,7 @@ store.
 | `snack_nutzy` | Nutzy mixed nuts | Nutzy | Pouch | FoilLaminate | 0.15×0.20×0.07 | 0.20 | 520 | `#8D6E63` | `#FFB300` | 0.48 | 0.00 |
 | `snack_popcorn` | Popcorn Panic butter | Popcorn Panic | Bag | Paperboard | 0.14×0.24×0.07 | 0.11 | 190 | `#FFF9C4` | `#E64A19` | 0.30 | 0.00 |
 
-### Checkout · Sweets & Impulse
+### Aisle 13 · Sweets
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -256,7 +258,7 @@ store.
 | `sweet_mochibites` | Mochi Bites | Mochi Bites | Tray | PlasticFilm | 0.13×0.05×0.10 | 0.14 | 280 | `#F8BBD0` | `#4A148C` | 0.60 | 0.00 |
 | `sweet_mintz` | a tin of Mintz | Mintz | Box | Steel | 0.06×0.02×0.04 | 0.05 | 120 | `#26A69A` | `#FFFFFF` | 0.70 | 0.85 |
 
-### Aisle 1 · Soft Drinks
+### Aisle 3 · Soft Drinks
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -268,7 +270,7 @@ store.
 | `drink_genki` | a Genki energy drink | Genki | Can | Aluminium | 0.05×0.15×0.05 | 0.26 | 210 | `#FDD835` | `#212121` | 0.78 | 0.95 |
 | `drink_chakra_tea` | Chakra green tea | Chakra | Bottle | Pet | 0.07×0.25×0.07 | 0.62 | 150 | `#2E7D32` | `#FFFFFF` | 0.92 | 0.00 |
 
-### Aisle 3 · Tins & Jars
+### Aisle 5 · Tins & Jars
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -279,7 +281,7 @@ store.
 | `canned_nori` | a jar of nori paste | Umi | Jar | Glass | 0.06×0.11×0.06 | 0.24 | 310 | `#1B2A22` | `#C62828` | 0.88 | 0.00 |
 | `canned_miso` | Miso Master miso | Miso Master | Tub | Hdpe | 0.12×0.10×0.12 | 0.75 | 420 | `#8D6E63` | `#D84315` | 0.46 | 0.00 |
 
-### Aisle 5 · Noodles, Pasta & Rice
+### Aisle 7 · Noodles, Pasta & Rice
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -290,7 +292,7 @@ store.
 | `noodle_rice` | a bag of Kome King rice | Kome King | Bag | PlasticFilm | 0.20×0.30×0.11 | 2.10 | 980 | `#F5F5F5` | `#C62828` | 0.50 | 0.00 |
 | `noodle_udon` | Udon Uno fresh udon | Udon Uno | Pouch | PlasticFilm | 0.16×0.13×0.06 | 0.24 | 160 | `#FFF8E1` | `#00695C` | 0.60 | 0.00 |
 
-### Aisle 7 · Household & Cleaning
+### Aisle 9 · Household & Cleaning
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -301,7 +303,7 @@ store.
 | `house_binbags` | a roll of bin bags | Sakku | Box | Paperboard | 0.14×0.09×0.08 | 0.30 | 260 | `#37474F` | `#8BC34A` | 0.28 | 0.00 |
 | `house_sponges` | a pack of sponges | Sponge Squad | Bag | PlasticFilm | 0.16×0.12×0.09 | 0.08 | 180 | `#FDD835` | `#4CAF50` | 0.58 | 0.00 |
 
-### Aisle 6 · Health & Beauty
+### Aisle 8 · Health & Beauty
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -312,7 +314,7 @@ store.
 | `care_sanitiser` | Handy sanitiser gel | Handy | Bottle | Pet | 0.05×0.14×0.04 | 0.14 | 320 | `#E0F7FA` | `#00838F` | 0.90 | 0.00 |
 | `care_plasters` | a box of plasters | Plaster Patrol | Box | Paperboard | 0.09×0.06×0.03 | 0.05 | 250 | `#FFCC80` | `#C62828` | 0.28 | 0.00 |
 
-### Back Wall · Pet
+### Aisle 12 · Pet
 
 | id | name | brand | shape | material | w×h×d (m) | kg | ¥ | primary | accent | smooth | metal |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -393,195 +395,19 @@ material can be generated without either.
 
 ## 7. How a bay gets stocked
 
-A **facing** is one board on one side of a bay — the whole of the top board, front side. That
-is how a real planogram is blocked out, and it is how this works too:
+The merchandising has its own document: [`MERCHANDISING.md`](MERCHANDISING.md). It covers
+which aisle sells what and why, the eye/waist/stoop rules, brand blocks, end caps, how
+`ShelfGrid` cuts each board into 0.5 m squares and fills them with slots, and every aisle's
+layouts.
 
-- A `ShelfTwoside` bay has 3 boards × 2 sides × 6 slots = **36 slots in 6 facings**,
-  so it shows six different products.
-- A one-sided bay or a tall pillar has **3 facings**.
-- A short pillar has **1**.
+In short: `StoreLayout` decides which aisle a bay belongs to, and `Planogram` picks the product
+for each board and face of it. `ShelfGrid` cuts the board into slots for that product, with one
+item in each slot. The shop stocks itself at load. **Kehai/Store/Stock the Maze with Product
+Prefabs** bakes it into the scene so the editor shows it too.
 
-`StoreLayout` decides which section a bay belongs to; `Planogram` decides what each of its boards
-carries, from the board's height and the side it faces. The rules are the ones every
-supermarket chain works to:
-
-| rule | what it means here |
-|---|---|
-| **Eye level is buy level** | The top board (1.4 m) is where an adult's eye lands: brand leaders and the lines with the best margin. |
-| **Kids' eye level** | The middle board (0.8 m) is a child's eye level: Choco Loops, Honey Nutz, Gummy Gang and Pokki are never higher. |
-| **Heavy goes low** | Nothing over 0.8 kg is on the top board. Rice, kibble, the litre of water and the laundry box sit on the bottom board. |
-| **Vertical brand blocks** | A brand's lines share one face of a bay, one above the other (Krunchos, Pipisi, Moo-Moo, Ramyum, Kamado, Freezy, Nyan Nyan, Wan Wan), so a shopper walking the aisle passes every brand once. |
-| **Best sellers take more facings** | Bananas, whole milk and Ramyum cups appear in more of their section's bays than anything else in it. |
-| **End caps** | The ends of runs (the `Shelfpillar_E` pieces) carry the section's promotion, or a cross-merchandised partner: Pipisi on the crisps' end caps, Krunchos on the drinks'. A cross-merchandised facing keeps its own section, so the crisps' end cap still only takes cola. |
-| **Impulse at the till** | The facing on the till counter is Mintz, and shoppers sometimes grab sweets while queueing. |
-
-Each section has two layouts, alternated across its bays by position so neighbouring bays don't
-match. Short two-board bays use the waist and stoop rows.
-
-**Produce · Fruit & Veg**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a bag of salad mix | bananas | a bag of Fuji apples |
-| A | back | a tray of tomatoes | a net of mikan | a daikon radish |
-| B | front | a tray of tomatoes | bananas | a daikon radish |
-| B | back | a bag of salad mix | a net of mikan | a bag of Fuji apples |
-
-End cap: a net of mikan, bananas.
-
-**Bakery**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a melon pan | an anpan | a Shokupan white loaf |
-| A | back | a pack of croissants | a pack of sesame bagels | a Rye Rider sourdough |
-| B | front | a melon pan | a Shokupan white loaf | an anpan |
-| B | back | a pack of croissants | a pack of sesame bagels | a Rye Rider sourdough |
-
-End cap: a pack of croissants, a melon pan.
-
-**Back Wall · Dairy & Chilled**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Yogo strawberry yoghurt | Moo-Moo skimmed milk | Moo-Moo whole milk |
-| A | back | Butterfly salted butter | a box of eggs | Kumo cream cheese |
-| B | front | Kumo cream cheese | a box of eggs | Moo-Moo whole milk |
-| B | back | Yogo strawberry yoghurt | Butterfly salted butter | Moo-Moo whole milk |
-
-End cap: Yogo strawberry yoghurt.
-
-**Back Wall · Frozen**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Ice Dream vanilla | a bag of Freezy peas | a bag of frozen fries |
-| A | back | Gyoza Gang gyoza | Kaiten prawns | a Pizza Piccolo margherita |
-| B | front | Gyoza Gang gyoza | a Pizza Piccolo margherita | Kaiten prawns |
-| B | back | Ice Dream vanilla | a bag of Freezy peas | a bag of frozen fries |
-
-End cap: Ice Dream vanilla.
-
-**Aisle 4 · Cereal & Breakfast**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Bran Flakies | Choco Loops | Oatsy instant porridge |
-| A | back | Kafé instant coffee | Honey Nutz clusters | Morning Mochi granola |
-| B | front | Morning Mochi granola | Honey Nutz clusters | Bran Flakies |
-| B | back | Kafé instant coffee | Sencha teabags | Choco Loops |
-
-End cap: Kafé instant coffee, Choco Loops.
-
-**Aisle 2 · Snacks & Crisps**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Krunchos salted | Krunchos sour cream & onion | Popcorn Panic butter |
-| A | back | Nutzy mixed nuts | Wasabi Wave rice crackers | Pretzel Pals |
-| B | front | Nutzy mixed nuts | Krunchos salted | Krunchos sour cream & onion |
-| B | back | Wasabi Wave rice crackers | Popcorn Panic butter | Pretzel Pals |
-
-End cap: Pipisi, Krunchos salted.
-
-**Checkout · Sweets & Impulse**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a tin of Mintz | a Kitto Katsu bar | Gummy Gang bears |
-| A | back | a Chocobo milk bar | Pokki sticks | Mochi Bites |
-| B | front | a Chocobo milk bar | Gummy Gang bears | Pokki sticks |
-| B | back | Mochi Bites | a Kitto Katsu bar | Gummy Gang bears |
-
-End cap: a Kitto Katsu bar.
-
-**Aisle 1 · Soft Drinks**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Pipisi | Pipisi Zero | Aqua Pura water |
-| A | back | Koka-Kora | Fanto orange | Chakra green tea |
-| B | front | a Genki energy drink | Chakra green tea | Aqua Pura water |
-| B | back | Koka-Kora | Pipisi Zero | Pipisi |
-
-End cap: a Genki energy drink, Krunchos salted.
-
-**Aisle 3 · Tins & Jars**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a jar of nori paste | a tin of Tunatastic | Bean Machine baked beans |
-| A | back | a tin of Sardino | Corn Star sweetcorn | Miso Master miso |
-| B | front | a tin of Tunatastic | a tin of Sardino | Miso Master miso |
-| B | back | a jar of nori paste | Corn Star sweetcorn | Bean Machine baked beans |
-
-End cap: a tin of Tunatastic.
-
-**Aisle 5 · Noodles, Pasta & Rice**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a Ramyum cup noodle | a Ramyum spicy 5-pack | a bag of Kome King rice |
-| A | back | Udon Uno fresh udon | Soba Sensei dried soba | Pasta Basta spaghetti |
-| B | front | Udon Uno fresh udon | Pasta Basta spaghetti | a bag of Kome King rice |
-| B | back | a Ramyum cup noodle | Soba Sensei dried soba | a Ramyum spicy 5-pack |
-
-End cap: a Ramyum cup noodle.
-
-**Aisle 6 · Health & Beauty**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Silkstrand shampoo | Freshbreath toothpaste | pocket tissues |
-| A | back | Handy sanitiser gel | a box of plasters | a bar of Soapy Sudz |
-| B | front | Handy sanitiser gel | Freshbreath toothpaste | a bar of Soapy Sudz |
-| B | back | Silkstrand shampoo | a box of plasters | pocket tissues |
-
-End cap: Handy sanitiser gel.
-
-**Aisle 7 · Household & Cleaning**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | Sparkle Spray cleaner | Bubbles dish soap | Whitewash laundry powder |
-| A | back | a pack of sponges | a roll of bin bags | kitchen roll |
-| B | front | Bubbles dish soap | a pack of sponges | kitchen roll |
-| B | back | Sparkle Spray cleaner | a roll of bin bags | Whitewash laundry powder |
-
-End cap: kitchen roll.
-
-**Back Wall · Pet**
-
-| layout | face | eye (1.4 m) | waist (0.8 m) | stoop (0.2 m) |
-|---|---|---|---|---|
-| A | front | a Nyan Nyan cat food pouch | a Nyan Nyan tuna tin | Hamu hamster bedding |
-| A | back | Birdy seed mix | a Wan Wan dog chunks tin | a bag of Wan Wan kibble |
-| B | front | Birdy seed mix | a Wan Wan dog chunks tin | a bag of Wan Wan kibble |
-| B | back | a Nyan Nyan cat food pouch | a Nyan Nyan tuna tin | Hamu hamster bedding |
-
-End cap: a Nyan Nyan cat food pouch.
-
-
-### The block on each slot
-
-A slot holds one item, the thing the player picks up and puts back, but a stocked shelf shows a
-block of the product: as many across as fit the slot (up to six), two deep, and flat tins and
-bars stacked, twelve at most. Blocks under 2% of the screen's height (about 20 m away) aren't
-drawn, and nor is a lone product once it's a few pixels tall. `Backstock` draws that block round the slot's item as one shared mesh per product and
-size, with no colliders and no shadows, and hides it while the slot is empty. A gap on the shelf
-still means "restock me", and the item itself stands in one of the block's cells.
-
-Restocking uses a single placeholder prefab for the whole building, so `ShelfSlot.FillWithNewItem`
-stamps the facing's section and product onto whatever it spawns, and `ProductLook` swaps the
-placeholder box for the product's model.
-
-### The aisles
-
-The middle of the shop is **Aisles 1–7**; the edge is named departments (Fruit & Veg, Bakery,
-Dairy & Chilled, Frozen, Pet, Sweets), as in any supermarket. `AisleSigns` hangs a four-sided
-sign over the middle of each zone's bays at 3 m, clear of the 2 m shelving: a numbered badge
-and the aisle's name for an aisle, the department's name for a department, with the Japanese
-underneath. It's built at load, like the stock.
+A black sign hangs at 4 m over the middle of each aisle's bays, and a lamp sits over every
+ceiling light (`AisleSigns`, `CeilingLamps`). `RoomLighting` keeps each room's lights in their
+room. The ceiling lights have no shadows, so without it they shone through walls.
 
 ## 8. Where this lives in code
 
@@ -589,10 +415,12 @@ underneath. It's built at load, like the stock.
 |---|---|
 | `_Game/Items/Scripts/Item.cs` | `ItemType` (the 13 sections + 4 tools); `Item.productId`, `Item.DisplayName` |
 | `_Game/Items/Scripts/ProductCatalog.cs` | `ProductDef`, `PackShape`, `PackMaterial`, the 80-row table, lookups |
-| `_Game/Level/Scripts/StoreLayout.cs` | the zone table (aisle numbers, names, what customers call them), `SectionAt`, `ApplyToScene`, `Describe` |
+| `_Game/Level/Scripts/StoreLayout.cs` | the aisle table (numbers, names, what customers call them), `SectionAt`, `ApplyToScene`, `Describe` |
 | `_Game/Level/Scripts/Planogram.cs` | the merchandising rules and layouts; which facings stock each product |
-| `_Game/Level/Scripts/Backstock.cs` | the block of product drawn round each slot's item |
-| `_Game/Level/Scripts/AisleSigns.cs` | the hanging aisle and department signs |
+| `_Game/Level/Scripts/ShelfGrid.cs` | cuts each board into 0.5 m squares and fills them with slots |
+| `_Game/Level/Scripts/AisleSigns.cs` | the hanging aisle signs |
+| `_Game/Level/Scripts/CeilingLamps.cs` | a lamp over every ceiling light, dark when its light is off |
+| `_Game/Level/Scripts/RoomLighting.cs` | keeps each room's lights in their room |
 | `_Game/Level/Scripts/ShelfSlot.cs` | `requiredType` + `productId` per facing; `Label`; stamps restocked items |
 | `_Game/Items/Scripts/ProductLook.cs` | dresses a placeholder item as its product's model |
 | `_Game/Items/Editor/ProductImport.cs` | `Kehai/Products/…`: imports the models and lays out the showcase on `Models_Island` |
@@ -629,19 +457,17 @@ They ask for help in two situations:
 
 - **The shelf is empty.** They ask whether there's any more, and are walked to another facing
   that has it.
-- **Sometimes, the next thing on the list.** They ask in one of four ways:
+- **Sometimes, the next thing on the list.** They ask in one of three ways:
 
 | how they ask | example | done when |
 |---|---|---|
 | by name | *"Excuse me - I'm looking for Pipisi Zero."* | they reach the facing |
 | which aisle | *"Which aisle would I find a tin of Tunatastic in?"* | they reach the facing |
-| by aisle | *"Which way is aisle 5? I need the noodles."* | they're anywhere in the aisle |
-| by department | *"Where's the bakery?"* | they're anywhere in the department |
+| by aisle | *"Which way is aisle 7? I need the noodles."* | they're anywhere in the aisle |
 
-A department has no number, so something sold round the edge of the shop is never asked for by
-aisle. Whatever is asked, the shelf the beacon lands on really stocks it. Product names are
-written as **object phrases** (`Pipisi Zero`, `a tin of Tunatastic`), so they drop into any
-line without a `the` in front.
+Whatever is asked, the shelf the beacon lands on really stocks it. Product names are written as
+**object phrases** (`Pipisi Zero`, `a tin of Tunatastic`), so they drop into any line without
+a `the` in front.
 
 With no planogram (a test scene, an old layout), shoppers fall back to the old way: a few
 random shelves, and a request for whatever a random facing holds.

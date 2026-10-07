@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // The ablation ladder from ideas.md §2. Each rung adds exactly one mechanism to the one
+    // The ablation ladder from IDEAS.md §2. Each rung adds exactly one mechanism to the one
     // below it, so any difference in the results table is attributable.
     public enum AikoRung
     {
@@ -37,7 +37,7 @@ namespace Kehai.Aiko
             $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} blink={Blink}";
     }
 
-    // Every tunable in one place, with the aiko.md section it comes from. Plain data so an
+    // Every tunable in one place, with the AIKO.md section it comes from. Plain data so an
     // eval run can override any of it from a JSON config without touching code.
     [System.Serializable]
     public class AikoConfig
@@ -109,7 +109,7 @@ namespace Kehai.Aiko
         public float lectureSeconds = 30f;
         public float overtimePerCatch = 60f;
 
-        [Header("Blink channel (ideas.md)")]
+        [Header("Blink channel (IDEAS.md)")]
         public float blinkAdvanceSpeed = 11f;
         public float blinkAdvanceMaxDistance = 3f;
 

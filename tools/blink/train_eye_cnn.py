@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train the tiny eye-state CNN and export it to ONNX (ideas.md "Own training path").
+"""Train the tiny eye-state CNN and export it to ONNX (IDEAS.md "Own training path").
 
 Input:  1x24x24 grayscale eye crop, values 0..1, rows top-down   (name "eye")
 Output: one logit, sigmoid = probability the eye is shut           (name "closed_logit")

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // aiko.md §3: six channels, plus touch (being caught is contact, not sight) and the
+    // AIKO.md §3: six channels, plus touch (being caught is contact, not sight) and the
     // blink channel from the webcam.
     public enum SenseChannel { Sight, Hearing, Trace, Testimony, Infrastructure, Absence, Touch, Blink }
 
