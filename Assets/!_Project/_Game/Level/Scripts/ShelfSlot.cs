@@ -34,6 +34,10 @@ public sealed class ShelfSlot : IInteractable
     // How tall what stands here is, for aiming at it.
     public readonly float height;
 
+    // The rendering layers of the room it's in (RoomLighting), so what stands on it is lit by
+    // that room's lights. The default layer, lit by every light, unless whoever made it says.
+    public uint lightMask = RoomLighting.Moving;
+
     // The section this facing belongs to. Only items from the same section fit.
     public ItemType requiredType;
 
@@ -193,6 +197,10 @@ public sealed class ShelfSlot : IInteractable
         if (item.TryGetComponent(out Rigidbody body))
             body.AddForce(Outward * 2f + Vector3.up * 0.5f, ForceMode.Impulse);
     }
+
+    // Puts back a state kept from before (a chunk of the endless maze coming back): full of
+    // `id`, or empty.
+    public void Load(bool filled, string id) => Set(filled, filled ? id : null);
 
     // A replay showing the shelf as it was: the look only, nobody told.
     public void Show(bool filled, string product)

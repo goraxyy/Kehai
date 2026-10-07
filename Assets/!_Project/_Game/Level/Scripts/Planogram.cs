@@ -298,6 +298,17 @@ public static class Planogram
         list.Add(slot);
     }
 
+    // Slots that are gone (a chunk of the endless maze unloading), from their products' lists.
+    public static void Forget(IReadOnlyCollection<ShelfSlot> gone)
+    {
+        var set = new HashSet<ShelfSlot>(gone);
+        var products = new HashSet<string>();
+        foreach (ShelfSlot slot in gone)
+            if (!string.IsNullOrEmpty(slot.productId)) products.Add(slot.productId);
+        foreach (string id in products)
+            if (facings.TryGetValue(id, out List<ShelfSlot> list)) list.RemoveAll(set.Contains);
+    }
+
     public static bool HasStock => facings.Count > 0;
 
     public static IReadOnlyList<ShelfSlot> FacingsOf(string productId) =>

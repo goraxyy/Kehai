@@ -35,11 +35,16 @@ public sealed class ShelfStock
     public IReadOnlyList<ShelfSlot> Slots => slots;
     public int Count => slots.Count;
 
-    // Bumped whenever the whole stock is rebuilt, or a bay's slots move.
+    // Bumped whenever the whole stock is rebuilt, or a bay's slots move: whatever draws or
+    // records it starts again. Slots added (Finish) and removed (Remove) are told instead.
     public int Version { get; private set; }
 
     public event System.Action<ShelfSlot> Changed;
     public event System.Action<IReadOnlyList<ShelfSlot>> Moved;
+    public event System.Action<IReadOnlyList<ShelfSlot>> Added;
+    public event System.Action<IReadOnlyList<ShelfSlot>> Removed;
+
+    readonly List<ShelfSlot> pending = new List<ShelfSlot>();
 
     public void Clear()
     {
@@ -47,6 +52,7 @@ public sealed class ShelfStock
         grid.Clear();
         byFrame.Clear();
         frames.Clear();
+        pending.Clear();
         Version++;
     }
 
@@ -62,14 +68,56 @@ public sealed class ShelfStock
         }
         own.Add(slot);
         Index(slot);
+        pending.Add(slot);
         return slot;
     }
 
-    // Done adding: everything that draws or records the stock starts again from here.
+    // Done adding: whatever draws the stock hears about the new slots.
     public void Finish()
     {
         foreach (Transform frame in frames) if (frame != null) frame.hasChanged = false;
-        Version++;
+        if (pending.Count == 0) return;
+        var added = new List<ShelfSlot>(pending);
+        pending.Clear();
+        Added?.Invoke(added);
+    }
+
+    // Takes bays' slots out (the endless maze, unloading a chunk's forty or so bays at once).
+    // Each gap is filled by the last slot, so only the slots taken out and those moved into
+    // their places are touched, not the hundred thousand others; a moved slot's Index changes.
+    public void Remove(IEnumerable<Transform> bays)
+    {
+        var gone = new List<ShelfSlot>();
+        foreach (Transform frame in bays)
+        {
+            if (frame == null || !byFrame.TryGetValue(frame, out List<ShelfSlot> own)) continue;
+            foreach (ShelfSlot slot in own) Unindex(slot);
+            byFrame.Remove(frame);
+            frames.Remove(frame);
+            gone.AddRange(own);
+        }
+        if (gone.Count == 0) return;
+        Planogram.Forget(gone);
+
+        gone.Sort((a, b) => b.Index.CompareTo(a.Index));
+        foreach (ShelfSlot slot in gone)
+        {
+            int at = slot.Index, last = slots.Count - 1;
+            if (at < 0 || at > last || slots[at] != slot) continue;
+            if (at != last)
+            {
+                slots[at] = slots[last];
+                slots[at].Attach(this, at);
+            }
+            slots.RemoveAt(last);
+            slot.Attach(null, -1);
+        }
+        if (pending.Count > 0)
+        {
+            var set = new HashSet<ShelfSlot>(gone);
+            pending.RemoveAll(set.Contains);
+        }
+        Removed?.Invoke(gone);
     }
 
     internal void NotifyChanged(ShelfSlot slot) => Changed?.Invoke(slot);
