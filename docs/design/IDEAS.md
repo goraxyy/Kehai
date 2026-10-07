@@ -13,7 +13,9 @@ aimed at a research audience.
 > runner (results in [`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md)), the thought log with its
 > overlay and replay scrubber, and the blink pipeline from keyboard to webcam
 > ([`tools/blink/`](../../tools/blink/README.md)). The store itself is exported for people and
-> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15.
+> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15. The infinite
+> maze, and far more stock, are planned in
+> [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): step 1 of 3 is done.
 
 ---
 
@@ -209,6 +211,121 @@ was), and the post-shift performance review that reads from it.
 
 ---
 
+## Scaling: a lot of stock, and a maze with no end
+
+The shop is meant to hold far more stock than it does now, and the maze is meant to extend
+without limit. That changes how stock has to exist in the game. This is the plan, in three
+steps, each one measured.
+
+### Where it started (2026-10-07)
+
+- **Shelves.** 189 bays, cut into 16,502 slots ([`MERCHANDISING.md`](MERCHANDISING.md) §4).
+  Each slot was a GameObject with a trigger collider. Each item on it was another, with a
+  renderer, a rigidbody and a collider. That's about 33,000 objects for the stock alone.
+- **The scene.** 92 MB on disk, and 16 s to save.
+- **Lookups.** Each time a shopper looked for something, it scanned all 16,502 slots. The
+  replay recorder scanned them all on every tick.
+- **Drawing.** The render cost was 18.9 ms on average. That is the camera render alone in the
+  editor at 1080p, over four fixed views: down a long run, the drinks aisle, produce from the
+  door, and along the back wall.
+
+### Step 1: the GPU Resident Drawer (done)
+
+URP can draw ordinary MeshRenderers through BatchRendererGroup instancing. It culls on the GPU
+and, with occlusion culling on, skips what the shelves hide.
+
+| | render cost, mean of the four views |
+|---|---|
+| off | 18.9 ms |
+| on | 5.1 ms |
+| on, with GPU occlusion culling | **4.5 ms** |
+
+Pictures with it on and off are identical, and the room lighting measures the same.
+
+**Where the settings live.** They're local project settings, which never go to git:
+
+- `PC_RPAsset`: the GPU Resident Drawer set to Instanced Drawing, with GPU occlusion
+  culling on.
+- Graphics settings: *BatchRendererGroup Variants* set to **Keep All**. Without it the
+  editor quietly leaves the drawer off, and builds lack its shaders.
+
+`PerformanceSettingsTests` fails if any of these is turned off.
+
+**What it doesn't fix.** The drawer makes the objects cheap to draw, but they still exist: the
+memory, the scene's size and load time, the linear lookups. A streamed maze can't be made of
+33,000 hand-placed objects.
+
+### Step 2: shelves as data
+
+Stock stops being GameObjects. A slot becomes a record:
+
+- where it is and which way it faces;
+- what the planogram wants on it;
+- what is on it now.
+
+Each bay owns its slots. The things that need GameObjects get them only while they need them:
+
+- **Drawing.** A drawer keeps, for each 10 m cell of the floor and each product, the positions
+  of the stocked slots. It draws each list with one instanced call
+  (`Graphics.RenderMeshInstanced`), on the cell's room layer, skipping cells outside the view.
+  It works in the editor too, so the shelves look stocked there without baking anything into
+  the scene.
+- **Aiming.** The player's ray finds the first solid thing in reach. Then it's tested against
+  the slot boxes on its way there, taken from a spatial grid. No slot needs a collider.
+- **Items in hand.** An item becomes a GameObject only when it leaves a shelf: taken by the
+  player or a shopper, or knocked off by Aiko. It comes from a pool, at the slot's exact pose.
+  Put back on a shelf, it returns to the pool and the slot records what's on it.
+- **Lookups.** A spatial grid and per-product lists replace the linear scans. Replays record
+  slot changes from a change list instead of reading every slot.
+- **Migration.** One editor pass clears what the old way left in the scene:
+  - the baked `GridSlots`;
+  - the shelf prefabs' unused six-to-a-board slots;
+  - the till counter's slot, which becomes a marker for a data slot.
+
+**Done when:**
+
+- no GameObject stands for shelved stock;
+- the scene is back near 20 MB;
+- the render cost is no worse than step 1's;
+- shoppers, Aiko's shelf sweep, the eval's restock action and replays behave as before, by
+  their tests and by a Play-mode check.
+
+### Step 3: chunks, then a maze without an end
+
+This builds the design in [Infinite maze](#infinite-maze) below on top of step 2.
+
+- **3a. Chunks.** The floor is cut into 25 m chunks, and shelf data, drawing and lookups are
+  kept per chunk. A chunk's stock is generated from its position (the planogram already is).
+  Only changes from that default are stored, so a chunk can be dropped and rebuilt exactly as
+  it was left.
+- **3b. A seeded maze.** A chunk's bays come from `hash(seed, chunk_x, chunk_z)`:
+  - edge-matched tiles, so aisles meet across chunk edges;
+  - braided, so there are loops and few dead ends;
+  - floor, ceiling, ceiling lights and lamps for each chunk, taken from pools;
+  - the aisle signs and room lighting rules applied per chunk.
+- **3c. Streaming.** Chunks within a radius of the player load; the rest unload, keeping their
+  changes.
+  - Each chunk's NavMesh builds asynchronously (`NavMeshBuilder.UpdateNavMeshDataAsync`), with
+    links to its neighbours.
+  - Shoppers in a chunk that unloads leave the store.
+  - Tasks count the shift's area, not whatever happens to be loaded.
+  - Aiko plans on a bounded window: see the conflict below. The resolution is a store that is
+    finite per shift and endless across shifts, and that still holds.
+  - The world shifts back toward the origin once the player is far out (a floating origin).
+
+**Still open: how the drawn store meets the generated maze.** The hand-built store stays
+the default. The generated maze runs first as its own mode, which the eval can also ask
+for. Whether the generated maze replaces the sales floor, or opens out of it, is a design
+call for later, once it can be walked.
+
+### Order
+
+1. ~~GPU Resident Drawer, with GPU occlusion culling~~ done, 18.9 → 4.5 ms
+2. Shelves as data
+3. Chunks (3a), a seeded maze (3b), streaming (3c)
+
+---
+
 ## Infinite maze
 
 ### Why it helps the research, not just the game
@@ -247,8 +364,9 @@ Aiko's herding tactics need loops to be interesting.
    whose chunk unloads must despawn cleanly
 2. **Floating origin.** Past a few kilometres, float precision degrades visibly. Shift the
    world back toward origin when the player strays far
-3. **Object pooling.** There are ~3,400 items in the current scene as a *fixed* set;
-   streaming means spawn/despawn churn. Pool shelves, items, lights, speakers
+3. **Object pooling.** Streaming means spawn/despawn churn. Pool shelves, lights, speakers,
+   and the items that are off their shelves. The 16,500 shelved items are data after step 2
+   of the scaling plan above, so they don't churn at all
 4. **State of unloaded chunks.** A spill in a chunk you walked away from — does it persist?
    Cheapest answer: keep a small per-chunk state record (spills, shelf fill, bins) and
    restore on load. Without this the task counts flicker as you move
@@ -378,7 +496,9 @@ rung F's `blink_advance` tactic moves inside what's left of the closure.
 4. **Seeded finite store per shift** — procedural variation without the streaming cost
    (partly: `MazeMutation` moves bays between shifts from shift 7, validated for reachability)
 5. ~~**Blink**: keyboard → replay → webcam~~ done
-6. Infinite streaming maze *only if* it earns its place after 4 — not built
+6. Infinite streaming maze: wanted (2026-10-07), and planned in
+   [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end). Step 1 is done; shelves as data
+   come next, then chunks
 
 The first three are the ones a research audience actually reads. Everything after is
 upside.
