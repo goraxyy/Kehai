@@ -97,7 +97,7 @@ public static class ProductLook
         if (item.TryGetComponent(out Rigidbody body)) body.mass = look.Mass;
         if (item.TryGetComponent(out OutlineHighlight outline)) outline.Rebuild();
 
-        item.restHeight = look.RestHeight;
+        item.RestHeight = look.RestHeight;
         if (item.isOnShelf) item.ApplyShelfTransform();
         CullWhenTiny(item.gameObject, renderer);
         return true;

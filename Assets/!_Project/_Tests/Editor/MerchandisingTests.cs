@@ -133,6 +133,34 @@ public class MerchandisingTests
                         Planogram.EndCapsFor(ItemType.Snacks).ToList());
     }
 
+    // The sweets are on one-sided bays, where Mochi Bites' back faces never show, and health
+    // and beauty on short bays without the eye-level board sanitiser is on: neither was on sale.
+    [Test]
+    public void EveryProduct_GetsAFacing_OnTheBaysItsSectionHas()
+    {
+        var oneSided = new[] { Board.Stoop, Board.Waist, Board.Eye };
+        var shortBay = new[] { Board.Stoop, Board.Waist };
+        foreach (ItemType section in ProductCatalog.StockSections)
+            foreach (Board[] shape in new[] { oneSided, shortBay })
+            {
+                var ids = new List<string>();
+                var boards = new List<Board>();
+                for (int seed = 0; seed < 6; seed++)
+                    foreach (Board board in shape)
+                    {
+                        ids.Add(Planogram.ProductFor(section, seed, false, board, false));
+                        boards.Add(board);
+                    }
+                Planogram.GiveEveryProductAFacing(section, ids, boards);
+
+                string bays = shape == oneSided ? "one-sided bays" : "short bays";
+                foreach (ProductDef p in ProductCatalog.InSection(section))
+                    Assert.Contains(p.Id, ids, $"{p.Id} isn't on sale on {bays}");
+                for (int i = 0; i < ids.Count; i++)
+                    Assert.IsTrue(Planogram.MayGoOn(ProductCatalog.Get(ids[i]), boards[i]), $"{ids[i]} on the {boards[i]} board");
+            }
+    }
+
     // ------------------------------------------------------------------ the shelf grid
 
     static List<ShelfGrid.Facing> FacingsOfBoard(float width, float depth, float z = 0f)
@@ -230,6 +258,24 @@ public class MerchandisingTests
         ProductDef daikon = ProductCatalog.Get("produce_daikon");
         Assert.Less(ProductLook.ScaleFor(daikon), ProductLook.DisplayScale);
         Assert.LessOrEqual(daikon.Size.y * ProductLook.ScaleFor(daikon), ProductLook.MaxDisplayHeight + 1e-4f);
+    }
+
+    // Kehai/Store/Stock the Maze stands the shop's items up in the editor, where Awake never
+    // runs: they once all stood 0.2 m up, the placeholder box's half height, whatever their size.
+    [Test]
+    public void AnItem_StandsOnItsBoard_EvenInTheEditor()
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        try
+        {
+            go.transform.localScale = new Vector3(1f, 0.3f, 1f);
+            var item = go.AddComponent<Item>();
+            item.shelfLift = 0f;
+            item.ApplyShelfTransform();
+            Assert.AreEqual(0.15f, item.RestHeight, 1e-4f);
+            Assert.AreEqual(0.15f, go.transform.localPosition.y, 1e-4f, "the bottom of the box is on the board");
+        }
+        finally { Object.DestroyImmediate(go); }
     }
 
     // ------------------------------------------------------------------ aisles

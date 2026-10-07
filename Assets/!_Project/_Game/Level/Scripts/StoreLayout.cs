@@ -168,10 +168,19 @@ public static class StoreLayout
     {
         int slots = 0;
 
-        var units = Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include);
-        foreach (ShelfUnit unit in units)
+        // Every bay is planned first, so that a product whose boards its section doesn't have
+        // can be given one (Planogram.GiveEveryProductAFacing). In position order, so the plan
+        // comes out the same whatever order Unity finds the bays in.
+        var plans = new List<BayPlan>();
+        foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include))
+            plans.Add(PlanBay(unit, ZoneAt(unit.transform.position)));
+        plans.Sort((a, b) => ComparePositions(a.Unit.transform.position, b.Unit.transform.position));
+        foreach (ItemType section in ProductCatalog.StockSections) FillGaps(plans, section);
+
+        foreach (BayPlan plan in plans)
         {
-            Zone zone = ZoneAt(unit.transform.position);
+            ShelfUnit unit = plan.Unit;
+            Zone zone = plan.Zone;
 
             if (write)
             {
@@ -181,12 +190,11 @@ public static class StoreLayout
                 afterWrite?.Invoke(unit);
             }
 
-            int facings;
-            int n = StockBay(unit, zone, write, beforeWrite, afterWrite, facingsPerProduct, out facings);
+            int n = StockBay(plan, write, beforeWrite, afterWrite, facingsPerProduct);
             slots += n;
 
             Tally(baysPerSection, zone.Section, 1);
-            Tally(facingsPerSection, zone.Section, facings);
+            Tally(facingsPerSection, zone.Section, plan.Facings.Count);
             Tally(slotsPerSection, zone.Section, n);
         }
 
@@ -209,13 +217,20 @@ public static class StoreLayout
         return slots;
     }
 
-    // Stocks one bay from the planogram. A facing is one board on one side of the bay — the
-    // whole of the top board, front side, is Pipisi and nothing else — which is how a real
-    // planogram is blocked out. Planogram picks the product for each board from its height
-    // (eye, waist or stoop level) and side; ShelfGrid cuts the board into slots for it.
-    static int StockBay(ShelfUnit unit, Zone zone, bool write,
-                        System.Action<Object> beforeWrite, System.Action<Object> afterWrite,
-                        Dictionary<string, int> facingsPerProduct, out int facingCount)
+    // One bay's facings and the product each sells. A facing is one board on one side of the
+    // bay — the whole of the top board, front side, is Pipisi and nothing else — which is how
+    // a real planogram is blocked out.
+    sealed class BayPlan
+    {
+        public ShelfUnit Unit;
+        public Zone Zone;
+        public List<ShelfGrid.Facing> Facings;
+        public string[] Ids;
+    }
+
+    // Planogram picks the product for each board from its height (eye, waist or stoop level)
+    // and side.
+    static BayPlan PlanBay(ShelfUnit unit, Zone zone)
     {
         Transform bay = unit.transform;
 
@@ -225,12 +240,55 @@ public static class StoreLayout
                              Mathf.RoundToInt(bay.position.z) * 19349663);
         bool endCap = Planogram.IsEndCap(bay);
 
-        int slots = 0;
         List<ShelfGrid.Facing> facings = ShelfGrid.Facings(bay);
-        facingCount = facings.Count;
-        foreach (ShelfGrid.Facing facing in facings)
+        var ids = new string[facings.Count];
+        for (int i = 0; i < facings.Count; i++)
+            ids[i] = Planogram.ProductFor(zone.Section, seed, facings[i].Back, Planogram.BoardAt(facings[i].Height), endCap);
+        return new BayPlan { Unit = unit, Zone = zone, Facings = facings, Ids = ids };
+    }
+
+    // A section's facings across all its bays, handed to the planogram to fill any product
+    // that has none.
+    static void FillGaps(List<BayPlan> plans, ItemType section)
+    {
+        var ids = new List<string>();
+        var boards = new List<Planogram.Board>();
+        foreach (BayPlan plan in plans)
         {
-            string id = Planogram.ProductFor(zone.Section, seed, facing.Back, Planogram.BoardAt(facing.Height), endCap);
+            if (plan.Zone.Section != section) continue;
+            ids.AddRange(plan.Ids);
+            foreach (ShelfGrid.Facing facing in plan.Facings) boards.Add(Planogram.BoardAt(facing.Height));
+        }
+        Planogram.GiveEveryProductAFacing(section, ids, boards);
+
+        int k = 0;
+        foreach (BayPlan plan in plans)
+        {
+            if (plan.Zone.Section != section) continue;
+            for (int i = 0; i < plan.Ids.Length; i++) plan.Ids[i] = ids[k++];
+        }
+    }
+
+    static int ComparePositions(Vector3 a, Vector3 b)
+    {
+        int x = a.x.CompareTo(b.x);
+        return x != 0 ? x : a.z.CompareTo(b.z);
+    }
+
+    // Stocks one bay from its plan; ShelfGrid cuts each board into slots for its product.
+    static int StockBay(BayPlan plan, bool write,
+                        System.Action<Object> beforeWrite, System.Action<Object> afterWrite,
+                        Dictionary<string, int> facingsPerProduct)
+    {
+        Transform bay = plan.Unit.transform;
+        ShelfUnit unit = plan.Unit;
+        Zone zone = plan.Zone;
+
+        int slots = 0;
+        for (int f = 0; f < plan.Facings.Count; f++)
+        {
+            ShelfGrid.Facing facing = plan.Facings[f];
+            string id = plan.Ids[f];
             ProductDef product = ProductCatalog.Get(id);
             // A cross-merchandised product keeps its own section: cola on the crisps' end cap
             // still only takes cola.

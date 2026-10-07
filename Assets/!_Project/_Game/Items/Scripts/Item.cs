@@ -51,11 +51,22 @@ public class Item : MonoBehaviour
     // slots ShelfGrid builds sit on the board itself.
     public const float SnapHeight = 0.2f;
 
-    // From this item's origin, the centre of its box, down to the bottom of its mesh.
-    [System.NonSerialized] public float restHeight = SnapHeight;
+    // From this item's origin down to the bottom of its mesh. Measured the first time it's
+    // asked for, not in Awake: Awake doesn't run in the editor, where Kehai/Store/Stock the Maze
+    // stands thousands of items on their boards. ProductLook sets it when it swaps the model.
+    public float RestHeight
+    {
+        get
+        {
+            if (float.IsNaN(restHeight)) restHeight = MeasureRest();
+            return restHeight;
+        }
+        set => restHeight = value;
+    }
+    [System.NonSerialized] float restHeight = float.NaN;
 
     // How far above the board the snap point it's standing on is (its slot's snapLift). The
-    // item is lifted by restHeight less this, so whatever its height it stands on the board.
+    // item is lifted by RestHeight less this, so whatever its height it stands on the board.
     [System.NonSerialized] public float shelfLift = SnapHeight;
 
     // Makes this a particular product: its section, its id, and — once the product has been
@@ -114,13 +125,15 @@ public class Item : MonoBehaviour
         // children, and leaving those live while carried let them swing across the
         // crosshair as the player turned or strafed, re-targeting the mop in your hands.
         colliders = GetComponentsInChildren<Collider>(true);
+    }
 
+    // The placeholder box's half height when there's no mesh to measure.
+    float MeasureRest()
+    {
         var filter = GetComponent<MeshFilter>();
-        if (filter != null && filter.sharedMesh != null)
-        {
-            Bounds b = filter.sharedMesh.bounds;
-            restHeight = (b.extents.y - b.center.y) * transform.localScale.y;
-        }
+        if (filter == null || filter.sharedMesh == null) return SnapHeight;
+        Bounds b = filter.sharedMesh.bounds;
+        return (b.extents.y - b.center.y) * transform.localScale.y;
     }
 
     // No Update(): with thousands of items in a level, re-applying a transform every frame
@@ -160,7 +173,7 @@ public class Item : MonoBehaviour
 
     public void ApplyShelfTransform()
     {
-        transform.localPosition = Vector3.up * (restHeight - shelfLift);
+        transform.localPosition = Vector3.up * (RestHeight - shelfLift);
         transform.localRotation = Quaternion.Euler(shelfRotationOffset);
     }
 
