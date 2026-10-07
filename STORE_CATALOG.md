@@ -684,6 +684,13 @@ in:
 | `Items/Products/Resources/Products/<id>.prefab` | a variant of `Item_def` wearing the model, its collider sized to it and its mass from the catalogue |
 
 None of it is in version control (the repository holds scripts only), so a fresh checkout shows
-the placeholder boxes until the import is run. **Kehai/Products/2. Lay Out the Showcase on
-Models_Island** stands every product on display shelves along the north edge of the model
-island, one section per shelf in walking order, each with its name and price on the shelf edge.
+the placeholder boxes until the import is run.
+
+- **Kehai/Products/2. Lay Out Every Product on the Floor of Models_Island** stands all 80 on the
+  island's floor: one row per section in walking order, the section's name at the head of each
+  row, each product's name and price on the floor in front of it. The floor is stretched north
+  to fit.
+- **Kehai/Store/Stock the Maze with Product Prefabs** puts each facing's product prefab on every
+  slot in the maze and hangs the aisle signs, so the editor shows the stocked shop. The game
+  does the same by itself at load, so this is only for seeing it, and it adds a few thousand
+  objects to the scene.

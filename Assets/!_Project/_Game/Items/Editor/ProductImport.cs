@@ -28,7 +28,6 @@ public static class ProductImport
     const string MaterialsFolder = Root + "/Materials";
     public const string PrefabsFolder = Root + "/Resources/Products";
     const string ItemPrefabPath = "Assets/!_Project/_Game/Items/Prefabs/Item_def.prefab";
-    const string ShelfModelPath = "Assets/!_Project/_Game/Level/Prefabs/Shelves/Models/ShelfOneside_3_grey.prefab";
 
     static readonly string[] SharedTextures = { "can_top", "tin_lid", "net_red", "net_orange" };
 
@@ -46,7 +45,7 @@ public static class ProductImport
     [MenuItem("Kehai/Products/1. Import Product Models")]
     public static void ImportMenu() => Debug.Log(ImportAll());
 
-    [MenuItem("Kehai/Products/2. Lay Out the Showcase on Models_Island")]
+    [MenuItem("Kehai/Products/2. Lay Out Every Product on the Floor of Models_Island")]
     public static void ShowcaseMenu() => Debug.Log(BuildShowcase());
 
     public static string ImportAll()
@@ -303,103 +302,103 @@ public static class ProductImport
 
     // ------------------------------------------------------------------ the showcase
 
-    // Every product on display shelves along the north edge of Models_Island, one section per
-    // shelf in the order a customer walks the store, each with its name and price on the edge.
+    // Every product standing on the floor of Models_Island in a grid: one row per section in
+    // the order a customer walks the store, the section's name at the head of the row, and
+    // each product's name and price on the floor in front of it. The island's test floor is
+    // stretched north to fit when it has to be.
     public const string ShowcaseName = "Products_Showcase";
+    const float ProductPitch = 0.5f;      // across a row: wider than the widest pack (0.25)
+    const float RowPitch = 1.0f;          // between rows, with room for the name tags
+    const float FrontRowGap = 1.6f;       // clear of the shelf models already on the island
 
     public static string BuildShowcase()
     {
         var island = GameObject.Find("Models_Island");
         if (island == null) return "No Models_Island in the open scene.";
-        var shelfModel = AssetDatabase.LoadAssetAtPath<GameObject>(ShelfModelPath);
-        if (shelfModel == null) return $"No shelf model at {ShelfModelPath}.";
 
         Transform old = island.transform.Find(ShowcaseName);
-        if (old != null) Object.DestroyImmediate(old.gameObject);
+        if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
 
         var root = new GameObject(ShowcaseName);
-        root.transform.SetParent(island.transform, false);
         Undo.RegisterCreatedObjectUndo(root, "Product showcase");
+        root.transform.SetParent(island.transform, false);
+
+        // Where the grid goes: north of everything already standing on the island.
+        Transform plane = island.transform.Find("Plane_test");
+        Bounds floor = plane != null && plane.GetComponent<Renderer>() != null
+            ? plane.GetComponent<Renderer>().bounds
+            : new Bounds(island.transform.position, new Vector3(30f, 0f, 20f));
+        float occupied = floor.min.z;
+        foreach (Renderer r in island.GetComponentsInChildren<Renderer>())
+            if (plane == null || r.transform != plane) occupied = Mathf.Max(occupied, r.bounds.max.z);
 
         ItemType[] order = ProductCatalog.StockSections;
-        const float bayWidth = 4f;
-        float[] platformTops = { 1.42f, 0.83f };   // eye level, then waist level, of a 3-shelf bay
-        int bays = Mathf.CeilToInt(order.Length / (float)platformTops.Length);
+        float frontZ = occupied + FrontRowGap;
+        float backZ = frontZ + (order.Length - 1) * RowPitch;
+        float centreX = floor.center.x;
+        string grew = plane != null ? ExtendFloor(plane, backZ + 1.4f) : "";
 
-        // A row along the north edge of the island's floor, backs to the edge, centred on it.
-        Bounds floor = new Bounds(island.transform.position, new Vector3(30f, 0f, 20f));
-        Transform plane = island.transform.Find("Plane_test");
-        if (plane != null && plane.GetComponent<Renderer>() != null) floor = plane.GetComponent<Renderer>().bounds;
-        float wallZ = floor.max.z - 0.7f;
-        float firstX = floor.center.x - (bays - 1) * bayWidth * 0.5f;
         TMP_FontAsset font = TMP_Settings.defaultFontAsset;
         bool hasYen = font != null && font.HasCharacter('¥');
-
         int placed = 0;
-        for (int bay = 0; bay < bays; bay++)
+
+        for (int row = 0; row < order.Length; row++)
         {
-            var shelf = (GameObject)PrefabUtility.InstantiatePrefab(shelfModel, root.transform);
-            shelf.name = $"ShowcaseShelf_{bay + 1}";
-            // The one-sided bay's platforms stand in front of its back wall, on local -Z, so
-            // with no rotation it faces south, into the island.
-            shelf.transform.position = new Vector3(firstX + bay * bayWidth, 0f, wallZ);
-            shelf.transform.rotation = Quaternion.identity;
+            ItemType section = order[row];
+            IReadOnlyList<ProductDef> range = ProductCatalog.InSection(section);
+            float z = frontZ + row * RowPitch;
 
-            for (int level = 0; level < platformTops.Length; level++)
+            var group = new GameObject(section.ToString());
+            group.transform.SetParent(root.transform, false);
+            group.transform.position = new Vector3(centreX, floor.max.y, z);
+
+            float halfRow = (range.Count - 1) * 0.5f * ProductPitch;
+            FloorLabel(group.transform, "Sign", SignFor(section).ToUpperInvariant(),
+                       new Vector3(-halfRow - 0.45f, 0f, 0f), new Vector2(2.4f, 0.22f),
+                       TextAlignmentOptions.Right, new Color(0.55f, 0.08f, 0.06f), font, bold: true);
+
+            for (int i = 0; i < range.Count; i++)
             {
-                int s = bay * platformTops.Length + level;
-                if (s >= order.Length) break;
-                ItemType section = order[s];
-                IReadOnlyList<ProductDef> range = ProductCatalog.InSection(section);
+                ProductDef p = range[i];
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabsFolder}/{p.Id}.prefab");
+                if (prefab == null) continue;
 
-                // The section's name on the back panel over its row: dark on the pale top
-                // panel, light on the dark one between the shelves.
-                bool paleWall = level == 0;
-                Label(shelf.transform, $"Sign_{section}", SignFor(section).ToUpperInvariant(),
-                      new Vector3(-bayWidth * 0.5f + 0.06f, platformTops[level] + 0.47f, -0.03f),
-                      2.4f, 0.11f, TextAlignmentOptions.Left,
-                      paleWall ? new Color(0.55f, 0.08f, 0.06f) : new Color(1f, 0.85f, 0.3f), font, bold: true);
+                float x = (i - (range.Count - 1) * 0.5f) * ProductPitch;
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, group.transform);
+                // The model's front faces +Z; turn it to face south, where you walk up from.
+                go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                go.transform.localPosition = new Vector3(x, RestHeight(go) + 0.001f, 0f);
 
-                for (int i = 0; i < range.Count; i++)
-                {
-                    ProductDef p = range[i];
-                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabsFolder}/{p.Id}.prefab");
-                    if (prefab == null) continue;
+                var rb = go.GetComponent<Rigidbody>();
+                if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
 
-                    float x = -bayWidth * 0.5f + (i + 0.5f) * bayWidth / range.Count;
-                    var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, shelf.transform);
-
-                    // The model's front faces +Z; turn it to face the aisle. Anything whose
-                    // print is on its lid (bars, the pizza, trays) is propped up to show it.
-                    bool lidLabel = LabelOnTop(p);
-                    go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * Quaternion.Euler(lidLabel ? 70f : 0f, 0f, 0f);
-                    go.transform.localPosition = new Vector3(x, platformTops[level] + 0.3f, -0.3f);
-
-                    // Stand it on the board, pulled up to the front edge the way stores face up.
-                    Bounds b = go.GetComponent<Renderer>().bounds;
-                    Vector3 local = go.transform.localPosition;
-                    Vector3 minLocal = shelf.transform.InverseTransformPoint(b.min);
-                    Vector3 maxLocal = shelf.transform.InverseTransformPoint(b.max);
-                    float bottom = Mathf.Min(minLocal.y, maxLocal.y);
-                    float front = Mathf.Min(minLocal.z, maxLocal.z);
-                    go.transform.localPosition = new Vector3(x, local.y + (platformTops[level] + 0.002f - bottom),
-                                                             local.z + (-0.47f - front));
-
-                    var rb = go.GetComponent<Rigidbody>();
-                    if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
-
-                    string price = hasYen ? $"¥{p.Price:0}" : $"{p.Price:0} yen";
-                    Label(shelf.transform, $"Tag_{p.Id}", $"{Capitalise(p.Name)}  <b>{price}</b>",
-                          new Vector3(x, platformTops[level] - 0.035f, -0.515f), bayWidth / range.Count - 0.04f, 0.06f,
-                          TextAlignmentOptions.Center, new Color(0.12f, 0.12f, 0.13f), font);
-                    placed++;
-                }
+                string price = hasYen ? $"¥{p.Price:0}" : $"{p.Price:0} yen";
+                FloorLabel(group.transform, "Tag_" + p.Id, $"{Capitalise(p.Name)}\n<b>{price}</b>",
+                           new Vector3(x, 0f, -0.3f), new Vector2(ProductPitch - 0.04f, 0.16f),
+                           TextAlignmentOptions.Center, new Color(0.12f, 0.12f, 0.13f), font);
+                placed++;
             }
         }
 
         EditorSceneManager.MarkSceneDirty(island.scene);
         EditorSceneManager.SaveScene(island.scene);
-        return $"Showcase: {placed} products on {bays} shelves under Models_Island/{ShowcaseName}; scene saved.";
+        return $"Showcase: {placed} products on the floor of Models_Island in {order.Length} rows, " +
+               $"z {frontZ:0.0} to {backZ:0.0}{grew}; scene saved.";
+    }
+
+    // Stretches the test floor north until it reaches `northZ`, keeping its south edge.
+    static string ExtendFloor(Transform plane, float northZ)
+    {
+        Bounds b = plane.GetComponent<Renderer>().bounds;
+        if (b.max.z >= northZ) return "";
+        Undo.RecordObject(plane, "Extend the island floor");
+        float depth = northZ - b.min.z;
+        Vector3 s = plane.localScale;
+        float perUnit = b.size.z / s.z;                 // a built-in plane is 10 units across
+        plane.localScale = new Vector3(s.x, s.y, depth / perUnit);
+        Vector3 c = plane.position;
+        plane.position = new Vector3(c.x, c.y, b.min.z + depth * 0.5f);
+        return $" (floor extended north to z {northZ:0.0})";
     }
 
     static string SignFor(ItemType section)
@@ -409,35 +408,37 @@ public static class ProductImport
         return ProductCatalog.SectionName(section);
     }
 
-    // Packages printed on the lid rather than the front: bars and buns in flow wrap, flat
-    // boxes (pizza, the mint tin, soap) and film-topped trays.
-    static bool LabelOnTop(ProductDef p)
+    // Centre of the box to the bottom of the mesh: how high the origin sits when it stands.
+    static float RestHeight(GameObject go)
     {
-        if (p.Shape == PackShape.Wrapper || p.Shape == PackShape.Tray) return true;
-        return p.Shape == PackShape.Box && p.Size.y <= 0.5f * Mathf.Min(p.Size.x, p.Size.z) + 1e-4f;
+        var mf = go.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return 0.1f;
+        Bounds b = mf.sharedMesh.bounds;
+        return b.extents.y - b.center.y;
     }
 
     static string Capitalise(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
 
-    static void Label(Transform parent, string name, string text, Vector3 localPosition, float width, float height,
-                      TextAlignmentOptions align, Color color, TMP_FontAsset font, bool bold = false)
+    // Text lying on the floor, reading from the south.
+    static void FloorLabel(Transform parent, string name, string text, Vector3 localPosition, Vector2 size,
+                           TextAlignmentOptions align, Color color, TMP_FontAsset font, bool bold = false)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
-        go.transform.localPosition = localPosition;
-        go.transform.localRotation = Quaternion.identity;     // TMP reads from -Z, the shelf's front
+        go.transform.localPosition = localPosition + Vector3.up * 0.003f;
+        go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         var tmp = go.AddComponent<TextMeshPro>();
         if (font != null) tmp.font = font;
         tmp.text = text;
         tmp.enableAutoSizing = true;
         tmp.fontSizeMin = 0.05f;
-        tmp.fontSizeMax = 0.6f;
+        tmp.fontSizeMax = 1.2f;
         tmp.alignment = align;
         tmp.color = color;
         if (bold) tmp.fontStyle = FontStyles.Bold;
         tmp.textWrappingMode = TextWrappingModes.NoWrap;
-        tmp.rectTransform.sizeDelta = new Vector2(width, height);
-        if (align == TextAlignmentOptions.Left) tmp.rectTransform.pivot = new Vector2(0f, 0.5f);
+        tmp.rectTransform.sizeDelta = size;
+        if (align == TextAlignmentOptions.Right) tmp.rectTransform.pivot = new Vector2(1f, 0.5f);
     }
 
     // ------------------------------------------------------------------ helpers

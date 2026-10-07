@@ -177,7 +177,9 @@ public class ShelfSlot : MonoBehaviour, IInteractable
     {
         if (isFilled || itemPrefab == null || snapPoint == null) return false;
 
-        GameObject spawned = Object.Instantiate(itemPrefab);
+        // The product's own prefab when it has been imported; the placeholder box otherwise.
+        GameObject prefab = ProductLook.Prefab(productId);
+        GameObject spawned = Object.Instantiate(prefab != null ? prefab : itemPrefab);
         Item item = spawned.GetComponent<Item>();
         if (item == null) { Object.Destroy(spawned); return false; }
 

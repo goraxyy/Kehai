@@ -8,7 +8,9 @@ using UnityEngine;
 // answer you can see. Each is a four-sided box on two wires, readable from any direction, over
 // the middle of its zone's bays.
 //
-// Built at load from StoreLayout.Zones, like the stock: nothing about them lives in the scene.
+// Built at load from StoreLayout.Zones, like the stock. Kehai/Store/Stock the Maze bakes a copy
+// into the scene so the editor shows them too; the game replaces it with its own at load (with
+// the Japanese, which needs the computer's fonts).
 public static class AisleSigns
 {
     public const string RootName = "AisleSigns";
@@ -43,22 +45,29 @@ public static class AisleSigns
         return at;
     }
 
-    public static int Build()
+    public static int Build() =>
+        Build(Flat(Board, 0.35f), Flat(Badge, 0.4f), Flat(WireColour, 0.5f), GameFonts.Heading, japanese: true);
+
+    // The colours, for the editor's copy of the signs.
+    public static readonly Color WireColour = new Color(0.12f, 0.12f, 0.13f);
+    public static Color BoardColour => Board;
+    public static Color BadgeColour => Badge;
+
+    public static int Build(Material board, Material badge, Material wire, TMP_FontAsset font, bool japanese)
     {
         var old = GameObject.Find(RootName);
-        if (old != null) Object.Destroy(old);
+        if (old != null)
+        {
+            if (Application.isPlaying) Object.Destroy(old);
+            else Object.DestroyImmediate(old);
+        }
 
         Dictionary<int, Vector3> at = Positions();
         if (at.Count == 0) return 0;
 
         var root = new GameObject(RootName);
-        Material board = Flat(Board, 0.35f);
-        Material badge = Flat(Badge, 0.4f);
-        Material wire = Flat(new Color(0.12f, 0.12f, 0.13f), 0.5f);
-        TMP_FontAsset font = GameFonts.Heading;
-
         foreach (var pair in at)
-            Sign(root.transform, StoreLayout.Zones[pair.Key], pair.Value, board, badge, wire, font);
+            Sign(root.transform, StoreLayout.Zones[pair.Key], pair.Value, board, badge, wire, font, japanese);
         return at.Count;
     }
 
@@ -67,7 +76,7 @@ public static class AisleSigns
     public static string Caption(StoreLayout.Zone zone) => zone.IsAisle ? zone.Name : "";
 
     static void Sign(Transform root, StoreLayout.Zone zone, Vector3 centre, Material board, Material badge,
-                     Material wire, TMP_FontAsset font)
+                     Material wire, TMP_FontAsset font, bool japanese)
     {
         var sign = new GameObject("Sign_" + (zone.IsAisle ? "Aisle" + zone.Aisle : zone.Section.ToString()));
         sign.transform.SetParent(root, false);
@@ -98,15 +107,17 @@ public static class AisleSigns
                      new Vector2(0.5f, 0.46f), Board, font, TextAlignmentOptions.Center, bold: true);
                 Text(face.transform, "Name", zone.Name, new Vector3(0.3f, 0.09f, -0.002f),
                      new Vector2(Width - 0.82f, 0.26f), Ink, font, TextAlignmentOptions.Center, bold: true);
-                Text(face.transform, "Japanese", zone.Japanese, new Vector3(0.3f, -0.17f, -0.002f),
-                     new Vector2(Width - 0.82f, 0.17f), Subtitle, font, TextAlignmentOptions.Center);
+                if (japanese)
+                    Text(face.transform, "Japanese", zone.Japanese, new Vector3(0.3f, -0.17f, -0.002f),
+                         new Vector2(Width - 0.82f, 0.17f), Subtitle, font, TextAlignmentOptions.Center);
             }
             else
             {
                 Text(face.transform, "Name", zone.Name.ToUpperInvariant(), new Vector3(0f, 0.09f, -0.002f),
                      new Vector2(Width - 0.2f, 0.28f), Ink, font, TextAlignmentOptions.Center, bold: true);
-                Text(face.transform, "Japanese", zone.Japanese, new Vector3(0f, -0.17f, -0.002f),
-                     new Vector2(Width - 0.2f, 0.17f), Badge, font, TextAlignmentOptions.Center);
+                if (japanese)
+                    Text(face.transform, "Japanese", zone.Japanese, new Vector3(0f, -0.17f, -0.002f),
+                         new Vector2(Width - 0.2f, 0.17f), Badge, font, TextAlignmentOptions.Center);
             }
         }
     }
@@ -115,7 +126,9 @@ public static class AisleSigns
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.name = name;
-        Object.Destroy(go.GetComponent<Collider>());     // scenery, high up: nothing walks into it
+        // Scenery, high up: nothing walks into it.
+        if (Application.isPlaying) Object.Destroy(go.GetComponent<Collider>());
+        else Object.DestroyImmediate(go.GetComponent<Collider>());
         go.transform.SetParent(parent, false);
         go.transform.localPosition = local;
         go.transform.localScale = size;
