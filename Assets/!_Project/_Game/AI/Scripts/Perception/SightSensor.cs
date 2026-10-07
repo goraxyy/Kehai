@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Graded sight (AIKO.md §3.1). Not "can I see the player" but a detection score that
+    // Graded sight (Aiko.md §3.1). Not "can I see the player" but a detection score that
     // builds while you're visible and drains while you aren't, so a glimpse through a gap
     // between two bays doesn't become a chase:
     //

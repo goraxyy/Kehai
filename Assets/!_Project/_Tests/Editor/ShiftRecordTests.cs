@@ -102,6 +102,7 @@ public class ShiftRecordTests
         string root = Directory.GetParent(Application.dataPath).FullName;
         var files = Directory.GetFiles(Path.Combine(Application.dataPath, "!_Project"), "*.cs", SearchOption.AllDirectories)
             .Concat(Directory.GetFiles(root, "*.md", SearchOption.TopDirectoryOnly))
+            .Concat(Directory.GetFiles(Path.Combine(root, "docs"), "*.md", SearchOption.AllDirectories))
             .Concat(Directory.GetFiles(Path.Combine(root, "tools"), "*.*", SearchOption.AllDirectories)
                 .Where(p => (p.EndsWith(".md") || p.EndsWith(".py") || p.EndsWith(".swift"))
                          && !p.Contains(".venv") && !p.Contains("site-packages")));

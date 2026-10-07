@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Aiko — the orchestrator (AIKO.md §2, §6.1).
+    // Aiko — the orchestrator (Aiko.md §2, §6.1).
     //
     // Owns the three minds and runs them at their own rates:
     //
@@ -1065,7 +1065,7 @@ namespace Kehai.Aiko
         float pacingSquaredError;
         int pacingSamples;
 
-        // The single healthiest metric (AIKO.md §13): how well panic tracks its target.
+        // The single healthiest metric (Aiko.md §13): how well panic tracks its target.
         public float SetpointRmse => pacingSamples > 0 ? Mathf.Sqrt(pacingSquaredError / pacingSamples) : 0f;
 
         public void SamplePacing(float panic, float setpoint)

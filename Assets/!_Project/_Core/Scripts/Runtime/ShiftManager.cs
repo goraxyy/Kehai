@@ -28,7 +28,7 @@ public class ShiftManager : MonoBehaviour
     public BurnoutSystem burnoutSystem;
 
     // Asked when the employee tries to clock out with everything done. Returning true
-    // refuses — Aiko's overtime (AIKO.md §8.2). Null means nobody objects.
+    // refuses — Aiko's overtime (Aiko.md §8.2). Null means nobody objects.
     public System.Func<bool> ClockOutGuard;
 
     public bool IsShiftActive { get; private set; }

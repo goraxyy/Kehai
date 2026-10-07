@@ -5,7 +5,7 @@ namespace Kehai.Aiko
 {
     public enum GoalId { Patrol, Investigate, Sweep, Flush, Deny, Herd, Ambush, Stalk, Pursue, Withdraw, Assist }
 
-    // The handful of scalars the decision layer actually uses (AIKO.md §6.2), refreshed at
+    // The handful of scalars the decision layer actually uses (Aiko.md §6.2), refreshed at
     // the appraisal rate. Everything above the body reads this, not the raw grid.
     public struct Appraisal
     {

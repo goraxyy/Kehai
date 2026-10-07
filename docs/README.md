@@ -7,7 +7,7 @@ The repository's markdown files, by what they're for. The project [`README`](../
 
 | document | what it covers |
 |---|---|
-| [`AIKO.md`](design/AIKO.md) | Aiko, the adaptive antagonist: her three minds, what she perceives, her tactics, how she learns |
+| [`Aiko.md`](design/Aiko.md) | Aiko, the adaptive antagonist: her three minds, what she perceives, her tactics, how she learns |
 | [`STORE_CATALOG.md`](design/STORE_CATALOG.md) | the 80 products, their packaging, the aisles they're sold in, what customers say |
 | [`MERCHANDISING.md`](design/MERCHANDISING.md) | how the shelves are stocked: the route, eye/waist/stoop, brand blocks, end caps, the shelf grid, every aisle's layouts |
 | [`STORE_MAP.md`](design/STORE_MAP.md) | the map of the building the game builds from its NavMesh (written by Kehai/Map/Export) |

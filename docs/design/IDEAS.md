@@ -4,7 +4,7 @@ Working notes for the route we picked: **Kehai as an agent-eval environment (1)*
 **Aiko with ablations (2)**, and an **interpretable thought log (4)** — plus the infinite
 maze and the blink mechanic that feed into them.
 
-Companion documents: [`AIKO.md`](AIKO.md) is the antagonist design spec,
+Companion documents: [`Aiko.md`](Aiko.md) is the antagonist design spec,
 [`RELEASE_PLAN.md`](../production/RELEASE_PLAN.md) is the production route. This file is the part
 aimed at a research audience.
 
@@ -13,7 +13,7 @@ aimed at a research audience.
 > runner (results in [`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md)), the thought log with its
 > overlay and replay scrubber, and the blink pipeline from keyboard to webcam
 > ([`tools/blink/`](../../tools/blink/README.md)). The store itself is exported for people and
-> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `AIKO.md` §15.
+> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15.
 
 ---
 
@@ -123,7 +123,7 @@ is a scripted floor; `tools/eval/llm_agent.py` has Claude play a shift through o
 
 ## 2. Aiko with ablations
 
-Full design in [`AIKO.md`](AIKO.md). The research contribution is not the antagonist —
+Full design in [`Aiko.md`](Aiko.md). The research contribution is not the antagonist —
 it is **evidence that the adaptation does something**.
 
 ### The ablation ladder
@@ -146,7 +146,7 @@ Pick before running, not after:
 - Time-to-first-detection
 - Shift completion rate (the player's, under each config)
 - Tactic diversity (entropy over the tactic distribution — catches degenerate camping)
-- Panic Index trace (from `AIKO.md`) — the intended reward signal
+- Panic Index trace (from `Aiko.md`) — the intended reward signal
 - Player-reported tension, 1–5, if you run humans
 
 ### The trap to avoid
@@ -157,7 +157,7 @@ A two-rung ablation that exists beats a six-rung one that does not.
 
 ### Scope decision, unresolved
 
-`AIKO.md` is more ambitious than everything shipped so far combined, and is currently
+`Aiko.md` is more ambitious than everything shipped so far combined, and is currently
 zero lines of code. Decide explicitly which slice ships. My suggestion: rungs B–D are a
 complete, defensible story on their own.
 
@@ -258,7 +258,7 @@ Aiko's herding tactics need loops to be interesting.
 
 ### Conflict worth flagging
 
-`AIKO.md`'s herding relies on an **aisle graph with articulation points and min-cuts** —
+`Aiko.md`'s herding relies on an **aisle graph with articulation points and min-cuts** —
 that needs a *bounded* graph. On an infinite map, Aiko must operate on a bounded window:
 the current shift's store footprint. Practical resolution: **the store is finite per
 shift; the maze is infinite across shifts.** Each shift generates a bounded store from a

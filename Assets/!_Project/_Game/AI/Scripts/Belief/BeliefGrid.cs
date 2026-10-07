@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Kehai.Aiko
 {
-    // Where Aiko thinks you are (AIKO.md §4).
+    // Where Aiko thinks you are (Aiko.md §4).
     //
     // Never a "last known position": a probability distribution over every walkable cell
     // of the store map, Σ b(c) = 1, updated like a Bayes filter.
@@ -254,7 +254,7 @@ namespace Kehai.Aiko
         // ---- the Director's bounded hint ---------------------------------------------
 
         // Moves up to `amount` of the total mass onto a region. The Director alone calls
-        // this, and caps it (AIKO.md §9.2); the grid just does the arithmetic.
+        // this, and caps it (Aiko.md §9.2); the grid just does the arithmetic.
         public void Bias(int region, float amount)
         {
             if (region < 0 || amount <= 0f) return;

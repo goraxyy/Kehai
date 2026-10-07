@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Kehai.Eval
 {
-    // AIKO.md §13: three scripted player profiles. The Ledger should converge to visibly
+    // Aiko.md §13: three scripted player profiles. The Ledger should converge to visibly
     // different tactic distributions for each; if it doesn't, the bandit isn't learning and
     // the reward signal is broken. They play through exactly the same actions an external
     // agent would, with the same senses: Aiko only when she's in view, her footsteps only
