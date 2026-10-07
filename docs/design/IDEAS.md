@@ -272,10 +272,11 @@ Each bay owns its slots. The things that need GameObjects get them only while th
   without baking anything into the scene.
 
   The first version drew each product with instanced calls (`Graphics.RenderMeshInstanced`),
-  per 10 m cell and then per view. In Play that cost 5 ms more over the four views, because
-  instanced calls can't skip what the shelves hide. The render objects cost nothing
-  measurable: 4.2 ms against 4.5 ms with no stock at all, measured in the same run. Making
-  all 16,500 takes 0.6 s at load, in one batch per product.
+  per 10 m cell and then per view. In Play that cost 5 to 7 ms over the four views, because
+  instanced calls can't skip what the shelves hide. The render objects cost 2.4 ms (4.8 ms
+  against 2.4 ms with no stock, measured with frames between switching it and timing it).
+  They're made with `Instantiate`, 0.6 s for all 16,500: copies made by `InstantiateAsync` are
+  never taken up by the GPU Resident Drawer, and cost 17 ms drawn the ordinary way.
 - **Aiming.** The player's ray finds the first solid thing in reach. Then it's tested against
   the slot boxes on its way there, taken from a spatial grid. No slot needs a collider.
 - **Items in hand.** An item becomes a GameObject only when it leaves a shelf: taken by the
