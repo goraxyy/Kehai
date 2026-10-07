@@ -341,11 +341,46 @@ the default. The generated maze runs first as its own mode, which the eval can a
 for. Whether the generated maze replaces the sales floor, or opens out of it, is a design
 call for later, once it can be walked.
 
+**Where it got to (2026-10-07).**
+
+- **The generator (3b) is built and tested.** `MazeGenerator` works out a chunk from
+  `hash(seed, x, z)`: border edges from the border's own hash, at least two of them open; a
+  spanning tree inside the chunk; then braiding (75% of dead ends knocked through) and an
+  extra 12% of walls for loops. A closed wall is a two-sided 4 m bay, with a 1 m pillar where
+  walls meet. `EndlessMazeTests` checks it over 64 chunks (1,600 cells) and four seeds:
+  - every cell can be reached from every other;
+  - under 4% of cells are dead ends;
+  - neighbouring chunks agree on their border;
+  - no wall or corner is built twice;
+  - the same seed gives the same chunk.
+
+  That comes to about 17 bays and 22 pillars a chunk.
+- **The streaming (3a, 3c) is written, but hasn't run yet.** `EndlessMaze` builds the chunks
+  within two of the player's (a 125 m square):
+  - one chunk a frame, nearest first;
+  - shelf runs and pillars from pools, plus floor, ceiling, and 25 ceiling lights with their
+    lamps;
+  - each chunk's stock, as data, with one section per chunk.
+
+  A chunk more than three away comes down, keeping which slots changed, so it's rebuilt as it
+  was left. The NavMesh is rebuilt off the main thread over the built chunks whenever the
+  player has moved 10 m. *Kehai/Endless/Open an Endless Maze* makes its scene, with a simple
+  first-person walker; the game's player belongs to the store. The shelf code gained what
+  this needed: slots can leave the stock (`ShelfStock.Remove`); the drawer takes slots coming
+  and going a bay at a time instead of starting again; and each slot carries the light layer
+  it's lit by.
+- **Not done yet:**
+  - shoppers, Aiko and tasks in the generated maze;
+  - aisle signs per chunk;
+  - a floating origin;
+  - links stitching per-chunk NavMeshes (one NavMesh over the built window does instead).
+
 ### Order
 
 1. ~~GPU Resident Drawer, with GPU occlusion culling~~ done, 18.9 → 4.5 ms
 2. ~~Shelves as data~~ built: the scene is 92 → 6.2 MB. Render cost and Play-mode check to come
-3. Chunks (3a), a seeded maze (3b), streaming (3c)
+3. Chunks and a seeded maze: the generator is built and tested; the streaming is written and
+   waiting for its first run
 
 ---
 

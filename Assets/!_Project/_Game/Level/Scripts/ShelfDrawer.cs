@@ -113,12 +113,40 @@ public class ShelfDrawer : MonoBehaviour
 
     void Watch(ShelfStock stock)
     {
-        if (watching != null) watching.Changed -= OnChanged;
+        if (watching != null)
+        {
+            watching.Changed -= OnChanged;
+            watching.Added -= OnAdded;
+            watching.Removed -= OnRemoved;
+        }
         watching = stock;
-        if (watching != null) watching.Changed += OnChanged;
+        if (watching != null)
+        {
+            watching.Changed += OnChanged;
+            watching.Added += OnAdded;
+            watching.Removed += OnRemoved;
+        }
     }
 
     void OnChanged(ShelfSlot slot) => dirty.Add(slot);
+
+    // Slots come and go a bay at a time (the endless maze's chunks), and only theirs change.
+    void OnAdded(IReadOnlyList<ShelfSlot> added)
+    {
+        if (watching == null || watching.Version != builtVersion) return;   // all of it is redone anyway
+        foreach (ShelfSlot slot in added) dirty.Add(slot);
+    }
+
+    void OnRemoved(IReadOnlyList<ShelfSlot> removed)
+    {
+        foreach (ShelfSlot slot in removed)
+        {
+            dirty.Remove(slot);
+            if (!shown.TryGetValue(slot, out (GameObject go, (string id, uint mask) key) current)) continue;
+            Give(current.key, current.go);
+            shown.Remove(slot);
+        }
+    }
 
     void Rebuild(ShelfStock stock)
     {
@@ -212,9 +240,8 @@ public class ShelfDrawer : MonoBehaviour
         return free;
     }
 
-    // Lit by its own room's lights only, as the shelves under it are.
-    static (string id, uint mask) KeyOf(ShelfSlot slot) =>
-        (slot.StockedId, RoomLighting.LayersDefined ? (uint)RoomLighting.BitAt(slot.Position) : RoomLighting.Moving);
+    // Lit by its own room's lights only, as the shelves under it are (the slot's lightMask).
+    static (string id, uint mask) KeyOf(ShelfSlot slot) => (slot.StockedId, slot.lightMask);
 
     Transform Root
     {

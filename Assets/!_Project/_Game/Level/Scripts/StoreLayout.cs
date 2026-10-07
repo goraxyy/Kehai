@@ -205,7 +205,7 @@ public static class StoreLayout
                 afterWrite?.Invoke(unit);
             }
 
-            int n = StockBay(plan, writeScene, stock, facingsPerProduct);
+            int n = StockBay(plan, writeScene, stock, facingsPerProduct, null);
             slots += n;
 
             Tally(baysPerSection, zone.Section, 1);
@@ -226,6 +226,7 @@ public static class StoreLayout
             if (stock == null) continue;
             var slot = new ShelfSlot(null, marker.transform, Vector3.zero, false, marker.size,
                                      ShelfGrid.PackSize(counter).y + 0.04f);
+            slot.lightMask = RoomMask(slot.Position);
             stock.Add(slot);
             slot.Stock(counter.Category, counter.Id, filled: true);
         }
@@ -285,6 +286,30 @@ public static class StoreLayout
         }
     }
 
+    // What stands on a slot in the store is lit by that room's lights only, like the shelf.
+    static uint RoomMask(Vector3 p) => RoomLighting.LayersDefined ? (uint)RoomLighting.BitAt(p) : RoomLighting.Moving;
+
+    // Stocks bays that aren't the store's: the endless maze's, a chunk at a time, every bay
+    // selling `section` under the sign `sign`. Their slots go into `stock`, lit by every light.
+    public static List<ShelfSlot> StockBays(IReadOnlyList<ShelfUnit> units, ItemType section, string sign, ShelfStock stock)
+    {
+        var zone = new Zone { Sign = sign, Section = section };
+        var plans = new List<BayPlan>();
+        foreach (ShelfUnit unit in units) plans.Add(PlanBay(unit, zone));
+        plans.Sort((a, b) => ComparePositions(a.Unit.transform.position, b.Unit.transform.position));
+        FillGaps(plans, section);
+
+        var made = new List<ShelfSlot>();
+        foreach (BayPlan plan in plans)
+        {
+            plan.Unit.section = sign;
+            plan.Unit.category = section;
+            StockBay(plan, false, stock, null, RoomLighting.Moving);
+            made.AddRange(plan.Unit.Slots);
+        }
+        return made;
+    }
+
     static int ComparePositions(Vector3 a, Vector3 b)
     {
         int x = a.x.CompareTo(b.x);
@@ -293,7 +318,9 @@ public static class StoreLayout
 
     // Stocks one bay from its plan: ShelfGrid cuts each board into slots for its product, and
     // each slot starts full. With no `stock` it only counts them.
-    static int StockBay(BayPlan plan, bool writeScene, ShelfStock stock, Dictionary<string, int> facingsPerProduct)
+    // `lightMask`: what lights it, if not the room it stands in.
+    static int StockBay(BayPlan plan, bool writeScene, ShelfStock stock, Dictionary<string, int> facingsPerProduct,
+                        uint? lightMask)
     {
         Transform bay = plan.Unit.transform;
         ShelfUnit unit = plan.Unit;
@@ -317,6 +344,7 @@ public static class StoreLayout
                 slots++;
                 if (stock == null) continue;
                 var slot = new ShelfSlot(unit, bay, cell.Centre, cell.Back, cell.Size, height);
+                slot.lightMask = lightMask ?? RoomMask(slot.Position);
                 stock.Add(slot);
                 slot.Stock(section, id, filled: true);
                 made.Add(slot);
