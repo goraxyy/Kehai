@@ -15,7 +15,7 @@ aimed at a research audience.
 > ([`tools/blink/`](../../tools/blink/README.md)). The store itself is exported for people and
 > agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15. The infinite
 > maze, and far more stock, are planned in
-> [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): step 1 of 3 is done.
+> [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): steps 1 and 2 of 3 are built.
 
 ---
 
@@ -255,7 +255,7 @@ Pictures with it on and off are identical, and the room lighting measures the sa
 memory, the scene's size and load time, the linear lookups. A streamed maze can't be made of
 33,000 hand-placed objects.
 
-### Step 2: shelves as data
+### Step 2: shelves as data (built)
 
 Stock stops being GameObjects. A slot becomes a record:
 
@@ -273,8 +273,9 @@ Each bay owns its slots. The things that need GameObjects get them only while th
 - **Aiming.** The player's ray finds the first solid thing in reach. Then it's tested against
   the slot boxes on its way there, taken from a spatial grid. No slot needs a collider.
 - **Items in hand.** An item becomes a GameObject only when it leaves a shelf: taken by the
-  player or a shopper, or knocked off by Aiko. It comes from a pool, at the slot's exact pose.
-  Put back on a shelf, it returns to the pool and the slot records what's on it.
+  player or a shopper, or knocked off by Aiko. It's made at the slot's exact pose. Put back on
+  a shelf, it's destroyed and the slot records what's on it. (A pool turned out not to be
+  needed: items leave shelves a few times a minute, not a few hundred times a second.)
 - **Lookups.** A spatial grid and per-product lists replace the linear scans. Replays record
   slot changes from a change list instead of reading every slot.
 - **Migration.** One editor pass clears what the old way left in the scene:
@@ -289,6 +290,21 @@ Each bay owns its slots. The things that need GameObjects get them only while th
 - the render cost is no worse than step 1's;
 - shoppers, Aiko's shelf sweep, the eval's restock action and replays behave as before, by
   their tests and by a Play-mode check.
+
+**Where it got to (2026-10-07).** Built (`ShelfSlot`, `ShelfStock`, `ShelfDrawer`, `ShelfAim`):
+
+- **Shelved stock.** No GameObject stands for it. The editor shows the shelves stocked from
+  the planogram, with nothing baked.
+- **The scene.** It went from 92 MB to 6.2 MB, and the whole scene is now 4,662 GameObjects.
+  It's smaller than before the grid (19.5 MB), because the shelf prefabs' unused slots went
+  too.
+- **Tests.** All 128 EditMode tests pass, including the new `ShelfStockTests`: aiming, taking
+  and putting back, a bay counting its empty slots. Both replay tests pass too: a bot shift
+  recorded and played back, and the 10-second round trip.
+
+Still to measure: the render cost against step 1's 4.5 ms, and a Play-mode check of the
+player, shoppers and Aiko's shelf sweep. The editor stopped answering the tools that drive it
+before those ran.
 
 ### Step 3: chunks, then a maze without an end
 
@@ -321,7 +337,7 @@ call for later, once it can be walked.
 ### Order
 
 1. ~~GPU Resident Drawer, with GPU occlusion culling~~ done, 18.9 → 4.5 ms
-2. Shelves as data
+2. ~~Shelves as data~~ built: the scene is 92 → 6.2 MB. Render cost and Play-mode check to come
 3. Chunks (3a), a seeded maze (3b), streaming (3c)
 
 ---
@@ -497,8 +513,8 @@ rung F's `blink_advance` tactic moves inside what's left of the closure.
    (partly: `MazeMutation` moves bays between shifts from shift 7, validated for reachability)
 5. ~~**Blink**: keyboard → replay → webcam~~ done
 6. Infinite streaming maze: wanted (2026-10-07), and planned in
-   [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end). Step 1 is done; shelves as data
-   come next, then chunks
+   [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end). Steps 1 and 2 are built; chunks
+   come next
 
 The first three are the ones a research audience actually reads. Everything after is
 upside.

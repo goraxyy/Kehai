@@ -99,13 +99,14 @@ public static class StoreLayoutBuilder
             if (!string.IsNullOrEmpty(path)) prefabPaths.Add(path);
         }
 
-        // The till counter's slot: a missing script now (ShelfSlot isn't a component any
-        // more), with the SnapPoint its item stood on. The facing stands on the counter's top.
+        // The till counter's slot: a dead component now (ShelfSlot isn't a component any more,
+        // and Unity doesn't count that as a missing script), with the SnapPoint its item stood
+        // on. The facing stands on the counter's top.
         foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
         {
             if (t == null || t.GetComponentInParent<ShelfUnit>(true) != null) continue;
             Transform snap = t.Find("SnapPoint");
-            if (snap == null || GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject) == 0) continue;
+            if (snap == null || System.Array.IndexOf(t.GetComponents<Component>(), null) < 0) continue;
 
             var marker = new GameObject("Counter Facing");
             marker.transform.SetPositionAndRotation(snap.position - Vector3.up * Item.SnapHeight, t.rotation);
@@ -113,9 +114,12 @@ public static class StoreLayoutBuilder
             marker.AddComponent<CounterFacing>();
             Undo.RegisterCreatedObjectUndo(marker, "Migrate to data shelves");
 
-            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(t.gameObject);
-            if (!string.IsNullOrEmpty(path)) prefabPaths.Add(path);
-            t.gameObject.SetActive(false);
+            // Unity can't strip that dead component from the old slot's prefab, so the instance
+            // goes rather than carrying it.
+            if (PrefabUtility.GetOutermostPrefabInstanceRoot(t.gameObject) is GameObject own && own != t.gameObject)
+                t.gameObject.SetActive(false);
+            else
+                Undo.DestroyObjectImmediate(t.gameObject);
             counters++;
         }
 
