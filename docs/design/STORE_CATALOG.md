@@ -424,7 +424,7 @@ room. The ceiling lights have no shadows, so without it they shone through walls
 | `_Game/Level/Scripts/RoomLighting.cs` | keeps each room's lights in their room |
 | `_Game/Level/Scripts/ShelfSlot.cs` | one slot, as data: `requiredType`, `productId`, what's on it; hands an item out and takes it back |
 | `_Game/Level/Scripts/ShelfStock.cs` | every slot, and the lookups over them: by place, by bay, by change |
-| `_Game/Level/Scripts/ShelfDrawer.cs` | draws the stock with instanced calls, in the game and the editor |
+| `_Game/Level/Scripts/ShelfDrawer.cs` | shows the stock as bare render objects for the GPU Resident Drawer, in the game and the editor |
 | `_Game/Level/Scripts/ShelfAim.cs` | which slot the player is looking at |
 | `_Game/Level/Scripts/CounterFacing.cs` | the till counter's slot (mints) |
 | `_Game/Items/Scripts/ProductLook.cs` | dresses a placeholder item as its product's model |

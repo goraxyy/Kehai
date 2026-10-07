@@ -265,11 +265,17 @@ Stock stops being GameObjects. A slot becomes a record:
 
 Each bay owns its slots. The things that need GameObjects get them only while they need them:
 
-- **Drawing.** A drawer keeps, for each 10 m cell of the floor and each product, the positions
-  of the stocked slots. It draws each list with one instanced call
-  (`Graphics.RenderMeshInstanced`), on the cell's room layer, skipping cells outside the view.
-  It works in the editor too, so the shelves look stocked there without baking anything into
-  the scene.
+- **Drawing.** Each stocked slot gets a bare render object: the product's mesh and
+  materials, with no collider or script, hidden and never saved. Copies come from one
+  template per product and room, and the GPU Resident Drawer draws them, culling them one by
+  one, hidden ones included. It works in the editor too, so the shelves look stocked there
+  without baking anything into the scene.
+
+  The first version drew each product with instanced calls (`Graphics.RenderMeshInstanced`),
+  per 10 m cell and then per view. In Play that cost 5 ms more over the four views, because
+  instanced calls can't skip what the shelves hide. The render objects cost nothing
+  measurable: 4.2 ms against 4.5 ms with no stock at all, measured in the same run. Making
+  all 16,500 takes 0.6 s at load, in one batch per product.
 - **Aiming.** The player's ray finds the first solid thing in reach. Then it's tested against
   the slot boxes on its way there, taken from a spatial grid. No slot needs a collider.
 - **Items in hand.** An item becomes a GameObject only when it leaves a shelf: taken by the

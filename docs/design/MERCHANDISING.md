@@ -105,11 +105,12 @@ One slot holds one item. The item is centred in its slot, standing on the board,
 aisle (the back row faces the other aisle), so a full shelf looks full and an empty slot is a
 gap you can see.
 
-The slots and what's on them are data, not GameObjects: there are 16,500 of them. A slot is a
-`ShelfSlot`, `ShelfDrawer` draws the stock with instanced calls, and the player aims at a slot
-by ray against its box (`ShelfAim`). An item becomes a GameObject only when it leaves its
-shelf, and goes back to being data when it's put back
-([`IDEAS.md`](IDEAS.md#scaling-a-lot-of-stock-and-a-maze-with-no-end), step 2).
+The slots and what's on them are data: 16,500 records (`ShelfSlot`), with nothing about them
+saved in the scene. `ShelfDrawer` shows what stands on each as a bare render object (a mesh
+and its materials, no collider or script, never saved), which the GPU Resident Drawer culls
+one by one. The player aims at a slot by ray against its box (`ShelfAim`). An item becomes a
+real, interactive GameObject only when it leaves its shelf, and goes back to being data when
+it's put back ([`IDEAS.md`](IDEAS.md#scaling-a-lot-of-stock-and-a-maze-with-no-end), step 2).
 
 **The products are shown 1.5 times real size** so their labels read from the aisle. Tall ones are
 shown smaller so they fit under the board above: nothing is over 0.5 m, so the daikon is
