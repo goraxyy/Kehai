@@ -6,9 +6,9 @@ using UnityEngine;
 // the product's own model — mesh, materials, collider and weight — taken from its prefab in
 // Resources/Products/<id>, which Kehai/Products/1. Import Product Models makes.
 //
-// The item stays the same object, so the slot holding it, the replay following it and
-// anything else with a reference to it are none the wiser. Without an imported prefab the
-// placeholder box stays as it is.
+// The item stays the same object, so the replay following it and anything else with a
+// reference to it are none the wiser. Without an imported prefab the placeholder box stays as
+// it is. (Stock on the shelves isn't items at all: ShelfDrawer draws it from the same Look.)
 public static class ProductLook
 {
     public const string ResourceFolder = "Products";
@@ -67,8 +67,7 @@ public static class ProductLook
         return look;
     }
 
-    // Puts the product's model on an item. Play mode only: in the editor the layout pass
-    // writes ids into the scene, and baking 3,400 mesh swaps into it would be a lot of scene.
+    // Puts the product's model on an item. Play mode only: an edit to the scene would be saved.
     public static bool Apply(Item item)
     {
         if (item == null || !Application.isPlaying) return false;
@@ -98,13 +97,11 @@ public static class ProductLook
         if (item.TryGetComponent(out OutlineHighlight outline)) outline.Rebuild();
 
         item.RestHeight = look.RestHeight;
-        if (item.isOnShelf) item.ApplyShelfTransform();
         CullWhenTiny(item.gameObject, renderer);
         return true;
     }
 
-    // A tin of tuna 20 m down an aisle is a few pixels; past that it isn't drawn. Most of the
-    // shop's 3,400 products are that far from wherever the player stands.
+    // A tin of tuna 20 m down an aisle is a few pixels; past that it isn't drawn.
     public const float CullBelow = 0.004f;
 
     static void CullWhenTiny(GameObject go, Renderer renderer)

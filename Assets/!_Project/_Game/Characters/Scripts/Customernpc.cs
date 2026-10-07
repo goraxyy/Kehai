@@ -290,7 +290,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     // aisle in front of it.
     static Vector3 StandPoint(ShelfSlot slot)
     {
-        Vector3 p = slot.transform.position;
+        Vector3 p = slot.Position;
         return NavMesh.SamplePosition(p, out NavMeshHit hit, 2.5f, NavMesh.AllAreas) ? hit.position : p;
     }
 
@@ -451,20 +451,21 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         return true;
     }
 
+    // The closest stocked slot within reach, from the shop's grid of slots rather than all
+    // 16,500 of them.
     ShelfSlot FindNearestStockedSlot(System.Predicate<ShelfSlot> wanted = null)
     {
-        var slots = ShelfSlot.All;
+        ShelfStock.Current.Near(transform.position, shelfReachRadius, nearby);
         ShelfSlot nearest = null;
-        float nearestSqr = shelfReachRadius * shelfReachRadius;
+        float nearestSqr = float.MaxValue;
         Vector3 position = transform.position;
 
-        for (int i = 0; i < slots.Count; i++)
+        foreach (ShelfSlot slot in nearby)
         {
-            ShelfSlot slot = slots[i];
             if (!slot.isFilled) continue;
             if (wanted != null && !wanted(slot)) continue;
 
-            float sqr = (position - slot.transform.position).sqrMagnitude;
+            float sqr = (position - slot.Position).sqrMagnitude;
             if (sqr >= nearestSqr) continue;
 
             // Being close isn't enough — a shelf on the far side of a wall is metres away
@@ -478,20 +479,22 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         return nearest;
     }
 
+    readonly List<ShelfSlot> nearby = new List<ShelfSlot>();
+
     // True when nothing but this slot's own shelf sits between the customer and the slot.
     bool CanReach(ShelfSlot slot)
     {
-        Transform shelf = slot.owner != null ? slot.owner.transform : slot.transform.root;
+        Transform shelf = slot.owner != null ? slot.owner.transform : slot.frame.root;
 
         Vector3 from = transform.position + Vector3.up * 0.8f;
-        Vector3 to = slot.transform.position;
+        Vector3 to = slot.Position + Vector3.up * (slot.height * 0.5f);
         Vector3 direction = to - from;
         float distance = direction.magnitude;
         if (distance < 0.05f) return true;
 
         foreach (RaycastHit hit in Physics.RaycastAll(from, direction / distance, distance))
         {
-            if (hit.collider.isTrigger) continue;                          // slots themselves
+            if (hit.collider.isTrigger) continue;                          // triggers block nothing
             if (hit.collider.transform.IsChildOf(transform)) continue;     // ourselves
             if (hit.collider.transform.IsChildOf(shelf)) continue;         // the shelf we're reaching into
             return false;                                                  // a wall or another fixture

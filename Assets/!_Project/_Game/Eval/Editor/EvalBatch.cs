@@ -62,7 +62,7 @@ public static class EvalBatch
             sb.AppendLine($"== {path}");
             sb.AppendLine($"   roots {s.rootCount}, game objects {all.Length}");
             sb.AppendLine($"   shelf units {Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include).Length}, " +
-                          $"shelf slots {Object.FindObjectsByType<ShelfSlot>(FindObjectsInactive.Include).Length}, " +
+                          $"shelf slots {StoreLayout.BuildPreview()}, " +
                           $"items {Object.FindObjectsByType<Item>(FindObjectsInactive.Include).Length}, " +
                           $"lights {Object.FindObjectsByType<Light>(FindObjectsInactive.Include).Length}, " +
                           $"renderers {Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include).Length}");

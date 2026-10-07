@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Sits on a stocked shelf and highlights the whole unit while any of its slots are empty,
@@ -26,36 +27,32 @@ public class ShelfUnit : MonoBehaviour
     int emptyCount;
     bool initialised;
     bool countedAsNotFull;
+    readonly List<ShelfSlot> slots = new List<ShelfSlot>();
 
     public bool IsFull => emptyCount == 0;
+    public int EmptyCount => emptyCount;
+
+    // This bay's slots, which StoreLayout makes at load (they're data: ShelfSlot).
+    public IReadOnlyList<ShelfSlot> Slots => slots;
 
     void Awake()
     {
         outline = GetComponent<OutlineHighlight>();
-
-        // Claim every slot underneath us and take an initial census.
-        ShelfSlot[] slots = GetComponentsInChildren<ShelfSlot>(true);
-        emptyCount = 0;
-        foreach (ShelfSlot slot in slots)
-        {
-            slot.owner = this;
-            if (!slot.isFilled) emptyCount++;
-        }
-
         initialised = true;
         Refresh();
     }
 
-    // ShelfGrid replaced this bay's slots: claim the new ones and take the census again.
-    public void Rebind()
+    // StoreLayout has cut this bay's boards into slots: take them on and count the empty ones.
+    public void SetSlots(List<ShelfSlot> made)
     {
+        slots.Clear();
+        slots.AddRange(made);
         emptyCount = 0;
-        foreach (ShelfSlot slot in GetComponentsInChildren<ShelfSlot>(false))
+        foreach (ShelfSlot slot in slots)
         {
-            slot.owner = this;
+            slot.claimed = true;
             if (!slot.isFilled) emptyCount++;
         }
-        initialised = true;
         Refresh();
     }
 
@@ -99,14 +96,11 @@ public class ShelfUnit : MonoBehaviour
     }
 
     // Fills every empty slot in this shelf. Used by the stock crate.
-    public int FillAll(GameObject itemPrefab)
+    public int FillAll()
     {
         int filled = 0;
-        foreach (ShelfSlot slot in GetComponentsInChildren<ShelfSlot>(false))
-        {
-            if (slot.isFilled) continue;
-            if (slot.FillWithNewItem(itemPrefab)) filled++;
-        }
+        foreach (ShelfSlot slot in slots)
+            if (slot.Fill()) filled++;
         return filled;
     }
 }

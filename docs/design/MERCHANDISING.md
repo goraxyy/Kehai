@@ -8,7 +8,9 @@ strategy. The code it describes is in `Assets/!_Project/_Game/Level/Scripts/`:
 |---|---|
 | `Planogram.cs` | the rules and each aisle's layouts |
 | `ShelfGrid.cs` | how a shelf is cut into slots |
-| `StoreLayout.cs` | which aisle a bay belongs to |
+| `StoreLayout.cs` | which aisle a bay belongs to, and stocking the shop at load |
+| `ShelfSlot.cs`, `ShelfStock.cs` | the slots, as data, and the lookups over them |
+| `ShelfDrawer.cs`, `ShelfAim.cs` | drawing the stock, and aiming at a slot |
 
 [`STORE_CATALOG.md`](STORE_CATALOG.md) lists the 80 products themselves.
 
@@ -100,7 +102,14 @@ planogram picks its product. Each square is then filled with slots that fit that
 | anything bigger | 1 | the pizza box |
 
 One slot holds one item. The item is centred in its slot, standing on the board, facing the
-aisle, so a full shelf looks full and an empty slot is a gap you can see.
+aisle (the back row faces the other aisle), so a full shelf looks full and an empty slot is a
+gap you can see.
+
+The slots and what's on them are data, not GameObjects: there are 16,500 of them. A slot is a
+`ShelfSlot`, `ShelfDrawer` draws the stock with instanced calls, and the player aims at a slot
+by ray against its box (`ShelfAim`). An item becomes a GameObject only when it leaves its
+shelf, and goes back to being data when it's put back
+([`IDEAS.md`](IDEAS.md#scaling-a-lot-of-stock-and-a-maze-with-no-end), step 2).
 
 **The products are shown 1.5 times real size** so their labels read from the aisle. Tall ones are
 shown smaller so they fit under the board above: nothing is over 0.5 m, so the daikon is
@@ -268,6 +277,6 @@ the shelf is bare. [`STORE_CATALOG.md`](STORE_CATALOG.md) §9 has the details.
   hold the rules: nothing heavy at eye level, children's lines below it, a brand on one face.
 - **Change how many fit:** the square size and slot classes are at the top of `ShelfGrid.cs`;
   the display scale is in `ProductLook.cs`.
-- **See it in the editor:** **Kehai/Store/Stock the Maze with Product Prefabs** bakes the stocked
-  shelves, the signs and the lamps into the scene. The game builds the same at load by itself.
+- **See it in the editor:** the stocked shelves are drawn there from the planogram, as in the
+  game. **Kehai/Store/Hang Signs and Lamps** bakes the signs and lamps in to show them too.
 - **Count it:** **Kehai/Store/Report Layout** prints bays, facings and slots per aisle.

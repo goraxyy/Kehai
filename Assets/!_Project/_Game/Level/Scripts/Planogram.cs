@@ -278,7 +278,8 @@ public static class Planogram
 
     // ------------------------------------------------------------------ the live shop
 
-    // Every facing that stocks each product, filled in as StoreLayout stocks the shop.
+    // Every slot that stocks each product, filled in as StoreLayout stocks the shop (a slot
+    // registers once, when it's given its product).
     static readonly Dictionary<string, List<ShelfSlot>> facings = new Dictionary<string, List<ShelfSlot>>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -294,7 +295,7 @@ public static class Planogram
             list = new List<ShelfSlot>();
             facings[slot.productId] = list;
         }
-        if (!list.Contains(slot)) list.Add(slot);
+        list.Add(slot);
     }
 
     public static bool HasStock => facings.Count > 0;
@@ -313,11 +314,11 @@ public static class Planogram
         bool bestFilled = false;
         foreach (ShelfSlot slot in FacingsOf(productId))
         {
-            if (slot == null || !slot.isActiveAndEnabled || slot == except) continue;
+            if (slot == null || slot == except) continue;
             if (except != null && except.owner != null && slot.owner == except.owner) continue;
             bool filled = slot.isFilled;
             if (mustBeFilled && !filled) continue;
-            float sqr = (slot.transform.position - from).sqrMagnitude;
+            float sqr = (slot.Position - from).sqrMagnitude;
             // A filled facing beats an empty one however far it is.
             if (best == null || (filled && !bestFilled) || (filled == bestFilled && sqr < bestSqr))
             {

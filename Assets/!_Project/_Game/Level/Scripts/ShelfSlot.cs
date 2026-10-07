@@ -2,24 +2,80 @@ using System.Collections.Generic;
 using Kehai.Aiko;
 using UnityEngine;
 
-public class ShelfSlot : MonoBehaviour, IInteractable
+// One slot on a shelf: the place one item stands, as data. A full shop has 16,500 of them;
+// when each was a GameObject, and the item on it another, the stock alone was 33,000 objects.
+// Now ShelfDrawer draws what stands on the slots, and an item becomes a GameObject only when
+// it leaves one: taken by the player or a shopper, or knocked off by Aiko (IDEAS.md,
+// "Scaling", step 2).
+//
+// A slot is kept relative to the bay it's on (its frame), so a bay that's moved takes its
+// stock along. The player aims at one through ShelfAim, which tests the ray against the
+// slots' boxes instead of a collider each.
+public sealed class ShelfSlot : IInteractable
 {
-    // Live registry of every enabled slot. With thousands of slots in a level,
-    // FindObjectsByType<ShelfSlot>() is far too expensive to call per shift — let alone
-    // per frame, which the old enemy AI used to do while sabotaging.
-    static readonly List<ShelfSlot> all = new List<ShelfSlot>();
-    public static IReadOnlyList<ShelfSlot> All => all;
+    // Every slot in the shop. A slot's place in this list is its number in a replay.
+    public static IReadOnlyList<ShelfSlot> All => ShelfStock.Current.Slots;
 
-    [Tooltip("The section this facing belongs to. Only items from the same section fit.")]
+    // The bay it's on, which counts its empty slots; null for the till counter's.
+    public readonly ShelfUnit owner;
+
+    // What it's placed relative to: its bay, or the counter's marker.
+    public readonly Transform frame;
+
+    // On the board, in the frame's space: the middle of the cell, at the board's surface.
+    public readonly Vector3 local;
+
+    // Faces the frame's back (+Z) aisle rather than its front (-Z).
+    public readonly bool facesBack;
+
+    // The cell's floor, in the frame's space: x along the board, y into it.
+    public readonly Vector2 cell;
+
+    // How tall what stands here is, for aiming at it.
+    public readonly float height;
+
+    // The section this facing belongs to. Only items from the same section fit.
     public ItemType requiredType;
 
-    [Tooltip("The planogram: which ProductCatalog id this facing is stocked with. " +
-             "Within a section any item still fits — this is what the shelf *should* hold, " +
-             "and it's what a customer asks for by name. Set by Kehai/Store/Apply Layout.")]
+    // The planogram: what this facing should hold, and what a customer asks for by name.
     public string productId;
 
-    public Transform snapPoint;
-    public AudioClip itemDropSound;
+    public bool isFilled { get; private set; }
+
+    // What's actually standing here: the planogram's product, or whatever of its section the
+    // player put back. Null when empty.
+    public string StockedId { get; private set; }
+
+    public int Index { get; private set; } = -1;
+    internal Vector2Int gridKey;
+    internal bool claimed;      // its bay has counted it, and hears when it empties or fills
+    ShelfStock stock;
+    string registeredFor;
+
+    public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, bool facesBack, Vector2 cell, float height)
+    {
+        this.owner = owner;
+        this.frame = frame;
+        this.local = local;
+        this.facesBack = facesBack;
+        this.cell = cell;
+        this.height = height;
+    }
+
+    internal void Attach(ShelfStock to, int index)
+    {
+        stock = to;
+        Index = index;
+    }
+
+    // On the board, in the world.
+    public Vector3 Position => frame.TransformPoint(local);
+
+    // Which way what stands here faces: products are made with their label to -Z.
+    public Quaternion Rotation => facesBack ? frame.rotation * Quaternion.Euler(0f, 180f, 0f) : frame.rotation;
+
+    // Toward the aisle it faces.
+    public Vector3 Outward => Rotation * Vector3.back;
 
     // The SKU stocked here, or null on a facing that has only been given a section.
     public ProductDef Product => ProductCatalog.Get(productId);
@@ -27,58 +83,21 @@ public class ShelfSlot : MonoBehaviour, IInteractable
     // What to call whatever belongs here: the product if there is one, the section if not.
     public string Label => ProductCatalog.Label(requiredType, productId);
 
-    [Header("Snap Rotation")]
-    public Vector3 snapRotationOffset = Vector3.zero;
-
-    [Tooltip("How far the snap point is above the board. The old shelf prefabs hold their item " +
-             "by its middle, 0.2 up; ShelfGrid's slots sit on the board, 0.")]
-    public float snapLift = Item.SnapHeight;
-
-    [HideInInspector] public bool isFilled;
-    [HideInInspector] public Item storedItem;
-
-    // Set by ShelfUnit.Awake so the shelf can track how many of its slots are empty.
-    [HideInInspector] public ShelfUnit owner;
-
-    int registryIndex = -1;
-
-    void OnEnable()
-    {
-        registryIndex = all.Count;
-        all.Add(this);
-    }
-
-    void OnDisable()
-    {
-        if (registryIndex < 0) return;
-
-        // Swap-remove keeps deregistration O(1); order in the registry doesn't matter.
-        int last = all.Count - 1;
-        if (registryIndex != last)
-        {
-            all[registryIndex] = all[last];
-            all[registryIndex].registryIndex = registryIndex;
-        }
-        all.RemoveAt(last);
-        registryIndex = -1;
-    }
-
-    // Gives the slot its section and product, from the planogram, and makes whatever is
-    // already standing on it the same product, stood on the board.
-    public void Stock(ItemType section, string id)
+    // Gives the slot its section and product, from the planogram, full or empty. What stands
+    // on it becomes that product too, so the player never picks cereal off the drinks shelf.
+    public void Stock(ItemType section, string id, bool filled)
     {
         requiredType = section;
         productId = id;
-        Planogram.Register(this);
-
-        if (storedItem == null) return;
-        storedItem.SetProduct(section, id);
-        if (storedItem.isOnShelf && storedItem.transform.parent == snapPoint)
+        if (isFilled != filled || (filled && StockedId != id)) Set(filled, filled ? id : null);
+        if (registeredFor != id)
         {
-            storedItem.shelfLift = snapLift;
-            storedItem.ApplyShelfTransform();
+            registeredFor = id;
+            Planogram.Register(this);
         }
     }
+
+    // ---------------------------------------------------------------- the player
 
     public void Interact(PlayerInteract player)
     {
@@ -95,124 +114,163 @@ public class ShelfSlot : MonoBehaviour, IInteractable
 
         if (isFilled)
         {
-            // Pick item up from shelf
             if (player.carrySlot.IsFull())
             {
                 Debug.Log("Inventory full!");
                 return;
             }
 
-            Item taken = storedItem;
-            storedItem.SetCarried(false, null);
-            player.carrySlot.TryPickup(storedItem);
-            storedItem = null;
-            isFilled = false;
-            if (owner != null) owner.OnSlotEmptied();
+            Item taken = TakeItem();
+            if (taken == null) return;
+            player.carrySlot.TryPickup(taken);
             GameEvents.RaisePlayerTookFromShelf(this, taken);
         }
         else
         {
-            // Place item on shelf
             if (!player.carrySlot.IsCarrying) return;
 
-            Item heldItem = player.carrySlot.currentItem;
-            if (heldItem.type != requiredType)
+            Item held = player.carrySlot.currentItem;
+            if (held.type != requiredType)
             {
                 Debug.Log("Wrong item type!");
                 return;
             }
 
             player.carrySlot.Drop();
-            heldItem.SetOnShelf(snapPoint, snapRotationOffset, snapLift);
-            storedItem = heldItem;
-            isFilled = true;
-            if (owner != null) owner.OnSlotFilled();
+            Put(held);
 
-            OneShotAudio.PlayAt(itemDropSound, transform.position);
-            NoiseBus.Emit(transform.position, 0.45f, NoiseKind.Stocking, NoiseAuthor.Player);
-            GameEvents.RaisePlayerShelvedItem(this, heldItem);
+            NoiseBus.Emit(Position, 0.45f, NoiseKind.Stocking, NoiseAuthor.Player);
+            GameEvents.RaisePlayerShelvedItem(this, held);
             if (owner != null && owner.IsFull) GameEvents.RaiseShelfRestocked(owner, 1);
         }
     }
 
-    // Called by customers taking an item off the shelf. Hands over the stored item and
-    // leaves the slot empty, so restocking it becomes work for the player.
+    public string GetPrompt() =>
+        isFilled ? "Pick up " + ProductCatalog.Label(requiredType, StockedId) : "Place " + Label;
+
+    // ---------------------------------------------------------------- stock coming and going
+
+    // The item standing here, made real: a GameObject of the product, where it stood, and
+    // the slot empty. For the player's hands and shoppers' baskets.
     public Item TakeItem()
     {
-        if (!isFilled || storedItem == null) return null;
-
-        Item taken = storedItem;
-        storedItem = null;
-        isFilled = false;
-        if (owner != null) owner.OnSlotEmptied();
-        return taken;
+        if (!isFilled) return null;
+        Item item = Spawn(StockedId);
+        if (item == null) return null;
+        Set(false, null);
+        return item;
     }
 
-    // Spawns a brand new item straight into this slot — used when restocking from a crate.
-    public bool FillWithNewItem(GameObject itemPrefab)
+    // Puts an item on the slot. It stops being a GameObject: the slot records what it was.
+    public bool Put(Item item)
     {
-        if (isFilled || itemPrefab == null || snapPoint == null) return false;
-
-        // The product's own prefab when it has been imported; the placeholder box otherwise.
-        GameObject prefab = ProductLook.Prefab(productId);
-        GameObject spawned = Object.Instantiate(prefab != null ? prefab : itemPrefab);
-        Item item = spawned.GetComponent<Item>();
-        if (item == null) { Object.Destroy(spawned); return false; }
-
-        // One placeholder prefab restocks the whole store, so the spawned item takes on
-        // this facing's identity — and its look. Without this every restocked shelf in the
-        // building would fill up with cereal, whatever its sign said.
-        item.SetProduct(requiredType, productId);
-
-        item.SetOnShelf(snapPoint, snapRotationOffset, snapLift);
-        storedItem = item;
-        isFilled = true;
-        if (owner != null) owner.OnSlotFilled();
+        if (isFilled || item == null) return false;
+        string id = string.IsNullOrEmpty(item.productId) ? productId : item.productId;
+        if (Application.isPlaying) Object.Destroy(item.gameObject);
+        else Object.DestroyImmediate(item.gameObject);
+        Set(true, id);
         return true;
     }
 
-    // Called by Aiko to knock an item off the shelf (her shelf sweep)
+    // Restocks it with the planogram's product, from the crate.
+    public bool Fill()
+    {
+        if (isFilled) return false;
+        Set(true, productId);
+        return true;
+    }
+
+    // Aiko's shelf sweep: the item tumbles off into the aisle.
     public void Eject()
     {
         if (!isFilled) return;
+        Item item = Spawn(StockedId);
+        Set(false, null);
+        if (item == null) return;
 
-        if (storedItem != null)
-        {
-            storedItem.SetCarried(false, null);
-            storedItem.lastAuthor = NoiseAuthor.Aiko;
-
-            Rigidbody rb = storedItem.GetComponent<Rigidbody>();
-            if (rb != null)
-                rb.AddForce(transform.forward * 2f + Vector3.up * 0.5f, ForceMode.Impulse);
-
-            OneShotAudio.PlayAt(itemDropSound, transform.position);
-
-            storedItem = null;
-        }
-
-        isFilled = false;
-        if (owner != null) owner.OnSlotEmptied();
+        item.SetCarried(false, null);
+        item.lastAuthor = NoiseAuthor.Aiko;
+        if (item.TryGetComponent(out Rigidbody body))
+            body.AddForce(Outward * 2f + Vector3.up * 0.5f, ForceMode.Impulse);
     }
 
-    public string GetPrompt()
+    // A replay showing the shelf as it was: the look only, nobody told.
+    public void Show(bool filled, string product)
     {
-        if (isFilled)
-            return "Pick up " + (storedItem != null ? storedItem.DisplayName : Label);
-
-        return "Place " + Label;
+        isFilled = filled;
+        StockedId = filled ? (string.IsNullOrEmpty(product) ? productId : product) : null;
+        stock?.NotifyChanged(this);
     }
 
-#if UNITY_EDITOR
-    // Replaces the old per-frame Update() that pushed snapRotationOffset into the stored
-    // item every frame for every slot. This fires only when the value is edited.
-    void OnValidate()
+    void Set(bool filled, string id)
     {
-        if (!Application.isPlaying) return;
-        if (isFilled && storedItem != null)
+        bool was = isFilled;
+        isFilled = filled;
+        StockedId = filled ? id : null;
+        if (owner != null && claimed && was != filled)
         {
-            storedItem.shelfRotationOffset = snapRotationOffset;
-            storedItem.ApplyShelfTransform();
+            if (filled) owner.OnSlotFilled();
+            else owner.OnSlotEmptied();
         }
+        stock?.NotifyChanged(this);
     }
-#endif
+
+    // Where an item of `id` stands here: its origin is the middle of its box, so it's lifted
+    // by its rest height off the board.
+    public void Pose(string id, out Vector3 position, out Quaternion rotation)
+    {
+        rotation = Rotation;
+        ProductLook.Look? look = ProductLook.For(id);
+        float rest = look != null ? look.Value.RestHeight : Item.SnapHeight;
+        position = Position + rotation * (Vector3.up * rest);
+    }
+
+    Item Spawn(string id)
+    {
+        GameObject prefab = ProductLook.Prefab(id);
+        if (prefab == null) prefab = ShelfStock.Placeholder;
+        if (prefab == null) return null;
+
+        Pose(id, out Vector3 position, out Quaternion rotation);
+        GameObject go = Object.Instantiate(prefab, position, rotation);
+        if (!go.TryGetComponent(out Item item))
+        {
+            Object.Destroy(go);
+            return null;
+        }
+        ProductDef product = ProductCatalog.Get(id);
+        item.SetProduct(product != null ? product.Category : requiredType, id);
+        item.isOnShelf = false;
+        return item;
+    }
+
+    // ---------------------------------------------------------------- aiming
+
+    // Where a ray first enters this slot's box (the cell, as tall as what stands in it), if
+    // it does.
+    public bool RayHit(Ray ray, out float distance)
+    {
+        distance = 0f;
+        Vector3 o = frame.InverseTransformPoint(ray.origin) - local - new Vector3(0f, height * 0.5f, 0f);
+        Vector3 d = frame.InverseTransformDirection(ray.direction);
+        var half = new Vector3(cell.x * 0.5f - 0.005f, height * 0.5f, cell.y * 0.5f - 0.005f);
+
+        float near = float.NegativeInfinity, far = float.PositiveInfinity;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float oa = o[axis], da = d[axis], h = half[axis];
+            if (Mathf.Abs(da) < 1e-6f)
+            {
+                if (oa < -h || oa > h) return false;
+                continue;
+            }
+            float t1 = (-h - oa) / da, t2 = (h - oa) / da;
+            if (t1 > t2) (t1, t2) = (t2, t1);
+            near = Mathf.Max(near, t1);
+            far = Mathf.Min(far, t2);
+            if (near > far || far < 0f) return false;
+        }
+        distance = Mathf.Max(0f, near);
+        return true;
+    }
 }

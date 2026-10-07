@@ -83,22 +83,18 @@ namespace Kehai.Replay
 
         // ---- things ------------------------------------------------------------------------
 
-        // An item by its recorded key: the product it was, or its section, or a box.
+        // An item by its recorded key: the product it was (one in the scene, or its prefab: stock
+        // on the shelves isn't GameObjects to copy), or its section, or a box.
         public GameObject MakeItem(string key, string name)
         {
             GameObject source = null;
-            if (!string.IsNullOrEmpty(key) && !itemByProduct.TryGetValue(key, out source) &&
-                System.Enum.TryParse(key, out ItemType type)) itemByType.TryGetValue(type, out source);
+            if (!string.IsNullOrEmpty(key) && !itemByProduct.TryGetValue(key, out source))
+            {
+                source = ProductLook.Prefab(key);
+                if (source == null && System.Enum.TryParse(key, out ItemType type)) itemByType.TryGetValue(type, out source);
+            }
             source = source != null ? source : anyItem;
             return source != null ? Copy(source, name) : Box(name, new Vector3(0.25f, 0.3f, 0.12f), new Color(0.8f, 0.75f, 0.6f));
-        }
-
-        public GameObject MakeItemFor(string productId, ItemType type)
-        {
-            GameObject source = null;
-            if (!string.IsNullOrEmpty(productId)) itemByProduct.TryGetValue(productId, out source);
-            if (source == null) itemByType.TryGetValue(type, out source);
-            return Copy(source != null ? source : anyItem, "Restocked " + productId);
         }
 
         public GameObject MakeSpill(string name) =>

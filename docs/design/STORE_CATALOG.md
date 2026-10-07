@@ -402,8 +402,9 @@ layouts.
 
 In short: `StoreLayout` decides which aisle a bay belongs to, and `Planogram` picks the product
 for each board and face of it. `ShelfGrid` cuts the board into slots for that product, with one
-item in each slot. The shop stocks itself at load. **Kehai/Store/Stock the Maze with Product
-Prefabs** bakes it into the scene so the editor shows it too.
+item in each slot. The shop stocks itself at load, as data: a slot is a record (`ShelfSlot`),
+`ShelfDrawer` draws what stands on them, in the editor as well, and an item becomes a
+GameObject only when it leaves its shelf.
 
 A black sign hangs at 4 m over the middle of each aisle's bays, and a lamp sits over every
 ceiling light (`AisleSigns`, `CeilingLamps`). `RoomLighting` keeps each room's lights in their
@@ -421,14 +422,18 @@ room. The ceiling lights have no shadows, so without it they shone through walls
 | `_Game/Level/Scripts/AisleSigns.cs` | the hanging aisle signs |
 | `_Game/Level/Scripts/CeilingLamps.cs` | a lamp over every ceiling light, dark when its light is off |
 | `_Game/Level/Scripts/RoomLighting.cs` | keeps each room's lights in their room |
-| `_Game/Level/Scripts/ShelfSlot.cs` | `requiredType` + `productId` per facing; `Label`; stamps restocked items |
+| `_Game/Level/Scripts/ShelfSlot.cs` | one slot, as data: `requiredType`, `productId`, what's on it; hands an item out and takes it back |
+| `_Game/Level/Scripts/ShelfStock.cs` | every slot, and the lookups over them: by place, by bay, by change |
+| `_Game/Level/Scripts/ShelfDrawer.cs` | draws the stock with instanced calls, in the game and the editor |
+| `_Game/Level/Scripts/ShelfAim.cs` | which slot the player is looking at |
+| `_Game/Level/Scripts/CounterFacing.cs` | the till counter's slot (mints) |
 | `_Game/Items/Scripts/ProductLook.cs` | dresses a placeholder item as its product's model |
 | `_Game/Items/Editor/ProductImport.cs` | `Kehai/Products/…`: imports the models and lays out the showcase on `Models_Island` |
 | `_Game/Characters/Scripts/ShoppingList.cs` | what a shopper came in for, in walking order |
 | `_Game/Characters/Scripts/CustomerQuestion.cs` | how they ask, and how they say thanks |
-| `_Game/Level/Scripts/ShelfUnit.cs` | `section` sign and `category` per bay |
+| `_Game/Level/Scripts/ShelfUnit.cs` | `section` sign and `category` per bay; its slots and how many are empty |
 | `_Game/Characters/Scripts/CustomerRequest.cs` | asks for a product by name; the bubble's position |
-| `_Game/Level/Editor/StoreLayoutBuilder.cs` | `Kehai/Store/Report Layout` and `Kehai/Store/Apply Layout` |
+| `_Game/Level/Editor/StoreLayoutBuilder.cs` | `Kehai/Store/…`: Report Layout, Apply Layout, Hang Signs and Lamps, Migrate to Data Shelves |
 
 **The shop stocks itself at load** — `StoreLayout` has a `[RuntimeInitializeOnLoadMethod]`
 that runs the plan over every bay before the first frame. Nothing needs to be baked for the
@@ -517,7 +522,8 @@ the placeholder boxes until the import is run.
   island's floor: one row per section in walking order, the section's name at the head of each
   row, each product's name and price on the floor in front of it. The floor is stretched north
   to fit.
-- **Kehai/Store/Stock the Maze with Product Prefabs** puts each facing's product prefab on every
-  slot in the maze and hangs the aisle signs, so the editor shows the stocked shop. The game
-  does the same by itself at load, so this is only for seeing it, and it adds a few thousand
-  objects to the scene.
+- The editor shows the stocked shop by itself: `ShelfDrawer` draws it from the planogram, as
+  the game does. **Kehai/Store/Hang Signs and Lamps** bakes the aisle signs and lamps in so the
+  editor shows them too. **Kehai/Store/Migrate to Data Shelves** clears out a scene from before
+  stock was data: the slots and items baked onto the bays, the shelf prefabs' unused slots, and
+  the till counter's slot, which becomes a `CounterFacing`.

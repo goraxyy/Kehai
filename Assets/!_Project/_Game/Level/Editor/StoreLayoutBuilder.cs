@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -5,17 +6,16 @@ using UnityEngine;
 
 // Authoring front end for StoreLayout, which is where the plan itself lives.
 //
-// The game stocks the shop at load, so neither of these is needed to play. They are here
-// for working on the layout: "Report" prints what the plan makes of the scene as it stands,
-// and "Apply" bakes it in so the Inspector shows each bay's section and each facing's
-// product instead of the placeholder cereal they were built with.
+// The game stocks the shop at load, so none of these is needed to play:
+//   - "Report Layout" prints what the plan makes of the scene as it stands;
+//   - "Apply Layout" writes each bay's aisle into the scene, so the Inspector shows it (every
+//     bay becomes a prefab override, so reach for the report first);
+//   - "Hang Signs and Lamps" bakes the aisle signs and the ceiling lamps in, so the editor
+//     shows them too (the game hangs its own at load either way);
+//   - "Migrate to Data Shelves" clears out what the shop held before stock was data.
 //
-// Baking is optional and costs something — every facing becomes a prefab override in a
-// scene file that is already a megabyte — so reach for the report first.
-//
-// "Stock the Maze with Product Prefabs" goes further and bakes the stocked shop itself: every
-// board cut into ShelfGrid's slots with a product prefab in each, the aisle signs and the lamps.
-// That is what the game does by itself at load; baked, the editor shows it too.
+// The stock itself isn't baked into anything: ShelfDrawer draws it in the editor from the
+// planogram, as the game does.
 public static class StoreLayoutBuilder
 {
     [MenuItem("Kehai/Store/Report Layout")]
@@ -45,67 +45,20 @@ public static class StoreLayoutBuilder
         Undo.CollapseUndoOperations(group);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
-        Debug.Log($"Baked the store layout into the scene: {facings} facings.\n\n" +
+        Debug.Log($"Wrote the store layout into the scene ({facings} slots).\n\n" +
                   StoreLayout.Describe());
     }
 
     const string LevelMaterials = "Assets/!_Project/_Game/Level/Materials";
 
-    [MenuItem("Kehai/Store/Stock the Maze with Product Prefabs")]
-    public static void StockWithProductsMenu() => Debug.Log(StockWithProducts());
+    [MenuItem("Kehai/Store/Hang Signs and Lamps")]
+    public static void HangSignsAndLampsMenu() => Debug.Log(HangSignsAndLamps());
 
-    // Bakes the whole stocked shop into the scene: every bay's boards cut into ShelfGrid's
-    // slots, each slot holding its product's prefab, then the aisle signs and the lamps. The
-    // game builds all of this by itself at load when the scene doesn't have it; baked, the
-    // editor shows it. Rerunning replaces the last bake. It is not undoable (tens of thousands
-    // of objects): save before, and reopen the scene to throw it away.
-    public static string StockWithProducts()
+    // The aisle signs over the bays and a lamp over every ceiling light, with their materials
+    // as assets so the scene can keep them. English only: the Japanese needs the computer's
+    // fonts, which the game picks up at load. Rerunning replaces the last ones.
+    public static string HangSignsAndLamps()
     {
-        int bays = 0, slots = 0, items = 0, cleared = 0;
-        foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include))
-        {
-            Transform bay = unit.transform;
-            StoreLayout.Zone zone = StoreLayout.ZoneAt(bay.position);
-
-            // The prefab's own six-to-a-board slots: drop the product prefabs a previous bake
-            // put on them, then switch them off (one override per bay).
-            Transform old = bay.Find("Slots");
-            if (old != null)
-            {
-                foreach (Item item in old.GetComponentsInChildren<Item>(true))
-                    if (PrefabUtility.IsAddedGameObjectOverride(item.gameObject)) { Object.DestroyImmediate(item.gameObject); cleared++; }
-                if (old.gameObject.activeSelf)
-                {
-                    old.gameObject.SetActive(false);
-                    if (PrefabUtility.IsPartOfPrefabInstance(old.gameObject))
-                        PrefabUtility.RecordPrefabInstancePropertyModifications(old.gameObject);
-                }
-            }
-
-            Transform grid = bay.Find(ShelfGrid.RootName);
-            if (grid != null) Object.DestroyImmediate(grid.gameObject);
-
-            int seed = Mathf.Abs(Mathf.RoundToInt(bay.position.x) * 73856093 ^ Mathf.RoundToInt(bay.position.z) * 19349663);
-            bool endCap = Planogram.IsEndCap(bay);
-            foreach (ShelfGrid.Facing facing in ShelfGrid.Facings(bay))
-            {
-                string id = Planogram.ProductFor(zone.Section, seed, facing.Back, Planogram.BoardAt(facing.Height), endCap);
-                ProductDef product = ProductCatalog.Get(id);
-                ItemType section = product != null ? product.Category : zone.Section;
-                Transform group = ShelfGrid.Build(bay, facing, product, section,
-                    (prefab, parent) => (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent));
-                foreach (ShelfSlot slot in group.GetComponentsInChildren<ShelfSlot>(true))
-                {
-                    slots++;
-                    if (slot.storedItem != null) items++;
-                }
-            }
-            bays++;
-        }
-
-        // Ids and each bay's section, through the usual pass.
-        ApplyLayout();
-
         int signs = AisleSigns.Build(Asset("M_SignBoard", AisleSigns.BoardColour, 0.2f, false),
                                      Asset("M_SignBadge", AisleSigns.BadgeColour, 0.2f, false),
                                      Asset("M_SignWire", AisleSigns.WireColour, 0.3f, false),
@@ -114,11 +67,95 @@ public static class StoreLayoutBuilder
                                                 Asset("M_SignWire", AisleSigns.WireColour, 0.3f, false),
                                                 Asset("M_LampPanelOn", new Color(1f, 0.98f, 0.92f), 0f, true),
                                                 Asset("M_LampPanelOff", new Color(0.12f, 0.12f, 0.12f), 0.4f, false));
-
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        return $"Stocked the maze: {bays} bays, {slots} slots, {items} items" +
-               (cleared > 0 ? $" ({cleared} products from the last bake cleared)" : "") +
-               $"; {signs} aisle signs and {lamps.lamps.Count} lamps hung. Not saved yet.";
+        return $"Hung {signs} aisle signs and {lamps.lamps.Count} lamps. Not saved yet.";
+    }
+
+    // ---------------------------------------------------------------- migration
+
+    [MenuItem("Kehai/Store/Migrate to Data Shelves")]
+    public static void MigrateMenu() => Debug.Log(MigrateToDataShelves());
+
+    // Stock used to be GameObjects: a slot with a trigger for every place an item stood, and
+    // the item on it another. This clears what that left in the open scene and the prefabs:
+    //   - each bay's baked GridSlots (the old Kehai/Store/Stock the Maze);
+    //   - the shelf prefabs' own Slots, six to a board, which nothing has used since the grid;
+    //   - the till counter's slot, which becomes a CounterFacing standing where its item stood;
+    // and puts in the drawer that shows the stock in the editor. Save the scene after.
+    public static string MigrateToDataShelves()
+    {
+        int baked = 0, prefabs = 0, counters = 0, stripped = 0;
+        var units = Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include);
+        var prefabPaths = new HashSet<string>();
+        foreach (ShelfUnit unit in units)
+        {
+            Transform grid = unit.transform.Find(ShelfGrid.LegacyRootName);
+            if (grid != null)
+            {
+                Object.DestroyImmediate(grid.gameObject);
+                baked++;
+            }
+            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(unit.gameObject);
+            if (!string.IsNullOrEmpty(path)) prefabPaths.Add(path);
+        }
+
+        // The till counter's slot: a missing script now (ShelfSlot isn't a component any
+        // more), with the SnapPoint its item stood on. The facing stands on the counter's top.
+        foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+        {
+            if (t == null || t.GetComponentInParent<ShelfUnit>(true) != null) continue;
+            Transform snap = t.Find("SnapPoint");
+            if (snap == null || GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject) == 0) continue;
+
+            var marker = new GameObject("Counter Facing");
+            marker.transform.SetPositionAndRotation(snap.position - Vector3.up * Item.SnapHeight, t.rotation);
+            if (t.parent != null) marker.transform.SetParent(t.parent, true);
+            marker.AddComponent<CounterFacing>();
+            Undo.RegisterCreatedObjectUndo(marker, "Migrate to data shelves");
+
+            string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(t.gameObject);
+            if (!string.IsNullOrEmpty(path)) prefabPaths.Add(path);
+            t.gameObject.SetActive(false);
+            counters++;
+        }
+
+        foreach (string path in prefabPaths)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            bool changed = false;
+            Transform old = root.transform.Find("Slots");
+            if (old != null)
+            {
+                Object.DestroyImmediate(old.gameObject);
+                changed = true;
+            }
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            {
+                int n = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
+                stripped += n;
+                changed |= n > 0;
+            }
+            if (changed)
+            {
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                prefabs++;
+            }
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        // Overrides on what the prefabs no longer have.
+        foreach (ShelfUnit unit in units)
+        {
+            GameObject instance = PrefabUtility.GetOutermostPrefabInstanceRoot(unit.gameObject);
+            if (instance != null)
+                PrefabUtility.RemoveUnusedOverrides(new[] { instance }, InteractionMode.AutomatedAction);
+        }
+
+        ShelfDrawer drawer = ShelfDrawer.Ensure();
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        return $"Migrated to data shelves: {baked} baked bays cleared, {prefabs} prefabs cleaned " +
+               $"({stripped} missing scripts stripped), {counters} counter facing{(counters == 1 ? "" : "s")} made, " +
+               $"drawer '{drawer.name}' in the scene. Save the scene.";
     }
 
     // A material as an asset, so the scene can keep it. `unlit` for the lamps' glowing panels.

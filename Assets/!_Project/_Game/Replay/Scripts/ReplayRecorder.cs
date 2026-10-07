@@ -81,9 +81,10 @@ namespace Kehai.Replay
         PlayerTools tools;
 
         List<ShelfSlot> slots;                  // as they were at the start: slot numbers stay put
-        readonly HashSet<Item> onShelves = new HashSet<Item>();
         bool[] slotFilled;
         string[] slotProduct;
+        ShelfStock watchedStock;                // tells us which slots changed, so they aren't all read
+        readonly HashSet<int> changedSlots = new HashSet<int>();
         IReadOnlyList<Light> lights;
         bool[] lightOn;
         int circuits = -1;
@@ -303,11 +304,11 @@ namespace Kehai.Replay
             for (int i = 0; i < slots.Count; i++)
             {
                 ShelfSlot s = slots[i];
-                slotFilled[i] = s != null && s.isFilled;
-                slotProduct[i] = s != null ? s.productId : "";
-                Vector3 at = s == null ? Vector3.zero : s.snapPoint != null ? s.snapPoint.position : s.transform.position;
-                h.Slots.Add((at, slotFilled[i], slotProduct[i]));
+                slotFilled[i] = s.isFilled;
+                slotProduct[i] = Shown(s);
+                h.Slots.Add((s.Position, slotFilled[i], slotProduct[i]));
             }
+            WatchStock(ShelfStock.Current);
 
             lights = LightProbe.CeilingLights;
             lightOn = new bool[lights.Count];
@@ -460,18 +461,13 @@ namespace Kehai.Replay
         }
 
         // An item is recorded from the moment it leaves its shelf: in a hand, dropped, thrown,
-        // knocked off. While it sits on a shelf the slot events say where it is. (The items
-        // placed in the scene sit in their slots without isOnShelf set, so a slot holding an
-        // item counts as its shelf too.)
+        // knocked off. On a shelf it isn't a GameObject at all (stock is data), and the slot
+        // events say what's there.
         void DiscoverItems()
         {
-            onShelves.Clear();
-            if (slots != null)
-                foreach (ShelfSlot slot in slots)
-                    if (slot != null && slot.isFilled && slot.storedItem != null) onShelves.Add(slot.storedItem);
             foreach (Item item in Item.All)
             {
-                if (item == null || byOwner.ContainsKey(item) || item.isOnShelf || onShelves.Contains(item) || !item.gameObject.activeInHierarchy) continue;
+                if (item == null || byOwner.ContainsKey(item) || item.isOnShelf || !item.gameObject.activeInHierarchy) continue;
                 TrackItem(item);
             }
         }
@@ -485,7 +481,7 @@ namespace Kehai.Replay
             return Track(item, KrecKind.Item, item.transform, key, item.DisplayName, () =>
             {
                 int s;
-                if (it.isOnShelf || onShelves.Contains(it)) s = KrecState.ItemOnShelf;
+                if (it.isOnShelf) s = KrecState.ItemOnShelf;
                 else if (!it.isCarried) s = KrecState.ItemLoose;
                 else if ((carry != null && carry.Contains(it)) || (tools != null && tools.HeldTool == it.gameObject)) s = KrecState.ItemInHand;
                 else s = KrecState.ItemHeld;
@@ -530,18 +526,37 @@ namespace Kehai.Replay
             writer.Camera(t, view.transform.position, view.transform.rotation, view.fieldOfView, lids != null ? lids.Closed01 : 0f, held);
         }
 
+        // The slots that changed since last time, from the stock's change list.
         void RecordSlots(float t)
         {
-            if (slots == null) return;
-            for (int i = 0; i < slots.Count && i < slotFilled.Length; i++)
+            if (slots == null || changedSlots.Count == 0) return;
+            foreach (int i in changedSlots)
             {
+                if (i < 0 || i >= slots.Count || i >= slotFilled.Length) continue;
                 ShelfSlot s = slots[i];
-                if (s == null) continue;
-                if (s.isFilled == slotFilled[i] && s.productId == slotProduct[i]) continue;
+                string shown = Shown(s);
+                if (s.isFilled == slotFilled[i] && shown == slotProduct[i]) continue;
                 slotFilled[i] = s.isFilled;
-                slotProduct[i] = s.productId;
-                writer.Slot(t, i, s.isFilled, s.productId);
+                slotProduct[i] = shown;
+                writer.Slot(t, i, s.isFilled, shown);
             }
+            changedSlots.Clear();
+        }
+
+        // What a slot shows: what's on it, or what it's for when it's empty.
+        static string Shown(ShelfSlot s) => (s.isFilled ? s.StockedId : s.productId) ?? "";
+
+        void WatchStock(ShelfStock stock)
+        {
+            if (watchedStock != null) watchedStock.Changed -= OnSlotChanged;
+            watchedStock = stock;
+            changedSlots.Clear();
+            if (watchedStock != null) watchedStock.Changed += OnSlotChanged;
+        }
+
+        void OnSlotChanged(ShelfSlot slot)
+        {
+            if (slots != null && slot.Index >= 0 && slot.Index < slots.Count && slots[slot.Index] == slot) changedSlots.Add(slot.Index);
         }
 
         void RecordLights(float t)
@@ -607,6 +622,7 @@ namespace Kehai.Replay
 
         void Unhook()
         {
+            WatchStock(null);
             if (brain != null)
             {
                 brain.Log.Written -= OnThought;

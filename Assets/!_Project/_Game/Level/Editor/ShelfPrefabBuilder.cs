@@ -9,7 +9,9 @@ using UnityEngine;
 
 // Regenerates the whole shelf pipeline:
 //   Shelves/Models/  3-platform (2 for "short") model prefabs — geometry only
-//   Shelves/Ready/   variants of those, with Slots + Items + a ShelfPoint for customers
+//   Shelves/Ready/   variants of those, with a ShelfUnit and a ShelfPoint for customers. Their
+//                    slots aren't in the prefab: StoreLayout cuts the boards into ShelfGrid's
+//                    slots at load, as data (ShelfSlot).
 // Menu items are under Kehai/Shelves so this can be re-run after tweaking the constants.
 public static class ShelfPrefabBuilder
 {
@@ -18,7 +20,6 @@ public static class ShelfPrefabBuilder
     const string ShelvesFolder = PrefabsRoot + "/Shelves";
     const string ModelsFolder = ShelvesFolder + "/Models";
     const string ReadyFolder = ShelvesFolder + "/Ready";
-    const string ItemPrefabPath = "Assets/!_Project/_Game/Items/Prefabs/Item_def.prefab";
     const string OutlineMaterialPath = "Assets/!_Project/_Game/Characters/Materials/CustomerOutline.mat";
 
     // Shelf heights: a full shelf's back wall spans 0..2, a "short" one 0..1.25.
@@ -32,10 +33,6 @@ public static class ShelfPrefabBuilder
     // solid base block (the "b" pillars) still line up with the runs they connect to.
     const float StandardBottom = 0.225f;
 
-    // Stocking density. Raise SlotSpacing to cut the item count across the level.
-    const float SlotSpacing = 0.6f;
-    const float ItemHalfHeight = 0.2f;    // Item_def is 0.4 tall
-    const float TwoRowDepth = 0.8f;       // platforms at least this deep get a row on each side
     const float ThinPlatformMax = 0.1f;   // thicker "polka" pieces are structural bases, not shelves
 
     const float ShelfPointClearance = 0.9f; // how far in front of the shelf a customer stands
@@ -77,9 +74,7 @@ public static class ShelfPrefabBuilder
     public static void BuildReady()
     {
         EnsureFolder(ReadyFolder);
-        var itemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ItemPrefabPath);
         var log = new StringBuilder("Ready prefabs:\n");
-        int grandTotal = 0;
 
         foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { ModelsFolder }))
         {
@@ -92,19 +87,15 @@ public static class ShelfPrefabBuilder
             GameObject root = (GameObject)PrefabUtility.InstantiatePrefab(model);
             root.name = readyName;
 
-            int slots = PopulateSlots(root, itemPrefab);
             AddShelfPoint(root);
             AddRestockHighlight(root);
 
             PrefabUtility.SaveAsPrefabAsset(root, $"{ReadyFolder}/{readyName}.prefab");
             Object.DestroyImmediate(root);
-
-            grandTotal += slots;
-            log.AppendLine($"  {readyName}: {slots} slots/items");
+            log.AppendLine($"  {readyName}");
         }
 
         AssetDatabase.SaveAssets();
-        log.AppendLine($"  total slots across prefab types: {grandTotal}");
         Debug.Log(log.ToString());
     }
 
@@ -254,77 +245,6 @@ public static class ShelfPrefabBuilder
         return deleted;
     }
 
-    // ---------------------------------------------------------------- stocking
-
-    static int PopulateSlots(GameObject root, GameObject itemPrefab)
-    {
-        var slotsRoot = new GameObject("Slots");
-        slotsRoot.transform.SetParent(root.transform, false);
-
-        int interactable = LayerMask.NameToLayer("Interactable");
-        int created = 0;
-
-        foreach (Transform platform in Platforms(root))
-        {
-            float surfaceY = platform.localPosition.y + platform.localScale.y * 0.5f;
-            float sizeX = platform.localScale.x;
-            float sizeZ = platform.localScale.z;
-
-            int columns = Mathf.Max(1, Mathf.FloorToInt(sizeX / SlotSpacing));
-            int rows = sizeZ >= TwoRowDepth ? 2 : 1;
-
-            for (int r = 0; r < rows; r++)
-            {
-                float z = platform.localPosition.z + (r - (rows - 1) * 0.5f) * (sizeZ / rows);
-                for (int c = 0; c < columns; c++)
-                {
-                    float x = platform.localPosition.x + (c - (columns - 1) * 0.5f) * (sizeX / columns);
-
-                    var slotGO = new GameObject($"ShelfSlot_{created:D3}");
-                    slotGO.layer = interactable;
-                    slotGO.transform.SetParent(slotsRoot.transform, false);
-                    slotGO.transform.localPosition = new Vector3(x, surfaceY, z);
-
-                    var box = slotGO.AddComponent<BoxCollider>();
-                    box.isTrigger = true;
-                    box.center = new Vector3(0f, ItemHalfHeight, 0f);
-                    box.size = new Vector3(0.26f, 0.44f, 0.26f);
-
-                    var snap = new GameObject("SnapPoint");
-                    snap.layer = interactable;
-                    snap.transform.SetParent(slotGO.transform, false);
-                    snap.transform.localPosition = new Vector3(0f, ItemHalfHeight, 0f);
-
-                    var slot = slotGO.AddComponent<ShelfSlot>();
-                    // Every facing starts as cereal; StoreLayoutBuilder gives it its
-                    // real section and product once the prefab is placed in the scene.
-                    slot.requiredType = ItemType.Cereal;
-                    slot.snapPoint = snap.transform;
-                    slot.snapRotationOffset = Vector3.zero;
-
-                    var item = (GameObject)PrefabUtility.InstantiatePrefab(itemPrefab);
-                    item.transform.SetParent(snap.transform, false);
-                    item.transform.localPosition = Vector3.zero;
-                    item.transform.localRotation = Quaternion.identity;
-
-                    var itemComponent = item.GetComponent<Item>();
-                    itemComponent.isOnShelf = true;
-                    itemComponent.isCarried = false;
-                    var rb = item.GetComponent<Rigidbody>();
-                    rb.isKinematic = true;
-                    rb.useGravity = false;
-                    item.GetComponent<Collider>().enabled = false;
-
-                    slot.isFilled = true;
-                    slot.storedItem = itemComponent;
-                    created++;
-                }
-            }
-        }
-
-        return created;
-    }
-
     // A spot in front of the shelf for customers to stand while browsing.
     static void AddShelfPoint(GameObject root)
     {
@@ -361,7 +281,7 @@ public static class ShelfPrefabBuilder
 
     static IEnumerable<Transform> Platforms(GameObject root)
     {
-        // Only the model's own platforms — never anything under Slots.
+        // Only the model's own platforms, not the structural bases.
         foreach (Transform child in root.transform)
             if (child.name.ToLower().Contains("polka") && child.localScale.y < ThinPlatformMax)
                 yield return child;

@@ -8,9 +8,9 @@ using UnityEngine;
 // the aisle's number in a white square, its name, and the Japanese under it, in a rounded face.
 // It hangs over the middle of its aisle's bays.
 //
-// Built at load from StoreLayout.Zones, like the stock. Kehai/Store/Stock the Maze bakes a copy
-// into the scene so the editor shows them too; the game replaces it with its own at load (with
-// the Japanese, which needs the computer's fonts).
+// Built at load from StoreLayout.Zones, like the stock. Kehai/Store/Hang Signs and Lamps bakes a
+// copy into the scene so the editor shows them too; the game replaces it with its own at load
+// (with the Japanese, which needs the computer's fonts).
 public static class AisleSigns
 {
     public const string RootName = "AisleSigns";

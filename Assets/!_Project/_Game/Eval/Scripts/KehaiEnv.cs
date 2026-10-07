@@ -429,10 +429,10 @@ namespace Kehai.Eval
             yield return Approach(stand, 1.2f, a, r);
             if (r.Finished) yield break;
 
-            ShelfSlot slot = bay.GetComponentsInChildren<ShelfSlot>()
-                .OrderBy(s => (s.transform.position - Driver.transform.position).sqrMagnitude).FirstOrDefault();
+            ShelfSlot slot = bay.Slots
+                .OrderBy(s => (s.Position - Driver.transform.position).sqrMagnitude).FirstOrDefault();
             if (slot == null) { r.Fail("bay has no slots"); yield break; }
-            yield return Tap(slot, slot.transform.position);
+            yield return Tap(slot, slot.Position);
             if (bay.IsFull) r.Pass("restocked"); else r.Fail("restock didn't take");
         }
 

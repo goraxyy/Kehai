@@ -6,8 +6,8 @@ using UnityEngine;
 // panel glows while its light is on and goes dark when that light is off (a blackout, a tripped
 // breaker, Aiko), so the lights you can see are the lights that are working.
 //
-// Built at load like the aisle signs, or kept from the scene when Kehai/Store/Stock the Maze
-// has baked it in.
+// Built at load like the aisle signs, or kept from the scene when Kehai/Store/Hang Signs and
+// Lamps has baked it in.
 public class CeilingLamps : MonoBehaviour
 {
     public const string RootName = "CeilingLamps";
