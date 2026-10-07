@@ -34,7 +34,7 @@ using Debug = UnityEngine.Debug;
 public static class KehaiBuild
 {
     // GuideMarker's rings and beacons, and Aiko's fog.
-    static readonly string[] RuntimeShaders = { "Universal Render Pipeline/Unlit", "Universal Render Pipeline/Particles/Unlit" };
+    static readonly string[] RuntimeShaders = { "Universal Render Pipeline/Unlit", "Universal Render Pipeline/Particles/Unlit", "Universal Render Pipeline/Lit" };
 
     const string CameraReason = GameNames.Game + " can watch for your blinks through the webcam, if you turn that on " +
                                 "in its settings. Nothing is recorded, and nothing leaves this computer.";

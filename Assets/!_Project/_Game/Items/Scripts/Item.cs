@@ -46,6 +46,27 @@ public class Item : MonoBehaviour
     // otherwise.
     public string DisplayName => ProductCatalog.Label(type, productId);
 
+    // A shelf slot's snap point sits this far above its board (ShelfPrefabBuilder's
+    // ItemHalfHeight): half the height of the placeholder box, whose middle it holds.
+    public const float SnapHeight = 0.2f;
+
+    // From this item's origin, the centre of its box, down to the bottom of its mesh. A
+    // product shorter or taller than the placeholder is lifted or lowered by the difference so
+    // it stands on the board instead of floating over it or sinking into it.
+    [System.NonSerialized] public float restHeight = SnapHeight;
+
+    // Where on its slot the item stands, when the slot shows a block of the product around it.
+    [System.NonSerialized] public Vector3 shelfPositionOffset;
+
+    // Makes this a particular product: its section, its id, and — once the product has been
+    // imported — its own model in place of the placeholder box.
+    public void SetProduct(ItemType section, string id)
+    {
+        type = section;
+        productId = id;
+        ProductLook.Apply(this);
+    }
+
     [Header("Impact Sound")]
     [Tooltip("Played when this lands on the floor, a shelf, or another item.")]
     public AudioClip impactSound;
@@ -93,6 +114,13 @@ public class Item : MonoBehaviour
         // children, and leaving those live while carried let them swing across the
         // crosshair as the player turned or strafed, re-targeting the mop in your hands.
         colliders = GetComponentsInChildren<Collider>(true);
+
+        var filter = GetComponent<MeshFilter>();
+        if (filter != null && filter.sharedMesh != null)
+        {
+            Bounds b = filter.sharedMesh.bounds;
+            restHeight = (b.extents.y - b.center.y) * transform.localScale.y;
+        }
     }
 
     // No Update(): with thousands of items in a level, re-applying a transform every frame
@@ -132,7 +160,7 @@ public class Item : MonoBehaviour
 
     public void ApplyShelfTransform()
     {
-        transform.localPosition = Vector3.zero;
+        transform.localPosition = shelfPositionOffset + Vector3.up * (restHeight - SnapHeight);
         transform.localRotation = Quaternion.Euler(shelfRotationOffset);
     }
 
@@ -176,12 +204,13 @@ public class Item : MonoBehaviour
     }
 
     // Called when placed on a shelf snap point
-    public void SetOnShelf(Transform snapPoint, Vector3 rotationOffset)
+    public void SetOnShelf(Transform snapPoint, Vector3 rotationOffset, Vector3 positionOffset = default)
     {
         gameObject.SetActive(true);
         isCarried = false;
         isOnShelf = true;
         shelfRotationOffset = rotationOffset;
+        shelfPositionOffset = positionOffset;
 
         if (rb != null)
         {

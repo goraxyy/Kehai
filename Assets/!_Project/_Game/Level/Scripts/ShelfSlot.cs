@@ -36,6 +36,13 @@ public class ShelfSlot : MonoBehaviour, IInteractable
     // Set by ShelfUnit.Awake so the shelf can track how many of its slots are empty.
     [HideInInspector] public ShelfUnit owner;
 
+    // How much board this slot has, x along the shelf and y into it. Set when the shop is
+    // stocked; the block of product drawn round the item is cut to fit it.
+    [System.NonSerialized] public Vector2 footprint = Backstock.DefaultFootprint;
+
+    Backstock backstock;
+    Vector3 itemCell;
+
     int registryIndex = -1;
 
     void OnEnable()
@@ -57,6 +64,41 @@ public class ShelfSlot : MonoBehaviour, IInteractable
         }
         all.RemoveAt(last);
         registryIndex = -1;
+    }
+
+    // Gives the facing its section and product, from the planogram, and makes whatever is
+    // already standing on it the same product.
+    public void Stock(ItemType section, string id, Vector2 boardFootprint)
+    {
+        requiredType = section;
+        productId = id;
+        footprint = boardFootprint;
+        Planogram.Register(this);
+        RefreshBackstock();
+
+        if (storedItem == null) return;
+        storedItem.SetProduct(section, id);
+        if (storedItem.isOnShelf && storedItem.transform.parent == snapPoint)
+        {
+            storedItem.shelfPositionOffset = itemCell;
+            storedItem.ApplyShelfTransform();
+        }
+    }
+
+    // Shows the rest of the facing round the item while the slot is filled, and works out
+    // which cell of that block the item itself stands in.
+    void RefreshBackstock()
+    {
+        if (!Application.isPlaying) return;
+        if (ProductLook.For(productId) == null)
+        {
+            if (backstock != null) backstock.Hide();
+            itemCell = Vector3.zero;
+            return;
+        }
+
+        if (backstock == null) backstock = Backstock.On(this);
+        itemCell = backstock.Show(productId, footprint, isFilled);
     }
 
     public void Interact(PlayerInteract player)
@@ -86,6 +128,7 @@ public class ShelfSlot : MonoBehaviour, IInteractable
             player.carrySlot.TryPickup(storedItem);
             storedItem = null;
             isFilled = false;
+            RefreshBackstock();
             if (owner != null) owner.OnSlotEmptied();
             GameEvents.RaisePlayerTookFromShelf(this, taken);
         }
@@ -102,9 +145,10 @@ public class ShelfSlot : MonoBehaviour, IInteractable
             }
 
             player.carrySlot.Drop();
-            heldItem.SetOnShelf(snapPoint, snapRotationOffset);
+            heldItem.SetOnShelf(snapPoint, snapRotationOffset, itemCell);
             storedItem = heldItem;
             isFilled = true;
+            RefreshBackstock();
             if (owner != null) owner.OnSlotFilled();
 
             OneShotAudio.PlayAt(itemDropSound, transform.position);
@@ -123,6 +167,7 @@ public class ShelfSlot : MonoBehaviour, IInteractable
         Item taken = storedItem;
         storedItem = null;
         isFilled = false;
+        RefreshBackstock();
         if (owner != null) owner.OnSlotEmptied();
         return taken;
     }
@@ -132,19 +177,22 @@ public class ShelfSlot : MonoBehaviour, IInteractable
     {
         if (isFilled || itemPrefab == null || snapPoint == null) return false;
 
-        GameObject spawned = Object.Instantiate(itemPrefab);
+        // The product's own prefab when it has been imported; the placeholder box otherwise.
+        GameObject prefab = ProductLook.Prefab(productId);
+        GameObject spawned = Object.Instantiate(prefab != null ? prefab : itemPrefab);
         Item item = spawned.GetComponent<Item>();
         if (item == null) { Object.Destroy(spawned); return false; }
 
         // One placeholder prefab restocks the whole store, so the spawned item takes on
-        // this facing's identity. Without this every restocked shelf in the building would
-        // fill up with cereal, whatever its sign said.
-        item.type = requiredType;
-        item.productId = productId;
+        // this facing's identity — and its look. Without this every restocked shelf in the
+        // building would fill up with cereal, whatever its sign said.
+        item.SetProduct(requiredType, productId);
+        RefreshBackstock();
 
-        item.SetOnShelf(snapPoint, snapRotationOffset);
+        item.SetOnShelf(snapPoint, snapRotationOffset, itemCell);
         storedItem = item;
         isFilled = true;
+        RefreshBackstock();
         if (owner != null) owner.OnSlotFilled();
         return true;
     }
@@ -169,6 +217,7 @@ public class ShelfSlot : MonoBehaviour, IInteractable
         }
 
         isFilled = false;
+        RefreshBackstock();
         if (owner != null) owner.OnSlotEmptied();
     }
 
