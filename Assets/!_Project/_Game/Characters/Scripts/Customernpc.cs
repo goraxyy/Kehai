@@ -10,6 +10,11 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     static readonly List<CustomerNPC> all = new List<CustomerNPC>();
     public static IReadOnlyList<CustomerNPC> All => all;
 
+    // Shoppers are plain soft orange: one material for all of them, made here rather than kept
+    // as an asset. The face keeps its own.
+    public static readonly Color BodyColour = new Color(1f, 0.68f, 0.42f);
+    static Material body;
+
     [Header("Route (leave empty if CustomerSpawner will assign these)")]
     public Transform[] shelfPoints;
     public Transform cashierPoint;
@@ -97,8 +102,25 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     bool forcedHighlight;
     readonly List<Item> basket = new List<Item>();
 
+    // Gives a shopper (or a copy of one, as replays make) its body colour.
+    public static GameObject Dress(GameObject shopper)
+    {
+        if (shopper == null || !shopper.TryGetComponent(out MeshRenderer renderer)) return shopper;
+        if (body == null)
+        {
+            Shader lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            body = new Material(lit) { name = "Shopper", color = BodyColour };
+            if (body.HasProperty("_BaseColor")) body.SetColor("_BaseColor", BodyColour);
+            if (body.HasProperty("_Smoothness")) body.SetFloat("_Smoothness", 0.15f);
+        }
+        renderer.sharedMaterial = body;
+        return shopper;
+    }
+
     void Awake()
     {
+        Dress(gameObject);
+
         if (agent == null)
             agent = GetComponent<NavMeshAgent>();
 

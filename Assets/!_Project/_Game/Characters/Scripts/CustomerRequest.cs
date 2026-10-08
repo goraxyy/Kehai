@@ -32,12 +32,13 @@ public class CustomerRequest : MonoBehaviour
     [Tooltip("How far the player can stand and still hold the conversation.")]
     public float talkRange = 5f;
 
-    [Tooltip("Height of the bottom edge of the bubble above the floor. It sits down by " +
-             "the customer's shins and grows upward from there.")]
+    [Tooltip("Height of the bottom edge of the bubble above the customer's middle (its " +
+             "pivot). It grows upward from there.")]
     public float bubbleHeight = 0.25f;
 
-    [Tooltip("How far in front of the customer's legs the bubble hangs.")]
-    public float bubbleForward = 0.4f;
+    [Tooltip("How far in front of the customer's body the bubble hangs: measured from its " +
+             "surface, not its middle, so the bubble is never inside it.")]
+    public float bubbleClearance = 0.5f;
 
     [Tooltip("{0} is the product. Both a named line - \"Pipisi Zero\" - and a loose one " +
              "- \"a tin of Tunatastic\" - drop into these, so they all read as object " +
@@ -383,6 +384,14 @@ public class CustomerRequest : MonoBehaviour
 
     static ShelfSlot NearestSlotTo(Vector3 position, float radius) => ShelfStock.Current.Nearest(position, radius);
 
+    // How far the body reaches out from its middle: the capsule's radius, or the agent's.
+    float BodyRadius()
+    {
+        if (TryGetComponent(out CapsuleCollider capsule))
+            return capsule.radius * Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z));
+        return TryGetComponent(out NavMeshAgent agent) ? agent.radius : 0.5f;
+    }
+
     void Begin()
     {
         homePosition = transform.position;
@@ -392,7 +401,7 @@ public class CustomerRequest : MonoBehaviour
         StopWalking();
         npc.SetForcedHighlight(true);
 
-        bubble = SpeechBubble.Create(transform, bubbleHeight, bubbleForward);
+        bubble = SpeechBubble.Create(transform, bubbleHeight, BodyRadius() + bubbleClearance);
 
         // Nothing is said until the player asks — the cone overhead is the whole hint.
         askMarker = GuideMarker.CreateBeaconOver(
