@@ -79,7 +79,8 @@ namespace Kehai.Replay
             return root;
         }
 
-        public GameObject MakeCustomer(string name) => customerPrefab != null ? Copy(customerPrefab, name) : Capsule(name, ReplayLook.Other);
+        public GameObject MakeCustomer(string name) =>
+            customerPrefab != null ? CustomerNPC.Dress(Copy(customerPrefab, name)) : Capsule(name, ReplayLook.Other);
 
         // ---- things ------------------------------------------------------------------------
 
