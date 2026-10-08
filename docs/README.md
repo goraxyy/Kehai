@@ -22,6 +22,12 @@ The repository's markdown files, by what they're for. The project [`README`](../
 | [`MARKETING.md`](production/MARKETING.md) | the devlog and early-player plan |
 | [`PLAYTEST.md`](production/PLAYTEST.md) | how playtests run: the build, consent, the upload, the reports |
 
+## Engineering: how it's built
+
+| document | what it covers |
+|---|---|
+| [`DECISIONS.md`](engineering/DECISIONS.md) | the heavy decisions and why: the repository, measuring, rendering, shelves as data, the endless maze, Aiko's fairness, replays, the pipelines, and what's still open |
+
 ## Results
 
 | document | what it covers |
