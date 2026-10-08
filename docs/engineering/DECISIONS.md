@@ -4,7 +4,7 @@ The decisions that shaped how Kehai is built: what was chosen, what it was chose
 it costs, and the numbers behind it. The newest work, the scaling of the shop and the endless
 maze, is covered in the most detail, because it changed the most. The plans themselves live in
 [`IDEAS.md`](../design/IDEAS.md) (under *Scaling* and *Infinite maze*); this file is the
-record of why.
+record of why, and of the problems met on the way and how they were solved (§10).
 
 Each decision says where it lives in the code and which pull request made it.
 
@@ -19,7 +19,8 @@ Each decision says where it lives in the code and which pull request made it.
 7. [Recording and replays](#7-recording-and-replays)
 8. [Saves, names and sound](#8-saves-names-and-sound)
 9. [The pipelines: marketing and playtests](#9-the-pipelines-marketing-and-playtests)
-10. [Known costs and open questions](#10-known-costs-and-open-questions)
+10. [Problems and how they were solved](#10-problems-and-how-they-were-solved)
+11. [Known costs and open questions](#11-known-costs-and-open-questions)
 
 ---
 
@@ -504,7 +505,121 @@ away.
 
 ---
 
-## 10. Known costs and open questions
+## 10. Problems and how they were solved
+
+What went wrong along the way, why, and what fixed it. A dash in the last column means it was
+found and fixed while verifying, not in a pull request of its own.
+
+### 10.1 Rendering and light
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| The GPU Resident Drawer seemed to do nothing | Its BatchRendererGroup shader variants were stripped, so the editor quietly fell back. The setting is read-only through the API, and changing it during Play didn't stick. | *Keep All* set through the settings file itself, out of Play. `PerformanceSettingsTests` now fails if it's switched off. | #34 |
+| Ceiling lights lit the next room through the walls, and the sun lit the staff room | The 240 ceiling spots cast no shadows | Each room on its own rendering layer (§3.2) | #30 |
+| Then every room went dark | URP silently drops rendering-layer bits that have no name, and the rooms were on 8–12. The leak test passed only because the rooms had no direct light at all. | The rooms moved to layers 1–5, which URP names by default. The code warns instead of splitting the rooms if the names are missing, and tests check the layers are ones URP keeps. | #31 |
+| Product blocks doubled an aisle's render cost (14.4 against 8.1 ms) | About 10 million vertices of stacked product | Capped at 2 deep and 12 units and LOD'd; later replaced by one item per slot | #29, #30 |
+| Drawn stock cost 7.3 ms | Instanced calls: 356 of them for one view, and they can't skip what the shelves hide | Merged into one call per product per view, then replaced by render objects the GPU Resident Drawer culls (§4.2) | #38, #39 |
+| The render objects cost 19.6 ms, not the 4.2 ms first reported | `InstantiateAsync` copies are never taken up by the GPU Resident Drawer. The 4.2 was timed in the same frame, before the drawer had registered anything. | Copies made with `Instantiate`; every measurement waits frames after a change (§2.1) | #40 |
+| In a fresh Play session the stock looked 16 ms dearer than before | Three sets of hidden experiment objects (marked *don't save*) survived from an earlier session and were being drawn | Found by listing every hidden root object, then deleted. A picture is now taken with every measurement. | — |
+
+### 10.2 The shelves and the scene
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| A 92 MB scene that took 16 s to save, and lookups that scanned all 16,502 slots | About 33,000 stock objects were saved in the scene | Shelves as data (§4.1): 6.2 MB | #35 |
+| The migration found no till-counter slot | Unity's missing-script count skips a component whose script is no longer a MonoBehaviour: it reads as null instead | The migration looks for null components, and deletes the old slot, since Unity can't strip the dead component from its prefab | #36 |
+| Items stood 0.2 m above their boards in the editor | `Item.Awake` measured an item's rest height, and Awake doesn't run in the editor | Measured the first time it's read | #31 |
+| Mochi Bites and the hand sanitiser were never on sale | Sweets only have one-sided bays, and Mochi Bites only ever has a back face. Sanitiser was planned only at eye level, on aisles of mostly short bays. | Every bay is planned first. A product left with no facing takes one from the product with the most in its aisle, on a board it's allowed on. | #31 |
+| Restocked shelves filled with cereal | What the stock crate spawned didn't take the facing's section or product | The facing's section and product are stamped on whatever the crate spawns | #9 |
+| Bot shifts had every shelf holding placeholder cereal | The evaluation reloads the store for each episode, and only the first scene loaded was stocked | Every scene load is stocked | #11 |
+| Shoppers' speech bubbles sat inside their bodies | The bubble hung 0.4 m from the middle of a capsule 0.5 m round. The value was written for an older model with its pivot at the feet, and the local prefab kept it. | Measured from the body's surface. The field was renamed, so the stale prefab value no longer applies. | #41 |
+
+### 10.3 The endless maze
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| Shelf pieces would have landed off their walls | The prefabs aren't centred on their pivots: the pillar's footprint is 3.2 m from its pivot | Each piece is placed by the middle of its footprint. Checked in Play: 0 of 434 runs and 0 of 557 pillars off. | #37 |
+| Crossing a chunk border stalled 9 or 10 frames, at 40 to 240 ms each | Five causes, from re-scanning the whole stock to rebuilding the NavMesh after every chunk | Five fixes (§5.4): now 0 to 4 frames of 35 to 55 ms | #37 |
+
+### 10.4 Navigation, doors and the evaluation
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| Every path, shoppers' and Aiko's, could go through walls | The NavMesh bake missed the store's 3 cm walls | `NavMeshWalls` carves them in at load | #10 |
+| Doors swung toward whoever opened them | The code used a forward axis that runs along the panel | Doors swing away and carve their open panel out of the NavMesh, with one `Use()` for the player, Aiko and the agent | #10 |
+| Maze mutation lost the floor in headless runs | It rebaked the NavMesh from render meshes, which aren't there headless | It rebakes from colliders | #10 |
+| The first ablation runs broke fairness: a tell after its effect, and a re-catch straight after a lecture | — | Fixed, and the fairness rules are tested (§6.2) | #10 |
+| Bot shifts after the first in one process drift a little | Engine-side threading | Runs compare paired seeds and average. Worked around, not fixed. | #10 |
+
+### 10.5 Sound
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| The store radio echoed | Dozens of speakers out of phase, and virtualised voices came back at the wrong point in the song | One shared DSP clock; far speakers are stopped, not virtualised | #5 |
+| Sounds were inaudible a metre or two away | Unity's default fall-off | Peaks normalised, with a linear fall-off over tens of metres | #11 |
+| The door chime played again for each customer | `OnTriggerEnter` runs once per body | The chime plays only when the doors go from closed to open | #7 |
+| A dropped item clattered in bursts | Every bounce made a sound | Contacts under 1.2 m/s are silent, with a 0.12 s cooldown | #7 |
+
+### 10.6 The player and the interface
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| A carried mop kept re-targeting itself | Its child colliders, on the layer the crosshair aims at, stayed on | Every collider is off while an item is carried | #7 |
+| Tools never outlined on hover | The outline skipped any mesh with an item in its parents, the tool's own included | It skips only meshes belonging to a different item | #5 |
+| The webcam never took over from the keyboard for blinking | The camera counted as live only once read, and was read only once live | The loop is broken, with a test | #12 |
+| The main menu's first line stayed lit under a resting cursor | Hovering counted as selecting | A line is lit only when it's selected | #30 |
+| The shift analysis cut "Karen is " off with a fixed `Substring(9)` | A fixed length breaks when the name changes | It measures the prefix | #13 |
+
+### 10.7 Recording, replays and clips
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| The replay recorder tracked 3,600 extra entities | Every shelf item carried a pickup component, which was first taken to mean "tool" | Items are tracked only once they're off their shelf | #15 |
+| A blackout made one 324-second clip "moment" | Overlapping markers chained the whole shift together | Moments are capped at 45 s, and a long marker stretches one by at most 20 s | #14 |
+| A playtest package held an empty replay | The replay still being written was packed before it was finished | Recordings are finished before packing | #25 |
+
+### 10.8 Builds and the editor
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| Builds lacked the shaders of materials made in code | No material asset used them, so builds stripped them | The build script adds them to *Always Included Shaders* | #22 |
+| 過労死 didn't show in builds | TextMesh Pro's default font has no Japanese | Banners with Japanese use the computer's Japanese font | #22 |
+| macOS would kill the game when the blink helper opened the camera | The game had no `NSCameraUsageDescription` | Added to Info.plist, and the app re-signed | #22 |
+| Pressing Play showed nothing | Since the project moved folders, the editor started on an empty Untitled scene every launch | `OpenStoreOnLaunch` opens the first scene in the build list | #23 |
+
+### 10.9 The pipelines
+
+| problem | why | how it was solved | PR |
+|---|---|---|---|
+| Video renders failed through Remotion's ffmpeg | Its ffmpeg can't read raw frames from a pipe | Replay renders pipe PNG frames, encoded on worker threads | #17 |
+| The first video mix clipped | The game's sound sat on top of the voice and music | The game sound is staged and ducked, and every video is mastered to −14 LUFS | #17 |
+| One bad Telegram update stopped the whole poll, and undo restored the wrong version | — | Both fixed, with tests | #19 |
+| Scheduled jobs were missed while the Mac slept, and a bot run froze when the lid closed | n8n had to be running; sleep stops everything | launchd runs a missed calendar time once on waking; long runs go under `caffeinate` | #21, #14 |
+| Buffer refused Drive links | — | Videos go through a public host | #19 |
+
+### 10.10 Verifying on an 8 GB Mac with the editor open
+
+| problem | why | how it was solved |
+|---|---|---|
+| Two Unity processes don't fit in memory | 8 GB | Compile checks offline with the editor's own response files; batch runs on an APFS clone only while the editor is closed; anything else inside the open editor (§1.2) |
+| A batch harness sat in Play forever | The play-mode domain reload dropped its update hook | It re-attaches from an `[InitializeOnLoad]` constructor, keyed off a session flag |
+| Test results went missing | Callbacks registered from outside are dropped by the play-mode reload, and the editor bridge can't define classes | A temporary `[InitializeOnLoad]` script writes the results; plain tests are called directly instead |
+| The editor's assistant bridge hung on every call after an async test run | — | The project's second bridge (MCP for Unity) took over |
+| macOS ran out of memory during the maze tests and killed background services | The editor grew to 6.5 GB, profiler frames included | Profiler frames and unused assets cleared; big Play tests run with little else open |
+
+### 10.11 Found, not fixed yet
+
+- **Aiko can stand on a stuck player without catching them.** In one bot shift she stood on a
+  stuck bot for 72 s, seeing it. A touch only counts when she first bumps into you, and only
+  during a chase (#11).
+- **The learning rungs don't separate from planning alone.** Against scripted players, rungs D–F
+  of the ablation match C. The bots don't react to most tactics, so there's little reward to
+  learn from. The next experiment is players that react to tells, or people (#10,
+  [`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md)).
+
+---
+
+## 11. Known costs and open questions
 
 - **The NavMesh rebuild** still costs about 20 ms on the main thread, once per chunk border
   crossed. That's collecting the colliders and their meshes. Caching each chunk's sources when

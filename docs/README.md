@@ -26,7 +26,7 @@ The repository's markdown files, by what they're for. The project [`README`](../
 
 | document | what it covers |
 |---|---|
-| [`DECISIONS.md`](engineering/DECISIONS.md) | the heavy decisions and why: the repository, measuring, rendering, shelves as data, the endless maze, Aiko's fairness, replays, the pipelines, and what's still open |
+| [`DECISIONS.md`](engineering/DECISIONS.md) | the heavy decisions and why: the repository, measuring, rendering, shelves as data, the endless maze, Aiko's fairness, replays, the pipelines; the problems met on the way and how each was solved; and what's still open |
 
 ## Results
 
