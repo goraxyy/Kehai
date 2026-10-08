@@ -404,8 +404,9 @@ call for later, once it can be walked.
 
 1. ~~GPU Resident Drawer, with GPU occlusion culling~~ done, 18.9 → 4.5 ms
 2. ~~Shelves as data~~ done: the scene is 92 → 6.2 MB, and the stock costs 2.2 to 2.4 ms to draw
-3. Chunks and a seeded maze: built and walked, in a scene of its own. Shoppers, Aiko, tasks,
-   signs and a floating origin in it are still to come
+3. Chunks and a seeded maze: built and walked, in a scene of its own. **Parked for later
+   (2026-10-08):** the scene sits last in the build list, unticked, so builds leave it out.
+   Shoppers, Aiko, tasks, signs and a floating origin in it are still to come
 
 ---
 

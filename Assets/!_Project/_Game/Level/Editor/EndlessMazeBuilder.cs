@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -12,6 +13,19 @@ public static class EndlessMazeBuilder
     public const string ScenePath = "Assets/!_Project/_Core/Scenes/EndlessMaze.unity";
     const string Ready = "Assets/!_Project/_Game/Level/Prefabs/Shelves/Ready/";
     const string Grid = "Assets/Scalable Grid Prototype Materials/Materials/";
+
+    // The maze is parked at the end of the build list, after the store the game opens with,
+    // until work on it picks up again (IDEAS.md). It goes in unticked, so builds leave it out;
+    // tick it in Build Profiles to ship it, and that choice is kept.
+    public static void KeepLastInBuildList()
+    {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        int at = scenes.FindIndex(s => s.path == ScenePath);
+        bool enabled = at >= 0 && scenes[at].enabled;
+        if (at >= 0) scenes.RemoveAt(at);
+        scenes.Add(new EditorBuildSettingsScene(ScenePath, enabled));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
 
     [MenuItem("Kehai/Endless/Open an Endless Maze")]
     public static void OpenMenu()
@@ -56,6 +70,7 @@ public static class EndlessMazeBuilder
 
         ShelfDrawer.Ensure();
         EditorSceneManager.SaveScene(scene, ScenePath);
+        KeepLastInBuildList();
 
         string missing = (maze.runPrefab == null ? " the shelf run prefab" : "") +
                          (maze.pillarPrefab == null ? " the pillar prefab" : "") +

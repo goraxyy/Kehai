@@ -52,6 +52,17 @@ public class MainMenuTests
         StringAssert.EndsWith("SampleScene.unity", scenes[0], "the first scene is the one the game opens with");
     }
 
+    // Parked until work on it picks up again: listed after everything else, so the store stays
+    // the scene the game, the eval and the replays open with.
+    [Test]
+    public void TheEndlessMaze_IsLastInTheBuildList()
+    {
+        UnityEditor.EditorBuildSettingsScene[] scenes = UnityEditor.EditorBuildSettings.scenes;
+        int at = System.Array.FindIndex(scenes, s => s.path == EndlessMazeBuilder.ScenePath);
+        if (at < 0) Assert.Ignore("the endless maze hasn't been made on this computer");
+        Assert.AreEqual(scenes.Length - 1, at, "the endless maze isn't last in the build list");
+    }
+
     [Test]
     public void EachPlatform_BuildsIntoItsOwnFolder()
     {
