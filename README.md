@@ -123,10 +123,11 @@ of the eval harness and the 3D replay; `-skip-menu` on the command line skips it
 
 Esc pauses the game and opens the settings:
 
+- **All game sounds** on one slider, first on the page, and each kind on its own: sound effects,
+  Aiko, the radio and the PA.
 - **Restart this shift:** the store resets, you go back to where you start, and the same shift
   begins again. Aiko still remembers earlier shifts.
 - **Main menu:** leave the shift for the title screen.
-- **Volume** for everything, and separately for sound effects, Aiko, the radio and the PA.
 - **Mouse sensitivity**, and **Aiko's floor cone** on or off.
 - **Webcam blinking:** on or off, calibrate, and the blink test.
 - A **Keys** tab with every key in the game.
