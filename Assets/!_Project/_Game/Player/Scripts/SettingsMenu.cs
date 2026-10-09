@@ -4,10 +4,11 @@ using Kehai.Blink;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Esc: the settings. Restart the shift or leave it for the main menu, volume for each kind of
-// sound, mouse sensitivity, Aiko's floor cone, the webcam, and a Keys tab listing every key in
-// the game. The game pauses while it's open, and everything chosen here is remembered. The
-// main menu opens the same pages, without the shift.
+// Esc: the settings. Sound first: one slider for all game sounds at once, then each kind of
+// sound. Then restart the shift or leave it for the main menu, mouse sensitivity, Aiko's floor
+// cone, the webcam, and a Keys tab listing every key in the game. The game pauses while it's
+// open, and everything chosen here is remembered. The main menu opens the same pages, without
+// the shift.
 public sealed class SettingsMenu : MonoBehaviour
 {
     public static SettingsMenu Instance { get; private set; }
@@ -143,12 +144,13 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void DrawSettings()
     {
-        if (!fromMainMenu) DrawShift();
-
-        Heading("Volume");
-        float master = Slider("Everything", SoundSettings.Master, out bool masterDone);
+        // The one slider for every sound comes first, so it never has to be looked for.
+        Heading("Sound");
+        float master = Slider("All game sounds", SoundSettings.Master, out bool masterDone);
         if (!Mathf.Approximately(master, SoundSettings.Master)) SoundSettings.Master = master;
         if (masterDone) Preview(SoundKind.Effects);
+        GUILayout.Label("Turns every sound in the game up or down at once: the store, you, " + GameNames.Antagonist +
+                        ", the radio and the PA. Below, each of them on its own.", small);
         foreach (SoundKind kind in System.Enum.GetValues(typeof(SoundKind)))
         {
             float level = Slider(SoundSettings.Label(kind), SoundSettings.Get(kind), out bool done);
@@ -156,6 +158,8 @@ public sealed class SettingsMenu : MonoBehaviour
             if (done) Preview(kind);
         }
         GUILayout.Label(GameNames.Antagonist + "'s warning sounds tell you a trick is coming, so keep her audible. You hear a sample when you let go of a slider.", small);
+
+        if (!fromMainMenu) DrawShift();
 
         Heading("Mouse");
         float sensitivity = Sensitivity;
