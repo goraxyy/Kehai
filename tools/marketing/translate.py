@@ -45,7 +45,7 @@ def texts(edit: dict) -> list[dict]:
             kind = o["type"] + (f" {o['template']}" if o["type"] == "meme" else "")
             visit(o, ["scenes", i, "overlays", j], kind)
     for i, line in enumerate(edit.get("script", [])):
-        who = "the narrator" if line["speaker"] == "narrator" else prompts.names()["aiko"]
+        who = "the narrator" if line["speaker"] == "narrator" else prompts.names()["karen"]
         found.append({"path": ["script", i, "text"], "kind": f"spoken by {who}", "text": line["text"],
                       "line": line})
     if "title" in edit:
@@ -91,8 +91,8 @@ def checks(answer: dict, items: list[dict], lang: str, names: dict) -> list[str]
             want = names["game_ru"] if spoken else names["game"]
             if want not in t:
                 out.append(f"item {x['id']}: write the game's name as {want} " + ("(it is spoken)" if spoken else "(on screen it stays in Latin letters)"))
-        if names["aiko"] in it["en"] and names["aiko_ru"] not in t:
-            out.append(f"item {x['id']}: write her name as {names['aiko_ru']}")
+        if names["karen"] in it["en"] and names["karen_ru"] not in t:
+            out.append(f"item {x['id']}: write her name as {names['karen_ru']}")
         if re.search(r"[A-Za-z]{4,}", t.replace(names["game"], "")) and spoken:
             out.append(f"item {x['id']}: a spoken line should be all {lang} (Latin words are read out badly)")
     return out

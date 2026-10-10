@@ -3,33 +3,33 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     public sealed class PaAnnouncement
     {
         public string Text;
-        public AudioClip Clip;          // null = Aiko's voice
+        public AudioClip Clip;          // null = Karen's voice
         public bool Done;
         public bool Jammed;
         public float Started = -1f;
     }
 
-    // Everything Aiko puts on your screen that isn't the world: PA subtitles, written
+    // Everything Karen puts on your screen that isn't the world: PA subtitles, written
     // warnings, the endings. One overlay canvas built in code, under the eyelids.
-    public sealed class AikoScreen : MonoBehaviour
+    public sealed class KarenScreen : MonoBehaviour
     {
-        public static AikoScreen Instance { get; private set; }
+        public static KarenScreen Instance { get; private set; }
 
         TextMeshProUGUI subtitle;
         TextMeshProUGUI banner;
         Image fade;
         float subtitleUntil, bannerUntil;
 
-        public static AikoScreen Ensure()
+        public static KarenScreen Ensure()
         {
             if (Instance != null) return Instance;
-            var go = new GameObject("~AikoScreen");
-            Instance = go.AddComponent<AikoScreen>();
+            var go = new GameObject("~KarenScreen");
+            Instance = go.AddComponent<KarenScreen>();
             Instance.Build();
             return Instance;
         }
@@ -106,7 +106,7 @@ namespace Kehai.Aiko
         }
     }
 
-    // The tannoy (Aiko.md §8.3). Aiko owns it and is not obliged to be truthful. Plays
+    // The tannoy (Karen.md §8.3). Karen owns it and is not obliged to be truthful. Plays
     // through the store's own ceiling speakers — the ones nearest you — with a chime first,
     // ducks the radio underneath, and puts the words on screen. Jam it at the breaker box
     // and she has no voice.
@@ -189,7 +189,7 @@ namespace Kehai.Aiko
                 phase = 1;
                 phaseEnds = Time.time + ChimeSeconds;
                 ChimeStarted?.Invoke(current);
-                AikoScreen.Ensure().Subtitle("<color=#FF6F61>" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
+                KarenScreen.Ensure().Subtitle("<color=#FF6F61>" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
                                               1.3f + current.Text.Length * 0.06f + 1.5f);
                 return;
             }

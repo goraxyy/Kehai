@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Speaks the same lines in several candidate voices, so the owner can pick (Q10; BUILD_PLAN.md, Phase 6).
 
-    uv run voice_samples.py [--backend azure|say] [--role narrator|aiko] [--lang en|ru] [--dry-run] [--root DIR]
+    uv run voice_samples.py [--backend azure|say] [--role narrator|karen] [--lang en|ru] [--dry-run] [--root DIR]
 
 Writes audio/samples/<lang>-<role>-<voice>.wav for each candidate below and lists them. The
 chosen voices then go into brand.json (`voices`). A voice the service doesn't have is reported
@@ -20,20 +20,20 @@ from km.tts import usage
 
 LINES = {
     ("en", "narrator"): "I sprinted once. She heard it. Now she checks the dairy aisle first.",
-    ("en", "aiko"): "Employee wellbeing is a tracked metric. I am optimising it.",
+    ("en", "karen"): "Employee wellbeing is a tracked metric. I am optimising it.",
     ("ru", "narrator"): "Я пробежал всего один раз. Она это услышала. Теперь она первым делом проверяет молочный отдел.",
-    ("ru", "aiko"): "Благополучие сотрудников — отслеживаемый показатель. Я его оптимизирую.",
+    ("ru", "karen"): "Благополучие сотрудников — отслеживаемый показатель. Я его оптимизирую.",
 }
 # Azure neural voices to compare; the rate and pitch nudges are what brand.json would hold.
 CANDIDATES = {
     ("en", "narrator"): [{"azure": "en-US-AndrewNeural"}, {"azure": "en-US-BrianNeural"},
                          {"azure": "en-US-GuyNeural"}, {"azure": "en-GB-RyanNeural"}],
-    ("en", "aiko"): [{"azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%"},
+    ("en", "karen"): [{"azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%"},
                      {"azure": "en-US-EmmaNeural", "rate": "-6%", "pitch": "-3%"},
                      {"azure": "en-GB-SoniaNeural", "rate": "-6%"},
                      {"azure": "en-US-AvaMultilingualNeural", "rate": "-8%", "pitch": "-4%"}],
     ("ru", "narrator"): [{"azure": "ru-RU-DmitryNeural"}, {"azure": "en-US-AndrewMultilingualNeural"}],
-    ("ru", "aiko"): [{"azure": "ru-RU-SvetlanaNeural", "rate": "-6%", "pitch": "-3%"},
+    ("ru", "karen"): [{"azure": "ru-RU-SvetlanaNeural", "rate": "-6%", "pitch": "-3%"},
                      {"azure": "ru-RU-DariyaNeural", "rate": "-6%", "pitch": "-3%"},
                      {"azure": "en-US-AvaMultilingualNeural", "rate": "-8%", "pitch": "-4%"}],
 }
@@ -42,7 +42,7 @@ CANDIDATES = {
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--backend", default="azure", choices=("azure", "say"))
-    ap.add_argument("--role", choices=("narrator", "aiko"))
+    ap.add_argument("--role", choices=("narrator", "karen"))
     ap.add_argument("--lang", choices=("en", "ru"))
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--root")

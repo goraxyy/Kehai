@@ -196,7 +196,7 @@ export function gameVolume(volume: number | undefined, voice: VoiceClip[], t: nu
 
 // ---- captions ------------------------------------------------------------------------------------
 
-export interface TimedWord extends Word { speaker: 'narrator' | 'aiko' }
+export interface TimedWord extends Word { speaker: 'narrator' | 'karen' }
 export interface Chunk { start: number; end: number; words: TimedWord[] }
 
 // Every spoken word on the video's clock, in order.

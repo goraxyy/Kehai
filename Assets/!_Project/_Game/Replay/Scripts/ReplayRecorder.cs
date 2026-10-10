@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Store;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,7 +10,7 @@ namespace Kehai.Replay
     // Records the shift for the 3D replay, next to the shift record:
     //   <persistent data>/shift_records/<stem>.krec
     // Everything that moves or changes in the store, as snapshots (see KrecFormat.cs): the
-    // player's view 60 times a second, the player, Aiko, customers, her understudies, doors,
+    // player's view 60 times a second, the player, Karen, customers, her understudies, doors,
     // shelf units, her props, spills, bins, bags, tools and every item off its shelf 30 times a
     // second, the lights and the shelf slots as they change, what was heard and said, her
     // thought log, and her belief map twice a second. Only listens; changes nothing.
@@ -73,7 +73,7 @@ namespace Kehai.Replay
         int nextId = 1;
         float nextTick, nextCamera, nextBelief, nextDiscovery, nextSlots;
 
-        AikoBrain brain;
+        KarenBrain brain;
         PaSystem pa;
         Camera view;
         Eyelids lids;
@@ -103,14 +103,14 @@ namespace Kehai.Replay
         void OnEnable()
         {
             NoiseBus.Emitted += OnNoise;
-            AikoNarrator.Said += OnStory;
+            KarenNarrator.Said += OnStory;
             ShiftRecorder.Finishing += OnFinishing;
         }
 
         void OnDisable()
         {
             NoiseBus.Emitted -= OnNoise;
-            AikoNarrator.Said -= OnStory;
+            KarenNarrator.Said -= OnStory;
             ShiftRecorder.Finishing -= OnFinishing;
             Unhook();
             if (writer != null) Close(Now, false, keep: !interlude || Now >= ShortestInterlude);
@@ -390,13 +390,13 @@ namespace Kehai.Replay
 
             if (brain != null && brain.Body != null)
             {
-                AikoBody body = brain.Body;
-                AikoBrain b = brain;
-                Track(body, KrecKind.Aiko, body.transform, "Aiko", GameNames.Antagonist, () =>
+                KarenBody body = brain.Body;
+                KarenBrain b = brain;
+                Track(body, KrecKind.Karen, body.transform, "Karen", GameNames.Antagonist, () =>
                 {
                     int s = (int)body.CurrentMood;
-                    if (body.Sight != null && body.Sight.Awareness >= body.Sight.seeAt) s |= KrecState.AikoSees;
-                    if (b.IsChasing) s |= KrecState.AikoChasing;
+                    if (body.Sight != null && body.Sight.Awareness >= body.Sight.seeAt) s |= KrecState.KarenSees;
+                    if (b.IsChasing) s |= KrecState.KarenChasing;
                     return s;
                 }, () => true);
             }
@@ -606,15 +606,15 @@ namespace Kehai.Replay
 
         void Hook()
         {
-            if (brain == null && AikoBrain.Instance != null)
+            if (brain == null && KarenBrain.Instance != null)
             {
-                brain = AikoBrain.Instance;
+                brain = KarenBrain.Instance;
                 brain.Log.Written += OnThought;
                 brain.Told += OnTell;
             }
-            if (pa == null && AikoWorld.Instance != null && AikoWorld.Instance.Pa != null)
+            if (pa == null && KarenWorld.Instance != null && KarenWorld.Instance.Pa != null)
             {
-                pa = AikoWorld.Instance.Pa;
+                pa = KarenWorld.Instance.Pa;
                 pa.ChimeStarted += OnPaChime;
                 pa.SpeechStarted += OnPaSpeech;
             }

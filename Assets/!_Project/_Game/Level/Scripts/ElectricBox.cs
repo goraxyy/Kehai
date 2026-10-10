@@ -1,7 +1,7 @@
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
-// The breaker box out the back. When Aiko has tripped the circuits, the switches mounted
+// The breaker box out the back. When Karen has tripped the circuits, the switches mounted
 // on its face are the puzzle (see BreakerPanel); the box itself only restores a mains cut
 // that didn't touch the breakers — the debug key, or a power cut with the panel intact.
 public class ElectricBox : HighlightInteractable

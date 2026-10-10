@@ -12,7 +12,7 @@ Pick the moments that make the best 15–40 second vertical shorts, and say how 
 - Spread the week across different hooks and tactics; don't pick three chases.
 - Score is a guide, not the rule. A low-scoring moment with one perfect beat beats a busy one.
 - Skip moments already used in earlier weeks unless nothing else is usable.
-- Never pick a moment whose only interest is `aiko_stuck` or `manual_bug`: those are bugs.
+- Never pick a moment whose only interest is `karen_stuck` or `manual_bug`: those are bugs.
 
 **Kept moments** were marked by the developer (F7 or Shift+F7). Every one gets an entry in `kept`:
 `short` if you picked it, `long` to save it for the monthly video, `bug` for a Shift+F7 bug report

@@ -4,7 +4,7 @@
 
 A first-person convenience-store night shift, built in **Unity 6**. You clock in, stock shelves,
 mop spills, empty the bins, serve customers and walk lost shoppers to the shelf they're looking
-for. Meanwhile **Aiko**, the store's management AI, hunts you with only what she can see and
+for. Meanwhile **Karen**, the store's management AI, hunts you with only what she can see and
 hear, remembers where you hide, and moves when you blink. She rarely kills you: she gives you
 overtime.
 
@@ -21,7 +21,7 @@ release is in [`RELEASE_PLAN.md`](docs/production/RELEASE_PLAN.md), and the devl
 This is a **code-only mirror**: the C# scripts (with their `.meta` files), the custom shader,
 the Python and Swift tools, and the design documents. It deliberately leaves out the scenes,
 models, materials, audio, prefabs, third-party packs and `ProjectSettings`, so it is not a
-runnable Unity project on its own. Data that would normally live in assets (Aiko's tactics, the
+runnable Unity project on its own. Data that would normally live in assets (Karen's tactics, the
 store's planogram) is written in code so that it can be reviewed here.
 
 ---
@@ -33,15 +33,16 @@ store's planogram) is written in code so that it can be reviewed here.
   are mopped and the rubbish is out.
 - **The jobs.** Restock (carry the stock crate to a shelf), mop (hold **E** with the mop), bag the
   bins and take the bag to the skip out back, serve at the till, and walk customers to the shelf
-  they asked about in a 150×150 m maze of a store (189 shelf units, 13 sections, 80 products).
+  they asked about in a 150×150 m maze of a store (189 shelf units holding 16,500 items, aisles
+  1 to 13, 80 products).
 - **Burnout.** Your energy drains over the shift and with sprinting; coffee restores it. At zero
   you can only walk.
 - **The building.** Mains power with breakers, 240 ceiling lights, a store radio on 64 speakers,
-  automatic doors, a flashlight, and procedural sound for everything Aiko does.
+  automatic doors, a flashlight, and procedural sound for everything Karen does.
 
-## Aiko, the adaptive antagonist
+## Karen, the adaptive antagonist
 
-Designed in [`Aiko.md`](docs/design/Aiko.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
+Designed in [`Karen.md`](docs/design/Karen.md) (1,200 lines) and implemented in `Assets/!_Project/_Game/AI/`
 (about 11,500 lines of C#). She runs three minds:
 
 | Mind | Knows | Controls |
@@ -73,7 +74,7 @@ Opt-in webcam blink tracking. A small helper program reads your eyes, either App
 ([`tools/blink/mac`](tools/blink/mac), no downloads) or MediaPipe
 ([`tools/blink/setup_mediapipe.sh`](tools/blink/setup_mediapipe.sh)), and sends the game one
 number per frame over localhost. The game calibrates to your eyes, compensates for the helper's
-delay, and lets Aiko act inside the ~300 ms of your blink. Nothing is recorded, and nothing
+delay, and lets Karen act inside the ~300 ms of your blink. Nothing is recorded, and nothing
 leaves the computer.
 
 **F8** turns it on, **F9** runs a 12-second guided calibration, **F10** is a live test panel, and
@@ -82,10 +83,10 @@ leaves the computer.
 
 ## Seeing what happened
 
-- **F1:** a live map of the store (walls, shelves by section, doors) with you, Aiko, her view
+- **F1:** a live map of the store (walls, shelves by section, doors) with you, Karen, her view
   cone and her guess of where you are, customers by what they're doing (a dashed line to the
   shelf one is asking about), sounds as rings, spills, empty shelves and bins, plus a plain-English
-  story of what Aiko is doing. **H** adds her belief heat map; **T** the technical view.
+  story of what Karen is doing. **H** adds her belief heat map; **T** the technical view.
 - **F2:** a replay of the shift so far on the same map.
 - **Shift reports.** Every shift is recorded (positions five times a second, every event) and
   saved as JSON plus a self-contained HTML report: a replay with a timeline, a clickable event
@@ -110,7 +111,7 @@ leaves the computer.
 
 The game opens on a title screen over the store, with time stopped:
 
-- **Continue** picks your career up at its next shift. Aiko saves it, and what she has learned
+- **Continue** picks your career up at its next shift. Karen saves it, and what she has learned
   about you, after every shift; a shift you leave halfway isn't saved.
 - **New career** wipes what she has learned (it asks first); your settings stay.
 - **Settings** and **Controls** open the Esc menu's own pages.
@@ -124,11 +125,11 @@ of the eval harness and the 3D replay; `-skip-menu` on the command line skips it
 Esc pauses the game and opens the settings:
 
 - **All game sounds** on one slider, first on the page, and each kind on its own: sound effects,
-  Aiko, the radio and the PA.
+  Karen, the radio and the PA.
 - **Restart this shift:** the store resets, you go back to where you start, and the same shift
-  begins again. Aiko still remembers earlier shifts.
+  begins again. Karen still remembers earlier shifts.
 - **Main menu:** leave the shift for the title screen.
-- **Mouse sensitivity**, and **Aiko's floor cone** on or off.
+- **Mouse sensitivity**, and **Karen's floor cone** on or off.
 - **Webcam blinking:** on or off, calibrate, and the blink test.
 - A **Keys** tab with every key in the game.
 
@@ -136,16 +137,16 @@ Your choices are remembered between sessions.
 
 ## Evaluation harness
 
-Aiko is measured, not just tuned by feel (`Assets/!_Project/_Game/Eval/`, [`tools/eval`](tools/eval)):
+Karen is measured, not just tuned by feel (`Assets/!_Project/_Game/Eval/`, [`tools/eval`](tools/eval)):
 
 - A headless, fixed-timestep simulation that runs faster than real time.
 - A socket environment for external agents, with Python clients: scripted baselines and an LLM
   agent (Claude plays the shift).
 - Simulated players in three profiles: *efficient*, *skittish* and *reckless*.
-- An **ablation ladder**: six versions of Aiko, from a random patrol (A) up to the full system
+- An **ablation ladder**: six versions of Karen, from a random patrol (A) up to the full system
   with learning and the blink channel (F), on paired seeds.
 
-Results are in [`AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md). Across 216 simulated shifts, the belief map
+Results are in [`KAREN_RESULTS.md`](docs/results/KAREN_RESULTS.md). Across 216 simulated shifts, the belief map
 and planner found players twice as fast as the patrols (first detection 51 s against about
 100 s) with about 11 more detections a shift, and the fairness rules held with 0 violations. The
 learning rungs did not separate from the non-learning one against scripted players; the write-up
@@ -165,7 +166,7 @@ The essentials (the full list is in [`CONTROLS.md`](docs/design/CONTROLS.md), an
 | Q / hold Q | Put down / throw |
 | 1–4, mouse wheel | Hand slot |
 | C | Task list |
-| Esc | Pause: restart the shift, the main menu, volume by kind of sound, mouse, Aiko's floor cone, webcam |
+| Esc | Pause: all game sounds and each kind, restart the shift, the main menu, mouse, Karen's floor cone, webcam |
 | F1 / F2 | Live map / replay |
 | F8 / F9 / F10 / B | Webcam blink on-off / calibrate / test panel / keyboard blink |
 | F7 / Left Shift + F7 | Mark a clip moment / mark a bug |
@@ -175,9 +176,10 @@ The essentials (the full list is in [`CONTROLS.md`](docs/design/CONTROLS.md), an
 With the project closed in the editor (Unity allows one instance per project):
 
 ```bash
-# 83 EditMode tests: AI rules, fairness, Aiko's speed cap, the belief map, shift records, the key list,
-# the save migration from the game's old name, clip markers, the replay recording and the 3D replay,
-# the main menu's choices and the build's scene list
+# 143 EditMode tests: AI rules, fairness, Karen's speed cap, the belief map, shift records, the key list,
+# the save migration from the game's old names, clip markers, the replay recording and the 3D replay,
+# the main menu's choices, the build's scene list, the planogram, the shelves as data and the
+# endless maze's generator
 # (two of them load the store and play a few seconds of a bot shift; without -nographics the
 # replay test also checks what the cameras draw)
 Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults results.xml
@@ -185,12 +187,12 @@ Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -te
 # One shot of a recorded shift: clip moment 1, the chase camera, her mind drawn in, vertical
 tools/marketing/render_shot.sh -krec <shift>.krec -moment 1 -shot chase -layers all -size 1080x1920 -out shot.mp4
 
-# One simulated shift against the full Aiko, which also writes a shift report
+# One simulated shift against the full Karen, which also writes a shift report
 Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play \
   -kehai-ablation -ablation-careers 1 -ablation-shifts 1 -ablation-rungs F -ablation-profiles efficient
 ```
 
-The full ablation command and its analysis script are in [`AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md).
+The full ablation command and its analysis script are in [`KAREN_RESULTS.md`](docs/results/KAREN_RESULTS.md).
 
 ## Building the game
 
@@ -237,7 +239,7 @@ Assets/!_Project/
 ├── _Core/Editor/              the build script (macOS, Windows), opening the store on launch
 ├── _Game/
 │   ├── AI/Scripts/
-│   │   ├── Core/              Aiko's brain, body, Director, Ledger, config, bootstrap
+│   │   ├── Core/              Karen's brain, body, Director, Ledger, config, bootstrap
 │   │   ├── Perception/        sight, the noise bus, witnesses, traces, the building
 │   │   ├── Belief/            the belief grid
 │   │   ├── Decision/          goals, the planner, and the 35 tactics
@@ -271,7 +273,7 @@ is the index.
 
 | File | What it is |
 |---|---|
-| [`docs/design/Aiko.md`](docs/design/Aiko.md) | Aiko's full design, and where the code departs from it |
+| [`docs/design/Karen.md`](docs/design/Karen.md) | Karen's full design, and where the code departs from it |
 | [`docs/design/STORE_CATALOG.md`](docs/design/STORE_CATALOG.md) | The 80 products, the aisles, what customers say |
 | [`docs/design/MERCHANDISING.md`](docs/design/MERCHANDISING.md) | How the shelves are stocked, and why |
 | [`docs/design/STORE_MAP.md`](docs/design/STORE_MAP.md) | The store's map |
@@ -280,6 +282,7 @@ is the index.
 | [`docs/production/RELEASE_PLAN.md`](docs/production/RELEASE_PLAN.md) | Milestones to a Steam release |
 | [`docs/production/PLAYTEST.md`](docs/production/PLAYTEST.md) | How playtests work: the loop, what's recorded, running a round |
 | [`docs/production/MARKETING.md`](docs/production/MARKETING.md) | Devlog, platforms and getting early players |
-| [`docs/results/AIKO_RESULTS.md`](docs/results/AIKO_RESULTS.md) | The ablation results |
+| [`docs/results/KAREN_RESULTS.md`](docs/results/KAREN_RESULTS.md) | The ablation results |
+| [`docs/engineering/DECISIONS.md`](docs/engineering/DECISIONS.md) | The heavy engineering decisions and why, and the problems met on the way |
 | [`CHANGELOG.md`](CHANGELOG.md) | Changes that affect players' saves or settings |
 | [`tools/blink/README.md`](tools/blink/README.md), [`tools/eval/README.md`](tools/eval/README.md) | Tool setup |

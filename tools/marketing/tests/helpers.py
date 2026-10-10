@@ -9,14 +9,14 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 STEM = "shift_03_20260930_055451"
 
 
-def track(seconds: float, aiko=lambda t: (0.5, 0.4, 0.05), you=lambda t: None, hz: int = 10) -> dict:
+def track(seconds: float, karen=lambda t: (0.5, 0.4, 0.05), you=lambda t: None, hz: int = 10) -> dict:
     n = int(seconds * hz) + 1
 
     def sample(f, i):
         v = f(i / hz)
         return None if v is None else list(v)
 
-    return {"hz": hz, "aiko": [sample(aiko, i) for i in range(n)], "you": [sample(you, i) for i in range(n)]}
+    return {"hz": hz, "karen": [sample(karen, i) for i in range(n)], "you": [sample(you, i) for i in range(n)]}
 
 
 def shot(root: Path, folder: str, name: str, seconds: float = 20.0, camera: str = "topdown", alpha: bool = False,
@@ -27,7 +27,7 @@ def shot(root: Path, folder: str, name: str, seconds: float = 20.0, camera: str 
     ext = "webm" if alpha else "mp4"
     (d / f"{name}.{ext}").write_bytes(b"not really a video")
     side = {"version": 1, "game": "Kehai", "krec": f"{STEM}.krec", "stem": STEM, "shift": 3, "from": 126.73,
-            "to": 126.73 + seconds, "moment": None, "shot": camera, "subject": "aiko", "layers": list(layers),
+            "to": 126.73 + seconds, "moment": None, "shot": camera, "subject": "karen", "layers": list(layers),
             "alpha": alpha, "dof": False, "width": 1080, "height": 1920, "fps": fps, "frames": int(seconds * fps),
             "video": f"{name}.{ext}", "audio": None if alpha else f"{name}.wav", "rendered": "2026-10-01T21:57:42",
             "renderSeconds": 30.0}
@@ -99,7 +99,7 @@ def draft() -> dict:
              "sfx": [{"asset": "whoosh", "at": 0, "volume": 0.8}]},
             {"name": "her guess", "duration": 5.0, "transition": "fade", "visual": vis(source="top", trim=7.0),
              "pip": {**NO_PIP, "source": "mind", "trim": 7.0, "size": 0.42, "label": "her guess"},
-             "overlays": [ov("arrow", start=0.8, to=2.6, x=0.24, y=0.64, x2=0.44, y2=0.53, style="aiko")], "sfx": []},
+             "overlays": [ov("arrow", start=0.8, to=2.6, x=0.24, y=0.64, x2=0.44, y2=0.53, style="karen")], "sfx": []},
             {"name": "the catch", "duration": 4.3, "transition": "cut",
              "visual": vis(source="pov", trim=11.6, speed=[{"at": 0, "rate": 1}, {"at": 1.4, "rate": 0.35},
                                                             {"at": 3.2, "rate": 0.35}, {"at": 4.3, "rate": 1}]),
@@ -113,7 +113,7 @@ def draft() -> dict:
             {"speaker": "narrator", "at": 0.2, "text": "I sprinted once. Just once."},
             {"speaker": "narrator", "at": 3.6, "text": "The lights flicker first. That's her warning."},
             {"speaker": "narrator", "at": 7.4, "text": "She heard me, and guessed where I'd hide."},
-            {"speaker": "aiko", "at": 14.4, "text": "This will be noted in your file."},
+            {"speaker": "karen", "at": 14.4, "text": "This will be noted in your file."},
             {"speaker": "narrator", "at": 18.0, "text": "She never saw me. She listened."},
         ],
         "music": {"asset": "night-shift", "offset": 0, "volume": 0.3},
@@ -142,7 +142,7 @@ STUDY = {
     "format": {"layout": "Full frame.", "text": "None.", "captions": "None.", "motion": "None.", "transitions": "A hard cut.",
                "sound": "A steady tone.", "ending": "On the bright frame."},
     "recipe": [{"element": "the hard cut", "editor": "cut", "how": "cut at 2 s"}],
-    "shots": [{"camera": "cctv", "subject": "aiko", "layers": [], "use": "the reveal"}],
+    "shots": [{"camera": "cctv", "subject": "karen", "layers": [], "use": "the reveal"}],
     "missing": [],
     "kehai": {"moments": "a blackout that ends with her close", "tags": ["blackout"], "idea": "The lights come back and she is there."},
     "avoid": ["its tone"],

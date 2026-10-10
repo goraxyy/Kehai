@@ -33,7 +33,7 @@
         "name": { "type": "string", "description": "Lowercase words joined by dashes, unique in the outline." },
         "moment": { "type": "string", "description": "<stem>#<rank> from the digest." },
         "camera": { "enum": ["pov", "cctv", "chase", "orbit", "topdown"] },
-        "subject": { "enum": ["aiko", "you"] },
+        "subject": { "enum": ["karen", "you"] },
         "layers": { "type": "array", "items": { "enum": ["belief", "guess", "cone", "sound", "thoughts", "actors"] } },
         "alpha": { "type": "boolean" },
         "start_offset": { "type": "number" },

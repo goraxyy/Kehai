@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // The store's lights, split into the circuits Aiko can trip (Aiko.md §8.1).
+    // The store's lights, split into the circuits Karen can trip (Karen.md §8.1).
     public enum LightCircuit { East, West, Back }
 
     public sealed class LightControl : MonoBehaviour
@@ -106,14 +106,14 @@ namespace Kehai.Aiko
         }
     }
 
-    // The breaker box out in the backstreet, rebuilt as a puzzle (Aiko.md §8.1, §3.5).
+    // The breaker box out in the backstreet, rebuilt as a puzzle (Karen.md §8.1, §3.5).
     //
     // Three light circuits, each with its own hum when you look at it. After a blackout
     // they have to go back on in rising pitch — low, middle, high — in the dark, by ear.
     // Get it wrong and everything you'd already thrown trips again.
     //
     // A fourth switch jams the PA. The panel can only carry two of the three light
-    // circuits while the jammer is drawing power, so silencing Aiko costs you a wing of
+    // circuits while the jammer is drawing power, so silencing Karen costs you a wing of
     // the store.
     public sealed class BreakerPanel : MonoBehaviour
     {
@@ -185,9 +185,9 @@ namespace Kehai.Aiko
             RefreshVisuals();
         }
 
-        // ---- Aiko's side ------------------------------------------------------
+        // ---- Karen's side ------------------------------------------------------
 
-        public void TripAll(AikoRng rng)
+        public void TripAll(KarenRng rng)
         {
             for (int i = 0; i < 3; i++) on[i] = false;
             Shuffle(rng);
@@ -204,7 +204,7 @@ namespace Kehai.Aiko
             RefreshVisuals();
         }
 
-        void Shuffle(AikoRng rng)
+        void Shuffle(KarenRng rng)
         {
             for (int i = 2; i > 0; i--)
             {
@@ -274,8 +274,8 @@ namespace Kehai.Aiko
                 if (live > 2)
                     for (int i = 2; i >= 0; i--)
                         if (on[i]) { on[i] = false; break; }
-                AikoWorld.Instance?.Pa.Clear();
-                AikoBrain.Instance?.Ledger.RecordCounterplay("pa_jammed");
+                KarenWorld.Instance?.Pa.Clear();
+                KarenBrain.Instance?.Ledger.RecordCounterplay("pa_jammed");
             }
             OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), at);
             Settle();
@@ -349,7 +349,7 @@ namespace Kehai.Aiko
             s.index = index;
             s.colour = colour;
             s.lamp = go.GetComponent<Renderer>();
-            s.lamp.sharedMaterial = AikoProps.Lit(colour);
+            s.lamp.sharedMaterial = KarenProps.Lit(colour);
             return s;
         }
 

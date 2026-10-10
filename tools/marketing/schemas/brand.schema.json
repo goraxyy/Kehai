@@ -37,7 +37,7 @@
         "game": {
           "type": "object",
           "description": "The game's own palette (the shift report and the replay's mind layers).",
-          "required": ["aiko", "you", "guess"],
+          "required": ["karen", "you", "guess"],
           "additionalProperties": { "$ref": "#/$defs/colour" }
         }
       },
@@ -80,8 +80,8 @@
     },
     "voiceSet": {
       "type": "object",
-      "required": ["narrator", "aiko"],
-      "properties": { "narrator": { "$ref": "#/$defs/voice" }, "aiko": { "$ref": "#/$defs/voice" } }
+      "required": ["narrator", "karen"],
+      "properties": { "narrator": { "$ref": "#/$defs/voice" }, "karen": { "$ref": "#/$defs/voice" } }
     },
     "voice": {
       "type": "object",

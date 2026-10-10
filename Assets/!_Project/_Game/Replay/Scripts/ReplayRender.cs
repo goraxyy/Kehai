@@ -18,7 +18,7 @@ namespace Kehai.Replay
     //   -krec <file.krec>                    the recording
     //   -moment <rank> | -from <s> -to <s>   which part: a clip moment from <stem>.markers.json (default 1)
     //   -shot <preset | path.json | path>    pov, cctv, chase (default), orbit, topdown, or a keyframed path
-    //   -subject aiko | you                  who the presets follow (default aiko)
+    //   -subject karen | you                  who the presets follow (default karen)
     //   -layers <list>                       her mind over the store: belief,guess,cone,sound,thoughts,actors | all | none
     //   -alpha                               her mind alone, on a transparent background (.webm / .mov / PNG)
     //   -dof                                 depth of field on the subject
@@ -32,14 +32,14 @@ namespace Kehai.Replay
     // a pipe but not raw video. The sound is mixed from the
     // recording's events as heard at the camera, written as a WAV beside the video and muxed
     // in. A <out>.json beside it says what was rendered, for the editor (Phase 5), and where
-    // Aiko and you are in the picture through it (ShotTrack, Phase 6).
+    // Karen and you are in the picture through it (ShotTrack, Phase 6).
     public sealed class ReplayRender
     {
         public const int WarmUpFrames = 8;
 
         public sealed class Settings
         {
-            public string Krec, Out, Shot = "chase", Subject = "aiko";
+            public string Krec, Out, Shot = "chase", Subject = "karen";
             public float From, To;
             public int Moment;
             public MindLayer Layers;
@@ -155,8 +155,8 @@ namespace Kehai.Replay
             }
             else if (!ReplayCameras.TryParse(s.Shot, out ShotPreset preset) || preset == ShotPreset.Free)
                 throw new System.ArgumentException($"-shot {s.Shot}: pov, cctv, chase, orbit, topdown, path, or a camera path .json");
-            s.Subject = (ReplayMode.Arg("-subject") ?? "aiko").ToLowerInvariant();
-            if (s.Subject != "aiko" && s.Subject != "you" && s.Subject != "player") throw new System.ArgumentException("-subject is aiko or you");
+            s.Subject = (ReplayMode.Arg("-subject") ?? "karen").ToLowerInvariant();
+            if (s.Subject != "karen" && s.Subject != "you" && s.Subject != "player") throw new System.ArgumentException("-subject is karen or you");
             s.Layers = MindLayers.Parse(ReplayMode.Arg("-layers"));
             s.Alpha = ReplayMode.Flag("-alpha");
             if (s.Alpha && s.Layers == MindLayer.None) s.Layers = MindLayer.All;
@@ -248,7 +248,7 @@ namespace Kehai.Replay
                 ReplayCameras.TryParse(s.Shot, out ShotPreset preset);
                 cams.Use(preset);
             }
-            cams.Subject = s.Subject == "aiko" ? KrecKind.Aiko : KrecKind.Player;
+            cams.Subject = s.Subject == "karen" ? KrecKind.Karen : KrecKind.Player;
             cams.DepthOfFieldOn = s.Dof;
             player.Mind.Shown = s.Layers;
 

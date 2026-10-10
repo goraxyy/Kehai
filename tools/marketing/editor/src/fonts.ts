@@ -1,5 +1,5 @@
 // The brand's soft, rounded fonts, fetched at render time (never committed). Nunito for English
-// and Russian, from Google Fonts. For Japanese only the glyphs the videos use (気配, 愛子) of
+// and Russian, from Google Fonts. For Japanese only the glyphs the videos use (気配, カレン) of
 // M PLUS Rounded 1c: the whole Japanese font is ~120 files, those few glyphs are one small one.
 import { continueRender, delayRender } from 'remotion';
 import { loadFont as loadNunito } from '@remotion/google-fonts/Nunito';

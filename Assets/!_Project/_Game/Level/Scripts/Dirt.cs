@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 // A patch of mess a customer left behind. Cleaned by holding E while carrying the mop;
@@ -13,7 +13,7 @@ public class Dirt : HighlightInteractable, IHoldInteractable
     // How many spills are on the floor right now — the mopping task reads this directly.
     public static int ActiveCount { get; private set; }
 
-    // And which: Aiko's footprint trail and her favour both need to find them.
+    // And which: Karen's footprint trail and her favour both need to find them.
     static readonly List<Dirt> all = new List<Dirt>();
     public static IReadOnlyList<Dirt> All => all;
 

@@ -2,7 +2,7 @@ using System.IO;
 using NUnit.Framework;
 using Choice = MainMenu.Choice;
 
-// What the main menu offers depends on the career Aiko has on file, and the build has to
+// What the main menu offers depends on the career Karen has on file, and the build has to
 // contain the store.
 public class MainMenuTests
 {

@@ -5,14 +5,14 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Everything Aiko can do to the building, in one place. Tactics ask for effects here
+    // Everything Karen can do to the building, in one place. Tactics ask for effects here
     // rather than reaching into gameplay scripts, so the list of what she *can* touch is
     // the list of methods on this class.
-    public sealed class AikoWorld : MonoBehaviour
+    public sealed class KarenWorld : MonoBehaviour
     {
-        public static AikoWorld Instance { get; private set; }
+        public static KarenWorld Instance { get; private set; }
 
         public PaSystem Pa { get; private set; }
         public LightControl Lights { get; private set; }
@@ -30,7 +30,7 @@ namespace Kehai.Aiko
             Pa = gameObject.AddComponent<PaSystem>();
             Lights = gameObject.AddComponent<LightControl>();
             Breakers = gameObject.AddComponent<BreakerPanel>();
-            AikoScreen.Ensure();
+            KarenScreen.Ensure();
 
             CustomerSpawner spawner = FindAnyObjectByType<CustomerSpawner>();
             if (spawner != null && spawner.customerPrefab != null)
@@ -73,13 +73,13 @@ namespace Kehai.Aiko
                 case TellKind.BallastWhine:
                     // A blackout is audible storewide and visible as a flicker everywhere.
                     Pa.PlayNear(at, clip, 1f);
-                    OneShotAudio.PlayAt(clip, ListenerPosition(), 0.6f, 5f, 40f, 0.3f, SoundKind.Aiko);
+                    OneShotAudio.PlayAt(clip, ListenerPosition(), 0.6f, 5f, 40f, 0.3f, SoundKind.Karen);
                     Lights.FlickerAll(lead);
                     break;
                 case TellKind.Flicker:
                     Light near = LightProbe.NearestOn(at);
                     if (near != null) StartCoroutine(Lights.Flicker(near, lead));
-                    OneShotAudio.PlayAt(clip, near != null ? near.transform.position : at, 0.8f, TellNear, TellFar, TellSpatial, SoundKind.Aiko);
+                    OneShotAudio.PlayAt(clip, near != null ? near.transform.position : at, 0.8f, TellNear, TellFar, TellSpatial, SoundKind.Karen);
                     break;
                 case TellKind.PaChime:
                 case TellKind.SpeakerCrackle:
@@ -88,13 +88,13 @@ namespace Kehai.Aiko
                     break;
                 case TellKind.CrtTick:
                     // The HUD tell has to reach you wherever you are.
-                    OneShotAudio.PlayAt(clip, ListenerPosition(), 0.7f, 5f, 40f, 0f, SoundKind.Aiko);
+                    OneShotAudio.PlayAt(clip, ListenerPosition(), 0.7f, 5f, 40f, 0f, SoundKind.Karen);
                     break;
                 default:
-                    OneShotAudio.PlayAt(clip, at, 1f, TellNear, TellFar, TellSpatial, SoundKind.Aiko);
+                    OneShotAudio.PlayAt(clip, at, 1f, TellNear, TellFar, TellSpatial, SoundKind.Karen);
                     break;
             }
-            NoiseBus.Emit(at, 0.4f, NoiseKind.Tell, NoiseAuthor.Aiko);
+            NoiseBus.Emit(at, 0.4f, NoiseKind.Tell, NoiseAuthor.Karen);
         }
 
         const float TellNear = 6f, TellFar = 60f, TellSpatial = 0.8f;
@@ -107,7 +107,7 @@ namespace Kehai.Aiko
 
         // ---- sight --------------------------------------------------------------------
 
-        public void Blackout(AikoRng rng)
+        public void Blackout(KarenRng rng)
         {
             Breakers.TripAll(rng);
             PowerSystem.Instance?.CutPower();
@@ -195,7 +195,7 @@ namespace Kehai.Aiko
             {
                 bay.transform.position = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / seconds));
                 if (Mathf.Repeat(t, 0.4f) < Time.deltaTime)
-                    NoiseBus.Emit(bay.transform.position, 0.8f, NoiseKind.Environmental, NoiseAuthor.Aiko);
+                    NoiseBus.Emit(bay.transform.position, 0.8f, NoiseKind.Environmental, NoiseAuthor.Karen);
                 yield return null;
             }
             bay.transform.position = to;

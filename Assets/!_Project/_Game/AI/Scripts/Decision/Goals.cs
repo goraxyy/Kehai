@@ -3,9 +3,9 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Goal selection by utility, not by state (Aiko.md §6.3). Every goal is scored every
+    // Goal selection by utility, not by state (Karen.md §6.3). Every goal is scored every
     // decision; the best one wins, with hysteresis so she doesn't flap between two.
     //
     //   U(g) = w_conf·Fit(g) + w_stress·ExpectedPanicDelta(g)·sign(pressure)
@@ -30,7 +30,7 @@ namespace Kehai.Aiko
 
         // Picks the goal to pursue now. `forced` bypasses the minimum commit time — used
         // when an interrupt has fired or the current plan has ended.
-        public GoalId Choose(AikoContext c, bool forced, out string because)
+        public GoalId Choose(KarenContext c, bool forced, out string because)
         {
             LastOptions.Clear();
             var scores = new Dictionary<GoalId, float>();
@@ -71,10 +71,10 @@ namespace Kehai.Aiko
             return best;
         }
 
-        float Score(GoalId g, AikoContext c, out string why)
+        float Score(GoalId g, KarenContext c, out string why)
         {
             Appraisal a = c.A;
-            AikoConfig k = c.Config;
+            KarenConfig k = c.Config;
 
             // Which tactics could serve this goal right now at all?
             var available = HtnPlanner.Candidates(g, c, null);
@@ -120,7 +120,7 @@ namespace Kehai.Aiko
 
         // How well the situation suits the goal, before any learning (the "Confidence(g)"
         // term of the utility). Each line reads as the rule it is.
-        static float Fit(GoalId g, AikoContext c, out string why)
+        static float Fit(GoalId g, KarenContext c, out string why)
         {
             Appraisal a = c.A;
             switch (g)
@@ -188,12 +188,12 @@ namespace Kehai.Aiko
 
     // Turns a goal into a plan: pick one of the goal's tactics (by learned value where the
     // rung allows, by authored prior otherwise), then decompose it into primitives under a
-    // time budget (Aiko.md §6.4).
+    // time budget (Karen.md §6.4).
     public static class HtnPlanner
     {
         // Tactics that could serve `goal` right now. Refusals are appended to `refusals`
         // when it's supplied, so the thought log can say why a tactic was ruled out.
-        public static List<Tactic> Candidates(GoalId goal, AikoContext c, List<string> refusals)
+        public static List<Tactic> Candidates(GoalId goal, KarenContext c, List<string> refusals)
         {
             var result = new List<Tactic>();
             foreach (Tactic t in TacticLibrary.For(goal))
@@ -212,7 +212,7 @@ namespace Kehai.Aiko
             return result;
         }
 
-        static bool Introduced(Tactic t, AikoContext c, ref string why)
+        static bool Introduced(Tactic t, KarenContext c, ref string why)
         {
             if (!c.Features.Goals && t.Tier > 0) { why = "rung has no tactics"; return false; }
             if (c.Brain.CareerOverride || t.IntroducedShift <= c.ShiftNumber) return true;
@@ -220,28 +220,28 @@ namespace Kehai.Aiko
             return false;
         }
 
-        static bool Permitted(Tactic t, AikoContext c, ref string why)
+        static bool Permitted(Tactic t, KarenContext c, ref string why)
         {
             if (c.Director.PermitsTier(t.Tier, c)) return true;
             why = $"tier {t.Tier} not permitted ({c.Director.PhaseName})";
             return false;
         }
 
-        static bool OffCooldown(Tactic t, AikoContext c, ref string why)
+        static bool OffCooldown(Tactic t, KarenContext c, ref string why)
         {
             if (!t.OnCooldown(c.Now)) return true;
             why = $"cooldown {t.Cooldown - (c.Now - t.LastUsed):0}s";
             return false;
         }
 
-        static bool Affordable(Tactic t, AikoContext c, ref string why)
+        static bool Affordable(Tactic t, KarenContext c, ref string why)
         {
             if (t.TensionCost <= c.A.Tension + 1e-4f) return true;
             why = $"costs {t.TensionCost:0.00}, budget {c.A.Tension:0.00}";
             return false;
         }
 
-        public static PlanTree Plan(GoalId goal, AikoContext c, System.Func<AikoContext, bool> interrupt,
+        public static PlanTree Plan(GoalId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
                                     out Tactic chosen, out List<ThoughtOption> options, out string because)
         {
             var refusals = new List<string>();

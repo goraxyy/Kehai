@@ -2,24 +2,24 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     public enum Status { Running, Success, Failure }
 
-    // The leaves of a plan: things the body can actually do this frame (Aiko.md §6.4).
+    // The leaves of a plan: things the body can actually do this frame (Karen.md §6.4).
     // A primitive may carry a guard — a precondition that must stay true for the rest of
     // the plan to make sense. A violated guard aborts to the interrupt branch rather than
     // leaving the body frozen mid-plan.
     public abstract class Primitive
     {
         public string Label;
-        public Func<AikoContext, bool> Guard;
+        public Func<KarenContext, bool> Guard;
         public string GuardName;
         bool started;
 
         public bool Started => started;
 
-        public Status Run(AikoContext c, float dt)
+        public Status Run(KarenContext c, float dt)
         {
             if (!started)
             {
@@ -31,21 +31,21 @@ namespace Kehai.Aiko
             return s;
         }
 
-        public void Abort(AikoContext c)
+        public void Abort(KarenContext c)
         {
             if (started) End(c, true);
         }
 
-        public Primitive When(Func<AikoContext, bool> guard, string name)
+        public Primitive When(Func<KarenContext, bool> guard, string name)
         {
             Guard = guard;
             GuardName = name;
             return this;
         }
 
-        protected virtual void Begin(AikoContext c) { }
-        protected abstract Status Tick(AikoContext c, float dt);
-        protected virtual void End(AikoContext c, bool aborted) { }
+        protected virtual void Begin(KarenContext c) { }
+        protected abstract Status Tick(KarenContext c, float dt);
+        protected virtual void End(KarenContext c, bool aborted) { }
 
         public override string ToString() => Label ?? GetType().Name;
     }
@@ -54,15 +54,15 @@ namespace Kehai.Aiko
 
     public sealed class MoveTo : Primitive
     {
-        readonly Func<AikoContext, Vector3> target;
-        readonly AikoBody.Pace pace;
+        readonly Func<KarenContext, Vector3> target;
+        readonly KarenBody.Pace pace;
         readonly float arrive;
         readonly float timeout;
         readonly bool follow;
         float elapsed, retarget;
 
         // `follow` re-reads the target every half second — for walking after belief.
-        public MoveTo(Func<AikoContext, Vector3> target, AikoBody.Pace pace, string label,
+        public MoveTo(Func<KarenContext, Vector3> target, KarenBody.Pace pace, string label,
                       float arrive = 1.3f, float timeout = 45f, bool follow = false)
         {
             this.target = target;
@@ -73,12 +73,12 @@ namespace Kehai.Aiko
             Label = label;
         }
 
-        public static MoveTo Point(Vector3 p, AikoBody.Pace pace, string label, float arrive = 1.3f) =>
+        public static MoveTo Point(Vector3 p, KarenBody.Pace pace, string label, float arrive = 1.3f) =>
             new MoveTo(_ => p, pace, label, arrive);
 
-        protected override void Begin(AikoContext c) => c.Body.MoveTo(target(c), pace);
+        protected override void Begin(KarenContext c) => c.Body.MoveTo(target(c), pace);
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             elapsed += dt;
             if (elapsed > timeout) return Status.Failure;
@@ -111,16 +111,16 @@ namespace Kehai.Aiko
             Label = label;
         }
 
-        protected override void Begin(AikoContext c) => c.Body.Stop();
+        protected override void Begin(KarenContext c) => c.Body.Stop();
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             c.Body.SweepHead(Mathf.Sin(t / seconds * Mathf.PI * 2f) * 70f);
             return t >= seconds ? Status.Success : Status.Running;
         }
 
-        protected override void End(AikoContext c, bool aborted) => c.Body.SweepHead(0f);
+        protected override void End(KarenContext c, bool aborted) => c.Body.SweepHead(0f);
     }
 
     public sealed class Wait : Primitive
@@ -128,17 +128,17 @@ namespace Kehai.Aiko
         readonly float seconds;
         float t;
         public Wait(float seconds, string label = null) { this.seconds = seconds; Label = label ?? $"wait {seconds:0.#}s"; }
-        protected override Status Tick(AikoContext c, float dt) { t += dt; return t >= seconds ? Status.Success : Status.Running; }
+        protected override Status Tick(KarenContext c, float dt) { t += dt; return t >= seconds ? Status.Success : Status.Running; }
     }
 
     public sealed class WaitUntil : Primitive
     {
-        readonly Func<AikoContext, bool> condition;
+        readonly Func<KarenContext, bool> condition;
         readonly float max;
         readonly bool failOnTimeout;
         float t;
 
-        public WaitUntil(Func<AikoContext, bool> condition, float max, string label, bool failOnTimeout = false)
+        public WaitUntil(Func<KarenContext, bool> condition, float max, string label, bool failOnTimeout = false)
         {
             this.condition = condition;
             this.max = max;
@@ -146,7 +146,7 @@ namespace Kehai.Aiko
             Label = label;
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             if (condition(c)) return Status.Success;
@@ -157,11 +157,11 @@ namespace Kehai.Aiko
 
     public sealed class Face : Primitive
     {
-        readonly Func<AikoContext, Vector3> target;
+        readonly Func<KarenContext, Vector3> target;
         float t;
-        public Face(Func<AikoContext, Vector3> target, string label = "face") { this.target = target; Label = label; }
-        protected override void Begin(AikoContext c) => c.Body.Stop();
-        protected override Status Tick(AikoContext c, float dt)
+        public Face(Func<KarenContext, Vector3> target, string label = "face") { this.target = target; Label = label; }
+        protected override void Begin(KarenContext c) => c.Body.Stop();
+        protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             c.Body.TurnToward(target(c));
@@ -175,37 +175,37 @@ namespace Kehai.Aiko
     {
         readonly bool silent;
         public SetSilent(bool silent) { this.silent = silent; Label = silent ? "go silent" : "footsteps back"; }
-        protected override Status Tick(AikoContext c, float dt) { c.Body.Silent = silent; return Status.Success; }
+        protected override Status Tick(KarenContext c, float dt) { c.Body.Silent = silent; return Status.Success; }
     }
 
     // Stand utterly still and quiet until the condition breaks or time runs out (ambush).
     public sealed class Hold : Primitive
     {
         readonly float max;
-        readonly Func<AikoContext, bool> until;
+        readonly Func<KarenContext, bool> until;
         float t;
 
-        public Hold(float max, Func<AikoContext, bool> until, string label)
+        public Hold(float max, Func<KarenContext, bool> until, string label)
         {
             this.max = max;
             this.until = until;
             Label = label;
         }
 
-        protected override void Begin(AikoContext c)
+        protected override void Begin(KarenContext c)
         {
             c.Body.Stop();
             c.Body.Silent = true;
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             if (until != null && until(c)) return Status.Success;
             return t >= max ? Status.Success : Status.Running;
         }
 
-        protected override void End(AikoContext c, bool aborted) => c.Body.Silent = false;
+        protected override void End(KarenContext c, bool aborted) => c.Body.Silent = false;
     }
 
     // ---- tells and effects ----------------------------------------------------------
@@ -216,11 +216,11 @@ namespace Kehai.Aiko
     public sealed class Tell : Primitive
     {
         readonly TellKind kind;
-        readonly Func<AikoContext, Vector3> at;
+        readonly Func<KarenContext, Vector3> at;
         readonly float lead;
         float startedAt, required;
 
-        public Tell(TellKind kind, Func<AikoContext, Vector3> at, float lead)
+        public Tell(TellKind kind, Func<KarenContext, Vector3> at, float lead)
         {
             this.kind = kind;
             this.at = at;
@@ -228,7 +228,7 @@ namespace Kehai.Aiko
             Label = $"tell:{kind}";
         }
 
-        protected override void Begin(AikoContext c)
+        protected override void Begin(KarenContext c)
         {
             required = Mathf.Max(lead, c.Config.minTellLead);
             Vector3 where = at(c);
@@ -239,21 +239,21 @@ namespace Kehai.Aiko
 
         // Measured from when the tell began, so the frame it starts in doesn't count towards
         // the lead (at a coarse time step that frame alone is most of a tenth of a second).
-        protected override Status Tick(AikoContext c, float dt) =>
+        protected override Status Tick(KarenContext c, float dt) =>
             Time.time - startedAt >= required ? Status.Success : Status.Running;
     }
 
     public sealed class Effect : Primitive
     {
-        readonly Action<AikoContext> act;
+        readonly Action<KarenContext> act;
 
-        public Effect(string label, Action<AikoContext> act)
+        public Effect(string label, Action<KarenContext> act)
         {
             Label = label;
             this.act = act;
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             c.Brain.RecordEffect(Label);
             act(c);
@@ -264,19 +264,19 @@ namespace Kehai.Aiko
     // An effect that takes time — a shelf stripped four items at a time, a camera drilled in.
     public sealed class Process : Primitive
     {
-        readonly Func<AikoContext, float, bool> step;   // return true when finished
+        readonly Func<KarenContext, float, bool> step;   // return true when finished
         readonly float max;
         float t;
         bool logged;
 
-        public Process(string label, Func<AikoContext, float, bool> step, float max = 30f)
+        public Process(string label, Func<KarenContext, float, bool> step, float max = 30f)
         {
             Label = label;
             this.step = step;
             this.max = max;
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             if (!logged) { c.Brain.RecordEffect(Label); logged = true; }
             t += dt;
@@ -287,11 +287,11 @@ namespace Kehai.Aiko
 
     public sealed class Speak : Primitive
     {
-        readonly Func<AikoContext, string> line;
+        readonly Func<KarenContext, string> line;
         readonly bool waitForIt;
         PaAnnouncement announcement;
 
-        public Speak(Func<AikoContext, string> line, bool waitForIt = true, string label = "PA")
+        public Speak(Func<KarenContext, string> line, bool waitForIt = true, string label = "PA")
         {
             this.line = line;
             this.waitForIt = waitForIt;
@@ -300,16 +300,16 @@ namespace Kehai.Aiko
 
         public static Speak Line(string text, bool wait = true) => new Speak(_ => text, wait, "PA: " + text);
 
-        protected override void Begin(AikoContext c)
+        protected override void Begin(KarenContext c)
         {
-            // The PA system chimes before it speaks; AikoBrain logs the chime as the tell and
+            // The PA system chimes before it speaks; KarenBrain logs the chime as the tell and
             // the words as the effect when they actually play.
             string text = line(c);
             announcement = c.World.Pa.Announce(text);
             if (!announcement.Jammed) c.Brain.NotePlanTell();
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             if (!waitForIt || announcement == null) return Status.Success;
             return announcement.Done ? Status.Success : Status.Running;
@@ -331,13 +331,13 @@ namespace Kehai.Aiko
             Label = "pursue";
         }
 
-        protected override void Begin(AikoContext c)
+        protected override void Begin(KarenContext c)
         {
-            c.Body.SetMood(AikoBody.Mood.Hunt);
+            c.Body.SetMood(KarenBody.Mood.Hunt);
             c.Brain.SetChasing(true);
         }
 
-        protected override Status Tick(AikoContext c, float dt)
+        protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             SightSensor sight = c.Body.Sight;
@@ -351,17 +351,17 @@ namespace Kehai.Aiko
                 Vector3 goal = sight.Time_SinceSeen() < 2f
                     ? sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f)
                     : c.Belief.PeakPosition;
-                c.Body.MoveTo(goal, AikoBody.Pace.Run);
+                c.Body.MoveTo(goal, KarenBody.Pace.Run);
             }
 
             if (lostFor > 5f) return Status.Failure;
             return t >= max ? Status.Success : Status.Running;
         }
 
-        protected override void End(AikoContext c, bool aborted)
+        protected override void End(KarenContext c, bool aborted)
         {
             c.Brain.SetChasing(false);
-            c.Body.SetMood(AikoBody.Mood.Calm);
+            c.Body.SetMood(KarenBody.Mood.Calm);
         }
     }
 
@@ -372,20 +372,20 @@ namespace Kehai.Aiko
 
     // ---- the behaviour tree ---------------------------------------------------------
 
-    // A deliberately dumb behaviour tree (Aiko.md §6.5): a selector whose first branch is
+    // A deliberately dumb behaviour tree (Karen.md §6.5): a selector whose first branch is
     // the global interrupt check and whose second is the plan as a sequence. All the
     // intelligence is upstream; this only has to stop cleanly when told to.
     public abstract class BtNode
     {
-        public abstract Status Tick(AikoContext c, float dt);
-        public virtual void Abort(AikoContext c) { }
+        public abstract Status Tick(KarenContext c, float dt);
+        public virtual void Abort(KarenContext c) { }
     }
 
     public sealed class BtCondition : BtNode
     {
-        readonly Func<AikoContext, bool> test;
-        public BtCondition(Func<AikoContext, bool> test) => this.test = test;
-        public override Status Tick(AikoContext c, float dt) => test(c) ? Status.Success : Status.Failure;
+        readonly Func<KarenContext, bool> test;
+        public BtCondition(Func<KarenContext, bool> test) => this.test = test;
+        public override Status Tick(KarenContext c, float dt) => test(c) ? Status.Success : Status.Failure;
     }
 
     public sealed class BtSequence : BtNode
@@ -399,7 +399,7 @@ namespace Kehai.Aiko
         public int Count => steps.Count;
         public string ViolatedGuard { get; private set; }
 
-        public override Status Tick(AikoContext c, float dt)
+        public override Status Tick(KarenContext c, float dt)
         {
             while (index < steps.Count)
             {
@@ -420,7 +420,7 @@ namespace Kehai.Aiko
             return Status.Success;
         }
 
-        public override void Abort(AikoContext c) => Current?.Abort(c);
+        public override void Abort(KarenContext c) => Current?.Abort(c);
     }
 
     // Selector(interrupt, plan). Returns Failure when interrupted, so the brain re-decides.
@@ -434,7 +434,7 @@ namespace Kehai.Aiko
         public string Target;       // what it's aimed at, in words (a place, a shelf, "close distance")
         public bool Interrupted { get; private set; }
 
-        public PlanTree(string name, GoalId goal, Tactic tactic, List<Primitive> steps, Func<AikoContext, bool> interrupt)
+        public PlanTree(string name, GoalId goal, Tactic tactic, List<Primitive> steps, Func<KarenContext, bool> interrupt)
         {
             Name = name;
             Goal = goal;
@@ -443,7 +443,7 @@ namespace Kehai.Aiko
             this.interrupt = new BtCondition(interrupt);
         }
 
-        public override Status Tick(AikoContext c, float dt)
+        public override Status Tick(KarenContext c, float dt)
         {
             if (interrupt.Tick(c, dt) == Status.Success)
             {
@@ -454,6 +454,6 @@ namespace Kehai.Aiko
             return Plan.Tick(c, dt);
         }
 
-        public override void Abort(AikoContext c) => Plan.Abort(c);
+        public override void Abort(KarenContext c) => Plan.Abort(c);
     }
 }

@@ -1,4 +1,4 @@
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 // The stock crate. Carried in the inventory like any other item; while it's the item in

@@ -3,11 +3,11 @@ using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Materials and shapes for everything Aiko puts into the store. Built from primitives
+    // Materials and shapes for everything Karen puts into the store. Built from primitives
     // and URP Lit at runtime, since the repository carries no art.
-    public static class AikoProps
+    public static class KarenProps
     {
         static readonly Dictionary<Color, Material> lit = new Dictionary<Color, Material>();
         static Material particle;
@@ -26,7 +26,7 @@ namespace Kehai.Aiko
         public static Material Lit(Color colour, float smoothness = 0.3f)
         {
             if (lit.TryGetValue(colour, out Material m) && m != null) return m;
-            m = new Material(LitShader) { name = "AIKO_" + ColorUtility.ToHtmlStringRGB(colour) };
+            m = new Material(LitShader) { name = "KAREN_" + ColorUtility.ToHtmlStringRGB(colour) };
             m.color = colour;
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", colour);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smoothness);
@@ -36,7 +36,7 @@ namespace Kehai.Aiko
 
         public static Material Emissive(Color colour, float intensity)
         {
-            var m = new Material(LitShader) { name = "AIKO_Glow" };
+            var m = new Material(LitShader) { name = "KAREN_Glow" };
             m.color = colour * 0.2f;
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", colour * 0.2f);
             m.EnableKeyword("_EMISSION");
@@ -48,7 +48,7 @@ namespace Kehai.Aiko
         {
             if (particle != null) return particle;
             Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default");
-            particle = new Material(shader) { name = "AIKO_Fog" };
+            particle = new Material(shader) { name = "KAREN_Fog" };
             particle.mainTexture = SoftDot();
             if (particle.HasProperty("_BaseMap")) particle.SetTexture("_BaseMap", SoftDot());
             if (particle.HasProperty("_Surface")) particle.SetFloat("_Surface", 1f);   // transparent
@@ -100,7 +100,7 @@ namespace Kehai.Aiko
 
         public static CrateWall Spawn(Vector3 at, Vector3 across, float width)
         {
-            var root = new GameObject("AIKO_CrateWall");
+            var root = new GameObject("KAREN_CrateWall");
             root.layer = LayerMask.NameToLayer("Interactable");
             root.transform.position = at;
             root.transform.rotation = Quaternion.LookRotation(Vector3.Cross(across, Vector3.up), Vector3.up);
@@ -111,7 +111,7 @@ namespace Kehai.Aiko
             for (int h = 0; h < 2; h++)
             {
                 float x = (c - (columns - 1) * 0.5f) * 0.62f;
-                GameObject crate = AikoProps.Box("Crate", Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), colour, root.transform);
+                GameObject crate = KarenProps.Box("Crate", Vector3.zero, new Vector3(0.6f, 0.55f, 0.6f), colour, root.transform);
                 crate.transform.localPosition = new Vector3(x, 0.28f + h * 0.56f, Random.Range(-0.05f, 0.05f));
                 crate.transform.localRotation = Quaternion.Euler(0f, Random.Range(-8f, 8f), 0f);
                 crate.layer = root.layer;
@@ -151,7 +151,7 @@ namespace Kehai.Aiko
 
         public void OnHoldComplete(PlayerInteract player)
         {
-            AikoBrain.Instance?.Ledger.RecordCounterplay("crates_cleared");
+            KarenBrain.Instance?.Ledger.RecordCounterplay("crates_cleared");
             Destroy(gameObject);
         }
     }
@@ -174,7 +174,7 @@ namespace Kehai.Aiko
         // The cloud, not yet venting and never timing out: the replay runs its particles itself.
         public static FogCloud Build(Vector3 at, float radius, float seconds)
         {
-            var go = new GameObject("AIKO_Fog");
+            var go = new GameObject("KAREN_Fog");
             go.transform.position = at + Vector3.up * 0.2f;
 
             var ps = go.AddComponent<ParticleSystem>();
@@ -207,7 +207,7 @@ namespace Kehai.Aiko
                              new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.5f, 0.2f), new GradientAlphaKey(0f, 1f) });
             fade.color = gradient;
 
-            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = AikoProps.Particle();
+            go.GetComponent<ParticleSystemRenderer>().sharedMaterial = KarenProps.Particle();
             var fog = go.AddComponent<FogCloud>();
             fog.Radius = radius;
             return fog;
@@ -216,7 +216,7 @@ namespace Kehai.Aiko
 
     // ---- CCTV (§3.5, §8.1) --------------------------------------------------------------
 
-    // A camera Aiko watches through. Low-confidence sightings in a narrow cone. Hold E for
+    // A camera Karen watches through. Low-confidence sightings in a narrow cone. Hold E for
     // four seconds to pull its plug — which buys silence and announces that you exist:
     // a dead camera is information, and she comes to look at the blind spot.
     public sealed class CctvCamera : MonoBehaviour, IInteractable, IHoldInteractable, IHoverable
@@ -225,7 +225,7 @@ namespace Kehai.Aiko
         public static IReadOnlyList<CctvCamera> All => all;
 
         public bool Dead { get; private set; }
-        public bool BoltedOn;            // installed by Aiko over a hiding place
+        public bool BoltedOn;            // installed by Karen over a hiding place
         SightSensor eye;
         Light led;
         float nextReport;
@@ -235,16 +235,16 @@ namespace Kehai.Aiko
 
         public static CctvCamera Spawn(Vector3 position, Vector3 look, bool boltedOn)
         {
-            var root = new GameObject(boltedOn ? "AIKO_Camera_BoltedOn" : "AIKO_Camera");
+            var root = new GameObject(boltedOn ? "KAREN_Camera_BoltedOn" : "KAREN_Camera");
             root.layer = LayerMask.NameToLayer("Interactable");
             root.transform.position = position;
             root.transform.rotation = Quaternion.LookRotation(look.sqrMagnitude > 0.01f ? look : Vector3.forward);
 
-            GameObject body = AikoProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
+            GameObject body = KarenProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
             body.transform.localPosition = Vector3.zero;
             body.transform.localRotation = Quaternion.identity;
             body.layer = root.layer;
-            GameObject lens = AikoProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
+            GameObject lens = KarenProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
             lens.transform.localPosition = new Vector3(0f, 0f, 0.18f);
 
             var cam = root.AddComponent<CctvCamera>();
@@ -302,7 +302,7 @@ namespace Kehai.Aiko
             // The camera going dark is itself a report: someone is standing right here.
             InfrastructureFeed.Report(new Observation(SenseChannel.Infrastructure, transform.position - transform.forward * 1.2f,
                 0.7f, 4f, $"camera dead({name})"));
-            AikoBrain.Instance?.Ledger.RecordCounterplay("camera_unplugged");
+            KarenBrain.Instance?.Ledger.RecordCounterplay("camera_unplugged");
         }
 
         public void OnHoverEnter() { }
@@ -321,7 +321,7 @@ namespace Kehai.Aiko
 
         public static CoffeeCup Spawn(Vector3 at, bool isLast)
         {
-            var root = new GameObject(isLast ? "AIKO_Coffee_Last" : "AIKO_Coffee");
+            var root = new GameObject(isLast ? "KAREN_Coffee_Last" : "KAREN_Coffee");
             root.layer = LayerMask.NameToLayer("Interactable");
             root.transform.position = at;
 
@@ -330,7 +330,7 @@ namespace Kehai.Aiko
             cup.transform.SetParent(root.transform, false);
             cup.transform.localScale = new Vector3(0.09f, 0.06f, 0.09f);
             cup.transform.localPosition = new Vector3(0f, 0.06f, 0f);
-            cup.GetComponent<Renderer>().sharedMaterial = AikoProps.Lit(new Color(0.95f, 0.95f, 0.92f));
+            cup.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(new Color(0.95f, 0.95f, 0.92f));
             cup.layer = root.layer;
             var box = cup.GetComponent<Collider>();
             if (box != null) box.isTrigger = true;
@@ -401,7 +401,7 @@ namespace Kehai.Aiko
         public static Footprint Spawn(Vector3 at, Vector3 heading, float lifetime, float wetness)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            go.name = "AIKO_Footprint";
+            go.name = "KAREN_Footprint";
             go.layer = LayerMask.NameToLayer("Interactable");
             go.transform.position = new Vector3(at.x, at.y + 0.015f, at.z);
             go.transform.rotation = Quaternion.LookRotation(Vector3.down, heading);
@@ -417,7 +417,7 @@ namespace Kehai.Aiko
             f.lifetime = lifetime;
             f.wetness = Mathf.Clamp01(wetness);
             f.mark = go.GetComponent<Renderer>();
-            f.mark.material = AikoProps.Lit(new Color(0.12f, 0.1f, 0.08f));
+            f.mark.material = KarenProps.Lit(new Color(0.12f, 0.1f, 0.08f));
             f.trace = TraceRegistry.Add(TraceKind.WetFootprint, at, lifetime, heading, f);
             return f;
         }
@@ -452,7 +452,7 @@ namespace Kehai.Aiko
                 Footprint other = c.GetComponent<Footprint>();
                 if (other != null && other != this) Destroy(other.gameObject);
             }
-            AikoBrain.Instance?.Ledger.RecordCounterplay("footprints_mopped");
+            KarenBrain.Instance?.Ledger.RecordCounterplay("footprints_mopped");
             Destroy(gameObject);
         }
     }

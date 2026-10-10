@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Watches one shift for the moments in ClipMarkers.All and writes a marker for each. Plain
-    // C# fed by ClipMarkerRecorder — the live picture ten times a second, and whatever Aiko,
+    // C# fed by ClipMarkerRecorder — the live picture ten times a second, and whatever Karen,
     // the narrator and the store report — so the rules can be tested without a running shift.
     // Every time is in seconds into the shift; every position is on the floor plan.
     public sealed class ClipWatch
@@ -45,8 +45,8 @@ namespace Kehai.Aiko
         bool escapePending;
         float escapeFrom, escapeTo;
         float nearMissUntil, foundBlindUntil, stuckUntil;
-        Vector2 aiko;
-        bool aikoKnown;
+        Vector2 karen;
+        bool karenKnown;
         readonly List<(float t, Vector2 at, bool hunt)> path = new List<(float, Vector2, bool)>();
         readonly Dictionary<int, CustomerMark> customers = new Dictionary<int, CustomerMark>();
 
@@ -67,18 +67,18 @@ namespace Kehai.Aiko
             }
             if (escapePending && t >= escapeTo + 1f) ResolveEscape(f.Player);
 
-            if (!f.AikoPresent) return;
-            aiko = f.Aiko;
-            aikoKnown = true;
-            float apart = Vector2.Distance(f.Player, f.Aiko);
+            if (!f.KarenPresent) return;
+            karen = f.Karen;
+            karenKnown = true;
+            float apart = Vector2.Distance(f.Player, f.Karen);
 
-            if (apart <= ClipMarkers.NearMissMetres && !f.AikoSees && !f.PlayerHeld && t >= nearMissUntil)
+            if (apart <= ClipMarkers.NearMissMetres && !f.KarenSees && !f.PlayerHeld && t >= nearMissUntil)
             {
                 Add("near_miss", t, f.Player, true, $"{Her} came within {apart:0.0} m of you without seeing you.");
                 nearMissUntil = t + ClipMarkers.NearMissCooldown;
             }
 
-            if (f.GuessConfidence >= ClipMarkers.FoundBlindConfidence && !f.AikoSees && t >= foundBlindUntil &&
+            if (f.GuessConfidence >= ClipMarkers.FoundBlindConfidence && !f.KarenSees && t >= foundBlindUntil &&
                 Vector2.Distance(f.Guess, f.Player) <= ClipMarkers.FoundBlindMetres)
             {
                 Add("found_blind", t, f.Player, true, $"{Her} knew where you were without seeing you ({Mathf.RoundToInt(f.GuessConfidence * 100f)}% sure).");
@@ -86,8 +86,8 @@ namespace Kehai.Aiko
             }
 
             // Hunting but not getting anywhere: usually stuck on something.
-            bool hunt = f.AikoMood == (byte)AikoBody.Mood.Hunt;
-            path.Add((t, f.Aiko, hunt));
+            bool hunt = f.KarenMood == (byte)KarenBody.Mood.Hunt;
+            path.Add((t, f.Karen, hunt));
             while (path.Count > 0 && path[0].t < t - ClipMarkers.StuckSeconds - 0.5f) path.RemoveAt(0);
             if (hunt && t >= stuckUntil && path.Count > 1 && path[0].t <= t - ClipMarkers.StuckSeconds + 0.05f)
             {
@@ -97,11 +97,11 @@ namespace Kehai.Aiko
                 {
                     if (p.t < t - ClipMarkers.StuckSeconds - 0.05f) continue;
                     allHunting &= p.hunt;
-                    furthest = Mathf.Max(furthest, Vector2.Distance(p.at, f.Aiko));
+                    furthest = Mathf.Max(furthest, Vector2.Distance(p.at, f.Karen));
                 }
                 if (allHunting && furthest < ClipMarkers.StuckMetres)
                 {
-                    Add("aiko_stuck", t - ClipMarkers.StuckSeconds, f.Aiko, true, $"{Her} was hunting but hardly moved for {ClipMarkers.StuckSeconds:0} seconds.", t);
+                    Add("karen_stuck", t - ClipMarkers.StuckSeconds, f.Karen, true, $"{Her} was hunting but hardly moved for {ClipMarkers.StuckSeconds:0} seconds.", t);
                     stuckUntil = t + ClipMarkers.StuckCooldown;
                 }
             }
@@ -120,7 +120,7 @@ namespace Kehai.Aiko
             for (int i = loudChecks.Count - 1; i >= 0; i--)
             {
                 LoudCheck check = loudChecks[i];
-                if (Vector2.Distance(f.Aiko, check.At) <= check.Distance - ClipMarkers.HeadingThereMetres)
+                if (Vector2.Distance(f.Karen, check.At) <= check.Distance - ClipMarkers.HeadingThereMetres)
                 {
                     if (check.NoiseT - lastLoudMistake >= ClipMarkers.LoudMistakeCooldown)
                     {
@@ -190,12 +190,12 @@ namespace Kehai.Aiko
                     break;
                 case StoryKind.Heard:
                     loudNoises.RemoveAll(n => t - n.t > ClipMarkers.LoudMistakeSeconds);
-                    if (loudNoises.Count == 0 || !aikoKnown) return;
+                    if (loudNoises.Count == 0 || !karenKnown) return;
                     var noise = loudNoises[loudNoises.Count - 1];
                     loudNoises.Clear();
                     loudChecks.Add(new LoudCheck
                     {
-                        NoiseT = noise.t, HeardT = t, At = noise.at, Distance = Vector2.Distance(aiko, noise.at),
+                        NoiseT = noise.t, HeardT = t, At = noise.at, Distance = Vector2.Distance(karen, noise.at),
                         Text = $"You made a noise ({noise.what}) and {Her} came to look."
                     });
                     break;
@@ -215,20 +215,20 @@ namespace Kehai.Aiko
         float openPropUntil;
         float lastClockRefused = -999f;
 
-        public void Record(float t, string kind, string chose, string text, Vector2 aikoAt)
+        public void Record(float t, string kind, string chose, string text, Vector2 karenAt)
         {
             switch (kind)
             {
                 case "CAUGHT":
                     lastCatch = t;
-                    Add("catch", t, aikoAt, true, $"{Her} caught you: a lecture and overtime.");
+                    Add("catch", t, karenAt, true, $"{Her} caught you: a lecture and overtime.");
                     break;
 
                 case "PLAN":
                     openProp = -1;
                     if (chose != null && ClipMarkers.PropTricks.Contains(chose))
                     {
-                        openProp = Add("prop_trick", t, aikoAt, true, $"{Her} is {AikoNarrator.Tactic(chose).TrimEnd('!')}.");
+                        openProp = Add("prop_trick", t, karenAt, true, $"{Her} is {KarenNarrator.Tactic(chose).TrimEnd('!')}.");
                         openPropUntil = t + ClipMarkers.PropTrickSeconds;
                     }
                     break;
@@ -243,21 +243,21 @@ namespace Kehai.Aiko
                     {
                         var w = warnings[0];
                         warnings.RemoveAt(0);
-                        Add("tell_then_trick", w.t, aikoAt, true, w.text + " Then: " + label + ".", t, t - w.t);
+                        Add("tell_then_trick", w.t, karenAt, true, w.text + " Then: " + label + ".", t, t - w.t);
                     }
 
                     if (label.StartsWith("kick over a bucket"))
                     {
                         mopped.RemoveAll(m => t - m.t > ClipMarkers.UndoneWorkSeconds);
                         foreach (var m in mopped)
-                            if (Vector2.Distance(m.at, aikoAt) <= ClipMarkers.UndoneSpillMetres)
+                            if (Vector2.Distance(m.at, karenAt) <= ClipMarkers.UndoneSpillMetres)
                             {
-                                Add("undone_work", t, aikoAt, true, $"{Her} spilled something where you had just mopped.", t, t - m.t);
+                                Add("undone_work", t, karenAt, true, $"{Her} spilled something where you had just mopped.", t, t - m.t);
                                 mopped.Remove(m);
                                 break;
                             }
                     }
-                    else if (label.StartsWith("clock-out refused")) ClockRefused(t, aikoAt, false);
+                    else if (label.StartsWith("clock-out refused")) ClockRefused(t, karenAt, false);
                     break;
             }
         }

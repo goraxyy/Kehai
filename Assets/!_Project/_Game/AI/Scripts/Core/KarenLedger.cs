@@ -4,7 +4,7 @@ using System.Linq;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     [System.Serializable]
     public class ArmStat
@@ -41,7 +41,7 @@ namespace Kehai.Aiko
         public int lastShift;
     }
 
-    // The player model (Aiko.md §7.1), serialised. Roughly forty numbers and a few
+    // The player model (Karen.md §7.1), serialised. Roughly forty numbers and a few
     // histograms; survives death, quitting and new shifts.
     [System.Serializable]
     public class LedgerData
@@ -73,7 +73,7 @@ namespace Kehai.Aiko
         public List<CounterStat> counterplay = new List<CounterStat>();
     }
 
-    // The Ledger (Aiko.md §2.3, §7). It does not decide what happens; it decides what Aiko
+    // The Ledger (Karen.md §2.3, §7). It does not decide what happens; it decides what Karen
     // is inclined to try, and what she expects of this particular employee.
     //
     //   Bandit    — every tactic is an arm. UCB (or Thompson) with a habituation penalty
@@ -81,13 +81,13 @@ namespace Kehai.Aiko
     //   Habits    — where you dwell, where you hide, the routes you take between jobs.
     //   Decay     — every learned prior fades without reinforcement, so changing your
     //               behaviour visibly works within two shifts (fairness rule 7).
-    public sealed class AikoLedger
+    public sealed class KarenLedger
     {
         public LedgerData Data { get; private set; } = new LedgerData();
         public bool Persistent { get; set; }
         public string PlayerName => Data.playerName;
 
-        readonly AikoConfig config;
+        readonly KarenConfig config;
         readonly Dictionary<string, ArmStat> arms = new Dictionary<string, ArmStat>();
         readonly Dictionary<string, RegionStat> regions = new Dictionary<string, RegionStat>();
         int shift = 1;
@@ -96,10 +96,10 @@ namespace Kehai.Aiko
         readonly List<string> currentRoute = new List<string>();
         string lastRegionKey;
 
-        public static string DefaultPath => Path.Combine(Application.persistentDataPath, "aiko_ledger.json");
+        public static string DefaultPath => Path.Combine(Application.persistentDataPath, "karen_ledger.json");
         public string SavePath => string.IsNullOrEmpty(config?.ledgerPath) ? DefaultPath : config.ledgerPath;
 
-        public AikoLedger(AikoConfig config)
+        public KarenLedger(KarenConfig config)
         {
             this.config = config;
         }
@@ -214,21 +214,21 @@ namespace Kehai.Aiko
             return a;
         }
 
-        public float ExpectedPanicDelta(Tactic t, AikoContext c)
+        public float ExpectedPanicDelta(Tactic t, KarenContext c)
         {
             if (!c.Features.Bandit) return t.PanicPrior;
             return arms.TryGetValue(t.Id, out ArmStat a) && a.n > 0.5f ? a.q : t.PanicPrior;
         }
 
         // The authored escalation curve: a tactic just introduced this shift gets a push.
-        public float PriorScore(Tactic t, AikoContext c)
+        public float PriorScore(Tactic t, KarenContext c)
         {
             float fresh = t.IntroducedShift == c.ShiftNumber ? 0.1f : 0f;
             return t.PanicPrior + fresh;
         }
 
         //   score(a) = Q̂(a) + c·sqrt(ln t / n(a)) − λ·exp(−(t − tLast)/τ) + prior(a, shift)
-        public float BanditScore(Tactic t, AikoContext c, out string why)
+        public float BanditScore(Tactic t, KarenContext c, out string why)
         {
             ArmStat a = Arm(t.Id);
             float total = 1f;
@@ -350,7 +350,7 @@ namespace Kehai.Aiko
         public int CounterplayKindsThisShift => Data.counterplay.Count(x => x.lastShift == shift);
 
         // The employee's favourite hiding places, as region ids (§7.5).
-        public List<int> ConcealmentRegions(AikoContext c, int n)
+        public List<int> ConcealmentRegions(KarenContext c, int n)
         {
             var result = new List<int>();
             if (!c.Features.Bandit && !c.Features.Persistent) return result;
@@ -381,7 +381,7 @@ namespace Kehai.Aiko
             }
         }
 
-        public int LeastVisitedRegion(AikoContext c)
+        public int LeastVisitedRegion(KarenContext c)
         {
             int best = -1;
             float bestScore = float.MaxValue;
@@ -397,7 +397,7 @@ namespace Kehai.Aiko
 
         // Route prior between two regions: which region on the employee's habitual way there
         // is the best place to wait (§7.5 route denial, §8.6 ambush).
-        public bool RoutePrior(AikoContext c, int from, int to, out int waitRegion, out float confidence)
+        public bool RoutePrior(KarenContext c, int from, int to, out int waitRegion, out float confidence)
         {
             waitRegion = -1;
             confidence = 0f;
@@ -430,7 +430,7 @@ namespace Kehai.Aiko
             return waitRegion >= 0;
         }
 
-        public float BestRouteConfidence(AikoContext c, out string why)
+        public float BestRouteConfidence(KarenContext c, out string why)
         {
             why = "no route prior";
             int target = c.Brain.LikelyNextJobRegion;
@@ -441,7 +441,7 @@ namespace Kehai.Aiko
             return conf;
         }
 
-        public int AmbushRegion(AikoContext c, out string reason)
+        public int AmbushRegion(KarenContext c, out string reason)
         {
             reason = null;
             int target = c.Brain.LikelyNextJobRegion;

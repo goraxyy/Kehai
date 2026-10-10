@@ -4,14 +4,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Eval
 {
     public sealed class AblationPlan
     {
-        public AikoRung[] rungs = { AikoRung.A_RandomPatrol, AikoRung.B_ScriptedPatrol, AikoRung.C_BeliefGrid, AikoRung.D_Bandit, AikoRung.E_Ledger, AikoRung.F_Blink };
+        public KarenRung[] rungs = { KarenRung.A_RandomPatrol, KarenRung.B_ScriptedPatrol, KarenRung.C_BeliefGrid, KarenRung.D_Bandit, KarenRung.E_Ledger, KarenRung.F_Blink };
         public PlayerProfile[] profiles = { PlayerProfile.Efficient, PlayerProfile.Skittish, PlayerProfile.Reckless };
         public int careers = 1;
         public int shiftsPerCareer = 4;
@@ -27,7 +27,7 @@ namespace Kehai.Eval
     // The ablation ladder (IDEAS.md §2), run end to end with simulated players.
     //
     // Paired design: for a given player profile and career, every rung sees the same seed —
-    // the same customers, the same spills — so a difference between rungs is Aiko, not luck.
+    // the same customers, the same spills — so a difference between rungs is Karen, not luck.
     // A career is several consecutive shifts in one session, which is what gives the
     // persistent Ledger (rung E) something to remember.
     public sealed class AblationRunner : MonoBehaviour
@@ -67,7 +67,7 @@ namespace Kehai.Eval
             for (int career = 0; career < Plan.careers; career++)
             {
                 int seed = Plan.baseSeed + career * 100 + (int)profile * 10;
-                foreach (AikoRung rung in Plan.rungs)
+                foreach (KarenRung rung in Plan.rungs)
                 {
                     var config = new EnvConfig
                     {
@@ -219,7 +219,7 @@ namespace Kehai.Eval
                     };
                     string rungs = Str(args, "-ablation-rungs", null);
                     if (rungs != null)
-                        plan.rungs = rungs.Where(char.IsLetter).Select(ch => (AikoRung)(char.ToUpperInvariant(ch) - 'A')).ToArray();
+                        plan.rungs = rungs.Where(char.IsLetter).Select(ch => (KarenRung)(char.ToUpperInvariant(ch) - 'A')).ToArray();
                     string profiles = Str(args, "-ablation-profiles", null);   // e.g. "efficient,reckless"
                     if (profiles != null)
                         plan.profiles = profiles.Split(',').Select(p => (PlayerProfile)System.Enum.Parse(typeof(PlayerProfile), p.Trim(), true)).ToArray();

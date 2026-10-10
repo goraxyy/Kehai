@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     public enum MotionState { Still, Crouching, Walking, Sprinting }
 
     // How lit a point on the floor is, from the ceiling lights that are actually on.
-    // Sight uses it for the player's visibility; Aiko uses it to prefer dark approaches.
+    // Sight uses it for the player's visibility; Karen uses it to prefer dark approaches.
     public static class LightProbe
     {
         const float Cell = 5f;
@@ -97,9 +97,9 @@ namespace Kehai.Aiko
 
     // Everything about the employee that can be *sensed* — and nothing else.
     //
-    // This is the one door between the player and Aiko, and only sensors may use it:
+    // This is the one door between the player and Karen, and only sensors may use it:
     // SightSensor looks at these points, CustomerMemory remembers them, the Director (which
-    // is omniscient by design) reads them for the Panic Index. AikoBody, the belief grid
+    // is omniscient by design) reads them for the Panic Index. KarenBody, the belief grid
     // and the planner never touch it — the fairness test in _Tests checks that in source.
     [DisallowMultipleComponent]
     public class PlayerPresence : MonoBehaviour
@@ -145,7 +145,7 @@ namespace Kehai.Aiko
             }
         }
 
-        // Aiko.md §3.1 motion salience.
+        // Karen.md §3.1 motion salience.
         public float MotionSalience
         {
             get
@@ -177,8 +177,8 @@ namespace Kehai.Aiko
 
         public bool Owns(Collider c) => c != null && (c == controller || c.transform.IsChildOf(transform));
 
-        // Walking into stock left on the floor — the noise carpet Aiko lays with a shelf
-        // sweep (Aiko.md §8.2).
+        // Walking into stock left on the floor — the noise carpet Karen lays with a shelf
+        // sweep (Karen.md §8.2).
         void OnControllerColliderHit(ControllerColliderHit hit)
         {
             if (hit.collider == null || hit.collider.attachedRigidbody == null) return;

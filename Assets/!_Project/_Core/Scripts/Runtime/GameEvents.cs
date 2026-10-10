@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 // The things the player does that other systems want to know about, raised where they
-// happen. Aiko reads them as evidence, the Director as stress signals, the eval harness
+// happen. Karen reads them as evidence, the Director as stress signals, the eval harness
 // as its action log — none of which the gameplay scripts need to know exist.
 public static class GameEvents
 {

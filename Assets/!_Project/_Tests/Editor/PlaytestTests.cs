@@ -81,7 +81,7 @@ public class PlaytestTests
     public void APackage_HoldsTheSession_NotOldShiftsOrReports()
     {
         DateTime started = DateTime.UtcNow.AddMinutes(-10);
-        string session = Dir("sessions/20261004_101500"), shifts = Dir("shift_records"), thoughts = Dir("aiko_logs");
+        string session = Dir("sessions/20261004_101500"), shifts = Dir("shift_records"), thoughts = Dir("karen_logs");
         File.WriteAllText(Path.Combine(session, PlaytestPaths.LogName), "{}\n");
         string[] fresh = { "shift_01_x.json", "shift_01_x.krec", "shift_01_x.markers.json", "interlude_01_x.krec", "shift_02_y.krec.part", "shift_01_x.html", "notes.txt" };
         foreach (string f in fresh) File.WriteAllText(Path.Combine(shifts, f), f);
@@ -89,7 +89,7 @@ public class PlaytestTests
         File.WriteAllText(old, "old");
         File.SetLastWriteTimeUtc(old, started.AddHours(-2));
         File.WriteAllText(Path.Combine(thoughts, "thoughts_shift01.jsonl"), "{}");
-        string ledger = Path.Combine(temp, "aiko_ledger.json");
+        string ledger = Path.Combine(temp, "karen_ledger.json");
         File.WriteAllText(ledger, "{}");
         string playerLog = Path.Combine(temp, "Player.log");
         File.WriteAllText(playerLog, "log");
@@ -98,7 +98,7 @@ public class PlaytestTests
         CollectionAssert.AreEquivalent(new[]
         {
             "session.jsonl", "shifts/shift_01_x.json", "shifts/shift_01_x.krec", "shifts/shift_01_x.markers.json",
-            "shifts/interlude_01_x.krec", "shifts/shift_02_y.krec.part", "aiko_logs/thoughts_shift01.jsonl", "aiko_ledger.json", "Player.log",
+            "shifts/interlude_01_x.krec", "shifts/shift_02_y.krec.part", "karen_logs/thoughts_shift01.jsonl", "karen_ledger.json", "Player.log",
         }, files.Select(f => f.entry).ToArray());
 
         string zip = PlaytestPackage.Pack(Path.Combine(temp, "outbox", PlaytestPackage.ZipName("round1", "T07", "20261004_101500")), files);

@@ -12,7 +12,7 @@ namespace Kehai.Replay
         public string Game = GameNames.Game, Stem = "", Started = "", Scene = "", Rung = "";
         public int Shift, Seed;
 
-        // Aiko's belief map is recorded on this grid (x across, z down the rows).
+        // Karen's belief map is recorded on this grid (x across, z down the rows).
         public Vector2 BeliefOrigin;
         public float BeliefCell = Krec.BeliefCell;
         public int BeliefCols, BeliefRows;

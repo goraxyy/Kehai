@@ -46,11 +46,11 @@ def session_text(facts: dict, summary: dict | None) -> str:
     spotted = sum(s.get("spotted", 0) or 0 for s in shifts)
     catches = sum(s.get("catches", 0) or 0 for s in shifts)
     if shifts:
-        lines.append(f"Aiko: spotted them {spotted}× · caught {catches}×")
+        lines.append(f"Karen: spotted them {spotted}× · caught {catches}×")
     a = facts.get("answers")
     if a:
         lines.append("Answers: " + " · ".join(f"{k} {esc(v)}" for k, v in
-                                               (("Aiko felt", a.get("aiko")), ("knew what to do:", a.get("knew")),
+                                               (("Karen felt", a.get("karen")), ("knew what to do:", a.get("knew")),
                                                 ("lost:", a.get("lost")), ("play more:", a.get("more"))) if v))
         if a.get("broke"):
             lines.append(f"“{esc(a['broke'])}”")
@@ -60,9 +60,9 @@ def session_text(facts: dict, summary: dict | None) -> str:
                  f"{esc(computer.get('os') or '?')} · {esc(computer.get('cpu') or '?')}")
     if summary:
         lines.append(f"<i>{esc(summary['headline'])}</i>")
-        verdict = summary.get("aiko", {}).get("verdict")
+        verdict = summary.get("karen", {}).get("verdict")
         if verdict and verdict != "unclear":
-            lines.append(f"Aiko looks {esc(verdict)}.")
+            lines.append(f"Karen looks {esc(verdict)}.")
     if facts["bugs"]:
         lines.append(f"🐞 {len(facts['bugs'])} bug note(s) follow.")
     lines.append(f"<code>{esc(str(root() / facts['round'] / facts['code'] / facts['launch']))}</code>")

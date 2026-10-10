@@ -95,7 +95,7 @@ test('captions come a few words at a time, breaking at pauses, sentence ends and
       { text: 'I', start: 0, end: 0.2 }, { text: 'hid', start: 0.25, end: 0.5 }, { text: 'behind', start: 0.55, end: 0.8 },
       { text: 'shelves.', start: 0.85, end: 1.2 }, { text: 'She', start: 2.0, end: 2.2 }, { text: 'knew', start: 2.25, end: 2.6 },
     ] },
-    { src: 'b', at: 13, duration: 1, speaker: 'aiko', words: [{ text: 'Hello', start: 0, end: 0.5 }] },
+    { src: 'b', at: 13, duration: 1, speaker: 'karen', words: [{ text: 'Hello', start: 0, end: 0.5 }] },
   ]);
   assert.equal(words[0].start, 10, 'on the video clock');
   const chunks = captionChunks(words, 3);

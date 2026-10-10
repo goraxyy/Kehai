@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Kehai.Replay
 {
     // Watches a recorded shift in 3D: the store rebuilt (ReplayStage), a camera to look at it
-    // with (ReplayCameras), Aiko's mind drawn in (MindLayers), the shift's sounds where they
+    // with (ReplayCameras), Karen's mind drawn in (MindLayers), the shift's sounds where they
     // happened (ReplaySound), and a timeline to move through it with the clip moments and
     // markers on it. Opened by ReplayMode; renders a shot instead when ReplayRender asks.
     public sealed class ReplayPlayer : MonoBehaviour
@@ -262,7 +262,7 @@ namespace Kehai.Replay
             // Line 1: what's playing.
             string layers = Mind.Shown == MindLayer.None ? "off" : MindLayers.Describe(Mind.Shown);
             string subject = Cameras.Preset == ShotPreset.Pov || Cameras.Preset == ShotPreset.Free || Cameras.Preset == ShotPreset.Path ? "" :
-                " · " + (Cameras.Subject == KrecKind.Aiko ? GameNames.Antagonist : "you");
+                " · " + (Cameras.Subject == KrecKind.Karen ? GameNames.Antagonist : "you");
             GUI.Label(new Rect(bar.x + 12, bar.y + 6, bar.width - 24, 22),
                 $"{(Playing ? "Playing" : "Paused")}  {Clock(T)} / {Clock(Stage.End)}   {Speed:0.##}×   camera: {Name(Cameras.Preset)}{subject}{(Cameras.DepthOfFieldOn ? " · focus" : "")}   her mind: {layers}", label);
             GUI.Label(new Rect(bar.x + 12, bar.y + 6, bar.width - 24, 22), "F1 keys · H hide · Backspace leave", RightAligned());
@@ -277,7 +277,7 @@ namespace Kehai.Replay
             foreach (Marker m in Markers)
             {
                 float tall = Mathf.Lerp(6f, line.height, Mathf.Clamp01(m.Weight / 10f));
-                Color c = m.Id == "manual_bug" ? ReplayLook.Aiko : m.Id == "manual_good" ? ReplayLook.You : new Color(1f, 0.84f, 0.25f, 0.9f);
+                Color c = m.Id == "manual_bug" ? ReplayLook.Karen : m.Id == "manual_good" ? ReplayLook.You : new Color(1f, 0.84f, 0.25f, 0.9f);
                 Fill(new Rect(X(m.T) - 1f, line.yMax - tall, 2f, tall), c);
             }
             Fill(new Rect(X(T) - 1.5f, line.y - 4f, 3f, line.height + 8f), Color.white);

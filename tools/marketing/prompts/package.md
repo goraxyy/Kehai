@@ -6,7 +6,7 @@ language (written natively in that language, not translated word for word).
 
 - **YouTube:** a title (shorts: under 60 characters, the hook as a claim or question, may end
   with #Shorts; long videos: what the viewer learns, under 70 characters); a description of two to
-  four short paragraphs (what happens, one line on how {{aiko}} works, the call to action); 5 to
+  four short paragraphs (what happens, one line on how {{karen}} works, the call to action); 5 to
   12 tags (plain words, no #).
 - **Instagram:** a caption of one to three short lines, then 5 to 12 hashtags.
 - **TikTok:** a one-line caption (a question works), 3 to 6 hashtags.

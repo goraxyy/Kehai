@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Where Aiko thinks you are (Aiko.md §4).
+    // Where Karen thinks you are (Karen.md §4).
     //
     // Never a "last known position": a probability distribution over every walkable cell
     // of the store map, Σ b(c) = 1, updated like a Bayes filter.
@@ -49,7 +49,7 @@ namespace Kehai.Aiko
         public float Staleness => Time.time - LastStrongObservation;
         public int Collapses { get; private set; }
 
-        // Tunables (AikoConfig overrides these).
+        // Tunables (KarenConfig overrides these).
         public float Floor = 1e-4f;                      // likelihood floor outside a bump
         public float MovingProbability = 0.65f;          // share of time a person is walking
         public float DesireGain = 0.9f;
@@ -104,7 +104,7 @@ namespace Kehai.Aiko
         }
 
         // Certainty at a point — for a fresh shift with the player at the time clock, which
-        // Aiko knows because the time clock is hers.
+        // Karen knows because the time clock is hers.
         public void ResetTo(Vector3 position, float sigma)
         {
             System.Array.Copy(prior, b, b.Length);
@@ -114,7 +114,7 @@ namespace Kehai.Aiko
 
         // ---- predict --------------------------------------------------------------
 
-        // One step of diffusion. `speed` is how fast Aiko believes you move on average —
+        // One step of diffusion. `speed` is how fast Karen believes you move on average —
         // lower once she thinks you're out of energy, which is burnout narrowing the search.
         public void Predict(float dt, float speed)
         {
@@ -254,7 +254,7 @@ namespace Kehai.Aiko
         // ---- the Director's bounded hint ---------------------------------------------
 
         // Moves up to `amount` of the total mass onto a region. The Director alone calls
-        // this, and caps it (Aiko.md §9.2); the grid just does the arithmetic.
+        // this, and caps it (Karen.md §9.2); the grid just does the arithmetic.
         public void Bias(int region, float amount)
         {
             if (region < 0 || amount <= 0f) return;

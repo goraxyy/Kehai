@@ -1,11 +1,11 @@
 using Kehai;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Blink;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Esc: the settings. Sound first: one slider for all game sounds at once, then each kind of
-// sound. Then restart the shift or leave it for the main menu, mouse sensitivity, Aiko's floor
+// sound. Then restart the shift or leave it for the main menu, mouse sensitivity, Karen's floor
 // cone, the webcam, and a Keys tab listing every key in the game. The game pauses while it's
 // open, and everything chosen here is remembered. The main menu opens the same pages, without
 // the shift.
@@ -168,8 +168,8 @@ public sealed class SettingsMenu : MonoBehaviour
         if (!Mathf.Approximately(value, sensitivity)) Sensitivity = value;
 
         Heading(GameNames.Antagonist);
-        bool cone = GUILayout.Toggle(AikoFloorCone.Enabled, "  Show where " + GameNames.Antagonist + " is looking, as a cone on the floor", toggle);
-        if (cone != AikoFloorCone.Enabled) AikoFloorCone.Enabled = cone;
+        bool cone = GUILayout.Toggle(KarenFloorCone.Enabled, "  Show where " + GameNames.Antagonist + " is looking, as a cone on the floor", toggle);
+        if (cone != KarenFloorCone.Enabled) KarenFloorCone.Enabled = cone;
         GUILayout.Label("Blue: walking her rounds. Orange: she noticed something. Red: she's hunting you, or can see you right now.", small);
 
         Heading("Webcam blinking");
@@ -303,7 +303,7 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void Preview(SoundKind kind)
     {
-        AudioClip clip = kind == SoundKind.Aiko ? ProceduralAudio.AikoStep()
+        AudioClip clip = kind == SoundKind.Karen ? ProceduralAudio.KarenStep()
             : kind == SoundKind.Voice ? ProceduralAudio.PaChime()
             : kind == SoundKind.Effects ? ProceduralAudio.PlayerStep(0)
             : null;   // music: the radio is its own sample

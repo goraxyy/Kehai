@@ -25,16 +25,16 @@ PICKS = {
     "shorts": [
         {"name": "one-sprint", "moment": f"{STEM}#1", "pattern": "", "angle": "One sprint was enough.", "hook_idea": "One sprint.",
          "why": "A catch with a turn.", "shots": [
-             {"name": "top", "camera": "topdown", "subject": "aiko", "layers": ["cone", "sound"], "alpha": False,
+             {"name": "top", "camera": "topdown", "subject": "karen", "layers": ["cone", "sound"], "alpha": False,
               "start_offset": 0, "end_offset": 0},
-             {"name": "mind", "camera": "topdown", "subject": "aiko", "layers": ["belief", "guess"], "alpha": True,
+             {"name": "mind", "camera": "topdown", "subject": "karen", "layers": ["belief", "guess"], "alpha": True,
               "start_offset": 0, "end_offset": 0}]},
         {"name": "borrowed", "moment": f"{STEM}#3", "pattern": "", "angle": "That customer isn't shopping.", "hook_idea": "Look again.",
          "why": "Marked good.", "shots": [
              {"name": "pov", "camera": "pov", "subject": "you", "layers": [], "alpha": False, "start_offset": -2, "end_offset": 0}]},
         {"name": "got-away", "moment": f"{STEM}#2", "pattern": "", "angle": "She can't outrun a sprint.", "hook_idea": "Run.",
          "why": "Fairness.", "shots": [
-             {"name": "chase", "camera": "chase", "subject": "aiko", "layers": [], "alpha": False, "start_offset": 0, "end_offset": 0}]},
+             {"name": "chase", "camera": "chase", "subject": "karen", "layers": [], "alpha": False, "start_offset": 0, "end_offset": 0}]},
     ],
     "pattern_fit": [],
     "kept": [{"moment": f"{STEM}#3", "use": "short", "reason": "Picked."},
@@ -116,7 +116,7 @@ def test_translation_fills_every_text_and_is_remembered(world, tmp_path, monkeyp
     edit_id = written_short(world, tmp_path, monkeypatch)
     edit = json.loads((world / "edits" / edit_id / "edit.json").read_text())
     items = [f for f in translate.texts(edit) if "ru" not in f["text"]]
-    answer = {"items": [{"id": f"t{n + 1}", "text": f"РУ {f['text']['en']}".replace("Aiko", "Айко")}
+    answer = {"items": [{"id": f"t{n + 1}", "text": f"РУ {f['text']['en']}".replace("Karen", "Карен")}
                         for n, f in enumerate(translate.texts(edit))]}
     for x, f in zip(answer["items"], translate.texts(edit)):
         if f["kind"].startswith("spoken"):
@@ -132,16 +132,16 @@ def test_translation_fills_every_text_and_is_remembered(world, tmp_path, monkeyp
 
 
 def test_translation_checks_names_stars_and_spoken_length():
-    names = {"game": "Kehai", "game_ru": "Кэхай", "aiko": "Aiko", "aiko_ru": "Айко"}
+    names = {"game": "Kehai", "game_ru": "Кэхай", "karen": "Karen", "karen_ru": "Карен"}
     items = [{"id": "t1", "en": "*Kehai* is out", "kind": "hook"},
-             {"id": "t2", "en": "Aiko heard me.", "kind": "spoken by the narrator", "seconds": 1.0},
+             {"id": "t2", "en": "Karen heard me.", "kind": "spoken by the narrator", "seconds": 1.0},
              {"id": "t3", "en": "Play Kehai", "kind": "spoken by the narrator", "seconds": 5.0}]
     found = translate.checks({"items": [{"id": "t1", "text": "Кэхай вышла"},
                                         {"id": "t2", "text": "Она услышала меня, когда я бежал через весь магазин."},
                                         {"id": "t3", "text": "Играй в Kehai"}]}, items, "ru", names)
     text = " | ".join(found)
     assert "stars" in text and "Latin letters" in text
-    assert "write her name as Айко" in text and "say it shorter" in text and "Кэхай (it is spoken)" in text
+    assert "write her name as Карен" in text and "say it shorter" in text and "Кэхай (it is spoken)" in text
 
 
 def test_revise_applies_a_note_keeps_history_and_undo_puts_it_back(world, tmp_path, monkeypatch):
@@ -230,10 +230,10 @@ def test_dry_runs_send_nothing(world, tmp_path, monkeypatch, capsys):
 def test_the_long_video_outline_and_script(world, tmp_path, monkeypatch):
     outline = {"title_ideas": ["A", "B", "C"], "logline": "A month of her.", "cta": "Follow.",
                "sections": [{"name": "Cold open", "minutes": 4, "purpose": "Hook.", "beats": ["The catch"],
-                             "shots": [{"name": "open-top", "moment": f"{STEM}#1", "camera": "topdown", "subject": "aiko",
+                             "shots": [{"name": "open-top", "moment": f"{STEM}#1", "camera": "topdown", "subject": "karen",
                                         "layers": ["cone"], "alpha": False, "start_offset": 0, "end_offset": 0}]},
                             {"name": "How she hears", "minutes": 4, "purpose": "Explain.", "beats": ["Sound rings"],
-                             "shots": [{"name": "rings", "moment": f"{STEM}#2", "camera": "topdown", "subject": "aiko",
+                             "shots": [{"name": "rings", "moment": f"{STEM}#2", "camera": "topdown", "subject": "karen",
                                         "layers": ["sound"], "alpha": False, "start_offset": 0, "end_offset": 0}]}]}
     words = " ".join(["word"] * 25)
     script = {"sections": [{"name": s["name"], "lines": [{"speaker": "narrator", "text": words + ".", "cue": "open-top"}] * 24}
@@ -268,7 +268,7 @@ def test_the_long_video_is_voiced_then_cut_to_its_voice(world, tmp_path, monkeyp
     monkeypatch.setitem(drafts.LIMITS, "long", (5.0, 1200.0))      # a tiny "long" video, to keep the test quick
     month = world / "long" / "2026-09"
     lines = [{"speaker": "narrator", "text": "This month she learned to listen.", "cue": "open-top"},
-             {"speaker": "aiko", "text": "Your footsteps are noted.", "cue": "open-top"}]
+             {"speaker": "karen", "text": "Your footsteps are noted.", "cue": "open-top"}]
     (month).mkdir(parents=True)
     (month / "outline.json").write_text(json.dumps({"answer": {"logline": "She listens.", "cta": "Follow.", "sections": [
         {"name": "Cold open", "minutes": 1, "purpose": "Hook.", "beats": [], "shots": []}]}}))
@@ -284,7 +284,7 @@ def test_the_long_video_is_voiced_then_cut_to_its_voice(world, tmp_path, monkeyp
                        "visual": vis(source="open-top"), "pip": NO_PIP,
                        "overlays": [ov("lower-third", text="Cold open")], "sfx": []}],
            "script": [{"speaker": "narrator", "at": 0.2, "text": lines[0]["text"]},
-                      {"speaker": "aiko", "at": round(0.2 + first + 0.3, 2), "text": lines[1]["text"]}],
+                      {"speaker": "karen", "at": round(0.2 + first + 0.3, 2), "text": lines[1]["text"]}],
            "music": {"asset": "", "offset": 0, "volume": 0.3}, "end_card": {"duration": 3, "cta": "Follow."}}
     wrong = json.loads(json.dumps(cut))
     wrong["script"][1]["text"] = "Your steps are noted."             # not what was recorded

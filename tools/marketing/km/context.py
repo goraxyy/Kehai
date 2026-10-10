@@ -33,19 +33,21 @@ def shot_entry(root: Path, sidecar: Path, docs_by_stem: dict | None = None) -> d
     if doc:
         entry["events"] = moments.events(doc, d["from"], d["to"])
     if d.get("track"):
+        if "aiko" in d["track"] and "karen" not in d["track"]:   # rendered while she was called Aiko
+            d["track"]["karen"] = d["track"].pop("aiko")
         entry["track"] = d["track"]
         entry["where"] = where(d["track"], entry["seconds"])
     return entry
 
 
 def where(track: dict, seconds: float) -> list:
-    """Once a second: [t, aiko, you], each [x, y] in the picture or null when off screen."""
+    """Once a second: [t, karen, you], each [x, y] in the picture or null when off screen."""
     hz = track["hz"]
     out = []
     for t in range(int(seconds) + 1):
         i = t * hz
         row = [t]
-        for who in ("aiko", "you"):
+        for who in ("karen", "you"):
             s = track[who][i] if i < len(track[who]) else None
             row.append([round(s[0], 2), round(s[1], 2)] if s else None)
         out.append(row)

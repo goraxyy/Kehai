@@ -1,16 +1,16 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Aiko's body: a NavMeshAgent with eyes, feet and hands (Aiko.md §2.1).
+    // Karen's body: a NavMeshAgent with eyes, feet and hands (Karen.md §2.1).
     //
     // What it has is as important as what it hasn't. It has no reference to the player at
     // all — that single missing reference is the difference between a stalker and an
     // investigator. It walks where the plan sends it, sees through its SightSensor, and
     // learns it has touched someone only by the contact itself.
     [RequireComponent(typeof(NavMeshAgent))]
-    public sealed class AikoBody : MonoBehaviour
+    public sealed class KarenBody : MonoBehaviour
     {
         public enum Pace { Sneak, Walk, Hurry, Run }
         public enum Mood { Calm, Alert, Hunt, Kind }
@@ -27,7 +27,7 @@ namespace Kehai.Aiko
 
         public event System.Action<Collider> Touched;
 
-        AikoConfig config;
+        KarenConfig config;
         Light eyeLight;
         Renderer eyeRenderer;
         AudioSource feet;
@@ -42,14 +42,14 @@ namespace Kehai.Aiko
         Vector3 burstFrom;
         float burstMax;
 
-        public static AikoBody Build(Transform parent, AikoConfig config, Vector3 at)
+        public static KarenBody Build(Transform parent, KarenConfig config, Vector3 at)
         {
-            var root = new GameObject("AIKO_Body");
+            var root = new GameObject("KAREN_Body");
             root.transform.SetParent(parent, false);
             root.transform.position = at;
             (Renderer eyeRenderer, Light gaze) = BuildLook(root.transform, config);
 
-            var body = root.AddComponent<AikoBody>();
+            var body = root.AddComponent<KarenBody>();
             body.config = config;
             body.Agent = root.GetComponent<NavMeshAgent>();
             body.Agent.radius = 0.4f;
@@ -92,7 +92,7 @@ namespace Kehai.Aiko
             body.hand.localPosition = new Vector3(0.35f, 1.1f, 0.35f);
 
             body.SetMood(Mood.Calm);
-            root.AddComponent<AikoFloorCone>();   // her gaze, painted on the floor
+            root.AddComponent<KarenFloorCone>();   // her gaze, painted on the floor
             if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, NavMesh.AllAreas)) body.Agent.Warp(hit.position);
             return body;
         }
@@ -100,7 +100,7 @@ namespace Kehai.Aiko
         // How she looks, and nothing else: the figure, the badge, the visor and the spot light
         // of her gaze, under `root`. The game gives it a body (Build); the replay dresses a
         // puppet in it.
-        public static (Renderer eye, Light gaze) BuildLook(Transform root, AikoConfig config)
+        public static (Renderer eye, Light gaze) BuildLook(Transform root, KarenConfig config)
         {
             // A tall, narrow, charcoal figure: a store manager seen from the far end of an aisle.
             var charcoal = new Color(0.16f, 0.16f, 0.18f);
@@ -109,7 +109,7 @@ namespace Kehai.Aiko
             torso.transform.SetParent(root, false);
             torso.transform.localPosition = new Vector3(0f, 1.05f, 0f);
             torso.transform.localScale = new Vector3(0.62f, 1.05f, 0.45f);
-            torso.GetComponent<Renderer>().sharedMaterial = AikoProps.Lit(charcoal, 0.55f);
+            torso.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(charcoal, 0.55f);
             Destroy(torso.GetComponent<Collider>());
 
             GameObject headGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -117,11 +117,11 @@ namespace Kehai.Aiko
             headGo.transform.SetParent(root, false);
             headGo.transform.localPosition = new Vector3(0f, 2.18f, 0f);
             headGo.transform.localScale = new Vector3(0.38f, 0.42f, 0.38f);
-            headGo.GetComponent<Renderer>().sharedMaterial = AikoProps.Lit(new Color(0.22f, 0.22f, 0.24f), 0.7f);
+            headGo.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(new Color(0.22f, 0.22f, 0.24f), 0.7f);
             Destroy(headGo.GetComponent<Collider>());
 
             // The badge: a lanyard card, the only friendly thing about her.
-            GameObject badge = AikoProps.Box("Badge", Vector3.zero, new Vector3(0.12f, 0.16f, 0.02f), new Color(0.95f, 0.95f, 0.9f), root, collider: false);
+            GameObject badge = KarenProps.Box("Badge", Vector3.zero, new Vector3(0.12f, 0.16f, 0.02f), new Color(0.95f, 0.95f, 0.9f), root, collider: false);
             badge.transform.localPosition = new Vector3(0.12f, 1.45f, 0.24f);
 
             // The eye: a visor that glows, and a spot light that shows exactly where she is
@@ -249,7 +249,7 @@ namespace Kehai.Aiko
             CurrentMood = mood;
             Color c = MoodColour(mood);
             if (eyeLight != null) eyeLight.color = c;
-            if (eyeRenderer != null) eyeRenderer.sharedMaterial = AikoProps.Emissive(c, mood == Mood.Hunt ? 6f : 3f);
+            if (eyeRenderer != null) eyeRenderer.sharedMaterial = KarenProps.Emissive(c, mood == Mood.Hunt ? 6f : 3f);
         }
 
         void Update()
@@ -282,7 +282,7 @@ namespace Kehai.Aiko
         {
             if (Agent.velocity.sqrMagnitude < 0.05f) return;
             HingeDoor door = HingeDoor.ClosedAhead(transform.position, Agent.velocity, 1.8f);
-            if (door != null && !door.Locked) door.OpenFor(transform.position, NoiseAuthor.Aiko);
+            if (door != null && !door.Locked) door.OpenFor(transform.position, NoiseAuthor.Karen);
         }
 
         void Footsteps()
@@ -293,8 +293,8 @@ namespace Kehai.Aiko
             if (stepTimer < interval) return;
             stepTimer = 0f;
             float volume = CurrentPace == Pace.Sneak ? 0.25f : CurrentPace == Pace.Run ? 1f : 0.6f;
-            feet.PlayOneShot(ProceduralAudio.AikoStep(), volume * SoundSettings.Get(SoundKind.Aiko));
-            NoiseBus.Emit(transform.position, volume * 0.8f, NoiseKind.AikoStep, NoiseAuthor.Aiko);
+            feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
+            NoiseBus.Emit(transform.position, volume * 0.8f, NoiseKind.KarenStep, NoiseAuthor.Karen);
         }
 
         void OnTriggerEnter(Collider other)

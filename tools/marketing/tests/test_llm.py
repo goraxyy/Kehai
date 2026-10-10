@@ -239,7 +239,7 @@ def test_the_model_can_be_overridden_for_every_step(monkeypatch):
 
 
 def test_names_fill_the_placeholders():
-    text = prompts.fill("{{game}} {{game_jp}} {{aiko}} {{aiko_ru}} {{game_ru}}")
+    text = prompts.fill("{{game}} {{game_jp}} {{karen}} {{karen_ru}} {{game_ru}}")
     assert re.fullmatch(r"\S+ \S+ \S+ \S+ \S+", text)
     with pytest.raises(KeyError):
         prompts.fill("{{nobody}}")

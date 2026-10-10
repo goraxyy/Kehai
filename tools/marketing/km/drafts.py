@@ -18,7 +18,7 @@ import re
 from . import timeline
 
 TRANSITION = 0.4
-WORDS_PER_SECOND = {"narrator": 2.6, "aiko": 2.2}
+WORDS_PER_SECOND = {"narrator": 2.6, "karen": 2.2}
 LIMITS = {"short": (12.0, 60.0), "long": (180.0, 1200.0)}
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{2,59}$")
 
@@ -425,7 +425,7 @@ def problems(draft: dict, ctx: dict, spoken: dict[str, float] | None = None) -> 
             if k in ("image", "gif", "lottie"):
                 if asset(o["asset"], (k,), ow) and not _in(o["size"], 0.05, 1):
                     out.append(f"{ow}: width (size) {o['size']} is outside 0.05 to 1")
-            if k in ("arrow", "circle") and o["style"] not in ("crimson", "ink", "paper", "aiko", "you"):
+            if k in ("arrow", "circle") and o["style"] not in ("crimson", "ink", "paper", "karen", "you"):
                 out.append(f"{ow}: style must be a colour")
         for j, x in enumerate(s["sfx"]):
             xw = f"{w} sfx {j + 1}"

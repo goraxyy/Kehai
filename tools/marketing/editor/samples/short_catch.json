@@ -358,7 +358,7 @@
         "src": "audio/sample/sample-short-catch.en.04.wav",
         "at": 13.95,
         "duration": 1.199,
-        "speaker": "aiko",
+        "speaker": "karen",
         "words": [
           {
             "text": "There",
@@ -520,7 +520,7 @@
         "src": "audio/sample/sample-short-catch.ru.04.wav",
         "at": 13.95,
         "duration": 0.901,
-        "speaker": "aiko",
+        "speaker": "karen",
         "words": [
           {
             "text": "Вот",

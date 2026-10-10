@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Eval;
 using Kehai.Replay;
 using NUnit.Framework;
@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 
 // The replay recorder, end to end: record ten seconds of a bot shift in the real store, read
-// the file back, and every position the player, Aiko and the customers really had at each
+// the file back, and every position the player, Karen and the customers really had at each
 // tick comes back within a centimetre. Slow (it loads the store and plays a shift), so it
 // cleans up the shift record it leaves behind.
 public class ReplayRoundTripTests
@@ -61,7 +61,7 @@ public class ReplayRoundTripTests
             Assert.GreaterOrEqual(data.End, RecordSeconds);
             List<(float t, int id, Vector3 position, Quaternion rotation)> poses = truth.Poses;
             Assert.IsTrue(poses.Any(s => data.Entities.TryGetValue(s.id, out ReplayEntity e) && e.Kind == KrecKind.Player), "the player was recorded");
-            Assert.IsTrue(poses.Any(s => data.Entities.TryGetValue(s.id, out ReplayEntity e) && e.Kind == KrecKind.Aiko), "Aiko was recorded");
+            Assert.IsTrue(poses.Any(s => data.Entities.TryGetValue(s.id, out ReplayEntity e) && e.Kind == KrecKind.Karen), "Karen was recorded");
             Assert.Greater(poses.Count, 100);
 
             float worst = 0f, worstAngle = 0f;
@@ -96,7 +96,7 @@ public class ReplayRoundTripTests
         yield return new ExitPlayMode();
     }
 
-    // Where the player, Aiko and every customer really were at each tick the recorder wrote.
+    // Where the player, Karen and every customer really were at each tick the recorder wrote.
     sealed class Truth
     {
         public readonly List<(float t, int id, Vector3 position, Quaternion rotation)> Poses = new List<(float, int, Vector3, Quaternion)>();
@@ -113,7 +113,7 @@ public class ReplayRoundTripTests
         void OnTick(float t)
         {
             foreach (ReplayRecorder.Tracked e in watching.Entities)
-                if ((e.Kind == KrecKind.Player || e.Kind == KrecKind.Aiko || e.Kind == KrecKind.Customer) && e.Transform != null)
+                if ((e.Kind == KrecKind.Player || e.Kind == KrecKind.Karen || e.Kind == KrecKind.Customer) && e.Transform != null)
                     Poses.Add((t, e.Id, e.Transform.position, e.Transform.rotation));
         }
     }

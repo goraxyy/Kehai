@@ -2,7 +2,7 @@
 # Renders one shot of a recorded shift with Unity, unattended (BUILD_PLAN.md, Phase 4).
 #
 #   tools/marketing/render_shot.sh -krec <file.krec> [-moment 1 | -from <s> -to <s>]
-#       [-shot pov|cctv|chase|orbit|topdown|path|<path.json>] [-subject aiko|you]
+#       [-shot pov|cctv|chase|orbit|topdown|path|<path.json>] [-subject karen|you]
 #       [-layers belief,guess,cone,sound,thoughts,actors|all|none] [-alpha] [-dof]
 #       [-size 1080x1920] [-fps 60] -out <file.mp4|file.webm|file.mov|folder/> [--dry-run]
 #

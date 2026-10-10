@@ -1,11 +1,11 @@
-# Aiko
+# Karen
 
-**Aiko** — the store's management AI, and the thing that is hunting you.
+**Karen** — the store's management AI, and the thing that is hunting you.
 
 > *"Employee wellbeing is a tracked metric. I am optimising it."*
 
 This document specifies the adaptive antagonist for **Kehai**. It is a design + architecture
-document, not an implementation. It describes what Aiko perceives, how it thinks, how it adapts
+document, not an implementation. It describes what Karen perceives, how it thinks, how it adapts
 across a single shift and across a career, the full library of things it can do to you, and how
 all of that maps onto the systems that already exist in this project.
 
@@ -13,7 +13,7 @@ all of that maps onto the systems that already exist in this project.
 
 ## 0. TL;DR
 
-Aiko is not a monster with a patrol route. It is a **facility** that happens to have a body.
+Karen is not a monster with a patrol route. It is a **facility** that happens to have a body.
 
 It runs three minds at once:
 
@@ -32,11 +32,11 @@ The core loop it plays against you:
      you have jobs to do  ──────────────►  the jobs force you into the maze
               ▲                                        │
               │                                        ▼
-     Aiko adds jobs / breaks jobs  ◄────────  the maze is where Aiko lives
+     Karen adds jobs / breaks jobs  ◄────────  the maze is where Karen lives
 ```
 
-Aiko almost never wins by catching you. It wins by making the shift take longer than you have
-energy for. **Kehai is the fail state. Aiko's real weapon is overtime.**
+Karen almost never wins by catching you. It wins by making the shift take longer than you have
+energy for. **Kehai is the fail state. Karen's real weapon is overtime.**
 
 ---
 
@@ -45,7 +45,7 @@ energy for. **Kehai is the fail state. Aiko's real weapon is overtime.**
 Five rules everything below has to obey.
 
 **1. The horror is administrative.**
-An Alien kills you. Aiko *assigns you more work*. Every scare should end with the player having a
+An Alien kills you. Karen *assigns you more work*. Every scare should end with the player having a
 new chore, a longer route, or less light — not just a raised heart rate. Fear that converts into
 a task is fear the player carries for the next ten minutes.
 
@@ -56,18 +56,18 @@ player reviews a replay, every single thing the Body did must be explainable fro
 could actually have sensed. This is a hard architectural boundary, not a guideline.
 
 **3. Adaptation must be two-way.**
-Hello Neighbor's failure mode is that the AI learns and the player just loses. Every Aiko
+Hello Neighbor's failure mode is that the AI learns and the player just loses. Every Karen
 counter-strategy must have a player counter-counter: cameras can be unplugged, the PA can be
 jammed, traps can be spotted, the maze can be re-learned. If a player can't fight back against
 the adaptation, it isn't adaptation, it's a difficulty slider with a story.
 
 **4. Regulate dread, don't maximise it.**
-Aiko targets a *band* of player stress, not the top of it. A permanently terrified player goes
+Karen targets a *band* of player stress, not the top of it. A permanently terrified player goes
 numb in ninety seconds. The quiet stretches are what make the loud ones work — so quiet is
-something Aiko actively schedules, not something that happens when it fails.
+something Karen actively schedules, not something that happens when it fails.
 
 **5. Every decision must be legible.**
-Aiko keeps a running natural-language trace of its own reasoning. It is a debugging tool, it is
+Karen keeps a running natural-language trace of its own reasoning. It is a debugging tool, it is
 a design tool, and at the end of a run it is a *feature* — the post-shift screen shows you what
 it was thinking. Being outsmarted is only satisfying if you can see how.
 
@@ -98,7 +98,7 @@ it was thinking. Being outsmarted is only satisfying if you can see how.
 
 A NavMeshAgent with a probabilistic model of where you are and a planner that turns that model
 into behaviour. It has no reference to `playerTransform` at all — that reference is the single
-biggest thing separating the current `EnemyAI.cs` from Aiko. It has a *belief*, and it acts on it.
+biggest thing separating the current `EnemyAI.cs` from Karen. It has a *belief*, and it acts on it.
 
 ### 2.2 The Director
 
@@ -106,7 +106,7 @@ Sees everything, controls nothing directly. Its job is the shape of the shift: w
 when it isn't, and whether the Body is allowed to spend the big tactics right now. Its levers:
 
 - **Tension budget** — a currency that regenerates over time and is spent on tactics. Big scares
-  cost a lot; the budget is why Aiko can't blackout-blackout-blackout.
+  cost a lot; the budget is why Karen can't blackout-blackout-blackout.
 - **Search bias** — may bias the belief grid toward the player's true region, capped hard (see
   §9). Used only when the player has been unthreatened for too long.
 - **Environmental events** — noises with no author, a flickering light, a door chime. Free dread
@@ -116,14 +116,14 @@ when it isn't, and whether the Body is allowed to spend the big tactics right no
 ### 2.3 The Ledger
 
 A serialised profile of the player that survives death, quitting, and new shifts. It does not
-decide *what happens*; it decides *what Aiko is inclined to try*. Details in §7.
+decide *what happens*; it decides *what Karen is inclined to try*. Details in §7.
 
 ---
 
 ## 3. Perception: the Sensorium
 
 Six sense channels. Each produces `Observation` records that feed one shared belief update.
-Nothing in the game grants Aiko a boolean "sees player" — everything is evidence with a
+Nothing in the game grants Karen a boolean "sees player" — everything is evidence with a
 confidence and a timestamp.
 
 ```csharp
@@ -173,7 +173,7 @@ NoiseBus.Emit(new NoiseEvent {
 });
 ```
 
-| Source | Existing hook | Loudness | What it tells Aiko |
+| Source | Existing hook | Loudness | What it tells Karen |
 |---|---|---|---|
 | Sprinting | `PlayerMotor.IsSprinting()` | 0.9 | you are moving, and you have energy |
 | Walking | `PlayerMotor` | 0.35 | rough bearing only |
@@ -196,7 +196,7 @@ watching even when nothing is.
 
 | Trace | Left by | Lifetime | Read as |
 |---|---|---|---|
-| Wet footprints | walking through a spill or a mopped patch | 45 s, fading | a **directed trail** — Aiko gets a bearing, not just a point |
+| Wet footprints | walking through a spill or a mopped patch | 45 s, fading | a **directed trail** — Karen gets a bearing, not just a point |
 | A gap on a shelf | `ShelfSlot.TakeItem` | until refilled | someone worked here recently |
 | A *filled* shelf it sabotaged | `ShelfUnit.IsFull` flipping back | permanent | you undid its work — it knows you were here and it knows when |
 | Item on the floor | `Q` drop | until picked up | your carry state, and your panic (dropped things = fleeing) |
@@ -204,7 +204,7 @@ watching even when nothing is.
 | Bagged bin | `Trashcan.UsageCount` reset | until re-filled | task progress |
 | An open door held open | `HingeDoor` | seconds | you went through *and were in a hurry* |
 
-Traces are the reason Aiko can be terrifying without ever seeing you: it walks into an aisle,
+Traces are the reason Karen can be terrifying without ever seeing you: it walks into an aisle,
 finds a bagged bin and wet footprints heading north, and now has a hard prior on half the store.
 
 ### 3.4 Testimony — the customers are its sensor network
@@ -212,7 +212,7 @@ finds a bagged bin and wet footprints heading north, and now has a hard prior on
 **This is the mechanic the maze exists for.**
 
 The store is full of `CustomerNPC`s doing their own routine. Each carries a tiny short-term
-memory: `lastSawEmployeeAt`, `when`, `confidence`. Aiko doesn't read their minds — the Body has
+memory: `lastSawEmployeeAt`, `when`, `confidence`. Karen doesn't read their minds — the Body has
 to physically pass near a customer to "ask", which costs it time and puts it in the open.
 
 ```csharp
@@ -234,11 +234,11 @@ Consequences that fall out of this for free, without writing a line of special-c
 
 ### 3.5 Infrastructure — it owns the building
 
-Aiko is the *store*. Static sensors it always has, and which the player can attack:
+Karen is the *store*. Static sensors it always has, and which the player can attack:
 
-| Asset | Gives Aiko | Player counter | Cost of the counter |
+| Asset | Gives Karen | Player counter | Cost of the counter |
 |---|---|---|---|
-| CCTV nodes | permanent low-confidence sighting in a cone | unplug it (hold-interact, 4 s) | Aiko notices the dead camera and *investigates the blind spot* |
+| CCTV nodes | permanent low-confidence sighting in a cone | unplug it (hold-interact, 4 s) | Karen notices the dead camera and *investigates the blind spot* |
 | Door sensors | region-transition events, storewide | prop a door open | that door now never reports — and never closes behind you |
 | The POS terminal | knows when a customer was served | serve away from the till (not possible yet) | — |
 | PA system | it can *speak* (§8) | jam it from the powerbox | costs a breaker slot you might need for lights |
@@ -249,16 +249,16 @@ dead sensor is information.
 
 ### 3.6 Absence — the sense that most AIs skip
 
-When Aiko sweeps a cone and finds nothing, that is an observation with `IsNegative = true`. It
+When Karen sweeps a cone and finds nothing, that is an observation with `IsNegative = true`. It
 subtracts probability. Without this, search AI re-checks the same three aisles forever and the
-player learns to stand still. With it, Aiko *clears* the map methodically and closes in — which
+player learns to stand still. With it, Karen *clears* the map methodically and closes in — which
 is the single most frightening property a searcher can have.
 
 ---
 
 ## 4. Belief: where it thinks you are
 
-Aiko never stores `lastPlayerPosition`. It stores a **probability distribution over the whole
+Karen never stores `lastPlayerPosition`. It stores a **probability distribution over the whole
 store**, and updates it like a Bayes filter. This is the single change that turns a stalker into
 an investigator.
 
@@ -284,11 +284,11 @@ b'(c) = Σ  T(c | c') · b(c')
 `T` is not uniform. It is weighted by:
 
 - **Traversal cost** — you flow down open aisles faster than through a blocked one.
-- **Your movement budget.** Aiko knows whether it forced you into a sprint, and it knows the
+- **Your movement budget.** Karen knows whether it forced you into a sprint, and it knows the
   store's coffee machine usage. If it believes you're out of energy, `CanSprint == false`, and
   the diffusion radius it uses **shrinks accordingly**. Getting burnt out doesn't only stop you
   running — it *narrows the search area*. That is the mechanic and the theme in one equation.
-- **Goal attraction.** Aiko knows the shift's task list (it wrote it). Mass flows preferentially
+- **Goal attraction.** Karen knows the shift's task list (it wrote it). Mass flows preferentially
   toward unfinished work: understocked `ShelfUnit`s, live `Dirt`, a full `Trashcan`, the
   `TrashContainer` out back if a bag is active. **You are predictable because you are employed.**
 - **Ledger priors.** Your historical route habits bias `T` (§7.6).
@@ -306,7 +306,7 @@ b(c)  ∝  b'(c) · P(observation | player in c)
 - **Negative** → `b(c) *= (1 - detect(c))` for every cell it just swept
 
 Then renormalise. If total mass collapses (everything was ruled out), reset to the graph-wide
-prior — Aiko "loses the scent" and starts over, and the player can *feel* that happen.
+prior — Karen "loses the scent" and starts over, and the player can *feel* that happen.
 
 ### 4.4 What the Body reads off the grid
 
@@ -318,7 +318,7 @@ prior — Aiko "loses the scent" and starts over, and the player can *feel* that
 | **Containment** | mass inside the region it has blocked | whether the trap is worth springing |
 | **Staleness** | time since the last positive observation | when to give up and go back to sabotage |
 
-Entropy is the interesting one. When Aiko doesn't know where you are, it doesn't wander — it
+Entropy is the interesting one. When Karen doesn't know where you are, it doesn't wander — it
 **does something that makes you make a noise**. High entropy is the trigger for a blackout, a
 shelf sweep, or a PA announcement. It is deliberately creating evidence.
 
@@ -326,7 +326,7 @@ shelf sweep, or a PA announcement. It is deliberately creating evidence.
 
 ## 5. The maze as a graph
 
-The store is not a room; it's a topology. Aiko reasons about it as one.
+The store is not a room; it's a topology. Karen reasons about it as one.
 
 ### 5.1 The aisle graph
 
@@ -345,16 +345,16 @@ walkable connections with a width and a door flag.
 
 ### 5.2 Chokepoints and articulation points
 
-On graph build, Aiko precomputes the **articulation points** — nodes whose removal disconnects
+On graph build, Karen precomputes the **articulation points** — nodes whose removal disconnects
 the graph. These are the places where standing still, or dropping a crate wall, cuts the store in
 half. Standard DFS lowpoint algorithm, computed once, recomputed when the maze mutates.
 
-This is why Aiko's blockades feel intelligent rather than random: it isn't picking a corridor, it
+This is why Karen's blockades feel intelligent rather than random: it isn't picking a corridor, it
 is picking *the* corridor, and it can tell you why.
 
 ### 5.3 Herding by min-cut
 
-To push you toward a region (the back room, the dark half, the dead end near the tills), Aiko
+To push you toward a region (the back room, the dark half, the dead end near the tills), Karen
 solves a small max-flow/min-cut on the aisle graph: source = your belief peak, sink = everywhere
 you'd rather be. The **min-cut edges are its shopping list of things to block** — with its own
 body, a crate wall, a locked door, or a spill you won't want to cross.
@@ -364,14 +364,14 @@ funnel, and a funnel the player walks into voluntarily is far better than a scri
 
 ### 5.4 Influence maps
 
-A cheap secondary layer painted over the graph: *danger* (where Aiko has been recently, where the
-noise came from) and *desire* (where the player's unfinished tasks are). Aiko can read the
+A cheap secondary layer painted over the graph: *danger* (where Karen has been recently, where the
+noise came from) and *desire* (where the player's unfinished tasks are). Karen can read the
 difference to predict your route, and — for herding — it can raise danger somewhere without ever
 going there, using a PA burst or a light flicker.
 
 ### 5.5 Maze mutation
 
-The shelving is on castors. Between shifts (later, *during* them), Aiko may relocate a
+The shelving is on castors. Between shifts (later, *during* them), Karen may relocate a
 `ShelfUnit`, seal a door, or open a staff passage. Effects:
 
 - Player route memory is invalidated on a schedule, so mastery decays and the store stays a maze
@@ -389,7 +389,7 @@ second exit while a chase is possible.
 ### 6.1 The tick
 
 Nothing here runs every frame except the cheap parts. Everything is amortised and budgeted, so
-one Aiko costs less than the ~40 customers already in the scene.
+one Karen costs less than the ~40 customers already in the scene.
 
 | Stage | Rate | Budget | What it does |
 |---|---|---|---|
@@ -422,7 +422,7 @@ struct Appraisal
 ```
 
 `TaskLoad` is read straight from the existing `TaskManager` — `MopQuotaMet`, `ShelvesStocked`,
-`TrashEmpty`, `AllCustomersServed`. **When you are one task from freedom, Aiko's incentive to
+`TrashEmpty`, `AllCustomersServed`. **When you are one task from freedom, Karen's incentive to
 break something spikes.** That's a one-line utility term and it produces the whole late-shift
 panic.
 
@@ -474,7 +474,7 @@ Goal: Deny(Restock)
 
 Two properties worth having:
 
-- **Anytime.** If the planning budget expires, use the best partial plan. Aiko never stalls.
+- **Anytime.** If the planning budget expires, use the best partial plan. Karen never stalls.
 - **Reactive replanning.** Plans carry preconditions; a violated precondition (you walked into
   the aisle it was sabotaging) aborts to the BT's interrupt branch, not to a frozen agent.
 
@@ -509,7 +509,7 @@ Three uses, in increasing order of value:
 1. **Debug.** An on-screen overlay with the belief grid rendered as a heatmap and the top three
    goal scores. You can watch it think.
 2. **Design.** Tuning a utility weight is guesswork until you can read why a choice lost.
-3. **Player-facing.** The post-shift screen prints a redacted version as Aiko's *performance
+3. **Player-facing.** The post-shift screen prints a redacted version as Karen's *performance
    review of you*: "Employee took 4 min 12 s to restore lighting. Employee's preferred
    concealment: Aisle 8, north end. Noted." Being outplayed is only fun when you can see the play.
 
@@ -517,7 +517,7 @@ Three uses, in increasing order of value:
 
 ## 7. Adaptability
 
-"Adaptive AI" usually means one of these three things and pretends to mean all of them. Aiko does
+"Adaptive AI" usually means one of these three things and pretends to mean all of them. Karen does
 all three, at explicitly different timescales, with different mechanisms.
 
 | Timescale | Mechanism | Feels like |
@@ -544,7 +544,7 @@ The two that matter most in play: **preferred route** and **concealment spots**.
 
 ### 7.2 Tactic selection as a bandit
 
-Each tactic in §8 is an arm. Aiko doesn't know in advance whether *you* find darkness scarier
+Each tactic in §8 is an arm. Karen doesn't know in advance whether *you* find darkness scarier
 than being followed — it finds out, cheaply, and stops wasting the ones that don't land.
 
 ```
@@ -566,7 +566,7 @@ Three notes on why this specific shape:
   learned late.
 
 Optionally: Thompson sampling instead of UCB, keeping a Beta posterior per arm. Smoother, less
-jittery early, and it makes the "Aiko is uncertain about you" phase read better.
+jittery early, and it makes the "Karen is uncertain about you" phase read better.
 
 ### 7.3 The Panic Index — the reward signal
 
@@ -617,7 +617,7 @@ pressure = Kp·e + Ki·∫e dt
 - `pressure > 0` → raise `Permission` on escalating tactics, shorten cooldowns, allow search bias
 - `pressure < 0` → gate the big tactics off, boost `Withdraw`'s utility, let the store go quiet
 
-The integral term is what stops Aiko from letting a *consistently* calm player coast: a long
+The integral term is what stops Karen from letting a *consistently* calm player coast: a long
 stretch below setpoint accumulates and eventually forces an event. And a player pinned at 0.95 for
 two minutes gets genuine silence, which is when the next scare gets its power back.
 
@@ -629,13 +629,13 @@ recovery window (§9).
 The two most personal-feeling adaptations, both straight reads of the Ledger:
 
 **Route denial.** Your preferred path from tills → back room is stored as a node sequence. Once
-Aiko has ≥5 samples with low variance, `Herd` starts scoring the min-cut against *that specific
+Karen has ≥5 samples with low variance, `Herd` starts scoring the min-cut against *that specific
 path*. Blocking the corridor you always use, on the shift after you established the habit, is
 the moment players say the AI is learning. It is also completely explainable in the thought log.
 
 **Concealment blacklisting.** Every time you break line of sight and stop, the node is recorded.
 Frequently-used spots get:
-1. a permanent bump to the belief prior (Aiko checks there first),
+1. a permanent bump to the belief prior (Karen checks there first),
 2. `Sweep` ordering that visits them early rather than by distance,
 3. eventually, physical denial — a crate stack, or a camera bolted to that exact shelf.
 
@@ -645,9 +645,9 @@ stop being predictable. That's the whole game in one loop.
 
 ### 7.6 Counter-adaptation — the player's side of the table
 
-Non-negotiable per pillar 3. Every Aiko capability has an attack surface:
+Non-negotiable per pillar 3. Every Karen capability has an attack surface:
 
-| Aiko capability | Player counter | Its cost |
+| Karen capability | Player counter | Its cost |
 |---|---|---|
 | CCTV network | unplug nodes (4 s hold) | dead cameras draw investigation |
 | PA system | jam it at the powerbox | uses a breaker slot you may want for lights |
@@ -656,7 +656,7 @@ Non-negotiable per pillar 3. Every Aiko capability has an attack surface:
 | Trace: dropped items | tidy up behind you | slow, and standing still is loud |
 | Route priors | vary your route | slower routes cost burnout |
 | Concealment blacklist | rotate hiding spots | you have to *find* new ones, in the dark |
-| Ambush | listen — an ambushing Aiko is silent, and silence is a tell | requires noticing absence |
+| Ambush | listen — an ambushing Karen is silent, and silence is a tell | requires noticing absence |
 | Traps | spot the tell and disarm | time, always time |
 
 Everything costs time, and time costs energy, and energy is the fail state. That's the pressure
@@ -675,7 +675,7 @@ the tell it must emit, and the *chore it generates*. Grouped by which sense it a
 - **The chore:** get the flashlight from the break room, cross the maze to the powerbox, reset
   three breakers in sequence, each with a distinct hum (audio puzzle in the dark).
 - **The trade:** the flashlight is a battery-limited cone that raises your own `lightLevel` term.
-  Light means seeing and being seen. Aiko's sight is unaffected by darkness — it *prefers* it.
+  Light means seeing and being seen. Karen's sight is unaffected by darkness — it *prefers* it.
 - **Escalation:** partial blackouts (one wing), rolling blackouts, and eventually killing the
   lights **behind you as you walk**, so the dark is a wave you're staying ahead of.
 - **Tell:** a ballast whine and a two-second flicker before the cut.
@@ -699,15 +699,15 @@ items at a time.
 
 **Spill** — kicks over the mop bucket at a chokepoint.
 - **The chore:** a new `Dirt` instance and a 3-second stationary hold to clear it.
-- **The trap:** walking through it un-mopped leaves a **wet trail** Aiko can read for 45 seconds.
+- **The trap:** walking through it un-mopped leaves a **wet trail** Karen can read for 45 seconds.
   You either spend the time, or you wear a tracking beacon.
 
 **Bin tamper** — re-fills a `Trashcan` you just emptied, or splits a bag so it must be re-bagged.
 - Targets `TrashEmpty` — the task with the longest travel time, out back, away from everything.
 
-**Task falsification** — *the best one.* Aiko writes to your HUD.
+**Task falsification** — *the best one.* Karen writes to your HUD.
 - Adds a task that doesn't exist, un-checks a completed one, or greys one out as done when it
-  isn't. `TaskListUI` is fed by Aiko, not by `TaskManager`, and can disagree with it.
+  isn't. `TaskListUI` is fed by Karen, not by `TaskManager`, and can disagree with it.
 - **The chore:** you have to physically verify. The HUD stops being ground truth.
 - **The tell (mandatory):** a one-frame flicker and a faint CRT tick when a line is falsified,
   so an attentive player can catch it. Without a tell this is unfair; with one it's a skill.
@@ -722,7 +722,7 @@ added, and the PA thanks you for your flexibility. This is the thesis of the gam
 
 ### 8.3 Attacking sound and trust
 
-**The PA system.** Aiko owns the tannoy, and it is not obliged to be truthful.
+**The PA system.** Karen owns the tannoy, and it is not obliged to be truthful.
 - Reads your task list back at you, slightly wrong
 - Calls you by the name you entered at the start
 - Announces a cleanup in an aisle it is not in (audio decoy — it wants you to go and look)
@@ -751,9 +751,9 @@ you walk into it. No scripting, just §5.3 executed properly.
 
 ### 8.5 Attacking the social layer
 
-**Mimicry.** Aiko takes over a `CustomerNPC`. That shopper stops shopping. It doesn't queue. It
+**Mimicry.** Karen takes over a `CustomerNPC`. That shopper stops shopping. It doesn't queue. It
 walks at exactly your speed, one aisle over, and faces you when you look. Everything else in the
-store is a real customer, which is what makes this work — the maze is full of ambiguity and Aiko
+store is a real customer, which is what makes this work — the maze is full of ambiguity and Karen
 just weaponised it.
 - **The tell:** possessed customers don't have a `IsWaitingToBeServed` state and never generate a
   till queue. A player who's paying attention can prove it. A player who isn't just feels wrong.
@@ -779,7 +779,7 @@ recovery window afterwards, and drains burnout via the existing `SetChaseState(t
 caught is not death — it's **a written warning, thirty seconds of lecture, and lost shift time.**
 Kehai's fail state is the clock, not the claw.
 
-**The favour.** Below `energy < 0.15`, Aiko turns helpful: it brews you a coffee, it mops a spill,
+**The favour.** Below `energy < 0.15`, Karen turns helpful: it brews you a coffee, it mops a spill,
 it tells you where the mop is, and it means it. A burnt-out employee who stays is the outcome it
 was optimising for the whole time. Nothing about this is a trick, and that's the horror.
 
@@ -791,7 +791,7 @@ An adaptive antagonist is one bad decision away from feeling like a cheater. The
 constraints, enforced in code, asserted in tests.
 
 1. **No omniscient body.** The Body may not read the player transform. Ever. Enforce it by not
-   giving `AikoBody` a reference — perception writes to the belief grid and nothing else can.
+   giving `KarenBody` a reference — perception writes to the belief grid and nothing else can.
 2. **Bounded Director hinting.** Search bias may shift belief mass toward the player's true
    region by at most `+0.15` per minute, may never exceed `0.5` of total mass, and may never
    trigger while the player is in line of sight of the Body's current path.
@@ -833,7 +833,7 @@ gentler one. Same curve shape, different amplitude, every time.
 
 Meanwhile the honest pressure never stops: `ShiftManager.TimeRemaining` runs down, customers keep
 queueing, `BurnoutSystem.energy` drains (twice as fast when you run), and `TaskManager` refuses
-to let you leave until the store is clear. Aiko doesn't have to create the stress. It only has to
+to let you leave until the store is clear. Karen doesn't have to create the stress. It only has to
 lean on it.
 
 ### 10.2 The career
@@ -862,12 +862,12 @@ lesson done right: escalation that teaches instead of escalation that grinds.
 
 Three ways a career ends, and the AI is complicit in all three:
 
-- **You quit.** Clock out enough shifts, walk out. Aiko's performance review is your ending text.
-- **You burn out.** Energy hits zero repeatedly and the shifts stop being survivable. Aiko's
+- **You quit.** Clock out enough shifts, walk out. Karen's performance review is your ending text.
+- **You burn out.** Energy hits zero repeatedly and the shifts stop being survivable. Karen's
   `Assist` goal ramps up as you decline — it becomes *kind*. The last thing that happens is that
   it makes you a coffee. This is the title of the game.
 - **You break it.** Full counter-play: cameras down, PA jammed, routes randomised, traps read.
-  Aiko's confidence collapses, its thought log goes to high entropy, and it starts making
+  Karen's confidence collapses, its thought log goes to high entropy, and it starts making
   visibly worse decisions. **A player who defeats the AI should be able to watch it lose.**
 
 ---
@@ -893,7 +893,7 @@ Shift 4. Two tasks left: three spills and a half-empty aisle. Panic sits at 0.28
 The lights flicker, hum, and die. You are mid-mop in aisle 3 with no flashlight — it's in the
 break room, and the break room is four junctions away through a maze you now can't see.
 
-Panic jumps to 0.71. Aiko doesn't chase. It walks to the break room door and stops making noise.
+Panic jumps to 0.71. Karen doesn't chase. It walks to the break room door and stops making noise.
 
 ```
 [201.4] SENSE    NEGATIVE sweep Aisle3 → mass redistributed
@@ -933,7 +933,7 @@ different one. And the tell was there — one frame — for a player who's learn
 
 ### Scenario C — "The customer who didn't shop"
 
-Shift 6, busy. Eleven customers in the maze, three queued at the till, and Aiko has no idea where
+Shift 6, busy. Eleven customers in the maze, three queued at the till, and Karen has no idea where
 you are — entropy 2.9, staleness 40 s.
 
 ```
@@ -955,7 +955,7 @@ noise and confirm yourself. If you keep working, it stands three metres away and
 ```
 
 The flush worked, and it worked because the *player* had to decide whether an ambiguity was a
-threat. That's the design goal: Aiko's best plays are the ones where you defeat yourself.
+threat. That's the design goal: Karen's best plays are the ones where you defeat yourself.
 
 ### Scenario D — "The quiet shift"
 
@@ -969,10 +969,10 @@ split open in the back room. Then:
 [540.1]   why    diminishing returns: Q̂(Chase) fell 0.31→0.12 over last 3 uses
 ```
 
-Aiko walks to the far end of the store and patrols like it's shift 1. The PA plays hold music.
+Karen walks to the far end of the store and patrols like it's shift 1. The PA plays hold music.
 The lights stay on. Nothing happens for a minute and a half.
 
-It is the worst ninety seconds of the game, and Aiko spent tension budget to buy it. Then panic
+It is the worst ninety seconds of the game, and Karen spent tension budget to buy it. Then panic
 decays to 0.34, the setpoint climbs back, and everything it does next works again.
 
 ---
@@ -980,13 +980,13 @@ decays to 0.34, the setpoint climbs back, and everything it does next works agai
 ## 12. Implementation map
 
 Nothing here throws away what's built. `EnemyAI.cs` becomes the execution layer at the bottom of
-a stack, and the existing systems become Aiko's sensors and levers.
+a stack, and the existing systems become Karen's sensors and levers.
 
 ### 12.1 What already exists and what it becomes
 
-| Existing | Role under Aiko |
+| Existing | Role under Karen |
 |---|---|
-| `EnemyAI.cs` | → `AikoBody` — keeps `NavMeshAgent` handling, loses `playerTransform`, loses the FSM |
+| `EnemyAI.cs` | → `KarenBody` — keeps `NavMeshAgent` handling, loses `playerTransform`, loses the FSM |
 | `EnemyAI.CanSeePlayer()` | → `SightSensor`, returns a graded score, not a bool |
 | `ShelfSlot.Eject()` / `ShelfUnit.FillAll()` | the `ShelfSweep` tactic's primitives — already correct |
 | `ShelfSlot.All` registry | O(1) target selection, no scene scans — already correct |
@@ -1006,10 +1006,10 @@ a stack, and the existing systems become Aiko's sensors and levers.
 ```
 _Game/AI/Scripts/
   Core/
-    AikoBody.cs                 execution: agent, BT runner, interrupts
-    AikoDirector.cs             panic estimate, setpoint PI controller, tension budget
-    AikoLedger.cs               serialised player model, bandit state, save/load
-    AikoBlackboard.cs           the appraisal struct, shared read-only snapshot
+    KarenBody.cs                 execution: agent, BT runner, interrupts
+    KarenDirector.cs             panic estimate, setpoint PI controller, tension budget
+    KarenLedger.cs               serialised player model, bandit state, save/load
+    KarenBlackboard.cs           the appraisal struct, shared read-only snapshot
   Perception/
     Sensorium.cs                fuses channels → Observation stream
     SightSensor.cs              graded detection
@@ -1028,7 +1028,7 @@ _Game/AI/Scripts/
     Tactics/                    one asset + script per entry in §8
   Debug/
     ThoughtLog.cs               ring buffer + formatting
-    AikoDebugOverlay.cs         belief heatmap, goal scores, plan tree
+    KarenDebugOverlay.cs         belief heatmap, goal scores, plan tree
 ```
 
 ### 12.3 Phasing
@@ -1041,15 +1041,15 @@ Each phase is shippable and playable on its own. Do not build this in order of i
 | **2** | `AisleGraph`, negative information, `ThoughtLog` + overlay | Search becomes systematic and you can finally see why it does things |
 | **3** | `GoalSet` utility layer replacing the FSM; `Deny` reading `TaskManager` | Behaviour becomes situational; the "administrative horror" pillar comes online |
 | **4** | Tactic ScriptableObjects: Blackout, ShelfSweep, Spill, Stalk | The first content wave; needs the flashlight + powerbox props |
-| **5** | `AikoDirector`: Panic Index, setpoint control, tension budget | Pacing stops being random |
-| **6** | `AikoLedger`: player model, bandit, route priors, `Ambush` | The part that makes people talk about it |
+| **5** | `KarenDirector`: Panic Index, setpoint control, tension budget | Pacing stops being random |
+| **6** | `KarenLedger`: player model, bandit, route priors, `Ambush` | The part that makes people talk about it |
 | **7** | Mimicry, task falsification, maze mutation, the endgame | Requires everything above to land properly |
 
 ### 12.4 Budget
 
-One Aiko, worst case, on a mid-range machine: **< 0.7 ms/frame**, with belief updates sliced
+One Karen, worst case, on a mid-range machine: **< 0.7 ms/frame**, with belief updates sliced
 across three ticks and planning happening only on goal change. For scale, the store already runs
-~40 `CustomerNPC` agents; Aiko should cost less than three of them. Everything expensive
+~40 `CustomerNPC` agents; Karen should cost less than three of them. Everything expensive
 (min-cut, articulation points, graph bake) is precomputed or amortised.
 
 ---
@@ -1084,16 +1084,16 @@ Sanity checks that fail loudly in CI:
 
 ## 14. Open questions
 
-- **How much should Aiko's learning transfer to a new save?** Fully persistent is scarier;
+- **How much should Karen's learning transfer to a new save?** Fully persistent is scarier;
   fully reset is fairer to a returning player. Probably: persist skill calibration, reset habits.
 - **Does the player ever get told there's a learning AI?** Hello Neighbor advertises it up front;
   Alien Isolation says nothing. Saying nothing and letting a player *notice* is stronger — and
   the post-shift performance review is the reveal.
-- **Two bodies?** A second Aiko unit doubles the sensor coverage and halves the safe space.
+- **Two bodies?** A second Karen unit doubles the sensor coverage and halves the safe space.
   Probably a late-career escalation rather than a base feature.
 - **Should mimicked customers be provably distinguishable?** Currently yes (§8.5). Removing the
   tell late in the career is tempting and probably a mistake.
-- **How far does `Assist` go?** An Aiko that genuinely does your job for you, so that you stay
+- **How far does `Assist` go?** A Karen that genuinely does your job for you, so that you stay
   another shift, is the darkest version of this game and possibly the best one.
 
 ---
@@ -1102,36 +1102,36 @@ Sanity checks that fail loudly in CI:
 
 Everything in §§2–13 is built. This section maps the design onto the code and says where the
 code departs from the plan above. Results of the ablation ladder are in
-[`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
 
 | Design | Code |
 |---|---|
-| §2 three minds | `AI/Scripts/Core/AikoBody.cs`, `AikoDirector.cs` (+ `PanicIndex`), `AikoLedger.cs`, tied together by `AikoBrain.cs` |
+| §2 three minds | `AI/Scripts/Core/KarenBody.cs`, `KarenDirector.cs` (+ `PanicIndex`), `KarenLedger.cs`, tied together by `KarenBrain.cs` |
 | §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
 | §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
 | §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; readable export in [`STORE_MAP.md`](STORE_MAP.md) |
-| §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `AikoContext.cs` (the blackboard) |
-| §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `aiko_logs/shift_###_seed.jsonl`), `AikoDebugOverlay.cs`, `PerformanceReview.cs` |
-| §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `AikoLedger.cs`; Panic Index and PI pacing in `AikoDirector.cs` |
+| §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard) |
+| §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
+| §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`; Panic Index and PI pacing in `KarenDirector.cs` |
 | §8 tactic library | `AI/Scripts/Decision/Tactics/` — 35 tactics across tiers 0–4 |
-| §8 the building's levers | `AI/Scripts/World/` — `AikoWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `AikoProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
-| §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/AikoTests.cs` |
+| §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
+| §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
 | §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` §§1–2 |
 | blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md` → Blink) |
 
-Aiko is installed from code when the store loads (`AikoBootstrap`), since the scene is not in
-version control. `-noaiko`, `-aiko-rung <A-F>` and `-aiko-seed <n>` work on the command line.
+Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
+version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line.
 
 ### Keys
 
-Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). Aiko's:
+Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). Karen's:
 
 | Key | What |
 |---|---|
-| Esc | settings: restart the shift, volume by kind of sound (Aiko's own slider included), mouse, her floor cone, the webcam |
-| F1 | live map of the store (you, Aiko, her guess, customers, sounds, jobs) and a plain-words story of what Aiko is doing; **H** adds her belief heat map, **T** the technical view |
+| Esc | settings: restart the shift, volume by kind of sound (Karen's own slider included), mouse, her floor cone, the webcam |
+| F1 | live map of the store (you, Karen, her guess, customers, sounds, jobs) and a plain-words story of what Karen is doing; **H** adds her belief heat map, **T** the technical view |
 | F2 | replay of the shift so far on the same map: drag the timeline, Space plays, 1/2/3 speed, ←/→ jump 5 s, O opens the full report |
 | F8 | blink channel consent panel (webcam path stays off until you agree); starts the camera helper |
 | F9 | guided blink calibration (~12 s): eyes open, closed until the beep, then three blinks it counts |
@@ -1142,16 +1142,16 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 
 ### Her speed
 
-Sneak 2, walk 3.4, hurry 5 and run 6.1 m/s (`AikoConfig`). Walking she is a little slower
+Sneak 2, walk 3.4, hurry 5 and run 6.1 m/s (`KarenConfig`). Walking she is a little slower
 than a walking employee (4 m/s); hurrying she outpaces one; running she is only just slower
-than a sprint. `AikoBootstrap` caps every pace at 94% of the player's actual sprint speed, so a
+than a sprint. `KarenBootstrap` caps every pace at 94% of the player's actual sprint speed, so a
 sprinting employee can always pull away, whatever the scene sets the sprint to. The one
 exception is the blink lunge (up to 3 m at 11 m/s while your eyes are shut), which is the
 point of the blink channel.
 
 ### Her gaze on the floor
 
-`AikoFloorCone` paints her field of view on the floor: the same range and angle as her
+`KarenFloorCone` paints her field of view on the floor: the same range and angle as her
 `SightSensor`, cut short by shelves and walls, brightest where her eyes weigh a sighting most
 (close and straight ahead). Blue while she walks her rounds, orange when she's noticed
 something, red when she's hunting; it pulses red while she can actually see you. Her spotlight
@@ -1159,13 +1159,13 @@ says the same, but a spotlight is hard to read in a lit store. Esc → Settings 
 
 ### Shift records
 
-`ShiftRecorder` records every shift: where you, Aiko and each customer were five times a
+`ShiftRecorder` records every shift: where you, Karen and each customer were five times a
 second (and what each customer was doing, including the shelf they asked for), every sound
-with how far it carried, every job, and Aiko's story in plain words. At the end of a shift it
+with how far it carried, every job, and Karen's story in plain words. At the end of a shift it
 writes `shift_NN_<date>.json` and a self-contained `shift_NN_<date>.html` report to
 `<persistentDataPath>/shift_records/` (on a Mac, `~/Library/Application Support/TokenLimit/Kehai/shift_records/`).
 The report replays the shift on the floor plan and adds `ShiftAnalysis`: jobs, time per area,
-how often and where Aiko spotted you, the closest she got, chases, warnings, and what she
+how often and where Karen spotted you, the closest she got, chases, warnings, and what she
 tried most. The floor plan itself (`StoreFloorPlan`) comes from the NavMesh, the shelves and
 the wall colliders, so the map is the store as it actually is.
 
@@ -1174,14 +1174,14 @@ the wall colliders, so the map is the store as it actually is.
 - **Tactics are C# classes, not ScriptableObjects.** The repository holds scripts only, so data
   that would live in assets is authored in code. Each tactic is one class with its tell, chore,
   tier, cooldown and prior, registered in `TacticLibrary`.
-- **`AisleGraph`, `InfluenceMap` and `AikoBlackboard` were folded** into `StoreMap`, `BeliefGrid`
-  and `AikoContext`/`Appraisal` respectively; `TestimonyCollector` is the `poll_witnesses` tactic
+- **`AisleGraph`, `InfluenceMap` and `KarenBlackboard` were folded** into `StoreMap`, `BeliefGrid`
+  and `KarenContext`/`Appraisal` respectively; `TestimonyCollector` is the `poll_witnesses` tactic
   plus `CustomerMemory`.
 - **Walls come from physics, not the NavMesh.** The store's walls are 3 cm boxes the NavMesh bake
   missed, so `StoreMap` builds connectivity from physics sweeps, and `NavMeshWalls` carves each thin
-  wall into the runtime NavMesh at load. Before that, every NavMesh path — shoppers' and Aiko's —
+  wall into the runtime NavMesh at load. Before that, every NavMesh path — shoppers' and Karen's —
   could run through walls.
-- **Doors.** `HingeDoor.Use(from, author)` is the one way a door opens: the E key, Aiko (who opens
+- **Doors.** `HingeDoor.Use(from, author)` is the one way a door opens: the E key, Karen (who opens
   doors in her way, audibly, and whose own passage doesn't trip her door sensor) and the eval agent
   all go through it. A door now swings away from whoever opens it, and its panel is carved out of
   the NavMesh while it stands open.
@@ -1192,19 +1192,19 @@ the wall colliders, so the map is the store as it actually is.
 - **Tell accounting.** The fairness guard checks each effect against its own plan's latest tell, so
   an unrelated PA chime can't count for (or against) it; a PA line is a tell in itself (the chime
   always plays 1.3 s before the words), and tells are timed on the clock, not by counting frames.
-  Across the final ablation (216 shifts, `AIKO_RESULTS.md`) the guard recorded none.
+  Across the final ablation (216 shifts, `KAREN_RESULTS.md`) the guard recorded none.
 - **A written warning always comes with a release window** (lecture + 15 s with no second catch), at
   every rung — without it the simplest rungs could catch you again the moment a lecture ended.
 - **Learning scope per rung** follows `IDEAS.md` §2 exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
   two shifts), F adds the blink channel.
-- **Not built:** the infinite maze (`IDEAS.md`), a second Aiko body (§14), and the Sentis in-engine
+- **Not built:** the infinite maze (`IDEAS.md`), a second Karen body (§14), and the Sentis in-engine
   blink model is written but only compiles once the `com.unity.ai.inference` package is added and
-  `AIKO_SENTIS` is defined.
+  `KAREN_SENTIS` is defined.
 
 ### The CI sanity checks from §13
 
-`_Tests/Editor/AikoTests.cs` (21 edit-mode tests; `Unity -batchmode -runTests -testPlatform EditMode`):
+`_Tests/Editor/KarenTests.cs` (21 edit-mode tests; `Unity -batchmode -runTests -testPlatform EditMode`):
 the body, belief and decision code never read the player (source scan), every tactic has a tell of
 at least 0.8 s and a chore, the bandit learns and habituates and explores, the Ledger forgets within
 two shifts, the Director gates big tactics while settling, seeds are deterministic, the map reaches

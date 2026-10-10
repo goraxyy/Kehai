@@ -120,7 +120,7 @@ namespace Kehai.Playtest
     {
         const string CodeKey = "Kehai.Playtest.Code";
         const string ConsentKey = "Kehai.Playtest.Consent";       // 1 send, 2 keep here
-        const string CareerKey = "Kehai.Playtest.CareerOf";       // whose career Aiko's ledger holds
+        const string CareerKey = "Kehai.Playtest.CareerOf";       // whose career Karen's ledger holds
         const string AnsweredKey = "Kehai.Playtest.Answered";     // the code that answered the questions
         const string SuggestedKey = "Kehai.Playtest.Suggested";   // the code we suggested stopping to
         const string RunningKey = "Kehai.Playtest.Running";       // the session in progress, until a clean quit
@@ -153,7 +153,7 @@ namespace Kehai.Playtest
             set { PlayerPrefs.SetString(RunningKey, value ?? ""); PlayerPrefs.Save(); }
         }
 
-        // A new tester gets a new employee: Aiko starts from nothing.
+        // A new tester gets a new employee: Karen starts from nothing.
         public static bool NeedsFreshCareer(string code) => !string.IsNullOrEmpty(code) && CareerOf != code;
 
         public static void Forget()

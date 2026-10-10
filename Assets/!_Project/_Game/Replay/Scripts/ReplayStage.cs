@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
@@ -11,7 +11,7 @@ namespace Kehai.Replay
     // controller, physics, the HUD) and what the recording tracked is driven from it:
     //   - the scene's own shelf units (moved by the maze and by her), doors, door panels, bins,
     //     and the spills, bags and loose items that were there when the shift began;
-    //   - puppets for everything that came and went: Aiko, customers, her understudy, items
+    //   - puppets for everything that came and went: Karen, customers, her understudy, items
     //     off their shelves, her props, spills, bags, footprints; and the player's body;
     //   - the shelf slots (stocked or empty) and the ceiling lights, as they changed.
     // `Apply(t)` puts all of it where it was at t, forwards or backwards.
@@ -28,8 +28,8 @@ namespace Kehai.Replay
             public Light Lamp;              // the torch's beam, a CCTV camera's LED
             public ParticleSystem Particles;
             public float ParticleAge = -1f;
-            public Renderer AikoEye;
-            public Light AikoGaze;
+            public Renderer KarenEye;
+            public Light KarenGaze;
         }
 
         sealed class SlotView
@@ -52,7 +52,7 @@ namespace Kehai.Replay
         public Camera Camera { get; private set; }
         public PlayerBodySlot Body { get; private set; }
         public int PlayerId { get; private set; } = -1;
-        public int AikoId { get; private set; } = -1;
+        public int KarenId { get; private set; } = -1;
         public float FloorY { get; private set; }
         public float Start => Data.Ticks.Count > 0 ? Data.Ticks[0] : 0f;
         public float End => Data.End;
@@ -185,16 +185,16 @@ namespace Kehai.Replay
             Camera = cam;
         }
 
-        // Where the floor is: under the player at the start, else where Aiko stood.
+        // Where the floor is: under the player at the start, else where Karen stood.
         void FindFloor()
         {
-            ReplayEntity player = null, aiko = null;
+            ReplayEntity player = null, karen = null;
             foreach (ReplayEntity e in Data.Entities.Values)
             {
                 if (e.Kind == KrecKind.Player && player == null) player = e;
-                if (e.Kind == KrecKind.Aiko && aiko == null) aiko = e;
+                if (e.Kind == KrecKind.Karen && karen == null) karen = e;
             }
-            FloorY = aiko != null ? aiko.Samples[0].Position.y : 0f;
+            FloorY = karen != null ? karen.Samples[0].Position.y : 0f;
             if (player == null) return;
             Vector3 p = player.Samples[0].Position;
             if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 4f, ~0, QueryTriggerInteraction.Ignore))
@@ -218,9 +218,9 @@ namespace Kehai.Replay
                     go = Body.gameObject;
                     PlayerId = e.Id;
                     break;
-                case KrecKind.Aiko:
-                    go = puppets.MakeAiko(out a.AikoEye, out a.AikoGaze);
-                    AikoId = e.Id;
+                case KrecKind.Karen:
+                    go = puppets.MakeKaren(out a.KarenEye, out a.KarenGaze);
+                    KarenId = e.Id;
                     break;
                 case KrecKind.Customer:
                 case KrecKind.Understudy:
@@ -483,13 +483,13 @@ namespace Kehai.Replay
         {
             switch (a.Entity.Kind)
             {
-                case KrecKind.Aiko:
+                case KrecKind.Karen:
                 {
                     int mood = state & 3;
                     if (!moodEyes.TryGetValue(mood, out Material eye))
-                        moodEyes[mood] = eye = AikoProps.Emissive(AikoBody.MoodColour((AikoBody.Mood)mood), mood == (int)AikoBody.Mood.Hunt ? 6f : 3f);
-                    if (a.AikoEye != null) a.AikoEye.sharedMaterial = eye;
-                    if (a.AikoGaze != null) a.AikoGaze.color = AikoBody.MoodColour((AikoBody.Mood)mood);
+                        moodEyes[mood] = eye = KarenProps.Emissive(KarenBody.MoodColour((KarenBody.Mood)mood), mood == (int)KarenBody.Mood.Hunt ? 6f : 3f);
+                    if (a.KarenEye != null) a.KarenEye.sharedMaterial = eye;
+                    if (a.KarenGaze != null) a.KarenGaze.color = KarenBody.MoodColour((KarenBody.Mood)mood);
                     break;
                 }
                 case KrecKind.Item:

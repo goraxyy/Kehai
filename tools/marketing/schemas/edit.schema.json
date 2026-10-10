@@ -81,7 +81,7 @@
     "colour": {
       "description": "A brand colour by name, or #RRGGBB.",
       "oneOf": [
-        { "enum": ["crimson", "ink", "inkSoft", "paper", "mist", "aiko", "you", "guess"] },
+        { "enum": ["crimson", "ink", "inkSoft", "paper", "mist", "karen", "you", "guess"] },
         { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
       ]
     },
@@ -173,7 +173,7 @@
     },
     "pip": {
       "type": "object",
-      "description": "Picture in picture: Aiko's mind (a -alpha render), or any second shot.",
+      "description": "Picture in picture: Karen's mind (a -alpha render), or any second shot.",
       "required": ["src"],
       "additionalProperties": false,
       "properties": {
@@ -293,7 +293,7 @@
       }
     },
     "meme": {
-      "description": "Meme formats as components: pov (a 'POV:' line), top-bottom (big text above and below), nobody ('Nobody:' / 'Aiko:'), caption-bar (a white bar of text above the picture), expectation-reality (tags on the two halves of a split).",
+      "description": "Meme formats as components: pov (a 'POV:' line), top-bottom (big text above and below), nobody ('Nobody:' / 'Karen:'), caption-bar (a white bar of text above the picture), expectation-reality (tags on the two halves of a split).",
       "allOf": [{ "$ref": "#/$defs/span" }],
       "type": "object",
       "required": ["type", "template"],
@@ -304,7 +304,7 @@
         "text": { "$ref": "#/$defs/text" },
         "top": { "$ref": "#/$defs/text" },
         "bottom": { "$ref": "#/$defs/text" },
-        "speaker": { "$ref": "#/$defs/text", "description": "nobody: who answers (defaults to Aiko's name)." }
+        "speaker": { "$ref": "#/$defs/text", "description": "nobody: who answers (defaults to Karen's name)." }
       }
     },
     "sfx": {
@@ -347,7 +347,7 @@
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$", "description": "Names the line's audio: audio/<edit id>/<language>/<id>.wav." },
-        "speaker": { "enum": ["narrator", "aiko"] },
+        "speaker": { "enum": ["narrator", "karen"] },
         "at": { "type": "number", "minimum": 0, "description": "Seconds into the video the line should start (voice.py moves it later if the line before runs long)." },
         "text": { "$ref": "#/$defs/text" }
       }
@@ -360,7 +360,7 @@
         "src": { "$ref": "#/$defs/file" },
         "at": { "type": "number", "minimum": 0, "description": "Seconds into the video." },
         "duration": { "type": "number", "exclusiveMinimum": 0, "description": "The clip's length (the music ducks under it)." },
-        "speaker": { "enum": ["narrator", "aiko"], "default": "narrator" },
+        "speaker": { "enum": ["narrator", "karen"], "default": "narrator" },
         "volume": { "type": "number", "minimum": 0, "maximum": 2, "default": 1 },
         "words": { "type": "array", "items": { "$ref": "#/$defs/word" }, "description": "Word timings (Azure's WordBoundary) for the captions." }
       }

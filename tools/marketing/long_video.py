@@ -110,9 +110,9 @@ def script_checks(ans: dict, outline: dict) -> list[str]:
             out.append(f"line {i + 1}: no *stars* in spoken lines")
         if drafts.words(l["text"]) > 45:
             out.append(f"line {i + 1}: {drafts.words(l['text'])} words; split lines longer than 45 words")
-    aiko = sum(1 for l in lines if l["speaker"] == "aiko")
-    if lines and aiko / len(lines) > 0.2:
-        out.append(f"{aiko} of {len(lines)} lines are hers; keep her to a few (at most a fifth)")
+    karen = sum(1 for l in lines if l["speaker"] == "karen")
+    if lines and karen / len(lines) > 0.2:
+        out.append(f"{karen} of {len(lines)} lines are hers; keep her to a few (at most a fifth)")
     return out
 
 

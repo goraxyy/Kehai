@@ -3,7 +3,7 @@ using System.Linq;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // How she gets about when she isn't doing something to you. Tier 0: no tension cost,
     // not bandit arms, always permitted.
@@ -24,7 +24,7 @@ namespace Kehai.Aiko
 
         // Coverage: go where she hasn't looked for longest, weighted a little by belief —
         // patrol refreshes negative information as much as it hunts.
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             Region best = null;
             float bestScore = float.MinValue;
@@ -38,7 +38,7 @@ namespace Kehai.Aiko
             }
             if (best == null) return;
             plan.Target = best.Name;
-            plan.Go(best.Centroid, AikoBody.Pace.Walk, "patrol to " + best.Name, 2f);
+            plan.Go(best.Centroid, KarenBody.Pace.Walk, "patrol to " + best.Name, 2f);
             plan.Add(new LookAround(2.5f));
         }
     }
@@ -56,13 +56,13 @@ namespace Kehai.Aiko
         public override TellKind Tell => TellKind.Footsteps;
         public override string Chore => "none";
         public override string Attacks => "you";
-        public override float ExposureRisk(AikoContext c) => 0.2f;
+        public override float ExposureRisk(KarenContext c) => 0.2f;
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             int region = c.Belief.PeakRegion;
             plan.Target = c.RegionName(region);
-            plan.Add(new MoveTo(k => k.Belief.RegionCentroid(region), AikoBody.Pace.Hurry, "investigate " + plan.Target, 1.6f)
+            plan.Add(new MoveTo(k => k.Belief.RegionCentroid(region), KarenBody.Pace.Hurry, "investigate " + plan.Target, 1.6f)
                 .When(k => k.Belief.RegionMass[region] > 0.02f, "belief still there"));
             plan.Add(new LookAround(3f));
         }
@@ -84,7 +84,7 @@ namespace Kehai.Aiko
         public override string Chore => "none";
         public override string Attacks => "sight";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             var hiding = c.Ledger.ConcealmentRegions(c, 3);
             var ranked = c.Map.Regions
@@ -103,7 +103,7 @@ namespace Kehai.Aiko
             plan.Target = string.Join(", ", ranked.Select(x => x.r.Name));
             foreach (var x in ranked)
             {
-                plan.Go(x.r.Centroid, AikoBody.Pace.Walk, "sweep " + x.r.Name, 2f);
+                plan.Go(x.r.Centroid, KarenBody.Pace.Walk, "sweep " + x.r.Name, 2f);
                 plan.Add(new LookAround(2f));
             }
         }
@@ -124,11 +124,11 @@ namespace Kehai.Aiko
         public override TellKind Tell => TellKind.Footsteps;
         public override string Chore => "none";
         public override string Attacks => "social";
-        public override float ExposureRisk(AikoContext c) => 0.25f;
+        public override float ExposureRisk(KarenContext c) => 0.25f;
 
         CustomerMemory witness;
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             witness = null;
             float best = 45f;
@@ -142,12 +142,12 @@ namespace Kehai.Aiko
             return witness != null;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             if (witness == null) return;
             CustomerMemory w = witness;
             plan.Target = w.name;
-            plan.Add(new MoveTo(_ => w != null ? w.transform.position : c.Body.Position, AikoBody.Pace.Hurry, "ask " + w.name, 1.8f, 30f, follow: true));
+            plan.Add(new MoveTo(_ => w != null ? w.transform.position : c.Body.Position, KarenBody.Pace.Hurry, "ask " + w.name, 1.8f, 30f, follow: true));
             plan.Add(new Wait(1.5f, "listen"));
         }
     }
@@ -169,7 +169,7 @@ namespace Kehai.Aiko
         public override string Attacks => "nothing";
         public override bool Learnable => true;
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             float[] far = TacticHelpers.DistanceFromBelief(c);
             Region best = null;
@@ -186,7 +186,7 @@ namespace Kehai.Aiko
 
             plan.Target = best.Name;
             plan.Add(new Tell(TellKind.HoldMusic, k => k.Body.Position, 1f));
-            plan.Go(best.Centroid, AikoBody.Pace.Walk, "withdraw to " + best.Name, 2.5f);
+            plan.Go(best.Centroid, KarenBody.Pace.Walk, "withdraw to " + best.Name, 2.5f);
             plan.Add(new LookAround(6f, "idle, facing away"));
         }
     }

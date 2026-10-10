@@ -18,7 +18,7 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 |---|---|
 | W A S D | Walk |
 | Mouse | Look around |
-| Left Shift (hold) | Sprint; stands you up if you're crouching. Loud: Aiko hears it |
+| Left Shift (hold) | Sprint; stands you up if you're crouching. Loud: Karen hears it |
 | Left Ctrl (hold) | Crouch while held; let go to stand up. Quiet, and slow |
 | Space | Jump |
 
@@ -45,9 +45,9 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| Esc | Pause: restart the shift or leave for the main menu, volume, mouse, Aiko's floor cone, webcam; closes any open panel |
-| F1 | Live map of the store and what Aiko is doing, in plain words |
-| H (on the F1 map) | Aiko's guess of where you are, as a heat map |
+| Esc | Pause: restart the shift or leave for the main menu, volume, mouse, Karen's floor cone, webcam; closes any open panel |
+| F1 | Live map of the store and what Karen is doing, in plain words |
+| H (on the F1 map) | Karen's guess of where you are, as a heat map |
 | T (on the F1 map) | Technical view: goal scores and her thought log |
 | F2 | Replay the shift so far |
 | Space (in the replay) | Play or pause |
@@ -92,7 +92,7 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 | [ / ] | The previous or next clip moment |
 | Home / End | The start or the end of the shift |
 | 1 2 3 4 5 6 7 | Camera: your eyes, CCTV corner, chase, orbit, top down, free, your path |
-| Tab | Follow Aiko or yourself |
+| Tab | Follow Karen or yourself |
 | Right mouse (hold) | Free camera: look around |
 | W A S D / Q E | Free camera: move, and down or up (Left Shift: faster) |
 | Mouse wheel | Free camera: how fast it flies |
@@ -121,10 +121,10 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 
 ## Settings (Esc)
 
-- **Shift**: restart this shift. The store resets, you go back to where you start, and the same shift begins again when you clock in. Aiko still remembers earlier shifts.
-- **Volume**: everything, sound effects, Aiko (her footsteps and warnings), music (the radio) and announcements (the PA). You hear a sample when you let go of a slider.
+- **Shift**: restart this shift. The store resets, you go back to where you start, and the same shift begins again when you clock in. Karen still remembers earlier shifts.
+- **Sound**, first on the page: **all game sounds** at once, then each kind on its own: sound effects, Karen (her footsteps and warnings), music (the radio) and announcements (the PA). You hear a sample when you let go of a slider.
 - **Mouse**: look sensitivity.
-- **Aiko**: show where she is looking, as a cone on the floor. Blue: walking her rounds. Orange: she noticed something. Red: she's hunting you, or can see you right now.
+- **Karen**: show where she is looking, as a cone on the floor. Blue: walking her rounds. Orange: she noticed something. Red: she's hunting you, or can see you right now.
 - **Webcam blinking**: turn it on or off, calibrate, open the blink test.
 
 The game pauses while the menu is open, and your choices are remembered.

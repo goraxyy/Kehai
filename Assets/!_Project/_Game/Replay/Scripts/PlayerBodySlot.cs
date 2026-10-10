@@ -46,7 +46,7 @@ namespace Kehai.Replay
                 IsPlaceholder = true;
                 Body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
                 Body.name = "PlayerBody (placeholder)";
-                Body.GetComponent<Renderer>().sharedMaterial = Kehai.Aiko.AikoProps.Lit(Placeholder, 0.35f);
+                Body.GetComponent<Renderer>().sharedMaterial = Kehai.Karen.KarenProps.Lit(Placeholder, 0.35f);
                 Remove(Body.GetComponent<Collider>());
                 Body.transform.SetParent(transform, false);
                 Stand(false);

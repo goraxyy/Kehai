@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Replay;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -175,7 +175,7 @@ namespace Kehai.Playtest
             try
             {
                 var files = PlaytestPackage.Collect(folder, since, ShiftRecorder.Folder,
-                    Path.Combine(Application.persistentDataPath, "aiko_logs"), AikoLedger.DefaultPath,
+                    Path.Combine(Application.persistentDataPath, "karen_logs"), KarenLedger.DefaultPath,
                     Application.consoleLogPath, previousLogToo: crashed);
                 string zip = Path.Combine(PlaytestPaths.Outbox, PlaytestPackage.ZipName(Config.round, TesterState.Code, stamp));
                 PlaytestPackage.Pack(zip, files);
@@ -217,10 +217,10 @@ namespace Kehai.Playtest
             Note("consent", new Dictionary<string, object> { ["sends"] = send });
         }
 
-        // A new tester is a new employee: Aiko forgets the last one, and calls this one by their code.
+        // A new tester is a new employee: Karen forgets the last one, and calls this one by their code.
         void StartFreshCareer()
         {
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             if (brain == null || brain.Ledger == null || shiftManager == null || shiftManager.IsShiftActive) return;
             string code = pendingFreshCareer;
             pendingFreshCareer = null;
@@ -361,10 +361,10 @@ namespace Kehai.Playtest
             Panel("paused", GamePause.Paused);
             TaskListUI tasks = FindTaskList();
             Panel("task list", tasks != null && tasks.Visible);
-            AikoDebugOverlay overlay = AikoBrain.Instance != null ? AikoBrain.Instance.GetComponent<AikoDebugOverlay>() : null;
+            KarenDebugOverlay overlay = KarenBrain.Instance != null ? KarenBrain.Instance.GetComponent<KarenDebugOverlay>() : null;
             Panel("map (F1)", overlay != null && overlay.showOverlay);
             Panel("shift replay (F2)", overlay != null && overlay.showScrubber);
-            Panel("performance review", AikoBrain.Instance != null && AikoBrain.Instance.Review != null && AikoBrain.Instance.Review.Visible);
+            Panel("performance review", KarenBrain.Instance != null && KarenBrain.Instance.Review != null && KarenBrain.Instance.Review.Visible);
             Panel("career over", Consequences.CareerOver);
             Panel("3D replay", ReplayPlayer.Instance != null);
             Panel("webcam blinking", Kehai.Blink.BlinkTracker.Consented);

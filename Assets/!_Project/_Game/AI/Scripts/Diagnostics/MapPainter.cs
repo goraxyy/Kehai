@@ -2,18 +2,18 @@ using System.Collections.Generic;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Draws the store and everyone in it with IMGUI — the F1 live map and the F2 replay.
     // The shapes and colours here are the same ones the shift report uses in the browser:
     //
     //   you              cyan arrow, pointing where you look
-    //   Aiko            red diamond with her view cone; flashing when she's chasing
+    //   Karen            red diamond with her view cone; flashing when she's chasing
     //   her guess        dashed yellow ring where she thinks you are (smaller = surer)
     //   customers        dots: grey shopping, amber heading to the till, orange waiting (with
     //                    seconds), purple "?" asking for directions — with a dotted line to the
     //                    shelf they want, which glows purple — green following you, red when
-    //                    Aiko has taken one over
+    //                    Karen has taken one over
     //   sounds           rings spreading from where they were made: cyan yours, red hers,
     //                    grey customers', violet the store's; bigger = heard further away
     //   warnings         yellow "!" where one of her tricks is about to happen
@@ -22,7 +22,7 @@ namespace Kehai.Aiko
     public sealed class MapPainter
     {
         public static readonly Color You = new Color32(77, 210, 255, 255);
-        public static readonly Color AikoRed = new Color32(255, 84, 84, 255);
+        public static readonly Color KarenRed = new Color32(255, 84, 84, 255);
         public static readonly Color Guess = new Color32(255, 214, 64, 255);
         public static readonly Color Shopper = new Color32(160, 168, 178, 255);
         public static readonly Color ToTill = new Color32(242, 201, 76, 255);
@@ -32,7 +32,7 @@ namespace Kehai.Aiko
         public static readonly Color Leaving = new Color32(95, 102, 112, 255);
         public static readonly Color Possessed = new Color32(230, 40, 60, 255);
         public static readonly Color SoundYou = You;
-        public static readonly Color SoundAiko = AikoRed;
+        public static readonly Color SoundKaren = KarenRed;
         public static readonly Color SoundCustomer = new Color32(200, 200, 200, 255);
         public static readonly Color SoundStore = new Color32(180, 140, 255, 255);
         public static readonly Color Spill = new Color32(150, 100, 45, 255);
@@ -91,7 +91,7 @@ namespace Kehai.Aiko
                 Square(ToScreen(new Vector2(bin.x, bin.y)), Mathf.Max(7f, Px(0.9f)), c);
             }
             foreach (Vector2 bag in f.Bags) Square(ToScreen(bag), Mathf.Max(6f, Px(0.7f)), new Color(0.25f, 0.2f, 0.3f));
-            foreach (Vector2 door in f.LockedDoors) Sprite(cross, ToScreen(door), Mathf.Max(12f, Px(2f)), AikoRed);
+            foreach (Vector2 door in f.LockedDoors) Sprite(cross, ToScreen(door), Mathf.Max(12f, Px(2f)), KarenRed);
             foreach (Vector4 prop in f.Props)
             {
                 Vector2 at = ToScreen(new Vector2(prop.y, prop.z));
@@ -144,25 +144,25 @@ namespace Kehai.Aiko
                 if (c.State == CustomerMark.Asking || c.State == CustomerMark.LostTheGuide)
                     Text(at + new Vector2(0f, -size), "?", Asking, fontSize, TextAnchor.LowerCenter, true);
                 else if (c.State == CustomerMark.Queueing && c.Wait >= 20f)
-                    Text(at + new Vector2(size * 0.7f, 0f), $"{c.Wait:0}s", c.Wait >= 60f ? AikoRed : Waiting, Mathf.RoundToInt(fontSize * 0.8f), TextAnchor.MiddleLeft, true);
+                    Text(at + new Vector2(size * 0.7f, 0f), $"{c.Wait:0}s", c.Wait >= 60f ? KarenRed : Waiting, Mathf.RoundToInt(fontSize * 0.8f), TextAnchor.MiddleLeft, true);
                 else if (c.State == CustomerMark.Possessed || c.State == CustomerMark.Fake)
                     Sprite(ring, at, size * 1.8f, Possessed);
             }
 
-            // Aiko.
-            if (f.AikoPresent)
+            // Karen.
+            if (f.KarenPresent)
             {
-                Vector2 k = ToScreen(f.Aiko);
+                Vector2 k = ToScreen(f.Karen);
                 if (f.GuessConfidence > 0.05f)
                 {
                     float r = Mathf.Lerp(12f, 3f, Mathf.Clamp01(f.GuessConfidence));
                     DashedCircle(ToScreen(f.Guess), Px(r), new Color(Guess.r, Guess.g, Guess.b, 0.9f));
                     Text(ToScreen(f.Guess) + new Vector2(0f, Px(r) + 2f), GameNames.Antagonist + "'s guess", Guess, Mathf.RoundToInt(fontSize * 0.75f), TextAnchor.UpperCenter, true);
                 }
-                Rotated(cone, k, Px(36f), f.AikoYaw, new Color(1f, 0.25f, 0.25f, f.AikoSees ? 0.38f : 0.18f));
+                Rotated(cone, k, Px(36f), f.KarenYaw, new Color(1f, 0.25f, 0.25f, f.KarenSees ? 0.38f : 0.18f));
                 bool flash = f.Chasing && Mathf.Repeat(Time.unscaledTime * 4f, 1f) < 0.5f;
-                Rotated(Texture2D.whiteTexture, k, Mathf.Max(12f, Px(1.3f)), 45f, flash ? Color.white : AikoRed);
-                Text(k + new Vector2(Mathf.Max(10f, Px(1.2f)), 0f), f.Chasing ? GameNames.Antagonist + " — CHASING" : GameNames.Antagonist, AikoRed, fontSize, TextAnchor.MiddleLeft, true);
+                Rotated(Texture2D.whiteTexture, k, Mathf.Max(12f, Px(1.3f)), 45f, flash ? Color.white : KarenRed);
+                Text(k + new Vector2(Mathf.Max(10f, Px(1.2f)), 0f), f.Chasing ? GameNames.Antagonist + " — CHASING" : GameNames.Antagonist, KarenRed, fontSize, TextAnchor.MiddleLeft, true);
             }
 
             // You.
@@ -172,7 +172,7 @@ namespace Kehai.Aiko
             Text(me + new Vector2(Mathf.Max(12f, Px(1.4f)), 0f), f.PlayerHeld ? "You (lectured)" : "You", You, fontSize, TextAnchor.MiddleLeft, true);
         }
 
-        // Aiko's belief as a heat layer (H on the F1 map).
+        // Karen's belief as a heat layer (H on the F1 map).
         public void DrawBelief(BeliefGrid belief)
         {
             StoreMap map = StoreMap.Current;
@@ -205,12 +205,12 @@ namespace Kehai.Aiko
             EnsureSprites();
             var items = new (Texture2D tex, Color colour, string label, float rot)[]
             {
-                (arrow, You, "You", 0f), (Texture2D.whiteTexture, AikoRed, GameNames.Antagonist, 45f), (ring, Guess, GameNames.Antagonist + "'s guess", 0f),
+                (arrow, You, "You", 0f), (Texture2D.whiteTexture, KarenRed, GameNames.Antagonist, 45f), (ring, Guess, GameNames.Antagonist + "'s guess", 0f),
                 (circle, Shopper, "Shopping", 0f), (circle, ToTill, "Going to till", 0f), (circle, Waiting, "Waiting at till", 0f),
                 (circle, Asking, "Wants directions", 0f), (circle, Following, "Following you", 0f), (circle, Possessed, GameNames.Antagonist + "'s puppet", 0f),
-                (ring, SoundYou, "Your noise", 0f), (ring, SoundAiko, "Her noise", 0f), (ring, SoundCustomer, "Other noise", 0f),
+                (ring, SoundYou, "Your noise", 0f), (ring, SoundKaren, "Her noise", 0f), (ring, SoundCustomer, "Other noise", 0f),
                 (circle, Warning, "Warning sound", 0f), (circle, Spill, "Spill", 0f), (Texture2D.whiteTexture, EmptyShelf, "Empty shelf", 0f),
-                (Texture2D.whiteTexture, new Color(0.3f, 0.8f, 0.4f), "Bin (fills red)", 0f), (cross, AikoRed, "Locked door", 0f),
+                (Texture2D.whiteTexture, new Color(0.3f, 0.8f, 0.4f), "Bin (fills red)", 0f), (cross, KarenRed, "Locked door", 0f),
             };
             int perRow = Mathf.Max(1, Mathf.FloorToInt(r.width / (fontSize * 8.5f)));
             float cellW = r.width / perRow, cellH = fontSize * 1.6f;
@@ -255,7 +255,7 @@ namespace Kehai.Aiko
             switch (who)
             {
                 case "you": return SoundYou;
-                case GameNames.Antagonist: return SoundAiko;
+                case GameNames.Antagonist: return SoundKaren;
                 case "a customer": return SoundCustomer;
                 default: return SoundStore;
             }

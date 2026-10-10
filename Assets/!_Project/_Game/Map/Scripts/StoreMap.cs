@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 namespace Kehai.Store
 {
-    // What a named place in the building is for. Aiko plans against these, the eval
+    // What a named place in the building is for. Karen plans against these, the eval
     // harness names them in its observations, and STORE_MAP.md lists them.
     public enum LandmarkKind
     {
@@ -24,7 +24,7 @@ namespace Kehai.Store
     }
 
     // Put on anything placed in the store at runtime that should not become part of the
-    // map's walls — Aiko's crate stacks, for instance, are blockages, not architecture.
+    // map's walls — Karen's crate stacks, for instance, are blockages, not architecture.
     public interface IMapTransient { }
 
     public struct Landmark
@@ -130,7 +130,7 @@ namespace Kehai.Store
             }
         }
 
-        // Rebuild after the maze has been changed (see Aiko's shelf relocation).
+        // Rebuild after the maze has been changed (see Karen's shelf relocation).
         public static StoreMap Rebuild()
         {
             current = Build();
@@ -770,7 +770,7 @@ namespace Kehai.Store
         }
 
         // Articulation points of the region graph (iterative Tarjan): regions whose loss
-        // splits the store in two. Where Aiko stands to cut you off.
+        // splits the store in two. Where Karen stands to cut you off.
         void FindChokepoints()
         {
             int n = Regions.Count;
@@ -1139,7 +1139,7 @@ namespace Kehai.Store
 
         // Minimum cut on the region graph between a source region and a set of sinks, with
         // link widths as capacities (Edmonds-Karp). Returns the links to close to separate
-        // them, cheapest total width first — Aiko's shopping list for a funnel.
+        // them, cheapest total width first — Karen's shopping list for a funnel.
         public List<(int from, int to, Vector3 at)> MinCut(int source, ICollection<int> sinks, ICollection<int> closed = null)
         {
             var result = new List<(int, int, Vector3)>();

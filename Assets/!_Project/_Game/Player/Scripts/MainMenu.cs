@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Kehai;
-using Kehai.Aiko;
+using Kehai.Karen;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 // The title screen. It opens over the store, with time stopped and the HUD put away, when the
 // game starts, when you leave a shift for it from the Esc menu, and after a career ends.
-//   Continue        the career, at its next shift (Aiko saves it after every shift)
+//   Continue        the career, at its next shift (Karen saves it after every shift)
 //   New career      she forgets what she has learned about you; your settings stay
 //   Settings, Controls   the Esc menu's own pages
 // It keeps out of the way of the eval harness, the 3D replay and batch runs. `-skip-menu` on
@@ -85,7 +85,7 @@ public sealed class MainMenu : MonoBehaviour
 
     void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
 
-    // The store the game starts in. By now Aiko, or a replay, has been put into it.
+    // The store the game starts in. By now Karen, or a replay, has been put into it.
     void Start()
     {
         if (Wanted(firstLoad: true)) Show();
@@ -210,10 +210,10 @@ public sealed class MainMenu : MonoBehaviour
         framesWaited = 0;
     }
 
-    // Aiko loads her ledger in her Start, which may come after ours.
+    // Karen loads her ledger in her Start, which may come after ours.
     void ReadCareer()
     {
-        AikoBrain brain = AikoBrain.Instance;
+        KarenBrain brain = KarenBrain.Instance;
         if (brain != null && brain.Ledger == null) return;
         if (brain == null && ++framesWaited < 10) return;
 
@@ -250,12 +250,12 @@ public sealed class MainMenu : MonoBehaviour
         Hide();
     }
 
-    // Aiko forgets you. The store loads again, so the Aiko in it starts from nothing.
+    // Karen forgets you. The store loads again, so the Karen in it starts from nothing.
     void StartOver()
     {
-        AikoBrain brain = AikoBrain.Instance;
+        KarenBrain brain = KarenBrain.Instance;
         if (brain != null && brain.Ledger != null) brain.Ledger.Wipe();
-        else if (File.Exists(AikoLedger.DefaultPath)) File.Delete(AikoLedger.DefaultPath);
+        else if (File.Exists(KarenLedger.DefaultPath)) File.Delete(KarenLedger.DefaultPath);
         Reload(0, menuAfter: false);
     }
 
@@ -384,7 +384,7 @@ public sealed class MainMenu : MonoBehaviour
         if (canvas != null) return;
         canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 1000;   // over the HUD, Aiko's screen (900) and the eyelids (999)
+        canvas.sortingOrder = 1000;   // over the HUD, Karen's screen (900) and the eyelids (999)
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);

@@ -1,6 +1,6 @@
 # KEHAI marketing pipeline: build plan
 
-> Studio **TokenLimit** · Game **Kehai** (気配, "the sense that someone is there") · Antagonist **Aiko** (愛子, "she")
+> Studio **TokenLimit** · Game **Kehai** (気配, "the sense that someone is there") · Antagonist **Karen** (カレン, "she")
 > Plan started 2026-09-29. This file is the source of truth for the build: a later session
 > reads it first, continues from **Status**, and ticks boxes as it goes.
 
@@ -85,7 +85,7 @@ Done 2026-09-29. What later phases still need from it:
 | **n8n** | 2.41.6 in `~/TokenLimit/n8n` on `node@24` 24.21.0 (installed 2026-10-02) | Phase 7 |
 | Telegram.app | ✓ installed | approvals |
 
-## Phase 1 — Rename to Kehai / Aiko ✅
+## Phase 1 — Rename to Kehai / Karen ✅
 
 Merged 2026-09-30 as PR #13 (`d823e35`); see `CHANGELOG.md` and the PR for what changed. Player-facing
 text reads `GameNames`; save data and settings were migrated to `TokenLimit/Kehai` (the old folder
@@ -96,7 +96,7 @@ stays as a backup); productName `Kehai`, bundle id `com.tokenlimit.kehai`; the r
 ## Phase 2 — Clip markers (Unity) ✋
 
 Branch `feat/clip-markers`, worktree `~/Developer/kehai-markers`. Markers **only observe**: the
-only changes to game code are two events for listeners (`AikoBrain.ShelfSabotaged`,
+only changes to game code are two events for listeners (`KarenBrain.ShelfSabotaged`,
 `ShiftRecorder.Recorded`/`Finishing`) and the recorder writing one more file.
 
 - [x] `ClipMarkers.cs`: the one table — id, weight, pre/post-roll, subjects, tags, always-kept — plus
@@ -106,7 +106,7 @@ only changes to game code are two events for listeners (`AikoBrain.ShelfSabotage
 - [x] `ClipWatch.cs` (plain C#, testable) + `ClipMarkerRecorder.cs` (listens, feeds it):
   - blink_move ← `StoryKind.Blink` · learned ← `StoryKind.Learned`
   - catch ← the thought log's `CAUGHT` · escape ← a chase in the live frame ending with no catch
-  - near_miss, found_blind, aiko_stuck, possessed, lost guide ← the recorder's 10 Hz live frame
+  - near_miss, found_blind, karen_stuck, possessed, lost guide ← the recorder's 10 Hz live frame
   - blackout ← mains off or a breaker tripped, until the lights are back (seconds in `value`)
   - undone_work ← `ShelfSabotaged` on a shelf restocked ≤ 60 s before, or the spill tactic's
     effect ≤ 15 m / ≤ 60 s from a spill you mopped
@@ -144,20 +144,20 @@ only changes to game code are two events for listeners (`AikoBrain.ShelfSabotage
 Branch `feat/replay-recorder`, worktree `~/Developer/kehai-replay`. Code in
 `Assets/!_Project/_Game/Replay/Scripts/` (namespace `Kehai.Replay`). Only listens; the game
 code gained listen-only hooks: an `Item` registry, `AutoDoubleDoor` panel accessors,
-`AikoBrain.Told`, `MazeMutation.LastMoves`, and `ShiftRecorder.Stem` (the shift's files are now
+`KarenBrain.Told`, `MazeMutation.LastMoves`, and `ShiftRecorder.Stem` (the shift's files are now
 named when it starts, so the replay can stream to `<stem>.krec.part` and be renamed at the end).
 
 - [x] `KrecFormat.cs` / `KrecWriter.cs`: one gzip stream of tagged records. Header: the shift,
-      scene, Aiko's seed and rung, the maze's moves, the belief grid (3 m bins of her 1.5 m cells),
+      scene, Karen's seed and rung, the maze's moves, the belief grid (3 m bins of her 1.5 m cells),
       every shelf slot (position, filled, product) and ceiling light (position, on). Then 30 Hz
       ticks: spawns, poses as **millimetre deltas** (zigzag varints), rotations as three 16-bit
       numbers (smallest three), state and visibility — **only what changed**; the view at 60 Hz
       (position, rotation, FOV, eyelids, what's in hand); events; belief frames XOR'd with the last.
-- [x] `ReplayRecorder.cs`: the player (motion, carrying, holding a tool), the view, Aiko (mood,
+- [x] `ReplayRecorder.cs`: the player (motion, carrying, holding a tool), the view, Karen (mood,
       sees you, chasing), customers (their mark), understudies, hinge doors (locked), auto-door
       panels, every shelf unit (so relocations and the maze show), crate walls, fog, CCTV cameras
       (bolted on, dead), coffee cups, footprints, spills, bins (how full), bags (disposed), and every
-      item off its shelf — tools included (the mop, the torch on/off) — loose, in hand, held (Aiko
+      item off its shelf — tools included (the mop, the torch on/off) — loose, in hand, held (Karen
       with the mop), or back on a shelf. Events: noises, tells (kind, place, lead), PA chime and speech, mains and
       breakers, the thought log, the narrator, shelf slots filling and emptying, ceiling lights.
       Belief map at 2 Hz with her guess and how sure she is.
@@ -168,12 +168,12 @@ named when it starts, so the replay can stream to `<stem>.krec.part` and be rena
       through the Playables API; a 1.8 m capsule (lower when crouching) until then.
 - [x] Tests: `KrecTests` (varints, rotations, a written file reads back as written, a still entity
       doesn't drift, a cut file loads, ten minutes stay under 20 MB, the capsule, clips by name) and
-      `ReplayRoundTripTests` (10 s of a bot shift in the real store; every pose of the player, Aiko
+      `ReplayRoundTripTests` (10 s of a bot shift in the real store; every pose of the player, Karen
       and the customers comes back within 1 cm).
 - [x] Verified 2026-09-30: offline compile (0 errors, 0 warnings); **EditMode 70/70** on a clone
-      (the round trip: 389 poses of the player, Aiko and a customer, worst **0.72 mm**, rotations
+      (the round trip: 389 poses of the player, Karen and a customer, worst **0.72 mm**, rotations
       exact, 151 views, 21 belief frames); a full 6-minute bot shift wrote a 380 KB `.krec`
-      (≈0.6 MB per 10 min) that reads back complete in 0.6 s: 252 entities (player, Aiko, 3
+      (≈0.6 MB per 10 min) that reads back complete in 0.6 s: 252 entities (player, Karen, 3
       customers, 14 items incl. the mop, torch, crate and what customers carried, 6 doors, 8 door
       panels, 189 shelf units, 20 footprints, 5 spills, 3 bins, a bag), 1,013 noises, 35 tells,
       12 PA events, 3,069 thoughts, 301 narrator lines, 16 slot and 81 light changes, 5,501 views,
@@ -192,8 +192,8 @@ the origin. No Animator Controller needed. A missing clip falls back to walk or 
 Branch `feat/replay-player`, worktree `~/Developer/kehai-player`, **stacked on
 `feat/replay-recorder`** (PR #15 wasn't merged when the owner said to continue). Code in
 `Replay/Scripts/` and `Replay/Editor/`, the overlay shader in `Replay/Resources/`. Changes to game
-code: `AikoBody.BuildLook`/`MoodColour` (her look without her body), `FogCloud.Build` (a cloud that
-doesn't time itself out), `ShiftRestart.Reload`, the replay branch in `AikoBootstrap`, **R** on the
+code: `KarenBody.BuildLook`/`MoodColour` (her look without her body), `FogCloud.Build` (a cloud that
+doesn't time itself out), `ShiftRestart.Reload`, the replay branch in `KarenBootstrap`, **R** on the
 review screen, `ProceduralAudio`'s synth helpers made internal, and the recorder writes a crate
 wall's width, the fog's radius and "the last coffee" as their state.
 
@@ -206,7 +206,7 @@ wall's width, the fog's radius and "the last coffee" as their state.
       - the store's own objects: shelf units (maze moves mapped back), doors, door panels, bins,
         and the spills, bags and loose items that were there when the shift began (loose ones
         it didn't start with are hidden);
-      - puppets: Aiko (her own look, eye colour by mood), customers and the understudy (the
+      - puppets: Karen (her own look, eye colour by mood), customers and the understudy (the
         customer prefab, stripped), items off their shelves (copies of the same product), crate
         walls, fog (its particles on the replay's clock), CCTV (LED off when dead), coffee,
         footprints, spills, bags, and your body (`PlayerBodySlot`);
@@ -226,11 +226,11 @@ wall's width, the fog's radius and "the last coffee" as their state.
       - free fly: right mouse, WASD, Q/E, the scroll wheel for speed, Z/X for field of view.
 
       The presets are worked out from the recording at t alone, so scrubbing and rendering see
-      the same picture. **Tab** follows Aiko or you; **F** turns on depth of field (URP Bokeh on the
+      the same picture. **Tab** follows Karen or you; **F** turns on depth of field (URP Bokeh on the
       subject). **K** adds a keyframe to `<stem>.path.json`; **Shift+K** removes the last. **7** plays
       the path (`ShotPath`: Hermite positions, squad rotations, still at the ends; schema
       `shot-path.schema.json`).
-- [x] **Aiko's mind** (`MindLayers`), on its own layer:
+- [x] **Karen's mind** (`MindLayers`), on its own layer:
       - belief heat map: her 3 m bins, red to yellow;
       - her guess: a ring, tighter the surer she is, plus a pin;
       - view cone: her sight range and field of view, cut by shelves, red while she sees you;
@@ -285,7 +285,7 @@ wall's width, the fog's radius and "the last coffee" as their state.
 - **Not yet verified:**
   - Real encoding: ffmpeg wasn't installed. Phase 5 found that Remotion's own ffmpeg is enough
     and switched the pipe to PNG frames; the sample shots are the first real encodes.
-  - The POV eyelids: bot shifts never close them. The bot's blinks feed Aiko's blink sense, not
+  - The POV eyelids: bot shifts never close them. The bot's blinks feed Karen's blink sense, not
     the eyelids on screen, so this needs a shift played with the webcam or **B**.
   - The interactive player's mouse and keys (scrubbing, free fly): tested only through the same
     code paths the render uses. This needs a look in the editor.
@@ -300,7 +300,7 @@ out). `editor/README.md` explains an edit.
 
 - [x] **`brand.json`** (Q11): crimson `#DC143C`, soft black `#151518`, white; the game's own palette
       for her and you; soft rounded fonts: **Nunito** (English and Russian) and **M PLUS Rounded
-      1c** (only the glyphs 気配 and 愛子), both from Google Fonts at render time. Handles and links
+      1c** (only the glyphs 気配 and カレン), both from Google Fonts at render time. Handles and links
       are `null` until the accounts exist. Voices hold the recommended Azure voices, marked
       `proposed` (Q10). A test checks the names against `GameNames.cs`.
 - [x] **`edit.json`** + `schemas/edit.schema.json`, shared by the renderer (ajv) and Python
@@ -310,7 +310,7 @@ out). `editor/README.md` explains an edit.
       relative to the working folder; absolute paths and `..` are refused.
 - [x] **One composition** (`editor/src/EditVideo.tsx`):
       - shots: trim, constant speed or smooth ramps (constant pieces), zoom and pan keys, split
-        screen (row or column), picture in picture (with alpha: Aiko's mind from
+        screen (row or column), picture in picture (with alpha: Karen's mind from
         `render_shot.sh -alpha`), images, flat colours;
       - transitions: fade, slide, wipe, flip, clock;
       - sound: voice per language, music that ducks under the voice (0.25 s ramps, fades in and
@@ -318,7 +318,7 @@ out). `editor/README.md` explains an edit.
         every video is mastered to **-14 LUFS, peaks under -1.5 dBTP** (two-pass `loudnorm`,
         what the platforms play at);
       - word-timed captions: a few words at a time with the spoken one in crimson, or whole lines;
-        Aiko's lines in her colour;
+        Karen's lines in her colour;
       - text: hook, labels, lower thirds, and an end card (気配, KEHAI, the tagline, a call to
         action, the handles). `*Starred words*` come out in crimson;
       - pictures: images, GIFs, Lottie;
@@ -405,10 +405,10 @@ and the macOS stand-in voice, and switches to Claude and Azure when `.env` has t
         for **every kept moment** (short, long, bug, skip; checked, and sent back once if one is
         missing); moments used in earlier weeks are marked; writes `plans/<week>/picks.json`
         with the `render_shot.sh` runs, which `render_picks.py` renders one at a time;
-      - `write_short.py`: a draft against the rendered shots (their events and where Aiko and
+      - `write_short.py`: a draft against the rendered shots (their events and where Karen and
         you are in the picture) and the asset library → `edits/<id>/` (edit, draft, context);
       - `translate.py`: every text to Russian, spoken lines checked to fit their time, names as
-        brand.json says (Latin on screen, «Кэхай» and «Айко» in speech); remembered, so a
+        brand.json says (Latin on screen, «Кэхай» and «Карен» in speech); remembered, so a
         revision only translates what changed;
       - `revise.py --note` / `--undo`: the owner's note applied to the whole draft; every earlier
         version kept in `versions/`;
@@ -435,13 +435,13 @@ and the macOS stand-in voice, and switches to Claude and Azure when `.env` has t
 - [x] **The voice** (`km/tts/`, `voice.py`): Azure neural voices (SSML with rate, pitch and style;
       word timings from `WordBoundary`; 429 retried; F0's 0.5M characters a month tracked and
       capped), ElevenLabs (word timings from its character alignment), and macOS `say` as the
-      stand-in (word timings estimated from the silences). Aiko has her own voice. Voices per
+      stand-in (word timings estimated from the silences). Karen has her own voice. Voices per
       language and role in `brand.json`. Lines cached by what's said and who says it; lines
       that would overlap move later; behind the heavy-job lock. The edit gained `script` (the
       voice-over as written; `voice` is what the renderer plays).
-- [x] **Where Aiko is in a shot** (`ShotTrack.cs`): every render now records where she and you
+- [x] **Where Karen is in a shot** (`ShotTrack.cs`): every render now records where she and you
       are in the picture, ten times a second, in the shot's `.json` (`track`). The writer sees
-      it once a second; an arrow or circle with `target: aiko` is placed from it exactly
+      it once a second; an arrow or circle with `target: karen` is placed from it exactly
       (trim, speed ramps and zoom included) and **follows her** through its time on screen (the
       editor's new `follow` keys).
 - [x] **Silence:** every Unity batch run (tests, bot shifts, renders) plays nothing out loud:
@@ -707,7 +707,7 @@ and sets `KEHAI_DRY_RUN=0` in `~/TokenLimit/n8n/env`.
 
 **Answered 2026-09-29:** Q1 clip markers on **F7** (blink calibration stays F9) · Q2 the burnout
 ending keeps 過労死 with **BURNED OUT** under it · Q3 settings migrated on macOS · Q4 the pitch
-rewrites, and Aiko's name meaning is **never explained** · Q5 folders renamed and the project moved
+rewrites, and Karen's name meaning is **never explained** · Q5 folders renamed and the project moved
 out of `~/Desktop` · Q6 repo renamed `goraxyy/Kehai` · Q15 the migration and its test are the only
 code that names the old game. **2026-09-30:** Q13 the player body will have idle, walk,
 crouch-walk, run and carry animations; a capsule until then (path as proposed, Humanoid rig).
@@ -729,15 +729,15 @@ handles and links still to come).
    deletes it a few days after it's posted. Alternative: Cloudinary's free tier. Until then,
    posting days send everything to Telegram to post by hand.
 9. **X or Bluesky** for the third Buffer channel (Free plan = 3)? Or a paid Buffer plan for both.
-10. **Voices.** English narrator, Russian narrator, and Aiko. *Recommend:* 3–4 Azure samples of
-    each for you to pick (e.g. EN: Andrew / Ava; RU: Dmitry / Svetlana; Aiko: a calm,
-    formal female voice, possibly a Japanese voice speaking English). Should Aiko ever speak
+10. **Voices.** English narrator, Russian narrator, and Karen. *Recommend:* 3–4 Azure samples of
+    each for you to pick (e.g. EN: Andrew / Ava; RU: Dmitry / Svetlana; Karen: a calm,
+    formal female voice, possibly a Japanese voice speaking English). Should Karen ever speak
     Japanese with subtitles? *Ready:* once the Azure key is in `.env`, `uv run voice_samples.py`
     makes 13 samples (`audio/samples/`).
 11. ~~**brand.json**~~ *Answered: crimson, soft black, white, soft fonts; handles and links when the accounts exist.* It needs: handle(s), website, Discord/Steam links (if any yet), colours, fonts.
-    *Recommend as defaults:* colours from the shift report (`#0f1116` bg, `#ff5454` Aiko,
+    *Recommend as defaults:* colours from the shift report (`#0f1116` bg, `#ff5454` Karen,
     `#4dd2ff` you, `#ffd640` her guess); fonts **Inter** (Latin + Cyrillic) and **Noto Sans JP**
-    for 気配/愛子. Handle: is `@kehaigame` free where you want it? (You check; Claude can't sign up.)
+    for 気配/カレン. Handle: is `@kehaigame` free where you want it? (You check; Claude can't sign up.)
 12. **Retention and budget** as proposed above (10 GB working, 3 GB free floor)? The tools
     themselves (Remotion + its Chrome, ffmpeg, Python venv, rclone) take roughly 1 GB, and n8n
     with node@24 another 2.6 GB; the disk had ~43 GB free on 2026-10-02.
@@ -755,6 +755,7 @@ handles and links still to come).
 | Date | Decision | By |
 |---|---|---|
 | 2026-09-29 | Names: Kehai (気配), Aiko (愛子), studio TokenLimit; Aiko's name meaning never explained | owner |
+| 2026-10-10 | The antagonist is Karen (カレン, «Карен» in Russian) again, after all; the game stays Kehai | owner |
 | 2026-09-29 | n8n runs on node@22 (n8n supports Node 20.19–24.x) | Phase 0 |
 | 2026-09-29 | Clip markers on F7 / Left Shift + F7; blink calibration stays on F9 | owner (Q1) |
 | 2026-09-29 | Burnout ending: 過労死 / BURNED OUT | owner (Q2) |
@@ -771,7 +772,7 @@ handles and links still to come).
 | 2026-10-02 | Phase 6 built without keys (owner: "proceed building"): replayed answers and the macOS voice stand in until the keys exist | owner |
 | 2026-10-02 | Every Claude step on Opus 5.5, effort per step; Sonnet 5.5 only if the owner chooses it (`KEHAI_LLM_MODEL`) | Phase 6 (for review) |
 | 2026-10-02 | Claude writes drafts in a small schema of its own; the code turns them into edits and checks what the schema can't | Phase 6 (for review) |
-| 2026-10-02 | Unity batch runs are silent (the owner heard them); shots record where Aiko and you are on screen, and marks follow her | owner + Phase 6 |
+| 2026-10-02 | Unity batch runs are silent (the owner heard them); shots record where Karen and you are on screen, and marks follow her | owner + Phase 6 |
 | 2026-10-02 | Phase 7 built without keys (owner: "go to phase 7 without them"); node@24 and n8n installed with the owner's OK | owner |
 | 2026-10-02 | n8n only schedules: every decision is in run_job.py; posting falls back to Telegram by hand while Buffer isn't ready | Phase 7 (for review) |
 | 2026-10-02 | Picks on Saturday's 1 a.m. run, so the weekend is for approving; retention only reports until Q12 is answered | Phase 7 (for review) |
@@ -792,7 +793,7 @@ handles and links still to come).
 - 2026-09-30 — Phase 2: clip markers built in `feat/clip-markers`; PR #14 merged.
 - 2026-09-30 — Phase 3 started (`feat/replay-recorder`); PR #15 opened.
 - 2026-09-30 — Phase 4 built on top of it (`feat/replay-player`): the 3D replay, its cameras and
-  Aiko's mind, and unattended shot renders; PR #16.
+  Karen's mind, and unattended shot renders; PR #16.
 - 2026-09-30 — Phase 5 started (`feat/editor`): brand.json, the edit schema, the Remotion editor,
   the asset library.
 - 2026-10-02 — Phase 5 PR #17 opened. Phase 6 built (`feat/voice-writing`): the Claude steps,

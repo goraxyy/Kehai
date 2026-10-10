@@ -12,7 +12,7 @@ using UnityEngine;
 // that border's own hash, so both chunks agree on it, and every border has at least two
 // openings. Inside a chunk a spanning tree joins every cell, so the whole world is one place.
 // Then it's braided: most dead ends are knocked through, so there are loops. A chase with no
-// way round is frustrating rather than tense, and Aiko's herding needs loops.
+// way round is frustrating rather than tense, and Karen's herding needs loops.
 public static class MazeGenerator
 {
     public const int Cells = 5;

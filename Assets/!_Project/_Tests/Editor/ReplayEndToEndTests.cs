@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Eval;
 using Kehai.Replay;
 using NUnit.Framework;
@@ -79,7 +79,7 @@ public class ReplayEndToEndTests
             yield return null;
 
             // Played back, not played.
-            Assert.IsNull(Object.FindAnyObjectByType<AikoBrain>(), "Aiko's brain isn't running in a replay");
+            Assert.IsNull(Object.FindAnyObjectByType<KarenBrain>(), "Karen's brain isn't running in a replay");
             Assert.IsFalse(Object.FindAnyObjectByType<ShiftManager>().enabled, "the shift isn't running");
             Assert.AreEqual(SimulationMode.Script, Physics.simulationMode, "nothing simulates");
             Assert.IsFalse(Object.FindObjectsByType<NavMeshAgent>().Any(a => a.enabled), "nobody walks by themselves");
@@ -88,7 +88,7 @@ public class ReplayEndToEndTests
             ReplayStage stage = p.Stage;
             int shelves = stage.Actors.Count(a => a.FromScene && a.Entity.Kind == KrecKind.ShelfUnit);
             Assert.Greater(shelves, 100, "the store's own shelf units are driven: " + stage.Summary);
-            Assert.GreaterOrEqual(stage.AikoId, 0, "Aiko has a puppet");
+            Assert.GreaterOrEqual(stage.KarenId, 0, "Karen has a puppet");
             Assert.GreaterOrEqual(stage.PlayerId, 0, "you have a body");
             Debug.Log("Replay end to end: " + stage.Summary);
 
@@ -101,7 +101,7 @@ public class ReplayEndToEndTests
                 p.Seek(t);
                 foreach (ReplayStage.Actor a in stage.Actors)
                 {
-                    if (a.Entity.Kind != KrecKind.Aiko && a.Entity.Kind != KrecKind.Customer && a.Entity.Kind != KrecKind.ShelfUnit) continue;
+                    if (a.Entity.Kind != KrecKind.Karen && a.Entity.Kind != KrecKind.Customer && a.Entity.Kind != KrecKind.ShelfUnit) continue;
                     if (!p.Data.TryPose(a.Entity.Id, t, out EntitySample pose) || !pose.Visible) continue;
                     Assert.IsTrue(a.Root.activeInHierarchy, $"{a.Entity.Kind} {a.Entity.Id} is shown at {at} s");
                     worst = Mathf.Max(worst, Vector3.Distance(a.Transform.position, pose.Position));
@@ -120,7 +120,7 @@ public class ReplayEndToEndTests
 
             // Every camera somewhere sensible, near what it follows.
             float mid = stage.Start + RecordSeconds * 0.5f;
-            p.Data.TryPose(stage.AikoId, mid, out EntitySample her);
+            p.Data.TryPose(stage.KarenId, mid, out EntitySample her);
             foreach (ShotPreset preset in new[] { ShotPreset.Pov, ShotPreset.Cctv, ShotPreset.Chase, ShotPreset.Orbit, ShotPreset.TopDown })
             {
                 p.Cameras.Use(preset);
@@ -135,7 +135,7 @@ public class ReplayEndToEndTests
             // cameras that follow her.
             foreach (ShotPreset preset in new[] { ShotPreset.Chase, ShotPreset.Orbit, ShotPreset.TopDown })
             {
-                p.Cameras.Subject = KrecKind.Aiko;
+                p.Cameras.Subject = KrecKind.Karen;
                 p.Cameras.Use(preset);
                 p.ApplyAt(mid, 1f / 60f, false);
                 double[] seen = ShotTrack.Project(stage.Camera, her.Position + Vector3.up * ShotTrack.MiddleHeight(true));
@@ -179,8 +179,8 @@ public class ReplayEndToEndTests
             // Leaving: the store is a game again.
             ReplayMode.Leave();
             deadline = Time.realtimeSinceStartup + 120f;
-            while (AikoBrain.Instance == null && Time.realtimeSinceStartup < deadline) yield return null;
-            Assert.IsNotNull(AikoBrain.Instance, "back to the game");
+            while (KarenBrain.Instance == null && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsNotNull(KarenBrain.Instance, "back to the game");
             Assert.IsNull(ReplayPlayer.Instance);
             Assert.AreNotEqual(SimulationMode.Script, Physics.simulationMode, "physics runs again");
         }

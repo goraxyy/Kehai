@@ -3,14 +3,14 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Aiko's performance review of you, printed at the end of every shift (Aiko.md §6.6).
+    // Karen's performance review of you, printed at the end of every shift (Karen.md §6.6).
     // A redacted version of her own thought log: being outplayed is only fun when you can
     // see the play. From shift five it also offers the way out.
     public sealed class PerformanceReview
     {
-        readonly AikoBrain brain;
+        readonly KarenBrain brain;
         public string Text { get; private set; } = string.Empty;
         public bool Visible { get; set; }
         public bool BrokeHer { get; private set; }
@@ -18,7 +18,7 @@ namespace Kehai.Aiko
 
         float blackoutSeconds = -1f;
 
-        public PerformanceReview(AikoBrain brain)
+        public PerformanceReview(KarenBrain brain)
         {
             this.brain = brain;
         }
@@ -27,8 +27,8 @@ namespace Kehai.Aiko
 
         public void Compose()
         {
-            AikoStats s = brain.Stats;
-            AikoLedger l = brain.Ledger;
+            KarenStats s = brain.Stats;
+            KarenLedger l = brain.Ledger;
             var sb = new StringBuilder();
 
             sb.AppendLine($"<b>PERFORMANCE REVIEW</b> — {l.PlayerName}, shift {s.Shift}");
@@ -112,7 +112,7 @@ namespace Kehai.Aiko
 
         public string EndingText(string kind)
         {
-            AikoLedger l = brain.Ledger;
+            KarenLedger l = brain.Ledger;
             switch (kind)
             {
                 case "burnout":
@@ -132,13 +132,13 @@ namespace Kehai.Aiko
     // Draws the review and handles its two keys.
     public sealed class ReviewScreen : MonoBehaviour
     {
-        AikoBrain brain;
+        KarenBrain brain;
         GUIStyle style;
 
         // The shift just played was recorded for the 3D replay.
         static bool CanWatch => Kehai.Replay.ReplayRecorder.LastFinished != null && System.IO.File.Exists(Kehai.Replay.ReplayRecorder.LastFinished);
 
-        void Awake() => brain = GetComponent<AikoBrain>();
+        void Awake() => brain = GetComponent<KarenBrain>();
 
         void Update()
         {
@@ -181,7 +181,7 @@ namespace Kehai.Aiko
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            // Aiko's review, then what the recording says happened.
+            // Karen's review, then what the recording says happened.
             var text = new System.Text.StringBuilder(brain.Review.Text);
             ShiftAnalysis analysis = ShiftRecorder.Instance != null ? ShiftRecorder.Instance.LastAnalysis : null;
             if (analysis != null && analysis.Findings.Count > 0)

@@ -16,8 +16,8 @@ happened, a bug note, a "No" to "Did you know what to do?".
   task list), and how long that took.
 - `confusions`: up to six moments, each with its session time (m:ss) and what happened. Only
   what the facts and timeline show; don't invent motives.
-- `aiko`: was {{aiko}} too harsh, about right, too soft, or is it unclear, from her numbers (how
-  often she spotted them, catches, warnings, their lowest energy) and their answer to "{{aiko}}
+- `karen`: was {{karen}} too harsh, about right, too soft, or is it unclear, from her numbers (how
+  often she spotted them, catches, warnings, their lowest energy) and their answer to "{{karen}}
   felt…". "unclear" when there's too little to tell.
 - `bugs`: for each bug note (in order, `i` copied), a GitHub issue the developer can publish as
   it is: a neutral title and a short Markdown body saying what happened, where and when (shift

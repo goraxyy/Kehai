@@ -3,13 +3,13 @@ using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Shared reasoning the tactics lean on. Everything here works from belief and the map,
     // never from where the player actually is.
     public static class TacticHelpers
     {
-        public static Vector3 Believed(AikoContext c) => c.Belief.RegionCentroid(c.Belief.PeakRegion);
+        public static Vector3 Believed(KarenContext c) => c.Belief.RegionCentroid(c.Belief.PeakRegion);
 
         public static Vector3 OnFloor(Vector3 p, float radius = 3f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, NavMesh.AllAreas) ? hit.position : p;
@@ -20,7 +20,7 @@ namespace Kehai.Aiko
         static int fromBeliefCell = -1;
         static float fromBeliefTime = -1f;
 
-        public static float[] DistanceFromBelief(AikoContext c)
+        public static float[] DistanceFromBelief(KarenContext c)
         {
             int cell = c.Belief.PeakCell;
             if (fromBelief == null || fromBeliefCell != cell || Time.time - fromBeliefTime > 1f || fromBelief.Length != c.Map.CellCount)
@@ -32,7 +32,7 @@ namespace Kehai.Aiko
             return fromBelief;
         }
 
-        public static float WalkFromBelief(AikoContext c, Vector3 p)
+        public static float WalkFromBelief(KarenContext c, Vector3 p)
         {
             int cell = c.Map.CellAt(p);
             if (cell < 0) return 0f;
@@ -42,7 +42,7 @@ namespace Kehai.Aiko
 
         // A dark, quiet spot not far from the body — where she goes after doing something
         // she didn't want to be seen doing.
-        public static Vector3 Retreat(AikoContext c, float within = 22f)
+        public static Vector3 Retreat(KarenContext c, float within = 22f)
         {
             Vector3 body = c.Body.Position;
             Vector3 best = body;
@@ -63,9 +63,9 @@ namespace Kehai.Aiko
 
         // ---- task progress and the "never deny a nearly finished task" rule ----------
 
-        // True when sabotaging `target` would break rule 5 (Aiko.md §9.5): the task is past
+        // True when sabotaging `target` would break rule 5 (Karen.md §9.5): the task is past
         // the configured completion *and* the target is the one she believes you're finishing.
-        public static bool DenyVetoed(AikoContext c, TaskManager.TaskKind kind, Vector3 target, out string check)
+        public static bool DenyVetoed(KarenContext c, TaskManager.TaskKind kind, Vector3 target, out string check)
         {
             float progress = c.Brain.TaskProgress(kind);
             float fromPlayer = WalkFromBelief(c, target);
@@ -81,7 +81,7 @@ namespace Kehai.Aiko
 
         // A full bay far (by walking) from where she believes you are — so fixing it costs
         // maximum walking — and not one she'd be seen stripping.
-        public static ShelfUnit BayToSweep(AikoContext c, out string check)
+        public static ShelfUnit BayToSweep(KarenContext c, out string check)
         {
             check = null;
             ShelfUnit best = null;
@@ -117,7 +117,7 @@ namespace Kehai.Aiko
 
         // A point to watch the believed position from: in line of sight, at the far end of
         // an aisle, 8–14 m off.
-        public static bool Vantage(AikoContext c, out Vector3 vantage)
+        public static bool Vantage(KarenContext c, out Vector3 vantage)
         {
             Vector3 target = Believed(c) + Vector3.up * 1.2f;
             vantage = c.Body.Position;
@@ -138,7 +138,7 @@ namespace Kehai.Aiko
             return best < float.MaxValue;
         }
 
-        public static CustomerNPC CustomerNear(AikoContext c, Vector3 p, float maxDistance, bool excludeQueued = true)
+        public static CustomerNPC CustomerNear(KarenContext c, Vector3 p, float maxDistance, bool excludeQueued = true)
         {
             CustomerNPC best = null;
             float bestSqr = maxDistance * maxDistance;
@@ -155,6 +155,6 @@ namespace Kehai.Aiko
             return best;
         }
 
-        public static string PlayerName(AikoContext c) => c.Ledger.PlayerName;
+        public static string PlayerName(KarenContext c) => c.Ledger.PlayerName;
     }
 }

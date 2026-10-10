@@ -14,7 +14,7 @@ using UnityEngine.Rendering.Universal;
 //   - the sun lights only outside,
 //   - a still thing (a wall, a shelf, a fridge) is on the layers of the rooms it stands in, so
 //     a wall between two rooms is lit from both sides and nothing reaches through it,
-//   - anything that moves (the player, shoppers, Aiko, stock on the move) keeps the default
+//   - anything that moves (the player, shoppers, Karen, stock on the move) keeps the default
 //     layer, which every light still lights, so it is never left in the dark by changing room.
 // The floor and the roof are one mesh each across the whole building, so each room gets its
 // own patch of floor and ceiling, drawn over them on the room's layer.

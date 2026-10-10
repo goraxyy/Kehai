@@ -20,9 +20,9 @@ from helpers import ctx, draft
 HAS_SAY = sys.platform == "darwin" and shutil.which("say") is not None
 BRAND = {"voices": {"backend": "say",
                     "en": {"narrator": {"azure": "en-US-AndrewNeural", "say": "Samantha"},
-                           "aiko": {"azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%", "say": "Samantha"}},
+                           "karen": {"azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%", "say": "Samantha"}},
                     "ru": {"narrator": {"azure": "ru-RU-DmitryNeural", "say": "Milena"},
-                           "aiko": {"azure": "ru-RU-SvetlanaNeural", "say": "Milena"}}}}
+                           "karen": {"azure": "ru-RU-SvetlanaNeural", "say": "Milena"}}}}
 
 
 def test_ssml_escapes_and_shapes_the_voice():

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Every warning a tactic gives (Aiko.md §9.3). Each is a distinct sound, so a player
+    // Every warning a tactic gives (Karen.md §9.3). Each is a distinct sound, so a player
     // who learns them can read what is about to happen.
     public enum TellKind
     {
@@ -31,7 +31,7 @@ namespace Kehai.Aiko
         Footsteps         // her own steps, from somewhere else
     }
 
-    // All of Aiko's sounds, synthesised at load. The project keeps audio clips out of the
+    // All of Karen's sounds, synthesised at load. The project keeps audio clips out of the
     // repository, and every one of these is short and simple enough to build from sines
     // and noise — which also makes them unmistakably *hers*: nothing else in the store
     // sounds like this.
@@ -67,7 +67,7 @@ namespace Kehai.Aiko
                 for (int i = 0; i < n; i++) data[i] *= gain;
             }
 
-            clip = AudioClip.Create("Aiko_" + name, n, 1, Rate, false);
+            clip = AudioClip.Create("Karen_" + name, n, 1, Rate, false);
             clip.SetData(data, 0);
             cache[name] = clip;
             return clip;
@@ -144,7 +144,7 @@ namespace Kehai.Aiko
 
         static float Footstep(float t) => Mathf.Exp(-t * 35f) * (Sine(80f, t) * 0.7f + White(t) * 0.5f);
 
-        public static AudioClip AikoStep() => Make("step", 0.25f, t => 0.8f * Footstep(t));
+        public static AudioClip KarenStep() => Make("step", 0.25f, t => 0.8f * Footstep(t));
 
         // The employee's own steps: softer and higher than hers, so the two never get confused.
         public static AudioClip PlayerStep(int variant) => Make("pstep" + variant, 0.18f, t =>
@@ -164,7 +164,7 @@ namespace Kehai.Aiko
             return 0.18f * Mathf.Exp(-local * 4f) * (Sine(notes[i], t) + Sine(notes[i] * 0.5f, t) * 0.5f);
         });
 
-        // Aiko's PA "voice": no text-to-speech, but a clipped, syllabic murmur the length of
+        // Karen's PA "voice": no text-to-speech, but a clipped, syllabic murmur the length of
         // the line — a tannoy you can't quite make out, with the words in the subtitle.
         public static AudioClip Voice(string text)
         {

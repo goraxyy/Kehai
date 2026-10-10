@@ -6,7 +6,7 @@ using UnityEngine;
 // a GameObject only once it leaves a shelf.
 //
 //   - by place: a 2 m grid of the floor, for "what's within reach of here";
-//   - by bay: so a bay that moves (Aiko rolls them between shifts) takes its slots with it;
+//   - by bay: so a bay that moves (Karen rolls them between shifts) takes its slots with it;
 //   - by change: the drawer and the replay recorder hear about each slot that changes.
 //
 // StoreLayout fills Current at load. Tests make their own.

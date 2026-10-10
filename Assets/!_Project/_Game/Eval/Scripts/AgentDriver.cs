@@ -163,7 +163,7 @@ namespace Kehai.Eval
                     // A closed door in the way: open it, as a person presses E on reaching it,
                     // then re-plan once it has swung (the open panel is carved out of the NavMesh).
                     HingeDoor door = HingeDoor.ClosedAhead(here, MoveWorld, 2.2f);
-                    if (door != null && !door.Locked && door.OpenFor(here, Kehai.Aiko.NoiseAuthor.Player))
+                    if (door != null && !door.Locked && door.OpenFor(here, Kehai.Karen.NoiseAuthor.Player))
                         replanAt = Time.time + 1.2f;
                     if (replanAt > 0f && Time.time > replanAt)
                     {
@@ -174,7 +174,7 @@ namespace Kehai.Eval
                     // Wedged on a corner or a customer: re-plan, then give up.
                     Vector3 moved = here - lastPosition;
                     moved.y = 0f;
-                    // Held still by Aiko's lecture: that's waiting, not being stuck.
+                    // Held still by Karen's lecture: that's waiting, not being stuck.
                     bool held = motor != null && motor.movementLocked;
                     if (held) progressFrom = here;
                     stuckFor = !held && moved.magnitude < 0.3f * dt ? stuckFor + dt : 0f;
@@ -185,7 +185,7 @@ namespace Kehai.Eval
                         Collider blocker = Blocker(here, d);
                         if (verbose) Debug.Log($"[driver] stuck at {here} ({Kehai.Store.StoreMap.Current.NameAt(here)}) heading for corner {corner}/{corners.Length - 1} at {corners[Mathf.Min(corner, corners.Length - 1)]}, blocked by {Describe(blocker)}");
 
-                        // A person (a shopper, Aiko) isn't on the NavMesh: walk round them.
+                        // A person (a shopper, Karen) isn't on the NavMesh: walk round them.
                         bool person = blocker != null && (blocker.GetComponentInParent<NavMeshAgent>() != null || blocker.GetComponentInParent<CustomerNPC>() != null);
                         if (person)
                         {

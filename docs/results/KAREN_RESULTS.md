@@ -1,9 +1,9 @@
-# Aiko — ablation results
+# Karen — ablation results
 
 The ablation ladder from [`IDEAS.md`](../design/IDEAS.md) §2, run headless against three scripted players.
 Each rung adds one mechanism, so a difference between neighbouring rungs is that mechanism.
 
-| rung | Aiko | learns |
+| rung | Karen | learns |
 |---|---|---|
 | A | random patrol; chases what she sees | — |
 | B | a fixed tour of the sales floor, last-seen search, the old random sabotage | — |
@@ -14,10 +14,10 @@ Each rung adds one mechanism, so a difference between neighbouring rungs is that
 
 ## How it was run
 
-- **Players.** `SimulatedPlayer` in three profiles (`Aiko.md` §13): *efficient* (nearest job first,
+- **Players.** `SimulatedPlayer` in three profiles (`Karen.md` §13): *efficient* (nearest job first,
   mostly ignores her), *skittish* (drops what it's doing when it sees or hears her, runs to the far
   end of the store and hides), *reckless* (sprints everywhere, helps everyone, ignores noise). They
-  act through the same verbs and the same senses an external agent gets — Aiko only when in view,
+  act through the same verbs and the same senses an external agent gets — Karen only when in view,
   her footsteps only when close.
 - **Careers.** A career is four consecutive shifts in one session — career shifts 4 to 7, so most
   tactics are unlocked and the maze mutates once, before shift 7. The Ledger is wiped at the start
@@ -28,7 +28,7 @@ Each rung adds one mechanism, so a difference between neighbouring rungs is that
 - **Caveat on replay.** The first shift after launch replays exactly for the same seed; later shifts
   in one process drift a little (engine-side threading in NavMesh carving and crowd updates), which
   adds noise on top of the pairing. Means ± standard errors below are over shifts.
-- **What the numbers are not.** These are scripted players, not people: "panic" is Aiko's own
+- **What the numbers are not.** These are scripted players, not people: "panic" is Karen's own
   Panic Index estimate from the players' movement, and the bots' completion rates say as much
   about the bots as about her. The comparisons between rungs are the point.
 
@@ -53,10 +53,10 @@ by the player at D and F (+2.2 ± 1.3, +2.0 ± 1.0). Over a career, E's detectio
 against the efficient player) without a measurable effect.
 
 **3. The Ledger does not converge to a different tactic mix per player — the negative result
-`Aiko.md` §13 asks us to look for.** The Jensen–Shannon divergence between one profile's mix and
+`Karen.md` §13 asks us to look for.** The Jensen–Shannon divergence between one profile's mix and
 the others' is no larger at the learning rungs (E: 0.016–0.068) than at C, where nothing is learnt
 (0.030–0.084). The likeliest reason is the players, not the bandit's arithmetic: the scripted bots
-react only to *seeing or hearing Aiko herself* (and only the skittish one does much about it); PA
+react only to *seeing or hearing Karen herself* (and only the skittish one does much about it); PA
 decoys, phantom chimes, fog and falsified HUDs change nothing they do, so the Panic Index barely
 moves after most tactics and the reward is close to zero. The next experiment is players that
 respond to tells — or people.
@@ -85,7 +85,7 @@ walk to the time clock and sprint their energy to zero, whoever is hunting them.
 
 ### Headline, by rung (all profiles)
 
-| rung | shifts | player clocked out | Aiko detected them | first detection (s) | catches / shift | tactics / shift | tactic entropy (bits) | mean Panic Index | setpoint RMSE | customers lost / shift | fairness violations |
+| rung | shifts | player clocked out | Karen detected them | first detection (s) | catches / shift | tactics / shift | tactic entropy (bits) | mean Panic Index | setpoint RMSE | customers lost / shift | fairness violations |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | **A** | 36 | 17% | 83% | 104 ± 21 | 0.83 ± 0.19 | 0.0 ± 0.0 | 0.00 ± 0.00 | 0.41 ± 0.02 | 0.27 ± 0.01 | 2.1 ± 0.3 | 0 |
 | **B** | 36 | 11% | 92% | 100 ± 15 | 0.97 ± 0.25 | 0.0 ± 0.0 | 0.00 ± 0.00 | 0.37 ± 0.01 | 0.29 ± 0.01 | 2.0 ± 0.3 | 0 |
@@ -96,7 +96,7 @@ walk to the time clock and sprint their energy to zero, whoever is hunting them.
 
 ### Each rung against rung C, paired by seed and shift
 
-Positive = more than C. Pairs share the same customers and spills; Aiko is the only difference.
+Positive = more than C. Pairs share the same customers and spills; Karen is the only difference.
 
 | rung | pairs | Δ detections | Δ catches | Δ mean panic | Δ setpoint RMSE | Δ jobs done | Δ clocked out |
 |---|---|---|---|---|---|---|---|

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Replay
@@ -18,7 +18,7 @@ namespace Kehai.Replay
         All = 63
     }
 
-    // "Aiko's mind", drawn into the store from the recording. Everything lives on its own layer
+    // "Karen's mind", drawn into the store from the recording. Everything lives on its own layer
     // (ReplayLook.MindLayer), so a shot can show it over the store, hide it, or render it alone
     // on a transparent background.
     public sealed class MindLayers
@@ -35,7 +35,7 @@ namespace Kehai.Replay
         readonly ReplayData data;
         readonly int layer;
         readonly Transform root;
-        readonly AikoConfig config = new AikoConfig();
+        readonly KarenConfig config = new KarenConfig();
         readonly float y;
 
         GameObject belief, guess, guessPin, cone, thoughts, you, her;
@@ -56,7 +56,7 @@ namespace Kehai.Replay
             data = stage.Data;
             layer = ReplayLook.MindLayer;
             y = stage.FloorY;
-            root = new GameObject("Aiko's mind (replay)") { layer = layer }.transform;
+            root = new GameObject("Karen's mind (replay)") { layer = layer }.transform;
             root.SetParent(parent, false);
             block = new MaterialPropertyBlock();
             BuildBelief();
@@ -64,7 +64,7 @@ namespace Kehai.Replay
             BuildCone();
             BuildThoughts();
             you = Dot("You", ReplayLook.You);
-            her = Dot(GameNames.Antagonist, ReplayLook.Aiko);
+            her = Dot(GameNames.Antagonist, ReplayLook.Karen);
         }
 
         // "belief,cone" → Belief | Cone; "all", "none", "" as they say.
@@ -205,7 +205,7 @@ namespace Kehai.Replay
             for (int i = 0; i < beliefPixels.Length; i++)
             {
                 float v = f != null && i < f.Grid.Length && (mask == null || i >= mask.Length || mask[i] != 0) ? f.Grid[i] / 255f : 0f;
-                Color c = Color.Lerp(ReplayLook.Aiko, ReplayLook.Guess, v * v);
+                Color c = Color.Lerp(ReplayLook.Karen, ReplayLook.Guess, v * v);
                 c.a = v <= 0.02f ? 0f : 0.12f + 0.66f * v;
                 beliefPixels[i] = c;
             }
@@ -238,7 +238,7 @@ namespace Kehai.Replay
         void ShowCone(float t)
         {
             EntitySample pose = default;
-            bool show = On(MindLayer.Cone) && stage.AikoId >= 0 && data.TryPose(stage.AikoId, t, out pose);
+            bool show = On(MindLayer.Cone) && stage.KarenId >= 0 && data.TryPose(stage.KarenId, t, out pose);
             cone.SetActive(show);
             if (!show) return;
 
@@ -247,8 +247,8 @@ namespace Kehai.Replay
             forward.y = 0f;
             forward = forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
             float half = config.sightFov * 0.5f, range = config.sightRange;
-            bool sees = (pose.State & KrecState.AikoSees) != 0;
-            Color tint = sees ? ReplayLook.Aiko : AikoFloorCone.Tint((AikoBody.Mood)(pose.State & 3));
+            bool sees = (pose.State & KrecState.KarenSees) != 0;
+            Color tint = sees ? ReplayLook.Karen : KarenFloorCone.Tint((KarenBody.Mood)(pose.State & 3));
             Vector3 floor = new Vector3(pose.Position.x, y + 0.05f, pose.Position.z);
             Vector3 eye = new Vector3(pose.Position.x, y + 1.3f, pose.Position.z);
 
@@ -297,7 +297,7 @@ namespace Kehai.Replay
                     float r = reach * (1f - (1f - age) * (1f - age) * (1f - age));
                     ring.transform.SetPositionAndRotation(new Vector3(e.Position.x, y + 0.08f, e.Position.z), Quaternion.identity);
                     ring.transform.localScale = new Vector3(Mathf.Max(0.05f, r), 1f, Mathf.Max(0.05f, r));
-                    Color c = e.Author == (int)NoiseAuthor.Player ? ReplayLook.You : e.Author == (int)NoiseAuthor.Aiko ? ReplayLook.Aiko : ReplayLook.Other;
+                    Color c = e.Author == (int)NoiseAuthor.Player ? ReplayLook.You : e.Author == (int)NoiseAuthor.Karen ? ReplayLook.Karen : ReplayLook.Other;
                     Tint(ring, ReplayLook.WithAlpha(c, 0.8f * (1f - age)));
                 }
             }
@@ -426,7 +426,7 @@ namespace Kehai.Replay
         {
             bool show = On(MindLayer.Actors);
             Place(you, show && stage.PlayerId >= 0 && data.TryPose(stage.PlayerId, t, out EntitySample p) ? p.Position : (Vector3?)null);
-            Place(her, show && stage.AikoId >= 0 && data.TryPose(stage.AikoId, t, out EntitySample a) ? a.Position : (Vector3?)null);
+            Place(her, show && stage.KarenId >= 0 && data.TryPose(stage.KarenId, t, out EntitySample a) ? a.Position : (Vector3?)null);
         }
 
         void Place(GameObject dot, Vector3? at)

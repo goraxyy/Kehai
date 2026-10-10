@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Replay
@@ -55,7 +55,7 @@ namespace Kehai.Replay
                 case NoiseKind.Footstep: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.35f * v };
                 case NoiseKind.CrouchStep: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.12f };
                 case NoiseKind.Sprint: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.6f * v };
-                case NoiseKind.AikoStep: return new Sound { Clip = ProceduralAudio.AikoStep(), Volume = 0.55f * v };
+                case NoiseKind.KarenStep: return new Sound { Clip = ProceduralAudio.KarenStep(), Volume = 0.55f * v };
                 case NoiseKind.DroppedItem:
                 case NoiseKind.Impact:
                 case NoiseKind.KickedItem: return new Sound { Clip = Thud(), Volume = 0.8f * v };
@@ -69,7 +69,7 @@ namespace Kehai.Replay
                 case NoiseKind.Serve: return new Sound { Clip = Beep(), Volume = 0.5f };
                 case NoiseKind.CrateClearing: return new Sound { Clip = ProceduralAudio.Tell(TellKind.Scrape), Volume = 0.7f };
                 case NoiseKind.Unplugging: return new Sound { Clip = ProceduralAudio.Unplug(), Volume = 0.6f };
-                case NoiseKind.AikoVoice: return new Sound { Clip = ProceduralAudio.Voice("mm hm, I see, of course"), Volume = 0.55f };
+                case NoiseKind.KarenVoice: return new Sound { Clip = ProceduralAudio.Voice("mm hm, I see, of course"), Volume = 0.55f };
                 default: return default;   // her tells come as Tell events; the rest has no sound of its own
             }
         }

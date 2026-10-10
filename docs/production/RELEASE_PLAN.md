@@ -29,13 +29,13 @@ units, 240 ceiling lights and 64 speakers. Plus the burnout meter, the mains/bla
 system, the store radio, the flashlight, and a first SFX pass.
 
 **The three biggest gaps.** There is no antagonist in the level (`EnemyAI.cs` exists but
-has zero scene instances, and `Aiko.md` is a design spec with no implementation). There
+has zero scene instances, and `Karen.md` is a design spec with no implementation). There
 are no menus of any kind — no main menu, pause, or options. And **no build has ever been
 produced**, so nothing has been tested outside the editor.
 
-*Update — the antagonist gap is closed:* Aiko (`Aiko.md`, all of it; status in §15 there)
+*Update — the antagonist gap is closed:* Karen (`Karen.md`, all of it; status in §15 there)
 now installs into the store when it loads and replaces `EnemyAI.cs`. She has been exercised
-headless by simulated players across every ablation rung (`AIKO_RESULTS.md`), not yet by a
+headless by simulated players across every ablation rung (`KAREN_RESULTS.md`), not yet by a
 person at the keyboard.
 
 *Update 2026-10-02 — the other two gaps are closed:* the game has a main menu, a pause menu
@@ -94,7 +94,7 @@ Status: **reached**.
 
 ### Pipeline
 - [x] Code-only GitHub mirror with PR workflow (#1–#6)
-- [x] `Aiko.md` — 1,097-line design spec for the adaptive antagonist
+- [x] `Karen.md` — 1,097-line design spec for the adaptive antagonist
 - [x] First SFX pass — door chime, till beep, door creaks, flashlight, item impacts,
       pickup, power-down
 
@@ -110,7 +110,7 @@ it is about one slice being *finished*.
 
 ### Antagonist — the biggest single gap
 - [x] Get `EnemyAI` into the scene with patrol points and a NavMesh route
-      *superseded: Aiko installs herself from code; `EnemyAI.cs` is retired*
+      *superseded: Karen installs herself from code; `EnemyAI.cs` is retired*
 - [x] Tune the existing FSM (Patrol / Sabotage / Search / Chase) until it reads as
       deliberate rather than random
       *superseded: belief grid, utility goals and a tactic library replace the FSM*
@@ -118,9 +118,9 @@ it is about one slice being *finished*.
       *graded sight, a noise bus with per-action loudness, and a tell before every tactic*
 - [x] A losing state — what actually happens when it catches you
       *a written warning: a 30 s lecture, overtime, and a recovery window; burnout ending*
-- [x] Pick the Aiko scope: full `Aiko.md` architecture, or a cut-down version for ship
+- [x] Pick the Karen scope: full `Karen.md` architecture, or a cut-down version for ship
       *Decided: the full architecture, every rung switchable for the ablation*
-- [ ] Play-test and tune Aiko with people — so far she has only been measured against
+- [ ] Play-test and tune Karen with people — so far she has only been measured against
       scripted players
 
 ### Feel and readability
@@ -130,7 +130,7 @@ it is about one slice being *finished*.
 - [ ] Audio pass 2 — footsteps, ambience, room tone, UI sounds
 - [x] Audio mixer with music / SFX / master groups (needed before options menu)
       *done in code rather than an AudioMixer asset: `SoundSettings` puts every sound in a group
-      (effects, Aiko, music, voice) under a master volume, with a slider for each in Esc*
+      (effects, Karen, music, voice) under a master volume, with a slider for each in Esc*
 - [ ] Lighting and mood pass on the slice area
 - [ ] Camera polish — head bob, FOV on sprint, damping
 
@@ -140,10 +140,10 @@ it is about one slice being *finished*.
 - [x] Pause menu
       *Esc: restart the shift, leave for the main menu, the settings, the keys*
 - [~] Options — sensitivity, volume sliders, resolution, quality
-      *sensitivity, volume by kind of sound, Aiko's floor cone, the webcam; no resolution or
+      *sensitivity, volume by kind of sound, Karen's floor cone, the webcam; no resolution or
       quality yet*
 - [x] Save/load, or an explicit decision that runs are session-only
-      *Decided: the career is saved after every shift (Aiko's ledger); Continue resumes at the
+      *Decided: the career is saved after every shift (Karen's ledger); Continue resumes at the
       next shift, and a shift left halfway isn't saved. New career wipes it.*
 - [x] Game-over and shift-summary screens
       *the Performance Review and the shift report after every shift; the burnout and
@@ -370,8 +370,8 @@ Ordered by how much damage each can still do.
    outside the editor. Finding them at Milestone 7 is expensive; finding them now is not.
    *(Addressed 2026-10-02: the first macOS build, with a bot shift played in it.)*
 3. **The antagonist is the game's hook and it is not in the level.** Everything built so
-   far is the chore loop. The chore loop is not the pitch. *(Addressed: Aiko is in.)*
-4. **`Aiko.md` is much larger than the rest of the project.** It is a genuinely good
+   far is the chore loop. The chore loop is not the pitch. *(Addressed: Karen is in.)*
+4. **`Karen.md` is much larger than the rest of the project.** It is a genuinely good
    design document, and implementing it fully is a bigger job than everything already
    built. Decide deliberately how much of it ships. *(Built in full; the open question is
    now tuning, which needs human play-testers.)*

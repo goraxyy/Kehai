@@ -4,7 +4,7 @@ using UnityEngine;
 // What the player can turn up and down (Esc → Settings). Master is the listener's own
 // volume; the others scale each kind of sound as the game plays it. Kept in PlayerPrefs,
 // so they survive a restart.
-public enum SoundKind { Effects, Aiko, Music, Voice }
+public enum SoundKind { Effects, Karen, Music, Voice }
 
 public static class SoundSettings
 {
@@ -43,7 +43,7 @@ public static class SoundSettings
     {
         switch (kind)
         {
-            case SoundKind.Aiko: return GameNames.Antagonist + " (her footsteps and warnings)";
+            case SoundKind.Karen: return GameNames.Antagonist + " (her footsteps and warnings)";
             case SoundKind.Music: return "Music (the radio)";
             case SoundKind.Voice: return "Announcements (the PA)";
             default: return "Sound effects (the store, you)";

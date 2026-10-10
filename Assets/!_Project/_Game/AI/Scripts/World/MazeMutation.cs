@@ -5,9 +5,9 @@ using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // The shelving is on castors (Aiko.md §5.5). Between shifts Aiko rolls a few bays to a
+    // The shelving is on castors (Karen.md §5.5). Between shifts Karen rolls a few bays to a
     // new spot on the 5 m lattice, so the store you walk into is *wrong* and the route you
     // learned is no longer the route.
     //
@@ -33,11 +33,11 @@ namespace Kehai.Aiko
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => LastMoves = new List<Move>();
 
-        public static List<Move> Mutate(AikoRng rng, int wanted, out string report)
+        public static List<Move> Mutate(KarenRng rng, int wanted, out string report)
         {
             var kept = new List<Move>();
             var log = new StringBuilder();
-            NavMeshSurface surface = AikoWorld.StoreSurface();
+            NavMeshSurface surface = KarenWorld.StoreSurface();
             if (surface == null)
             {
                 report = "no NavMeshSurface covers the store — mutation skipped";

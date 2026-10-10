@@ -12,7 +12,7 @@ namespace Kehai.Store
     //                every region, for a person or a language model to read.
     //   ToJson     — the same graph as data, served to agents by the eval harness.
     //
-    // Aiko reads the StoreMap object itself; these are views of it, generated rather than
+    // Karen reads the StoreMap object itself; these are views of it, generated rather than
     // written, so they can never disagree with what the game is actually doing.
     public static class StoreMapReport
     {
