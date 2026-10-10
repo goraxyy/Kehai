@@ -1,12 +1,12 @@
 // The in-engine webcam path (IDEAS.md "Deployment: Export ONNX → Unity Sentis").
 //
-// Compiled only when the project defines AIKO_SENTIS, because it needs the Unity Inference
+// Compiled only when the project defines KAREN_SENTIS, because it needs the Unity Inference
 // Engine package (com.unity.ai.inference, formerly Sentis), which this project doesn't ship
 // with. To enable it:
 //   1. Package Manager → add com.unity.ai.inference.
 //   2. Train the eye model with tools/blink/train_eye_cnn.py and drop eye_cnn.onnx into
 //      Assets (it imports as a ModelAsset). The model is yours; it isn't in the repository.
-//   3. Player Settings → Scripting Define Symbols → add AIKO_SENTIS.
+//   3. Player Settings → Scripting Define Symbols → add KAREN_SENTIS.
 //   4. Assign the ModelAsset on a SentisBlinkDriver in the scene, press F9 to calibrate.
 //
 // Until you have a face detector in-engine too, this runs the eye model on a fixed crop:
@@ -16,7 +16,7 @@
 //
 // NOTE: written against the Inference Engine 2.x API but not compiled in this repository's
 // CI, since the package isn't installed here.
-#if AIKO_SENTIS
+#if KAREN_SENTIS
 using Unity.InferenceEngine;
 using UnityEngine;
 

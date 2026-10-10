@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     public enum NoiseKind
     {
@@ -21,15 +21,15 @@ namespace Kehai.Aiko
         Serve,
         CrateClearing,
         Unplugging,
-        AikoStep,
-        AikoVoice,
+        KarenStep,
+        KarenVoice,
         Tell,
         Environmental
     }
 
-    // Who made it. Aiko ignores her own noises and the Director's, the way a person
+    // Who made it. Karen ignores her own noises and the Director's, the way a person
     // doesn't startle at their own footsteps — but the player hears all of them.
-    public enum NoiseAuthor { Player, Customer, Aiko, Director, World }
+    public enum NoiseAuthor { Player, Customer, Karen, Director, World }
 
     public struct NoiseEvent
     {
@@ -46,7 +46,7 @@ namespace Kehai.Aiko
     // Everything noisy in the store announces itself here. One static ring buffer, no
     // per-frame scanning: listeners keep a cursor and read what's new since they last looked.
     //
-    // Loudness follows Aiko.md §3.2 — sprint 0.9, walk 0.35, crouch 0.1 and so on — and
+    // Loudness follows Karen.md §3.2 — sprint 0.9, walk 0.35, crouch 0.1 and so on — and
     // one unit carries CarryPerUnit metres *along the floor*: the listener measures the
     // walking distance to the source, not the straight line, so a noise two aisles over
     // around a corner is quieter than one straight down the aisle.
@@ -58,7 +58,7 @@ namespace Kehai.Aiko
         static readonly NoiseEvent[] ring = new NoiseEvent[Capacity];
         static long next;
 
-        // Raised as each noise is made — for anything that must react *now* (Aiko
+        // Raised as each noise is made — for anything that must react *now* (Karen
         // re-deciding on a crash) rather than on its next scheduled tick.
         public static event System.Action<NoiseEvent> Emitted;
 

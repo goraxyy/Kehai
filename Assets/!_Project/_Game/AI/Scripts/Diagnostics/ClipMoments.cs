@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Turns a shift's clip markers into moments: markers no more than ClipMarkers.MergeGap
     // apart become one stretch of the shift, with each marker's pre- and post-roll around it,
@@ -18,7 +18,7 @@ namespace Kehai.Aiko
     //   <persistent data>/shift_records/<stem>.markers.json
     public static class ClipMoments
     {
-        static readonly string[] SubjectOrder = { "aiko", "player", "customer", "store" };
+        static readonly string[] SubjectOrder = { "karen", "player", "customer", "store" };
         static readonly HashSet<string> StoryKinds = new HashSet<string>(Enum.GetNames(typeof(StoryKind)));
         public const int CaptionLines = 12;
 
@@ -122,7 +122,7 @@ namespace Kehai.Aiko
               .Append(",\"started\":\"").Append(MiniJson.EscapeInner(r.StartedAt))
               .Append("\",\"length\":").Append(N(r.Length))
               .Append(",\"clockedOut\":").Append(r.ClockedOut ? "true" : "false")
-              .Append(",\"rung\":\"").Append(MiniJson.EscapeInner(r.AikoRung)).Append('"');
+              .Append(",\"rung\":\"").Append(MiniJson.EscapeInner(r.KarenRung)).Append('"');
             sb.Append(",\"markers\":");
             WriteMarkers(sb, r.Markers);
             sb.Append(",\"moments\":");

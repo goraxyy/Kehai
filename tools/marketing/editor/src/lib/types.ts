@@ -3,7 +3,7 @@
 
 export type Language = 'en' | 'ru';
 export type Text = string | Partial<Record<Language, string>>;
-export type Colour = 'crimson' | 'ink' | 'inkSoft' | 'paper' | 'mist' | 'aiko' | 'you' | 'guess' | string;
+export type Colour = 'crimson' | 'ink' | 'inkSoft' | 'paper' | 'mist' | 'karen' | 'you' | 'guess' | string;
 
 export interface ZoomKey { at: number; scale: number; x?: number; y?: number }
 export interface SpeedKey { at: number; rate: number }
@@ -69,10 +69,10 @@ export interface Scene {
 
 export interface Word { text: string; start: number; end: number }
 export interface VoiceClip {
-  src: string; at: number; duration: number; speaker?: 'narrator' | 'aiko'; volume?: number; words?: Word[];
+  src: string; at: number; duration: number; speaker?: 'narrator' | 'karen'; volume?: number; words?: Word[];
 }
 // The voice-over as written; tools/marketing/voice.py speaks it into `voice` (the renderer ignores it).
-export interface ScriptLine { id: string; speaker: 'narrator' | 'aiko'; at: number; text: Text }
+export interface ScriptLine { id: string; speaker: 'narrator' | 'karen'; at: number; text: Text }
 export interface Music { src: string; offset?: number; volume?: number; duck?: number; fadeIn?: number; fadeOut?: number }
 
 export interface Edit {
@@ -98,7 +98,7 @@ export interface Brand {
   antagonist: { name: string; japanese: string; pronoun: string };
   handles: Record<string, string | null>;
   links: Record<string, string | null>;
-  colours: { crimson: string; ink: string; inkSoft: string; paper: string; mist: string; game: { aiko: string; you: string; guess: string } };
+  colours: { crimson: string; ink: string; inkSoft: string; paper: string; mist: string; game: { karen: string; you: string; guess: string } };
   fonts: { display: { family: string; weight: number }; body: { family: string; weight: number }; japanese: { family: string; weight: number } };
 }
 

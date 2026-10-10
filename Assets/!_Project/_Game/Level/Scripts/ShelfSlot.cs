@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 // One slot on a shelf: the place one item stands, as data. A full shop has 16,500 of them;
 // when each was a GameObject, and the item on it another, the stock alone was 33,000 objects.
 // Now ShelfDrawer draws what stands on the slots, and an item becomes a GameObject only when
-// it leaves one: taken by the player or a shopper, or knocked off by Aiko (IDEAS.md,
+// it leaves one: taken by the player or a shopper, or knocked off by Karen (IDEAS.md,
 // "Scaling", step 2).
 //
 // A slot is kept relative to the bay it's on (its frame), so a bay that's moved takes its
@@ -184,7 +184,7 @@ public sealed class ShelfSlot : IInteractable
         return true;
     }
 
-    // Aiko's shelf sweep: the item tumbles off into the aisle.
+    // Karen's shelf sweep: the item tumbles off into the aisle.
     public void Eject()
     {
         if (!isFilled) return;
@@ -193,7 +193,7 @@ public sealed class ShelfSlot : IInteractable
         if (item == null) return;
 
         item.SetCarried(false, null);
-        item.lastAuthor = NoiseAuthor.Aiko;
+        item.lastAuthor = NoiseAuthor.Karen;
         if (item.TryGetComponent(out Rigidbody body))
             body.AddForce(Outward * 2f + Vector3.up * 0.5f, ForceMode.Impulse);
     }

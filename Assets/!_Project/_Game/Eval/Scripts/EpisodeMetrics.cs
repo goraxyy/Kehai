@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Eval
@@ -31,7 +31,7 @@ namespace Kehai.Eval
         public float MeanWait => Waits.Count > 0 ? Waits.Average() : 0f;
         public float LongestWait { get; private set; }
 
-        // Aiko's side, copied from her stats at the end.
+        // Karen's side, copied from her stats at the end.
         public float FirstDetection = -1f;
         public int Detections, Catches, Chases, Overtimes;
         public float TacticEntropy;
@@ -158,10 +158,10 @@ namespace Kehai.Eval
             CustomersLost += waitingSince.Count;           // still queued when it ended
             EnergyAtEnd = burnout != null ? burnout.Energy01 : 1f;
 
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             if (brain != null)
             {
-                AikoStats s = brain.Stats;
+                KarenStats s = brain.Stats;
                 FirstDetection = s.FirstDetection;
                 Detections = s.Detections;
                 Catches = s.Catches;
@@ -194,11 +194,11 @@ namespace Kehai.Eval
             ["coffees"] = Coffees, ["spills_left_standing"] = SpillsLeftStanding, ["customers_lost"] = CustomersLost,
             ["mean_wait_s"] = MeanWait, ["longest_wait_s"] = LongestWait, ["energy_at_end"] = EnergyAtEnd, ["min_energy"] = MinEnergy,
             ["spurious_clock_outs"] = SpuriousClockOuts,
-            ["aiko_first_detection_s"] = FirstDetection, ["aiko_detections"] = Detections, ["aiko_catches"] = Catches,
-            ["aiko_chases"] = Chases, ["aiko_overtimes"] = Overtimes, ["aiko_tactic_entropy_bits"] = TacticEntropy,
-            ["aiko_tactics_used"] = TacticsUsed, ["aiko_top_tactics"] = TopTactics,
+            ["karen_first_detection_s"] = FirstDetection, ["karen_detections"] = Detections, ["karen_catches"] = Catches,
+            ["karen_chases"] = Chases, ["karen_overtimes"] = Overtimes, ["karen_tactic_entropy_bits"] = TacticEntropy,
+            ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
             ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
-            ["aiko_fairness_violations"] = FairnessViolations,
+            ["karen_fairness_violations"] = FairnessViolations,
             ["failures"] = Failures
         };
     }

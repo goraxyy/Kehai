@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Blink
@@ -8,7 +8,7 @@ namespace Kehai.Blink
     //
     //   IBlinkSource → BlinkTracker (calibration, smoothing, confidence)
     //                       ├─→ Eyelids.Closed01            the player's own eyes, mirrored
-    //                       └─→ OnBlinkStart / OnEyesClosedFor(t) → Aiko
+    //                       └─→ OnBlinkStart / OnEyesClosedFor(t) → Karen
     //
     // Non-negotiables, all enforced here:
     //   • Blink is a modifier, never a requirement — with no camera the keyboard stands in,
@@ -16,7 +16,7 @@ namespace Kehai.Blink
     //   • Opt-in, local-only, never recorded, and said plainly on screen before the camera
     //     path is ever touched.
     //   • Exploit the window, don't chase the latency: a blink lasts ~300 ms and is learnt of
-    //     ~100 ms in, so the tracker predicts when the eyes will reopen and Aiko acts inside
+    //     ~100 ms in, so the tracker predicts when the eyes will reopen and Karen acts inside
     //     what is left.
     public sealed class BlinkTracker : MonoBehaviour
     {
@@ -113,7 +113,7 @@ namespace Kehai.Blink
         AudioSource beeper;
         readonly Dictionary<float, AudioClip> tones = new Dictionary<float, AudioClip>();
 
-        public const string ConsentKey = "aiko.blink.consent";
+        public const string ConsentKey = "karen.blink.consent";
         public static bool Consented => PlayerPrefs.GetInt(ConsentKey, 0) == 1;
         bool askingConsent;
         int consentAnsweredFrame = -1;
@@ -198,7 +198,7 @@ namespace Kehai.Blink
             if (mirrorToEyelids && lids != null && Live && Confidence > 0.3f && !(source is ReplayBlinkSource))
                 lids.SetClosed(Closed01);
 
-            PushToAiko();
+            PushToKaren();
         }
 
         void Step(BlinkSample s)
@@ -212,8 +212,8 @@ namespace Kehai.Blink
                 Blinks++;
                 recentBlinks.Enqueue(Time.unscaledTime);
                 OnBlinkStart?.Invoke(blinkStartedAt);
-                // Closing your eyes because the calibration asked you to isn't a chance for Aiko.
-                if (!IsCalibrating && !GamePause.Paused) AikoBrain.Instance?.OnBlinkStarted();
+                // Closing your eyes because the calibration asked you to isn't a chance for Karen.
+                if (!IsCalibrating && !GamePause.Paused) KarenBrain.Instance?.OnBlinkStarted();
             }
             else if (EyesClosed && Closed01 <= openThreshold)
             {
@@ -236,9 +236,9 @@ namespace Kehai.Blink
             }
         }
 
-        void PushToAiko()
+        void PushToKaren()
         {
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             if (brain == null) return;
             // The keyboard counts as a live channel — it's how the mechanic is played without a
             // camera — but only a real (or recorded) pair of eyes says anything about stress.
@@ -266,7 +266,7 @@ namespace Kehai.Blink
                     consentAnsweredFrame = Time.frameCount;
                     PlayerPrefs.SetInt(ConsentKey, 1);
                     StartWebcam();
-                    AikoScreen.Ensure().Subtitle(BlinkSidecar.Running
+                    KarenScreen.Ensure().Subtitle(BlinkSidecar.Running
                         ? "Webcam blink tracking on. Press F10 to watch it read your eyes, and F9 to calibrate."
                         : "Webcam blink tracking on, but the camera helper couldn't start — press F10 for what to do.", 6f);
                 }
@@ -286,7 +286,7 @@ namespace Kehai.Blink
         {
             PlayerPrefs.SetInt(ConsentKey, 0);
             StopWebcam();
-            AikoScreen.Ensure().Subtitle("Webcam blink tracking off. The camera helper has been stopped.", 3f);
+            KarenScreen.Ensure().Subtitle("Webcam blink tracking off. The camera helper has been stopped.", 3f);
         }
 
         public void BeginCalibration()
@@ -294,7 +294,7 @@ namespace Kehai.Blink
             if (!WebcamLive)
             {
                 CalibrationResult = "Calibration needs the webcam. Press F8 to turn it on, and wait for step 3 in the F10 panel to turn green.";
-                AikoScreen.Ensure().Subtitle(CalibrationResult, 5f);
+                KarenScreen.Ensure().Subtitle(CalibrationResult, 5f);
                 return;
             }
             oldOpen = openLevel;
@@ -312,7 +312,7 @@ namespace Kehai.Blink
             stepStarted = Time.unscaledTime;
             stepEnds = stepStarted + seconds;
             CalibrationText = text;
-            if (step != CalibrationStep.None) AikoScreen.Ensure().Subtitle(text, seconds);
+            if (step != CalibrationStep.None) KarenScreen.Ensure().Subtitle(text, seconds);
         }
 
         void CalibrationSample(float raw)
@@ -343,7 +343,7 @@ namespace Kehai.Blink
                         : seen > 0 ? $"Calibrated, but it only caught {seen} of your 3 blinks. Blink a bit more fully, or press F9 to try again."
                         : "Calibrated, but it didn't catch your blinks. Try more light on your face, or press F9 to try again.";
                     Enter(CalibrationStep.None, 0f, "");
-                    AikoScreen.Ensure().Subtitle(CalibrationResult, 5f);
+                    KarenScreen.Ensure().Subtitle(CalibrationResult, 5f);
                     break;
             }
         }
@@ -370,7 +370,7 @@ namespace Kehai.Blink
             Calibrated = oldCalibrated;
             CalibrationResult = why;
             Enter(CalibrationStep.None, 0f, "");
-            AikoScreen.Ensure().Subtitle(why, 6f);
+            KarenScreen.Ensure().Subtitle(why, 6f);
             return false;
         }
 
@@ -381,7 +381,7 @@ namespace Kehai.Blink
         }
 
         // Remembered per helper: Apple Vision and MediaPipe read the same eyes differently.
-        string CalibrationKey => "aiko.blink.cal." + (webcam != null ? webcam.Src : "none");
+        string CalibrationKey => "karen.blink.cal." + (webcam != null ? webcam.Src : "none");
 
         void SaveCalibration()
         {
@@ -425,7 +425,7 @@ namespace Kehai.Blink
                     float envelope = Mathf.Min(1f, i / 400f) * Mathf.Min(1f, (n - i) / 3000f);
                     data[i] = Mathf.Sin(2f * Mathf.PI * hz * i / rate) * 0.5f * envelope;
                 }
-                clip = AudioClip.Create("Aiko_CalibrationBeep", n, 1, rate, false);
+                clip = AudioClip.Create("Karen_CalibrationBeep", n, 1, rate, false);
                 clip.SetData(data, 0);
                 tones[hz] = clip;
             }

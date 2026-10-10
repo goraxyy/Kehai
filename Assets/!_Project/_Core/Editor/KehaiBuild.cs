@@ -33,7 +33,7 @@ using Debug = UnityEngine.Debug;
 // tools/playtest/.env or the environment), and come zipped for testers beside that folder.
 public static class KehaiBuild
 {
-    // GuideMarker's rings and beacons, and Aiko's fog.
+    // GuideMarker's rings and beacons, and Karen's fog.
     static readonly string[] RuntimeShaders = { "Universal Render Pipeline/Unlit", "Universal Render Pipeline/Particles/Unlit", "Universal Render Pipeline/Lit" };
 
     const string CameraReason = GameNames.Game + " can watch for your blinks through the webcam, if you turn that on " +

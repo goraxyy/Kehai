@@ -31,13 +31,13 @@ up, playtest, and later wishlist.
 learns how you work, and uses it against you.
 
 **Three sentences.** You stock shelves, mop spills and serve customers in a maze of a store.
-Aiko, the store's management AI, hunts you with what she can actually see and hear. She
+Karen, the store's management AI, hunts you with what she can actually see and hear. She
 remembers where you hide, and she moves when you blink. She rarely kills you: she gives you
 overtime. *Kehai* is the feeling that someone is there when you can't see them.
 
 **Hooks, strongest first** (lead every clip with one):
 
-1. **She moves when you blink.** Opt-in webcam blink tracking; Aiko acts inside your blink.
+1. **She moves when you blink.** Opt-in webcam blink tracking; Karen acts inside your blink.
    Nobody else has this, and it's instantly understandable in a 15-second clip.
 2. **It learned me.** She remembers where you hide and which routes you take, across shifts.
 3. **Administrative horror.** She doesn't kill you; she assigns you more work. Funny and
@@ -112,7 +112,7 @@ devlog; (5) everything else occasionally.
 
 ## 3. What to post: content pillars
 
-1. **Aiko moments.** A scare that ends in a chore. The bread and butter of the short clips.
+1. **Karen moments.** A scare that ends in a chore. The bread and butter of the short clips.
 2. **How she thinks.** This game can *show its AI*: the F1 live map (her guess of where you are,
    sound rings, her view cone), the H heat map, the F2 replay and the HTML shift report. A
    split screen of gameplay on top and her map underneath is a natural vertical video.
@@ -138,11 +138,11 @@ burned in, and end on a question or a loop.
 | 3 | "My manager learned where I hide." | Heat map (H) on shift 1 vs shift 3 | She checks your spot first |
 | 4 | "She doesn't kill you. She gives you overtime." | A catch, the lecture, the overtime | "Overtime is the jump scare." |
 | 5 | "The lights flicker before she cuts the power." | The flicker tell, then the blackout | "Every trick has a warning." |
-| 6 | "She turned a customer into a spy." | A possessed customer turning to face you | Aiko watching through them |
+| 6 | "She turned a customer into a spy." | A possessed customer turning to face you | Karen watching through them |
 | 7 | "The PA just said my name." | The PA line | A formal conversation about your performance |
 | 8 | "What my AI sees vs. what I see." | Split-screen replay (F2) | Her guess closing in |
-| 9 | "I made Claude play my horror game." | An LLM-agent run | How it did against Aiko |
-| 10 | "216 simulated shifts: does the AI's learning help?" | Charts from `AIKO_RESULTS.md` | The honest answer, and what's next |
+| 9 | "I made Claude play my horror game." | An LLM-agent run | How it did against Karen |
+| 10 | "216 simulated shifts: does the AI's learning help?" | Charts from `KAREN_RESULTS.md` | The honest answer, and what's next |
 | 11 | "A customer asked me where the miso is." | The directions job in the maze | The dashed line to the shelf on the map |
 | 12 | "She emptied the shelf I just filled." | Restock, then her sabotage | Relatable job horror |
 | 13 | "Her view cone is on the floor now." | Before/after of a dev update | Dev-progress format |
@@ -200,14 +200,14 @@ Your four routes, in the order that makes each one feed the next.
 - Invite 10–20 testers (Discord, r/playmygame, friends). Ask them to play two shifts, then answer
   the questions in section 9.
 - Ask testers to send their **shift report** (the `.html` the game saves after each shift). It
-  replays exactly what happened, including where Aiko was. Only ask; it's their data.
+  replays exactly what happened, including where Karen was. Only ask; it's their data.
 
 ### Phase 2 — Free itch.io prototype (after 2–3 rounds of fixes)
 
 - Public and free, labelled *prototype*: one or two shifts, with links to Discord and the email
   sign-up at the end.
 - Post it on r/playmygame and in itch.io's devlog feed. Many small-horror YouTubers browse itch.
-- Keep something back for Steam (later shifts, the maze changing, more of Aiko's tricks).
+- Keep something back for Steam (later shifts, the maze changing, more of Karen's tricks).
 
 ### Phase 3 — Steam page and Steam Playtest
 
@@ -266,7 +266,7 @@ After 4 weeks, do more of what worked and drop the platform that isn't.
 
 **Ask after two shifts:**
 
-1. When did you first feel Aiko was after *you*, specifically?
+1. When did you first feel Karen was after *you*, specifically?
 2. Did you notice her warnings (flicker, chime, PA) before her tricks? Which ones?
 3. Was anything unfair? When exactly?
 4. What did you want to do that the game didn't let you?
@@ -285,7 +285,7 @@ a bug; whether they notice she is learning.
 - [ ] 3–5 GIFs (blink, heat map, a tell, a catch)
 - [ ] Trailer, 60–90 s
 - [ ] Fact sheet: developer (TokenLimit), platforms, release window, price (TBD), contact
-- [ ] Short and long descriptions, plus Aiko's line: *"Employee wellbeing is a tracked metric.
+- [ ] Short and long descriptions, plus Karen's line: *"Employee wellbeing is a tracked metric.
       I am optimising it."*
 - [ ] Privacy line for the blink feature: opt-in, the camera never records, nothing leaves the
       computer

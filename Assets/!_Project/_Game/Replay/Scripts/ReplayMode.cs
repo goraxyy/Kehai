@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Kehai.Replay
 {
     // How a recorded shift is opened for watching. Every way in loads the store with a replay
-    // pending, and AikoBootstrap then puts a ReplayPlayer into it instead of Aiko:
+    // pending, and KarenBootstrap then puts a ReplayPlayer into it instead of Karen:
     //   -replay <file.krec>      on the command line (a build, or the editor in batch mode)
     //   -krec <file.krec> …      the same, rendering a shot unattended (ReplayRender)
     //   [R] on the review screen after a shift, for the shift just played

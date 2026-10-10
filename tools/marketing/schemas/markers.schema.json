@@ -13,7 +13,7 @@
     "started": { "type": "string", "description": "Wall-clock start, yyyy-MM-dd HH:mm." },
     "length": { "type": "number", "minimum": 0 },
     "clockedOut": { "type": "boolean" },
-    "rung": { "type": "string", "description": "Aiko's ablation rung for the shift (F is the full game)." },
+    "rung": { "type": "string", "description": "Karen's ablation rung for the shift (F is the full game)." },
     "markers": {
       "type": "array",
       "description": "Every marker, in the order it happened.",
@@ -30,7 +30,7 @@
       "enum": [
         "blink_move", "catch", "near_miss", "escape", "found_blind", "blackout", "possessed", "learned",
         "undone_work", "pa_call", "prop_trick", "clock_refused", "loud_mistake", "tell_then_trick",
-        "shift_review", "aiko_stuck", "customer_chaos", "manual_good", "manual_bug"
+        "shift_review", "karen_stuck", "customer_chaos", "manual_good", "manual_bug"
       ]
     },
     "marker": {
@@ -67,7 +67,7 @@
             "additionalProperties": false
           }
         },
-        "subjects": { "type": "array", "items": { "enum": ["aiko", "player", "customer", "store"] } },
+        "subjects": { "type": "array", "items": { "enum": ["karen", "player", "customer", "store"] } },
         "tags": { "type": "array", "items": { "type": "string" } },
         "captionSeed": { "type": "array", "items": { "type": "string" }, "description": "The narrator's lines inside the moment, in order." }
       },

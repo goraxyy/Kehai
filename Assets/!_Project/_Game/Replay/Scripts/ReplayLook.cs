@@ -5,12 +5,12 @@ using UnityEngine.Rendering;
 namespace Kehai.Replay
 {
     // What the replay draws with: the shift report's colours (so a clip, the report and the
-    // marketing all look like one thing), the overlay material, and the layer Aiko's mind is
+    // marketing all look like one thing), the overlay material, and the layer Karen's mind is
     // drawn on so a shot can show it, hide it, or render it alone.
     public static class ReplayLook
     {
         public static readonly Color You = Hex(0x4dd2ff);
-        public static readonly Color Aiko = Hex(0xff5454);
+        public static readonly Color Karen = Hex(0xff5454);
         public static readonly Color Guess = Hex(0xffd640);
         public static readonly Color Other = Hex(0xc8c8c8);
         public static readonly Color Panel = new Color(0.059f, 0.067f, 0.086f, 0.72f);   // the report's #0f1116
@@ -32,7 +32,7 @@ namespace Kehai.Replay
         public static Color WithAlpha(Color c, float a) => new Color(c.r, c.g, c.b, Mathf.Clamp01(a));
 
         // A layer nobody uses, from the top down (the project's own layers sit at the bottom).
-        // Aiko's mind lives there.
+        // Karen's mind lives there.
         public static int MindLayer
         {
             get

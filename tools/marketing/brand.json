@@ -8,7 +8,7 @@
     "russian": "Кэхай",
     "tagline": { "en": "The sense that someone is there.", "ru": "Ощущение, что кто-то рядом." }
   },
-  "antagonist": { "name": "Aiko", "japanese": "愛子", "russian": "Айко", "pronoun": "she" },
+  "antagonist": { "name": "Karen", "japanese": "カレン", "russian": "Карен", "pronoun": "she" },
   "handles": { "youtube": null, "instagram": null, "tiktok": null, "x": null, "bluesky": null },
   "links": { "website": null, "steam": null, "discord": null },
   "colours": {
@@ -17,7 +17,7 @@
     "inkSoft": "#2A2A30",
     "paper": "#FFFFFF",
     "mist": "#B8B5B2",
-    "game": { "aiko": "#FF5454", "you": "#4DD2FF", "guess": "#FFD640" }
+    "game": { "karen": "#FF5454", "you": "#4DD2FF", "guess": "#FFD640" }
   },
   "fonts": {
     "display": { "family": "Nunito", "weight": 900 },
@@ -31,11 +31,11 @@
     "backend": "azure",
     "en": {
       "narrator": { "azure": "en-US-AndrewNeural", "rate": "+0%", "pitch": "+0%", "say": "Samantha", "elevenlabs": null },
-      "aiko": { "azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%", "say": "Shelley", "elevenlabs": null }
+      "karen": { "azure": "en-US-AvaNeural", "rate": "-6%", "pitch": "-3%", "say": "Shelley", "elevenlabs": null }
     },
     "ru": {
       "narrator": { "azure": "ru-RU-DmitryNeural", "rate": "+0%", "pitch": "+0%", "say": "Milena", "elevenlabs": null },
-      "aiko": { "azure": "ru-RU-SvetlanaNeural", "rate": "-6%", "pitch": "-3%", "say": "Milena", "elevenlabs": null }
+      "karen": { "azure": "ru-RU-SvetlanaNeural", "rate": "-6%", "pitch": "-3%", "say": "Milena", "elevenlabs": null }
     }
   }
 }

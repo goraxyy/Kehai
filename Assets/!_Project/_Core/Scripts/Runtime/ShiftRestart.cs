@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Esc → Restart this shift. The store is loaded again from scratch (shelves, spills,
-// customers, Aiko, and you back where you start), and the shift you were on begins
-// again when you clock in; between shifts, the next one does. What Aiko has learnt about
+// customers, Karen, and you back where you start), and the shift you were on begins
+// again when you clock in; between shifts, the next one does. What Karen has learnt about
 // you over earlier shifts stays: it lives in her ledger, not in the scene.
 public static class ShiftRestart
 {

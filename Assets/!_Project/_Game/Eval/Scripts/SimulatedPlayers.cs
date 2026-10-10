@@ -1,15 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Eval
 {
-    // Aiko.md §13: three scripted player profiles. The Ledger should converge to visibly
+    // Karen.md §13: three scripted player profiles. The Ledger should converge to visibly
     // different tactic distributions for each; if it doesn't, the bandit isn't learning and
     // the reward signal is broken. They play through exactly the same actions an external
-    // agent would, with the same senses: Aiko only when she's in view, her footsteps only
+    // agent would, with the same senses: Karen only when she's in view, her footsteps only
     // when they're close.
     public enum PlayerProfile
     {
@@ -86,15 +86,15 @@ namespace Kehai.Eval
         static bool Threatened(Dictionary<string, object> obs, out Vector3 _)
         {
             _ = default;
-            var aiko = (Dictionary<string, object>)obs["aiko"];
-            if ((bool)aiko["visible"] && aiko.TryGetValue("distance_m", out object d) && (float)d < 16f) return true;
-            return (bool)aiko["heard"];
+            var karen = (Dictionary<string, object>)obs["karen"];
+            if ((bool)karen["visible"] && karen.TryGetValue("distance_m", out object d) && (float)d < 16f) return true;
+            return (bool)karen["heard"];
         }
 
         // Run to the far end of the store, then crouch in the dark and wait it out.
         IEnumerator Flee()
         {
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             Vector3 her = brain != null ? brain.Body.Position : env.Driver.transform.position;
             Vector3 me = env.Driver.transform.position;
             var map = env.World.Map;
@@ -174,7 +174,7 @@ namespace Kehai.Eval
             }
 
             // Nothing left that can be seen and the doors are shut: try the time clock. The HUD
-            // is only a hint — Aiko can make it lie either way — and a refusal is backed off.
+            // is only a hint — Karen can make it lie either way — and a refusal is backed off.
             if (!storeOpen)
                 return Unless(new EnvAction { verb = "clock_out", sprint = sprint }, Idle());
 

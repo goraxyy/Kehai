@@ -19,7 +19,13 @@ PROFILES = ("efficient", "skittish", "reckless")
 
 def load(path):
     with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+        return [karens_keys(json.loads(line)) for line in f if line.strip()]
+
+
+# Runs recorded while she was called Aiko (2026-09-29 to 2026-10-10) name her numbers
+# "aiko_catches" and so on; they read as "karen_catches" like every other run.
+def karens_keys(row):
+    return {("karen_" + k[len("aiko_"):] if k.startswith("aiko_") else k): v for k, v in row.items()}
 
 
 def mean(xs):
@@ -47,7 +53,7 @@ def pct(k, n):
 
 def tactics(row):
     counts = Counter()
-    for part in (row.get("aiko_top_tactics") or "").split():
+    for part in (row.get("karen_top_tactics") or "").split():
         if "×" in part:
             name, n = part.rsplit("×", 1)
             counts[name] += int(n)
@@ -82,23 +88,23 @@ def main(path):
       f"{careers} careers of shifts {shifts[0]}–{shifts[-1]}. Mean ± standard error.\n")
 
     w("### Headline, by rung (all profiles)\n")
-    w("| rung | shifts | player clocked out | Aiko detected them | first detection (s) | catches / shift | "
+    w("| rung | shifts | player clocked out | Karen detected them | first detection (s) | catches / shift | "
       "tactics / shift | tactic entropy (bits) | mean Panic Index | setpoint RMSE | customers lost / shift | fairness violations |")
     w("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for g in rungs:
         rs = by_rung[g]
-        det = [r["aiko_first_detection_s"] for r in rs if r["aiko_first_detection_s"] >= 0]
+        det = [r["karen_first_detection_s"] for r in rs if r["karen_first_detection_s"] >= 0]
         w(f"| **{g}** | {len(rs)} | {pct(sum(r['clocked_out'] for r in rs), len(rs))} | {pct(len(det), len(rs))} | "
-          f"{pm(det, '{:.0f}') if det else '—'} | {pm(r['aiko_catches'] for r in rs)} | "
-          f"{pm((r['aiko_tactics_used'] for r in rs), '{:.1f}')} | {pm(r['aiko_tactic_entropy_bits'] for r in rs)} | "
+          f"{pm(det, '{:.0f}') if det else '—'} | {pm(r['karen_catches'] for r in rs)} | "
+          f"{pm((r['karen_tactics_used'] for r in rs), '{:.1f}')} | {pm(r['karen_tactic_entropy_bits'] for r in rs)} | "
           f"{pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
-          f"{pm((r['customers_lost'] for r in rs), '{:.1f}')} | {sum(r.get('aiko_fairness_violations', 0) for r in rs)} |")
+          f"{pm((r['customers_lost'] for r in rs), '{:.1f}')} | {sum(r.get('karen_fairness_violations', 0) for r in rs)} |")
 
     # Paired differences against C.
     if "C" in by_rung:
         base = {(r["agent"], r["seed"], r["shift"]): r for r in by_rung["C"]}
         w("\n### Each rung against rung C, paired by seed and shift\n")
-        w("Positive = more than C. Pairs share the same customers and spills; Aiko is the only difference.\n")
+        w("Positive = more than C. Pairs share the same customers and spills; Karen is the only difference.\n")
         w("| rung | pairs | Δ detections | Δ catches | Δ mean panic | Δ setpoint RMSE | Δ jobs done | Δ clocked out |")
         w("|---|---|---|---|---|---|---|---|")
         for g in rungs:
@@ -110,8 +116,8 @@ def main(path):
                 if not b:
                     continue
                 jobs = lambda x: x["spills_mopped"] + x["shelves_restocked"] + x["customers_served"] + x["bins_bagged"]
-                d["det"].append(r["aiko_detections"] - b["aiko_detections"])
-                d["catch"].append(r["aiko_catches"] - b["aiko_catches"])
+                d["det"].append(r["karen_detections"] - b["karen_detections"])
+                d["catch"].append(r["karen_catches"] - b["karen_catches"])
                 d["panic"].append(r["mean_panic"] - b["mean_panic"])
                 d["rmse"].append(r["panic_setpoint_rmse"] - b["panic_setpoint_rmse"])
                 d["jobs"].append(jobs(r) - jobs(b))
@@ -130,8 +136,8 @@ def main(path):
             if not rs:
                 continue
             jobs = [r["spills_mopped"] + r["shelves_restocked"] + r["customers_served"] + r["bins_bagged"] for r in rs]
-            w(f"| {g} | {p} | {pct(sum(r['clocked_out'] for r in rs), len(rs))} | {pm((r['aiko_detections'] for r in rs), '{:.1f}')} | "
-              f"{pm(r['aiko_catches'] for r in rs)} | {pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
+            w(f"| {g} | {p} | {pct(sum(r['clocked_out'] for r in rs), len(rs))} | {pm((r['karen_detections'] for r in rs), '{:.1f}')} | "
+              f"{pm(r['karen_catches'] for r in rs)} | {pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
               f"{pm(jobs, '{:.1f}')} |")
 
     w("\n### Across a career (does she get better at this player?)\n")
@@ -143,7 +149,7 @@ def main(path):
         cells = []
         for s in shifts:
             rs = [r for r in by_rung[g] if r["shift"] == s]
-            cells.append(pm((r["aiko_detections"] for r in rs), "{:.1f}") if rs else "—")
+            cells.append(pm((r["karen_detections"] for r in rs), "{:.1f}") if rs else "—")
         w(f"| {g} | " + " | ".join(cells) + " |")
 
     w("\n### What she reached for, per profile\n")

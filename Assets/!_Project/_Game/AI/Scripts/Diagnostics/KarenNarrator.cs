@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     public enum StoryKind
     {
-        Plan,       // what Aiko has decided to do
+        Plan,       // what Karen has decided to do
         Warning,    // a tell: something is about to happen
         Seen,       // she saw you / lost sight of you
         Heard,      // she heard something
@@ -30,10 +30,10 @@ namespace Kehai.Aiko
         public bool HasPlace;
     }
 
-    // The shift told in plain words, for a player rather than a programmer: "Aiko heard a
-    // door in the Stockroom", not "SENSE Hearing door conf 0.62". Aiko's brain and the
+    // The shift told in plain words, for a player rather than a programmer: "Karen heard a
+    // door in the Stockroom", not "SENSE Hearing door conf 0.62". Karen's brain and the
     // shift recorder say things here; the F1 map, the replay and the shift report read them.
-    public static class AikoNarrator
+    public static class KarenNarrator
     {
         public static event Action<StoryLine> Said;
 
@@ -227,8 +227,8 @@ namespace Kehai.Aiko
                 case NoiseKind.Serve: return "the till";
                 case NoiseKind.CrateClearing: return "crates being moved";
                 case NoiseKind.Unplugging: return "a camera being unplugged";
-                case NoiseKind.AikoStep: return GameNames.Antagonist + "'s footsteps";
-                case NoiseKind.AikoVoice: return GameNames.Antagonist + "'s voice";
+                case NoiseKind.KarenStep: return GameNames.Antagonist + "'s footsteps";
+                case NoiseKind.KarenVoice: return GameNames.Antagonist + "'s voice";
                 case NoiseKind.Tell: return "a warning sound";
                 default: return "a noise";
             }
@@ -272,34 +272,34 @@ namespace Kehai.Aiko
             switch (author)
             {
                 case NoiseAuthor.Player: return "you";
-                case NoiseAuthor.Aiko: return GameNames.Antagonist;
+                case NoiseAuthor.Karen: return GameNames.Antagonist;
                 case NoiseAuthor.Customer: return "a customer";
                 default: return "the store";
             }
         }
 
-        public static string Phase(AikoDirector.Phase phase)
+        public static string Phase(KarenDirector.Phase phase)
         {
             switch (phase)
             {
-                case AikoDirector.Phase.Settle: return "The shift is starting — " + GameNames.Antagonist + " is keeping it calm for now.";
-                case AikoDirector.Phase.Build: return "The pressure is building.";
-                case AikoDirector.Phase.Spike: return GameNames.Antagonist + " is going all out.";
-                case AikoDirector.Phase.Recover: return GameNames.Antagonist + " is giving you a breather.";
-                case AikoDirector.Phase.Crunch: return "Closing time — " + GameNames.Antagonist + " is pushing hard.";
+                case KarenDirector.Phase.Settle: return "The shift is starting — " + GameNames.Antagonist + " is keeping it calm for now.";
+                case KarenDirector.Phase.Build: return "The pressure is building.";
+                case KarenDirector.Phase.Spike: return GameNames.Antagonist + " is going all out.";
+                case KarenDirector.Phase.Recover: return GameNames.Antagonist + " is giving you a breather.";
+                case KarenDirector.Phase.Crunch: return "Closing time — " + GameNames.Antagonist + " is pushing hard.";
                 default: return "The shift is over.";
             }
         }
 
-        public static string PhaseShort(AikoDirector.Phase phase)
+        public static string PhaseShort(KarenDirector.Phase phase)
         {
             switch (phase)
             {
-                case AikoDirector.Phase.Settle: return "calm";
-                case AikoDirector.Phase.Build: return "building";
-                case AikoDirector.Phase.Spike: return "all out";
-                case AikoDirector.Phase.Recover: return "breather";
-                case AikoDirector.Phase.Crunch: return "closing-time crunch";
+                case KarenDirector.Phase.Settle: return "calm";
+                case KarenDirector.Phase.Build: return "building";
+                case KarenDirector.Phase.Spike: return "all out";
+                case KarenDirector.Phase.Recover: return "breather";
+                case KarenDirector.Phase.Crunch: return "closing-time crunch";
                 default: return "off shift";
             }
         }

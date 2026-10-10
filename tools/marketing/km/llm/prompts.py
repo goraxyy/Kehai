@@ -1,6 +1,6 @@
 """The prompts in tools/marketing/prompts/*.md, with the names filled in from brand.json.
 
-`{{game}}`, `{{game_jp}}`, `{{game_ru}}`, `{{aiko}}`, `{{aiko_jp}}`, `{{aiko_ru}}`, `{{studio}}`,
+`{{game}}`, `{{game_jp}}`, `{{game_ru}}`, `{{karen}}`, `{{karen_jp}}`, `{{karen_ru}}`, `{{studio}}`,
 `{{tagline_en}}` and `{{tagline_ru}}` are replaced, so a rename touches brand.json alone. The system prompt is two
 cached blocks: style.md + reference.md + the brand facts (the same for every step, so one cache
 entry serves a whole run), then the step's own prompt.
@@ -26,8 +26,8 @@ def names() -> dict[str, str]:
     b = brand()
     return {
         "game": b["game"]["name"], "game_jp": b["game"]["japanese"], "game_ru": b["game"].get("russian", b["game"]["name"]),
-        "aiko": b["antagonist"]["name"], "aiko_jp": b["antagonist"]["japanese"],
-        "aiko_ru": b["antagonist"].get("russian", b["antagonist"]["name"]),
+        "karen": b["antagonist"]["name"], "karen_jp": b["antagonist"]["japanese"],
+        "karen_ru": b["antagonist"].get("russian", b["antagonist"]["name"]),
         "studio": b["studio"],
         "tagline_en": b["game"]["tagline"]["en"], "tagline_ru": b["game"]["tagline"]["ru"],
     }

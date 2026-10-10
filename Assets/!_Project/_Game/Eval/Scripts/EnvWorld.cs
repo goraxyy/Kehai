@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Store;
 using UnityEngine;
 
@@ -15,8 +15,8 @@ namespace Kehai.Eval
     // episode — spill_3, bay_41, cust_7, bin_2, mop — and every place is named by the store
     // map, so an agent reasons over "Aisle 2/B", not coordinates.
     //
-    // Fair by construction: the agent sees the HUD's task list (which Aiko can falsify),
-    // Aiko only when she is in its view cone with a clear line of sight, and her footsteps
+    // Fair by construction: the agent sees the HUD's task list (which Karen can falsify),
+    // Karen only when she is in its view cone with a clear line of sight, and her footsteps
     // only when they're close enough to hear. It is told nothing a player couldn't know.
     public sealed class EnvWorld
     {
@@ -26,7 +26,7 @@ namespace Kehai.Eval
         float[] fromPlayer;
         long noiseCursor;
         readonly List<NoiseEvent> noises = new List<NoiseEvent>();
-        float heardAikoAt = -99f;
+        float heardKarenAt = -99f;
 
         public StoreMap Map => StoreMap.Current;
 
@@ -230,23 +230,23 @@ namespace Kehai.Eval
             }
             o["power"] = power;
 
-            o["aiko"] = AikoAsSeen(me);
+            o["karen"] = KarenAsSeen(me);
             o["pa_subtitle"] = env.LastSubtitle;
             o["events"] = env.DrainEvents();
             o["last_action"] = env.LastResult;
             return o;
         }
 
-        Dictionary<string, object> AikoAsSeen(PlayerPresence me)
+        Dictionary<string, object> KarenAsSeen(PlayerPresence me)
         {
             var result = new Dictionary<string, object> { ["visible"] = false, ["heard"] = false };
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             if (brain == null || brain.Body == null || me == null) return result;
 
             NoiseBus.ReadSince(ref noiseCursor, noises);
             foreach (NoiseEvent n in noises)
-                if (n.Kind == NoiseKind.AikoStep && Vector3.Distance(n.Position, me.Position) < 12f) heardAikoAt = Time.time;
-            result["heard"] = Time.time - heardAikoAt < 2f;
+                if (n.Kind == NoiseKind.KarenStep && Vector3.Distance(n.Position, me.Position) < 12f) heardKarenAt = Time.time;
+            result["heard"] = Time.time - heardKarenAt < 2f;
 
             Vector3 her = brain.Body.Position + Vector3.up * 1.4f;
             Vector3 d = her - me.Head;
@@ -294,9 +294,9 @@ namespace Kehai.Eval
             List(sb, "Checkout queue", o["checkout_queue"], x => $"{x["id"]} waiting {x["waited_s"]}s ({x["walk_m"]} m)");
             List(sb, "Customers asking", o["customers_asking"], x => $"{x["id"]} wants {x["wants"]} ({x["stage"]}) in {x["region"]}");
 
-            var aiko = (Dictionary<string, object>)o["aiko"];
-            if ((bool)aiko["visible"]) sb.AppendLine($"{GameNames.Antagonist} is visible in {aiko["region"]}, {aiko["distance_m"]} m away, eye {aiko["eye_colour"]}.");
-            else if ((bool)aiko["heard"]) sb.AppendLine("You can hear " + GameNames.Antagonist + "'s footsteps nearby.");
+            var karen = (Dictionary<string, object>)o["karen"];
+            if ((bool)karen["visible"]) sb.AppendLine($"{GameNames.Antagonist} is visible in {karen["region"]}, {karen["distance_m"]} m away, eye {karen["eye_colour"]}.");
+            else if ((bool)karen["heard"]) sb.AppendLine("You can hear " + GameNames.Antagonist + "'s footsteps nearby.");
             var power = (Dictionary<string, object>)o["power"];
             if (!(bool)power["lights_on"]) sb.AppendLine("The lights are out. Breakers: " + string.Join(", ",
                 ((List<object>)power["breakers"]).Cast<Dictionary<string, object>>().Select(b => $"{b["id"]} {((bool)b["on"] ? "on" : "off")} (hum pitch {b["hum_pitch_rank"]})")));

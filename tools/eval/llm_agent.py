@@ -3,7 +3,7 @@
 
 Each turn Claude reads the observation as prose and calls one tool, `act`, with one macro
 action; the game runs it through the real body and hands back the next observation. It is
-told only what a player could know: the HUD (which Aiko can falsify), what's in view, what
+told only what a player could know: the HUD (which Karen can falsify), what's in view, what
 can be heard. The episode's metrics and the failure taxonomy come back from the game.
 
     pip install anthropic
@@ -29,7 +29,7 @@ keep the shelves stocked, the floor clean, the bins emptied, the checkout queue 
 lost customers helped, then clock out at the time clock once the doors have closed and the
 work is done. Your energy drains as you work and faster when you sprint; coffee restores it.
 
-The store has a manager system called Aiko. She walks the floor, watches, listens, and
+The store has a manager system called Karen. She walks the floor, watches, listens, and
 interferes: lights go out, spills appear, the HUD can lie, the PA can lie, doors lock. If
 she catches you, you get a written warning and your shift is extended. Everything she does
 is telegraphed by a sound or a flicker a moment before it happens, and every trick leaves
@@ -131,7 +131,7 @@ def main(argv=None) -> None:
     ap.add_argument("--port", type=int, default=5555)
     ap.add_argument("--episodes", type=int, default=1)
     ap.add_argument("--seed", type=int, default=1)
-    ap.add_argument("--rung", default="F", help="Aiko's ablation rung, A-F")
+    ap.add_argument("--rung", default="F", help="Karen's ablation rung, A-F")
     ap.add_argument("--shift-seconds", type=float, default=180)
     ap.add_argument("--fps", type=int, default=20)
     ap.add_argument("--effort", default="high", choices=("low", "medium", "high", "xhigh", "max"))
@@ -159,7 +159,7 @@ def main(argv=None) -> None:
             out.flush()
             print(f"episode {episode + 1}: clocked_out={metrics['clocked_out']} steps={metrics['steps']} "
                   f"served={metrics['customers_served']} mopped={metrics['spills_mopped']} "
-                  f"restocked={metrics['shelves_restocked']} caught={metrics['aiko_catches']} "
+                  f"restocked={metrics['shelves_restocked']} caught={metrics['karen_catches']} "
                   f"failures={metrics['failures']}")
 
 

@@ -5,10 +5,10 @@ using System.Text;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Reads a shift recording and says what happened, in numbers and in sentences: how the
-    // work went, where you spent your time, how often Aiko found you and how close she got,
+    // work went, where you spent your time, how often Karen found you and how close she got,
     // what she tried, and what made noise.
     public sealed class ShiftAnalysis
     {
@@ -53,21 +53,21 @@ namespace Kehai.Aiko
                 if (f.PlayerMotion == (byte)MotionState.Sprinting) Sprinted += dt;
                 if (f.PlayerMotion == (byte)MotionState.Crouching) Crouched += dt;
                 if (f.PlayerHeld) Lectured += dt;
-                if (f.AikoSees) SeenSeconds += dt;
+                if (f.KarenSees) SeenSeconds += dt;
                 LowestEnergy = Mathf.Min(LowestEnergy, f.Energy);
 
                 string area = StoreMap.AreaAt(new Vector3(f.Player.x, 0f, f.Player.y));
                 TimeIn.TryGetValue(area, out float t);
                 TimeIn[area] = t + dt;
 
-                if (f.AikoPresent)
+                if (f.KarenPresent)
                 {
-                    float d = Vector2.Distance(f.Player, f.Aiko);
+                    float d = Vector2.Distance(f.Player, f.Karen);
                     if (d < ClosestDistance)
                     {
                         ClosestDistance = d;
                         ClosestAt = f.T;
-                        ClosestWhere = AikoNarrator.Place(new Vector3(f.Player.x, 0f, f.Player.y));
+                        ClosestWhere = KarenNarrator.Place(new Vector3(f.Player.x, 0f, f.Player.y));
                     }
                 }
                 foreach (PersonState c in f.Customers)
@@ -109,7 +109,7 @@ namespace Kehai.Aiko
                     case nameof(StoryKind.Warning): Warnings++; break;
                     case nameof(StoryKind.Heard): Heard++; break;
                     case nameof(StoryKind.Plan):
-                        // "Aiko is emptying a shelf you've already filled — Aisle 3." → the middle part.
+                        // "Karen is emptying a shelf you've already filled — Aisle 3." → the middle part.
                         const string plan = GameNames.Antagonist + " is ";
                         string trick = e.Text.StartsWith(plan) ? e.Text.Substring(plan.Length) : e.Text;
                         int dash = trick.IndexOf(" — ", System.StringComparison.Ordinal);
@@ -130,7 +130,7 @@ namespace Kehai.Aiko
 
         void Write()
         {
-            string Clock(float s) => AikoNarrator.Clock(s);
+            string Clock(float s) => KarenNarrator.Clock(s);
 
             Findings.Add(ClockedOut
                 ? $"You clocked out after {Clock(Length)}."

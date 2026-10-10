@@ -1,4 +1,4 @@
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 // Refills the burnout bar. Pour as many cups as you like: cooldownTime is 0 by default,

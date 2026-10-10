@@ -39,13 +39,13 @@ def session_zip(code="T07", bugs=("the mop went through the wall",), answers=Tru
             {"t": 100, "k": "fps", "avg": 58.2, "worstMs": 41.0}, {"t": 105, "k": "fps", "avg": 31.5, "worstMs": 90.0},
             {"t": 120, "k": "error", "type": "Exception", "message": "NullReferenceException: boom"}]
     if answers:
-        log.append({"t": 210, "k": "answers", "aiko": "Scary", "knew": "Mostly", "lost": "Sometimes", "more": "Yes",
+        log.append({"t": 210, "k": "answers", "karen": "Scary", "knew": "Mostly", "lost": "Sometimes", "more": "Yes",
                     "broke": "the map was confusing"})
     log.append({"t": 215, "k": "end", "reason": "finished", "shifts": 1, "careerShifts": 1})
     record = {"shift": 1, "length": 170.0, "clockedOut": True,
               "plan": {"bounds": [0, 0, 100, 100], "floor": [[0, 0, 100, 0, 100, 100, 1]],
                        "shapes": [{"k": "Shelf", "c": [10, 10, 20, 10, 20, 20, 10, 20]}], "rooms": [], "pins": [], "sections": {}},
-              "analysis": {"numbers": {"Times Aiko spotted you": 4, "Catches": 1, "Warning sounds": 3, "Customers served": 2,
+              "analysis": {"numbers": {"Times Karen spotted you": 4, "Catches": 1, "Warning sounds": 3, "Customers served": 2,
                                        "Lowest energy (%)": 40.5},
                            "findings": ["You clocked out after 2:50."], "jobs": [["mopped a spill", 2]]}}
     buf = io.BytesIO()
@@ -111,7 +111,7 @@ def test_facts_say_how_they_got_on(world):
     assert (s["n"], s["spotted"], s["catches"], s["warnings"], s["clocked_out"]) == (1, 4, 1, 3, True)
     assert f["fps"] == {"avg": 44.9, "lowest": 31.5, "worst_frame_ms": 90.0}
     assert f["errors"] == 1 and f["error_messages"] == ["NullReferenceException: boom"]
-    assert f["answers"]["aiko"] == "Scary" and f["bugs"][0]["note"] == "the mop went through the wall"
+    assert f["answers"]["karen"] == "Scary" and f["bugs"][0]["note"] == "the mop went through the wall"
     assert f["replays"] == ["interlude_01_20261004_101500.krec", f"{STEM}.krec"]
     assert {p[2] for p in f["path"]} == {0, 1}, "the path knows shifts from the time between"
     assert session.plan(folder)["bounds"] == [0, 0, 100, 100]
@@ -151,7 +151,7 @@ def test_a_new_session_is_announced_and_each_bug_note_waits_for_the_owner(world)
     assert any("T07 (round1)" in l for l in lines) and (where / "report.html").exists()
     sent = [m["params"] for m in bot.sent()]
     assert "Playtest: T07" in sent[0]["text"] and "First clock-in after 0:30" in sent[0]["text"]
-    assert "Aiko felt Scary" in sent[0]["text"] and "NullReference" not in sent[0]["text"]
+    assert "Karen felt Scary" in sent[0]["text"] and "NullReference" not in sent[0]["text"]
     bug_messages = sent[1:]
     assert len(bug_messages) == 2
     keyboard = bug_messages[0]["reply_markup"]["inline_keyboard"][0]
@@ -210,7 +210,7 @@ SUMMARY = {
     "headline": "Found the time clock in 30 s, then fought the mop.",
     "understood": "They clocked in after half a minute and worked through the task list.",
     "confusions": [{"when": "0:07", "what": "Pressed E on nothing twice before finding the time clock."}],
-    "aiko": {"verdict": "about right", "why": "Spotted four times, caught once, and they called her scary."},
+    "karen": {"verdict": "about right", "why": "Spotted four times, caught once, and they called her scary."},
     "bugs": [{"i": 1, "title": "Mop passes through a wall", "body": "During shift 1 the mop went through a wall. Build 0.1.0, macOS."}],
     "suggestions": ["Light the time clock."],
 }
@@ -223,7 +223,7 @@ def test_claude_summarises_a_session_and_writes_its_issues(world, tmp_path, monk
     drop(where)
     playtest.cycle(marketing, bot)
     folder = where / "round1" / "T07" / LAUNCH
-    assert summary.load(folder)["aiko"]["verdict"] == "about right"
+    assert summary.load(folder)["karen"]["verdict"] == "about right"
     sent = [m["params"]["text"] for m in bot.sent()]
     assert "Found the time clock in 30 s" in sent[0]
     assert "Mop passes through a wall" in sent[1], "the issue Claude wrote, not the tester's words"

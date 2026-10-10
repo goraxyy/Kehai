@@ -28,7 +28,7 @@ public class ShiftManager : MonoBehaviour
     public BurnoutSystem burnoutSystem;
 
     // Asked when the employee tries to clock out with everything done. Returning true
-    // refuses — Aiko's overtime (Aiko.md §8.2). Null means nobody objects.
+    // refuses — Karen's overtime (Karen.md §8.2). Null means nobody objects.
     public System.Func<bool> ClockOutGuard;
 
     public bool IsShiftActive { get; private set; }
@@ -120,7 +120,7 @@ public class ShiftManager : MonoBehaviour
         ShiftNumber = Mathf.Max(0, completed);
     }
 
-    // More shift: the doors stay open longer and customers keep coming. Used by Aiko's
+    // More shift: the doors stay open longer and customers keep coming. Used by Karen's
     // overtime and by the lecture after being caught.
     public void AddOvertime(float seconds)
     {

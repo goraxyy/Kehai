@@ -15,10 +15,10 @@
     "to": { "type": "number", "minimum": 0 },
     "moment": { "type": ["integer", "null"], "minimum": 1, "description": "The clip moment's rank in <stem>.markers.json, or null when -from/-to were given." },
     "shot": { "type": "string", "description": "pov, cctv, chase, orbit, topdown, path, or the camera path file." },
-    "subject": { "enum": ["aiko", "you"] },
+    "subject": { "enum": ["karen", "you"] },
     "layers": {
       "type": "array",
-      "description": "Aiko's mind drawn in: empty for the store alone.",
+      "description": "Karen's mind drawn in: empty for the store alone.",
       "items": { "enum": ["belief", "guess", "cone", "sound", "thoughts", "actors"] }
     },
     "alpha": { "type": "boolean", "description": "Her mind alone on a transparent background (for picture-in-picture)." },
@@ -31,12 +31,12 @@
     "audio": { "type": ["string", "null"], "description": "The WAV mixed at the camera (also muxed into the video); null for an alpha render." },
     "track": {
       "type": "object",
-      "description": "Where Aiko and you are in the picture (ShotTrack.cs), `hz` times a second from the first frame: [x, y, r] is the body's middle (0..1 from the top left) and half its width as a fraction of the frame's width; null when the body is off screen or not there. Shots rendered before Phase 6 have none.",
-      "required": ["hz", "aiko", "you"],
+      "description": "Where Karen and you are in the picture (ShotTrack.cs), `hz` times a second from the first frame: [x, y, r] is the body's middle (0..1 from the top left) and half its width as a fraction of the frame's width; null when the body is off screen or not there. Shots rendered before Phase 6 have none.",
+      "required": ["hz", "karen", "you"],
       "additionalProperties": false,
       "properties": {
         "hz": { "type": "integer", "minimum": 1 },
-        "aiko": { "type": "array", "items": { "$ref": "#/$defs/where" } },
+        "karen": { "type": "array", "items": { "$ref": "#/$defs/where" } },
         "you": { "type": "array", "items": { "$ref": "#/$defs/where" } }
       }
     },

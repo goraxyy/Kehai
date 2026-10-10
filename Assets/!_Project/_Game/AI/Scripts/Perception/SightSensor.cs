@@ -1,14 +1,14 @@
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Graded sight (Aiko.md §3.1). Not "can I see the player" but a detection score that
+    // Graded sight (Karen.md §3.1). Not "can I see the player" but a detection score that
     // builds while you're visible and drains while you aren't, so a glimpse through a gap
     // between two bays doesn't become a chase:
     //
     //     detect = angular · distance · light · motion · exposure
     //
-    // The same component serves Aiko's own eyes, the CCTV cameras (lower gain, narrower
+    // The same component serves Karen's own eyes, the CCTV cameras (lower gain, narrower
     // cone), and the possessed customers — each is just an eye with different numbers.
     public class SightSensor : MonoBehaviour
     {

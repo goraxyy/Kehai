@@ -78,7 +78,7 @@ public class KrecTests
             w.Text(1f / 30f, KrecEvent.PaSpeech, "This is a formal conversation.");
             w.Circuits(1f / 30f, 1 | 2 | 8);
             w.Thought(1f / 30f, "PLAN", "PLAN     fog → because");
-            w.Story(1f / 30f, 3, "Aiko heard running.");
+            w.Story(1f / 30f, 3, "Karen heard running.");
             w.Slot(1f / 30f, 0, false, "miso_paste");
             w.Lights(1f / 30f, new List<(int, bool)> { (0, true) });
 

@@ -1,7 +1,7 @@
 # Step: translate
 
 You get items of English text from one video, each with its id, its kind (a hook, a label, a
-line spoken by the narrator or by {{aiko}}, a call to action…) and, for spoken lines, the seconds
+line spoken by the narrator or by {{karen}}, a call to action…) and, for spoken lines, the seconds
 it has. Translate every item into the target language, keeping its id.
 
 - Same meaning, same tone, same length class: a hook stays a punchy hook; a label stays a few

@@ -1,4 +1,4 @@
-// Picture in picture: Aiko's mind rendered alone (with alpha) floating over the store, or a
+// Picture in picture: Karen's mind rendered alone (with alpha) floating over the store, or a
 // second shot in a framed box, in a corner, with a small tag.
 import React from 'react';
 import { OffthreadVideo, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';

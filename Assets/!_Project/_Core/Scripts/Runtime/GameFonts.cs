@@ -87,7 +87,7 @@ namespace Kehai
             return null;
         }
 
-        // A Latin font that also draws 気配 and 愛子 from the Japanese one.
+        // A Latin font that also draws 気配 and カレン from the Japanese one.
         static TMP_FontAsset WithJapanese(TMP_FontAsset font) => WithFallback(font, Japanese);
 
         static TMP_FontAsset WithFallback(TMP_FontAsset font, TMP_FontAsset jp)

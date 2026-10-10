@@ -92,7 +92,7 @@
         "kind": { "enum": ["hook", "label", "lower-third", "arrow", "circle", "meme", "image", "gif", "lottie"] },
         "from": { "type": "number", "description": "Seconds into the scene." },
         "to": { "type": "number", "description": "Seconds into the scene; 0 for the end of the scene." },
-        "target": { "enum": ["none", "aiko", "you"], "description": "arrow and circle on a shot scene: who they point at. The code places them where the shot's track has that body at that moment (an arrow's x, y is then where it starts, or 0, 0 to let the code choose). Otherwise none." },
+        "target": { "enum": ["none", "karen", "you"], "description": "arrow and circle on a shot scene: who they point at. The code places them where the shot's track has that body at that moment (an arrow's x, y is then where it starts, or 0, 0 to let the code choose). Otherwise none." },
         "text": { "type": "string", "description": "hook and label: the text; lower-third: the title; meme: the line (pov, caption-bar, nobody: her answer; top-bottom: the top; expectation-reality: the first half's tag); otherwise ''. *Stars* make words crimson." },
         "text2": { "type": "string", "description": "lower-third: the subtitle; meme top-bottom: the bottom; meme expectation-reality: the second half's tag; otherwise ''." },
         "template": { "enum": ["none", "pov", "top-bottom", "nobody", "caption-bar", "expectation-reality"], "description": "meme: which one; otherwise none." },
@@ -102,7 +102,7 @@
         "x2": { "type": "number", "description": "arrow: where it points, across; otherwise 0." },
         "y2": { "type": "number", "description": "arrow: where it points, down; otherwise 0." },
         "size": { "type": "number", "description": "circle: radius as a fraction of the width (0.03 to 0.5); image/gif/lottie: width fraction (0.05 to 1); label: 0.7 small, 1 medium, 1.4 large; otherwise 1." },
-        "style": { "enum": ["crimson", "ink", "paper", "aiko", "you"], "description": "label: its colour (crimson, ink or paper); arrow and circle: their colour; otherwise crimson." }
+        "style": { "enum": ["crimson", "ink", "paper", "karen", "you"], "description": "label: its colour (crimson, ink or paper); arrow and circle: their colour; otherwise crimson." }
       }
     },
     "sfx": {
@@ -120,7 +120,7 @@
       "additionalProperties": false,
       "required": ["speaker", "at", "text"],
       "properties": {
-        "speaker": { "enum": ["narrator", "aiko"] },
+        "speaker": { "enum": ["narrator", "karen"] },
         "at": { "type": "number", "description": "Seconds into the whole video when the line starts." },
         "text": { "type": "string", "description": "What is said, in English, written to be spoken." }
       }

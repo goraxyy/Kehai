@@ -1,19 +1,19 @@
 # Kehai — Research & Systems Ideas
 
 Working notes for the route we picked: **Kehai as an agent-eval environment (1)**,
-**Aiko with ablations (2)**, and an **interpretable thought log (4)** — plus the infinite
+**Karen with ablations (2)**, and an **interpretable thought log (4)** — plus the infinite
 maze and the blink mechanic that feed into them.
 
-Companion documents: [`Aiko.md`](Aiko.md) is the antagonist design spec,
+Companion documents: [`Karen.md`](Karen.md) is the antagonist design spec,
 [`RELEASE_PLAN.md`](../production/RELEASE_PLAN.md) is the production route. This file is the part
 aimed at a research audience.
 
 > **Status.** Everything here except the infinite maze is built: the eval environment and
-> its clients ([`tools/eval/`](../../tools/eval/README.md)), all six Aiko rungs and the ablation
-> runner (results in [`AIKO_RESULTS.md`](../results/AIKO_RESULTS.md)), the thought log with its
+> its clients ([`tools/eval/`](../../tools/eval/README.md)), all six Karen rungs and the ablation
+> runner (results in [`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md)), the thought log with its
 > overlay and replay scrubber, and the blink pipeline from keyboard to webcam
 > ([`tools/blink/`](../../tools/blink/README.md)). The store itself is exported for people and
-> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Aiko.md` §15. The infinite
+> agents in [`STORE_MAP.md`](STORE_MAP.md). Where each piece lives: `Karen.md` §15. The infinite
 > maze, and far more stock, are planned in
 > [Scaling](#scaling-a-lot-of-stock-and-a-maze-with-no-end): steps 1 and 2 of 3 are done, and
 > step 3's maze streams and can be walked, in a scene of its own.
@@ -35,7 +35,7 @@ These three are not separate projects. They compose:
                         │  the same interface
                         ▼
    ┌──────────────────────────────────────────────────────┐
-   │   2. Aiko  ──► ablations ──► results table            │
+   │   2. Karen  ──► ablations ──► results table            │
    └────────────────────┬─────────────────────────────────┘
                         │  emits, every decision
                         ▼
@@ -46,7 +46,7 @@ These three are not separate projects. They compose:
         blink mechanic ─┘  asymmetric information channel
 ```
 
-The eval interface is the keystone. Build it first and Aiko gets a measurement harness
+The eval interface is the keystone. Build it first and Karen gets a measurement harness
 for free; build it last and you will retrofit everything.
 
 ---
@@ -69,7 +69,7 @@ failure naturally rather than artificially.
       position, facing, held items, visible shelves and their fill state, spills, queue
       length and wait times, bin fullness, burnout, time remaining, task list
       → `EnvWorld.Observe`: JSON plus a prose rendering; the HUD as the player sees it
-      (lies included), Aiko only when in view, her footsteps only when close
+      (lies included), Karen only when in view, her footsteps only when close
 - [x] **Action space** — a discrete verb set matching what the player can do:
       `move_to(target)`, `pick_up(item)`, `place_on(slot)`, `mop(spill)`, `serve(customer)`,
       `bag_trash(bin)`, `dispose(bag)`, `drink_coffee()`, `clock_out()`
@@ -79,9 +79,9 @@ failure naturally rather than artificially.
       → `KehaiEnv.ResetEpisode`/`Act`, over a local socket via `EnvServer`
 - [x] **Metrics** — shift completion, tasks completed, customers lost, spills left
       standing, average customer wait, burnout at clock-out, wall-clock and step count
-      → `EpisodeMetrics`, plus Aiko's side and the failure taxonomy below
+      → `EpisodeMetrics`, plus Karen's side and the failure taxonomy below
 - [~] **Determinism** — same seed produces the same shift. Non-negotiable for ablations
-      → one seed fixes `UnityEngine.Random` and Aiko's RNG, `Time.captureDeltaTime` fixes every
+      → one seed fixes `UnityEngine.Random` and Karen's RNG, `Time.captureDeltaTime` fixes every
       frame, scene reloads are synchronous and the planner has no wall-clock cut-off in eval runs.
       Verified: the first shift after launch replays identically for the same seed. Not yet:
       later shifts in the same process drift (engine-side — NavMesh carving and crowd updates run
@@ -124,9 +124,9 @@ is a scripted floor; `tools/eval/llm_agent.py` has Claude play a shift through o
 
 ---
 
-## 2. Aiko with ablations
+## 2. Karen with ablations
 
-Full design in [`Aiko.md`](Aiko.md). The research contribution is not the antagonist —
+Full design in [`Karen.md`](Karen.md). The research contribution is not the antagonist —
 it is **evidence that the adaptation does something**.
 
 ### The ablation ladder
@@ -149,24 +149,24 @@ Pick before running, not after:
 - Time-to-first-detection
 - Shift completion rate (the player's, under each config)
 - Tactic diversity (entropy over the tactic distribution — catches degenerate camping)
-- Panic Index trace (from `Aiko.md`) — the intended reward signal
+- Panic Index trace (from `Karen.md`) — the intended reward signal
 - Player-reported tension, 1–5, if you run humans
 
 ### The trap to avoid
 
-It is very easy to spend three months building Aiko and have zero numbers. **Commit to
+It is very easy to spend three months building Karen and have zero numbers. **Commit to
 producing the table at rung C** — belief grid vs scripted — before building D and E.
 A two-rung ablation that exists beats a six-rung one that does not.
 
 ### Scope decision, unresolved
 
-`Aiko.md` is more ambitious than everything shipped so far combined, and is currently
+`Karen.md` is more ambitious than everything shipped so far combined, and is currently
 zero lines of code. Decide explicitly which slice ships. My suggestion: rungs B–D are a
 complete, defensible story on their own.
 
-→ **Resolved: all six rungs ship**, switched by `AikoRung` (`-aiko-rung A..F`). The ladder is
+→ **Resolved: all six rungs ship**, switched by `KarenRung` (`-karen-rung A..F`). The ladder is
 run end to end by `AblationRunner` against three simulated players (efficient, skittish,
-reckless), paired by seed so rungs see the same shifts; the table is in `AIKO_RESULTS.md`.
+reckless), paired by seed so rungs see the same shifts; the table is in `KAREN_RESULTS.md`.
 
 ---
 
@@ -195,7 +195,7 @@ One structured record per decision, not prose:
 ### Why it is worth building early
 
 - It makes the ablations **legible** — you can see *why* rung D beats rung C, not just that it does
-- It is the debugging tool for Aiko; you will want it regardless
+- It is the debugging tool for Karen; you will want it regardless
 - It doubles as a player-facing feature: scrub the shift, watch what it was thinking
 - Interpretability framing lands well with the audience we are aiming at
 
@@ -206,7 +206,7 @@ One structured record per decision, not prose:
 - `because` is the one free-text field, and it should name the *mechanism*, not narrate
 - A replay scrubber over the log is a weekend of UI and enormously worth it
 
-→ Built as specified: `ThoughtLog` (ring buffer, JSONL per shift in `aiko_logs/`), F1 for the
+→ Built as specified: `ThoughtLog` (ring buffer, JSONL per shift in `karen_logs/`), F1 for the
 live overlay, F2 for the replay scrubber (with belief snapshots and where the player really
 was), and the post-shift performance review that reads from it.
 
@@ -281,7 +281,7 @@ Each bay owns its slots. The things that need GameObjects get them only while th
 - **Aiming.** The player's ray finds the first solid thing in reach. Then it's tested against
   the slot boxes on its way there, taken from a spatial grid. No slot needs a collider.
 - **Items in hand.** An item becomes a GameObject only when it leaves a shelf: taken by the
-  player or a shopper, or knocked off by Aiko. It's made at the slot's exact pose. Put back on
+  player or a shopper, or knocked off by Karen. It's made at the slot's exact pose. Put back on
   a shelf, it's destroyed and the slot records what's on it. (A pool turned out not to be
   needed: items leave shelves a few times a minute, not a few hundred times a second.)
 - **Lookups.** A spatial grid and per-product lists replace the linear scans. Replays record
@@ -296,7 +296,7 @@ Each bay owns its slots. The things that need GameObjects get them only while th
 - no GameObject stands for shelved stock;
 - the scene is back near 20 MB;
 - the render cost is no worse than step 1's;
-- shoppers, Aiko's shelf sweep, the eval's restock action and replays behave as before, by
+- shoppers, Karen's shelf sweep, the eval's restock action and replays behave as before, by
   their tests and by a Play-mode check.
 
 **Where it got to (2026-10-07).** Built (`ShelfSlot`, `ShelfStock`, `ShelfDrawer`, `ShelfAim`):
@@ -318,7 +318,7 @@ Each bay owns its slots. The things that need GameObjects get them only while th
     every one of the 172 slots at the front it was aimed at;
   - the player took an item and put it back, and the slot, its bay's and shelf's counts and
     the prompt all followed;
-  - Aiko's sweep knocked a box off: it fell to the floor, and the drawer showed one fewer;
+  - Karen's sweep knocked a box off: it fell to the floor, and the drawer showed one fewer;
   - eight shoppers in 96 s at ×3 time filled their lists from the shelves (21 slots emptied)
     and queued at the tills;
   - the console stayed clear.
@@ -342,7 +342,7 @@ This builds the design in [Infinite maze](#infinite-maze) below on top of step 2
     links to its neighbours.
   - Shoppers in a chunk that unloads leave the store.
   - Tasks count the shift's area, not whatever happens to be loaded.
-  - Aiko plans on a bounded window: see the conflict below. The resolution is a store that is
+  - Karen plans on a bounded window: see the conflict below. The resolution is a store that is
     finite per shift and endless across shifts, and that still holds.
   - The world shifts back toward the origin once the player is far out (a floating origin).
 
@@ -395,7 +395,7 @@ call for later, once it can be walked.
     swapping. What's left is collecting the NavMesh's colliders (about 20 ms, once a crossing),
     and the GPU Resident Drawer growing its buffers the first time out (130 to 210 ms, once).
 - **Not done yet:**
-  - shoppers, Aiko and tasks in the generated maze;
+  - shoppers, Karen and tasks in the generated maze;
   - aisle signs per chunk;
   - a floating origin;
   - links stitching per-chunk NavMeshes (one NavMesh over the built window does instead).
@@ -406,7 +406,7 @@ call for later, once it can be walked.
 2. ~~Shelves as data~~ done: the scene is 92 → 6.2 MB, and the stock costs 2.2 to 2.4 ms to draw
 3. Chunks and a seeded maze: built and walked, in a scene of its own. **Parked for later
    (2026-10-08):** the scene sits last in the build list, unticked, so builds leave it out.
-   Shoppers, Aiko, tasks, signs and a floating origin in it are still to come
+   Shoppers, Karen, tasks, signs and a floating origin in it are still to come
 
 ---
 
@@ -439,7 +439,7 @@ existing 5 m squares = 25×25 m). Each chunk's layout is generated from
 
 **Braid the maze.** Whatever generates it, remove most dead ends by knocking through
 walls to create loops. A chase with no escape route is frustrating rather than tense, and
-Aiko's herding tactics need loops to be interesting.
+Karen's herding tactics need loops to be interesting.
 
 ### The hard parts, in order
 
@@ -460,11 +460,11 @@ Aiko's herding tactics need loops to be interesting.
 
 ### Conflict worth flagging
 
-`Aiko.md`'s herding relies on an **aisle graph with articulation points and min-cuts** —
-that needs a *bounded* graph. On an infinite map, Aiko must operate on a bounded window:
+`Karen.md`'s herding relies on an **aisle graph with articulation points and min-cuts** —
+that needs a *bounded* graph. On an infinite map, Karen must operate on a bounded window:
 the current shift's store footprint. Practical resolution: **the store is finite per
 shift; the maze is infinite across shifts.** Each shift generates a bounded store from a
-seed. That keeps Aiko's graph analysis valid, gives the eval its procedural variation,
+seed. That keeps Karen's graph analysis valid, gives the eval its procedural variation,
 and sidesteps most of the streaming work above.
 
 I would take that resolution. It gets nearly all the benefit for a fraction of the cost.
@@ -543,11 +543,11 @@ IBlinkSource ─┬─ KeyboardBlinkSource   (dev + accessibility fallback)
                       │
           ┌───────────┴────────────┐
           ▼                        ▼
-   Eyelids.Closed01        OnBlinkStart / OnEyesClosedFor(t) → Aiko
+   Eyelids.Closed01        OnBlinkStart / OnEyesClosedFor(t) → Karen
 ```
 
-Build the keyboard source first — it proves the whole chain including Aiko's reactions.
-Then replay traces, so Aiko's blink behaviour can be tested without sitting in front of a
+Build the keyboard source first — it proves the whole chain including Karen's reactions.
+Then replay traces, so Karen's blink behaviour can be tested without sitting in front of a
 camera blinking on cue. The webcam goes in last; it is the least certain part and the
 easiest to swap in once everything above it works.
 
@@ -568,7 +568,7 @@ rung F's `blink_advance` tactic moves inside what's left of the closure.
   processing and a real trust barrier
 - **Exploit the window, do not chase the latency.** Blinks are stereotyped at roughly
   300 ms, so on detecting one ~120 ms in you can *predict* the reopening and schedule
-  Aiko's move inside the remaining closure. Far more robust than trying to react faster
+  Karen's move inside the remaining closure. Far more robust than trying to react faster
 
 ---
 
@@ -576,7 +576,7 @@ rung F's `blink_advance` tactic moves inside what's left of the closure.
 
 1. ~~**Eval interface** (observation, action, metrics, determinism, headless) — unlocks everything~~ done
 2. ~~**Thought log** schema — trivial now, painful to retrofit~~ done
-3. ~~**Aiko rungs B–D** + the ablation table~~ done, A–F
+3. ~~**Karen rungs B–D** + the ablation table~~ done, A–F
 4. **Seeded finite store per shift** — procedural variation without the streaming cost
    (partly: `MazeMutation` moves bays between shifts from shift 7, validated for reachability)
 5. ~~**Blink**: keyboard → replay → webcam~~ done

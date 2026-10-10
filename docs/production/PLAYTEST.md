@@ -21,7 +21,7 @@ you make tester codes ─► build a playtest round ─► testers download it (
 
 - **Async.** Testers play on their own, whenever they like. You don't hear them think; you get
   everything they did as a 3D replay you can rotate and fly around.
-- **Up to three shifts, fresh career.** Each tester starts as a new employee with an Aiko who
+- **Up to three shifts, fresh career.** Each tester starts as a new employee with a Karen who
   knows nothing about them. After shift 3 the game suggests stopping; they can keep going.
 - **Questions:** four one-tap questions and one optional line in the game (once per tester), and
   a Google Form with the longer questions afterwards, linked by their tester code.
@@ -37,7 +37,7 @@ you make tester codes ─► build a playtest round ─► testers download it (
 3. **First launch:** they type their code, then answer one question:
 
    > *This build records what happens in the game while you play: where you go, what you press,
-   > what Aiko does, and how smoothly it runs. Not your camera, microphone or screen. When you
+   > what Karen does, and how smoothly it runs. Not your camera, microphone or screen. When you
    > finish, it sends that to the developer, who watches your session as a 3D replay to see what
    > was confusing.* **[Send my sessions] [Keep them on this computer]**
 
@@ -54,7 +54,7 @@ you make tester codes ─► build a playtest round ─► testers download it (
 
 | # | Question | Answers |
 |---|---|---|
-| 1 | Aiko felt… | Scary · Unfair · Annoying · I didn't notice her |
+| 1 | Karen felt… | Scary · Unfair · Annoying · I didn't notice her |
 | 2 | Did you know what to do? | Yes · Mostly · No |
 | 3 | Did you get lost in the store? | Never · Sometimes · Often |
 | 4 | Would you play more? | Yes · Maybe · No |
@@ -68,7 +68,7 @@ keeps this table in step with it.
 First field: **Tester code** (pre-filled from the game's link). Then, all optional:
 
 1. What were you trying to do in your first minute? Did you work it out?
-2. When did you first notice Aiko? What did you think she was?
+2. When did you first notice Karen? What did you think she was?
 3. Describe a moment that felt unfair, if there was one.
 4. Describe a moment that felt great, if there was one.
 5. What did you never figure out?
@@ -90,7 +90,7 @@ shifts for the player's own reports and sends nothing.
 | The whole session as 3D replays: each shift (`shift_NN_*.krec`) and the stretches between them, from launch to the first clock-in and after each clock-out (`interlude_NN_*.krec`) | `ReplayRecorder` |
 | Each shift's data and clip markers, including Shift+F7 bug marks | `ShiftRecorder`, `ClipMarkerRecorder` |
 | `session.jsonl`, one line per event: the computer (OS, CPU, GPU, RAM, screen, quality); every menu and panel opened and closed (main menu, settings, pause, task list, F1 map, F2 replay, review, playtest screens); the keys that matter (E with what it was aimed at, or "nothing"; Q, C, F1, F2, F7, F8–F10, L, Esc); where the tester stood and looked, twice a second, with the replay file and time it belongs to; frame rate every 5 s; errors; focus lost and regained; shifts; bug notes; answers | `PlaytestSession` |
-| Aiko's thought logs and her ledger (what she learned about this tester) | `aiko_logs/`, `aiko_ledger.json` |
+| Karen's thought logs and her ledger (what she learned about this tester) | `karen_logs/`, `karen_ledger.json` |
 | The game's own log (and the one before, after a crash) | `Player.log` |
 
 Never recorded: the camera image (webcam blinking stays off unless they turn it on, and even then
@@ -110,7 +110,7 @@ your Mac (the scheduled "work" job, every 5 minutes) ◄── pulls new session
    └─► ~/TokenLimit/playtests/<round>/<code>/<launch time>/   (unzipped)
         ├─► the combined report (HTML, on your Mac)
         ├─► Telegram: who played, how long, how it ended, the report
-        ├─► Claude: a summary of the session (what confused them; Aiko too harsh or too soft)
+        ├─► Claude: a summary of the session (what confused them; Karen too harsh or too soft)
         └─► each bug note to Telegram with its replay moment; your tap files it as a public
             GitHub issue in Claude's neutral words, with no tester code and no replay link
 ```

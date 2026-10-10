@@ -1,12 +1,12 @@
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Aiko.md §3: six channels, plus touch (being caught is contact, not sight) and the
+    // Karen.md §3: six channels, plus touch (being caught is contact, not sight) and the
     // blink channel from the webcam.
     public enum SenseChannel { Sight, Hearing, Trace, Testimony, Infrastructure, Absence, Touch, Blink }
 
-    // One piece of evidence about where the employee is. Nothing in the game grants Aiko a
+    // One piece of evidence about where the employee is. Nothing in the game grants Karen a
     // boolean "sees player": everything arrives as one of these, with a confidence and a
     // timestamp, and goes into the belief grid.
     public readonly struct Observation

@@ -12,12 +12,12 @@ shelves are full, the spills are mopped and the rubbish is out.
 - **Burnout:** your energy drains over the shift and when you sprint; coffee restores it. At zero
   you can only walk.
 - **The building:** mains power with breakers, 240 ceiling lights, a store radio, automatic
-  doors, a flashlight, and procedural sound for everything {{aiko}} does.
+  doors, a flashlight, and procedural sound for everything {{karen}} does.
 - **Being caught** isn't death: a written warning, thirty seconds of lecture, lost shift time.
   The real threat is the clock. **Overtime** is her signature move: she refuses your clock-out,
   adds minutes, and thanks you over the PA for your flexibility.
 
-## {{aiko}}
+## {{karen}}
 
 The store's management AI. She hunts you with only what she can see and hear.
 
@@ -55,7 +55,7 @@ The store's management AI. She hunts you with only what she can see and hear.
 ## The blink channel
 
 Opt-in webcam blink tracking (Apple Vision or MediaPipe), all on the computer, nothing recorded.
-{{aiko}} can move inside the ~300 ms of your blink. B blinks from the keyboard.
+{{karen}} can move inside the ~300 ms of your blink. B blinks from the keyboard.
 
 ## Clip markers (what the game noticed in a shift)
 
@@ -66,7 +66,7 @@ the power went (value: seconds) · `possessed` mimicry · `undone_work` she undi
 (value: seconds between) · `pa_call` the PA spoke · `prop_trick` a planned trick (crate wall, fog,
 door lock, camera, shelf relocation, mimicry) until it took effect · `clock_refused` overtime ·
 `loud_mistake` you sprinted or dropped something, she heard it and closed in · `tell_then_trick` a
-warning, then the trick · `shift_review` clock-out · `aiko_stuck` she got stuck (a bug: don't use
+warning, then the trick · `shift_review` clock-out · `karen_stuck` she got stuck (a bug: don't use
 for marketing) · `customer_chaos` a customer gave up at the till or got lost · `manual_good` the
 developer pressed F7: worth a clip · `manual_bug` Shift+F7: a bug, not marketing.
 
@@ -80,7 +80,7 @@ with a chase or a catch); `kept` moments hold a manual marker. Each comes with t
   subject, cutting between corners) · `chase` (behind and above the subject) · `orbit` (circling
   the subject) · `topdown` (from above, the roof cut away: the maze, both of you, the layers read
   best here).
-- **Subject:** `aiko` or `you`.
+- **Subject:** `karen` or `you`.
 - **Her mind** (layers drawn into the shot): `belief` (her probability map, red to yellow) ·
   `guess` (a ring where she thinks you are, tighter the surer she is) · `cone` (her view, red
   while she sees you) · `sound` (rings for every noise: you blue, her red, others grey) ·
@@ -101,21 +101,21 @@ with a chase or a catch); `kept` moments hold a manual marker. Each comes with t
 - **Picture in picture:** a shot small in a corner (her mind with alpha sits on a dark glass panel).
 - **Overlays:** `hook` (the big line at the top) · `label` (a pill of text) · `lower-third` (title
   and subtitle) · `arrow` and `circle` (they draw themselves; point at her, at you, at the guess) ·
-  memes (`pov`, `top-bottom`, `nobody` ("Nobody:" then "{{aiko}}: <her line>"), `caption-bar`,
+  memes (`pov`, `top-bottom`, `nobody` ("Nobody:" then "{{karen}}: <her line>"), `caption-bar`,
   `expectation-reality` on a split) · `image`, `gif`, `lottie` from the asset library.
 - **Sound:** sound effects at scene times; one music track (it ducks under the voice); the voice
   track is the script, spoken by text-to-speech, with word-timed captions (the spoken word lit
-  crimson, {{aiko}}'s words in her colour).
+  crimson, {{karen}}'s words in her colour).
 - **The end card** shows {{game}}, {{game_jp}}, the tagline, your call to action and the handles.
 - **Geometry:** x and y run 0 to 1 from the top left. On 9:16 the platforms' buttons cover the
   edges: keep text and marks between x 0.07 and 0.93 and y 0.10 and 0.70. Captions sit around
   y 0.74 to 0.82, the hook at the top: keep labels and memes clear of both. On 16:9 keep 5% from
   the edges; the lower third and captions share the bottom fifth.
 - **Where things are in a shot:** you don't see the frames. Each shot's `events` say what happens
-  and when (seconds into the shot), and `where` says where {{aiko}} and you are in its picture once
-  a second: `[t, aiko, you]`, each `[x, y]` or null when off screen. To point at someone, give an
-  arrow or circle a `target` (`aiko` or `you`) and the code places it from the shot's exact track
+  and when (seconds into the shot), and `where` says where {{karen}} and you are in its picture once
+  a second: `[t, karen, you]`, each `[x, y]` or null when off screen. To point at someone, give an
+  arrow or circle a `target` (`karen` or `you`) and the code places it from the shot's exact track
   at that moment, allowing for trim, speed and zoom; it only works on a single-shot scene, while
   that person is on screen. Keep marks short-lived (1 to 2 s).
-- **Speaking pace:** the narrator says about 2.6 words a second, {{aiko}} about 2.2. A line needs
+- **Speaking pace:** the narrator says about 2.6 words a second, {{karen}} about 2.2. A line needs
   its words' time before the next line starts.

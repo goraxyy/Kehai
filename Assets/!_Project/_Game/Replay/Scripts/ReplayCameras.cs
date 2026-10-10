@@ -6,7 +6,7 @@ namespace Kehai.Replay
 {
     public enum ShotPreset { Pov, Cctv, Chase, Orbit, TopDown, Free, Path }
 
-    // Where the replay's camera is. The presets follow a subject (Aiko, or you) and are worked
+    // Where the replay's camera is. The presets follow a subject (Karen, or you) and are worked
     // out from the recording at t alone, so scrubbing, pausing and rendering all see the same
     // picture; only the CCTV corner remembers which corner it's in, and only the free camera
     // takes input.
@@ -20,7 +20,7 @@ namespace Kehai.Replay
     public sealed class ReplayCameras
     {
         public ShotPreset Preset = ShotPreset.Chase;
-        public KrecKind Subject = KrecKind.Aiko;
+        public KrecKind Subject = KrecKind.Karen;
         public ShotPath Path;
         public bool DepthOfFieldOn;
         public float Focus { get; private set; } = 5f;
@@ -80,10 +80,10 @@ namespace Kehai.Replay
             volume.weight = 0f;
         }
 
-        public void CycleSubject() => Subject = Subject == KrecKind.Aiko ? KrecKind.Player : KrecKind.Aiko;
+        public void CycleSubject() => Subject = Subject == KrecKind.Karen ? KrecKind.Player : KrecKind.Karen;
 
-        int SubjectId => Subject == KrecKind.Player ? stage.PlayerId : stage.AikoId;
-        int OtherId => Subject == KrecKind.Player ? stage.AikoId : stage.PlayerId;
+        int SubjectId => Subject == KrecKind.Player ? stage.PlayerId : stage.KarenId;
+        int OtherId => Subject == KrecKind.Player ? stage.KarenId : stage.PlayerId;
 
         public void Use(ShotPreset preset)
         {
@@ -187,7 +187,7 @@ namespace Kehai.Replay
             return true;
         }
 
-        float HeadHeight(int id) => id == stage.AikoId ? 2.05f : 1.6f;
+        float HeadHeight(int id) => id == stage.KarenId ? 2.05f : 1.6f;
 
         Vector3 Head(Vector3 at, int id) => new Vector3(at.x, stage.FloorY + HeadHeight(id), at.z);
 

@@ -9,7 +9,7 @@ outline's order and with its section names.
 - The narrator is the developer, in the first person, explaining their own game to a curious
   friend: concrete, honest about what didn't work, dry humour, no hype. Technical where it helps
   ("she keeps a probability map of where I might be"), never jargon for its own sake.
-- {{aiko}} may answer once or twice per section at most, in her own voice.
+- {{karen}} may answer once or twice per section at most, in her own voice.
 - One idea per line; lines of 5 to 30 words. Each line's `cue` says what's on screen under it:
   a shot name from the outline, or "title card", or "her mind".
 - Spoken text only: no stars, no stage directions in the text.

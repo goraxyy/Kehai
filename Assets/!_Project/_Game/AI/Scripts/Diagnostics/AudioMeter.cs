@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // How loud the game's own output is, measured at the listener — shown on the F1 map so
     // "I can't hear anything" can be told apart: if this moves, the game is making sound and

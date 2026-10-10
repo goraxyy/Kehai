@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Testimony (Aiko.md §3.4). Every shopper keeps a tiny memory of the last time it saw
-    // the employee. Aiko can't read minds: her body has to walk up to a customer to "ask",
+    // Testimony (Karen.md §3.4). Every shopper keeps a tiny memory of the last time it saw
+    // the employee. Karen can't read minds: her body has to walk up to a customer to "ask",
     // which costs her time and puts her in the open. A busy store is a dense sensor grid;
     // standing at the till puts you in front of the most reliable witness in the building.
     [DisallowMultipleComponent]
@@ -28,7 +28,7 @@ namespace Kehai.Aiko
         // Somebody near a scare is a jumpy witness: they notice more and remember harder.
         public bool IsJumpy => Time.time < jumpyUntil;
 
-        // Set by Aiko when she takes this shopper over (mimicry); its reports are then
+        // Set by Karen when she takes this shopper over (mimicry); its reports are then
         // near certain, and it stops shopping.
         [System.NonSerialized] public bool possessed;
 

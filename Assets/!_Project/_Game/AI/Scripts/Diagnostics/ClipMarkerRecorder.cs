@@ -1,7 +1,7 @@
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // Listens to the shift for moments worth a clip and hands them to a ClipWatch, which
     // writes the markers into the shift recording. Only listens: nothing here changes what
@@ -17,7 +17,7 @@ namespace Kehai.Aiko
         ShiftRecorder recorder;
         ShiftRecording target;
         ClipWatch watch;
-        AikoBrain brain;
+        KarenBrain brain;
         PaSystem pa;
         bool dark;
         float lastLive = -1f;
@@ -29,7 +29,7 @@ namespace Kehai.Aiko
 
         void OnEnable()
         {
-            AikoNarrator.Said += OnStory;
+            KarenNarrator.Said += OnStory;
             NoiseBus.Emitted += OnNoise;
             GameEvents.ShelfRestocked += OnRestocked;
             GameEvents.SpillCleaned += OnMopped;
@@ -40,7 +40,7 @@ namespace Kehai.Aiko
 
         void OnDisable()
         {
-            AikoNarrator.Said -= OnStory;
+            KarenNarrator.Said -= OnStory;
             NoiseBus.Emitted -= OnNoise;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.SpillCleaned -= OnMopped;
@@ -57,18 +57,18 @@ namespace Kehai.Aiko
             pa = null;
         }
 
-        // Aiko and her PA come up with the store; take them as soon as they exist.
+        // Karen and her PA come up with the store; take them as soon as they exist.
         void Hook()
         {
-            if (brain == null && AikoBrain.Instance != null)
+            if (brain == null && KarenBrain.Instance != null)
             {
-                brain = AikoBrain.Instance;
+                brain = KarenBrain.Instance;
                 brain.Log.Written += OnThought;
                 brain.ShelfSabotaged += OnSwept;
             }
-            if (pa == null && AikoWorld.Instance != null && AikoWorld.Instance.Pa != null)
+            if (pa == null && KarenWorld.Instance != null && KarenWorld.Instance.Pa != null)
             {
-                pa = AikoWorld.Instance.Pa;
+                pa = KarenWorld.Instance.Pa;
                 pa.SpeechStarted += OnPaSpeech;
             }
         }

@@ -1,9 +1,9 @@
 using Kehai;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 
 // Anything other than the keyboard and mouse that wants to walk the player around: the
-// simulated players Aiko is tested against, and the eval harness's agent driver. They
+// simulated players Karen is tested against, and the eval harness's agent driver. They
 // steer the same CharacterController a person does, so collisions, sprint rules and
 // footstep noise are identical whoever is playing.
 public interface IMotorInput
@@ -49,7 +49,7 @@ public class PlayerMotor : MonoBehaviour
     // Set by a bot or the eval harness to drive the player instead of the keyboard.
     [System.NonSerialized] public IMotorInput externalInput;
 
-    // Frozen in place — Aiko's lecture after a catch. Looking around still works.
+    // Frozen in place — Karen's lecture after a catch. Looking around still works.
     [System.NonSerialized] public bool movementLocked;
 
     CharacterController controller;
@@ -183,7 +183,7 @@ public class PlayerMotor : MonoBehaviour
     bool WantsToSprint() => !movementLocked && Input.GetKey(KeyCode.LeftShift) && (burnout == null || burnout.CanSprint);
 
     // Every step is a noise on the bus. Sprinting is loud and frequent, crouching is
-    // nearly silent — the whole stealth game is in these three numbers (Aiko.md §3.2).
+    // nearly silent — the whole stealth game is in these three numbers (Karen.md §3.2).
     void HandleFootsteps()
     {
         if (!IsMoving || !controller.isGrounded)

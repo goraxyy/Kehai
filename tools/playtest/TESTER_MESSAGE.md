@@ -8,7 +8,7 @@ message.
 ---
 
 Hi! Thanks for playtesting Kehai, a night shift in a convenience store where the store's
-management AI, Aiko, learns your habits.
+management AI, Karen, learns your habits.
 
 Your tester code: {code}
 
@@ -25,7 +25,7 @@ Opening it the first time:
 
 Then:
 1. Type your code when the game asks. It keeps your sessions together; your name never goes in.
-2. Play up to three shifts, about 20–30 minutes. Headphones help: Aiko makes sounds.
+2. Play up to three shifts, about 20–30 minutes. Headphones help: Karen makes sounds.
 3. Please don't look anything up first. Not knowing what to do is exactly what I want to see.
 4. If something breaks, press Shift+F7 and write one line about it.
 5. At the end there are four quick questions in the game, then a link to a few longer ones:

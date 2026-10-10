@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -19,7 +19,7 @@ namespace Kehai.Playtest
     {
         public static readonly (string id, string text, string[] options)[] Questions =
         {
-            ("aiko", "Aiko felt…", new[] { "Scary", "Unfair", "Annoying", "I didn't notice her" }),
+            ("karen", "Karen felt…", new[] { "Scary", "Unfair", "Annoying", "I didn't notice her" }),
             ("knew", "Did you know what to do?", new[] { "Yes", "Mostly", "No" }),
             ("lost", "Did you get lost in the store?", new[] { "Never", "Sometimes", "Often" }),
             ("more", "Would you play more?", new[] { "Yes", "Maybe", "No" }),
@@ -96,7 +96,7 @@ namespace Kehai.Playtest
             if (TesterState.Suggested || session.CareerShifts < session.Config.suggestFinishAfter) return false;
             ShiftManager shift = FindAnyObjectByType<ShiftManager>();
             if (shift == null || shift.IsShiftActive || MainMenu.Visible || FullScreenPanel.AnyOpen || Consequences.CareerOver) return false;
-            return AikoBrain.Instance == null || AikoBrain.Instance.Review == null || !AikoBrain.Instance.Review.Visible;
+            return KarenBrain.Instance == null || KarenBrain.Instance.Review == null || !KarenBrain.Instance.Review.Visible;
         }
 
         // ---- the pages --------------------------------------------------------------------

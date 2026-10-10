@@ -4,7 +4,7 @@ using UnityEngine;
 // A lamp over every ceiling light: a black box hung on a wire from the roof, sitting right
 // above the light, with a white panel on its underside, a little smaller than the box. The
 // panel glows while its light is on and goes dark when that light is off (a blackout, a tripped
-// breaker, Aiko), so the lights you can see are the lights that are working.
+// breaker, Karen), so the lights you can see are the lights that are working.
 //
 // Built at load like the aisle signs, or kept from the scene when Kehai/Store/Hang Signs and
 // Lamps has baked it in.
@@ -55,7 +55,7 @@ public class CeilingLamps : MonoBehaviour
         lamps.panelOn = on;
         lamps.panelOff = off;
 
-        foreach (Light light in Kehai.Aiko.LightProbe.CeilingLights)
+        foreach (Light light in Kehai.Karen.LightProbe.CeilingLights)
         {
             if (light == null) continue;
             Vector3 p = light.transform.position;

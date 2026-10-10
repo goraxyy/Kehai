@@ -5,7 +5,7 @@
   "description": "km/playtest/summary.py: one tester's session read for the developer, and each of their bug notes written as a public GitHub issue for the developer to approve.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["headline", "understood", "confusions", "aiko", "bugs", "suggestions"],
+  "required": ["headline", "understood", "confusions", "karen", "bugs", "suggestions"],
   "properties": {
     "headline": { "type": "string", "description": "One line, under 140 characters: the most useful thing this session shows." },
     "understood": { "type": "string", "description": "Two or three sentences: did they work out what to do, and how long it took." },
@@ -22,7 +22,7 @@
         }
       }
     },
-    "aiko": {
+    "karen": {
       "type": "object",
       "additionalProperties": false,
       "required": ["verdict", "why"],

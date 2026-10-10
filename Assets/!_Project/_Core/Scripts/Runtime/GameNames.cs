@@ -7,8 +7,8 @@ namespace Kehai
     {
         public const string Game = "Kehai";
         public const string GameJapanese = "気配";
-        public const string Antagonist = "Aiko";
-        public const string AntagonistJapanese = "愛子";
+        public const string Antagonist = "Karen";
+        public const string AntagonistJapanese = "カレン";
         public const string Studio = "TokenLimit";
     }
 }

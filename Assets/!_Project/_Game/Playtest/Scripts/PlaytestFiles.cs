@@ -69,7 +69,7 @@ namespace Kehai.Playtest
 
     // A finished session, packed for sending: its log, the shifts and in-between stretches it
     // recorded (data and 3D replay; the HTML reports are rebuilt on the developer's side),
-    // Aiko's thought logs and ledger, and the game's own log (the one before it too, after a crash).
+    // Karen's thought logs and ledger, and the game's own log (the one before it too, after a crash).
     public static class PlaytestPackage
     {
         public static string ZipName(string round, string code, string stamp) => $"{Safe(round)}_{Safe(code)}_{stamp}.zip";
@@ -95,8 +95,8 @@ namespace Kehai.Playtest
                 }
             if (thoughtFolder != null && Directory.Exists(thoughtFolder))
                 foreach (string f in Directory.GetFiles(thoughtFolder))
-                    if (File.GetLastWriteTimeUtc(f) >= since) files.Add((f, "aiko_logs/" + Path.GetFileName(f)));
-            if (ledgerPath != null && File.Exists(ledgerPath)) files.Add((ledgerPath, "aiko_ledger.json"));
+                    if (File.GetLastWriteTimeUtc(f) >= since) files.Add((f, "karen_logs/" + Path.GetFileName(f)));
+            if (ledgerPath != null && File.Exists(ledgerPath)) files.Add((ledgerPath, "karen_ledger.json"));
             if (!string.IsNullOrEmpty(playerLog) && File.Exists(playerLog)) files.Add((playerLog, "Player.log"));
             if (previousLogToo && !string.IsNullOrEmpty(playerLog))
             {

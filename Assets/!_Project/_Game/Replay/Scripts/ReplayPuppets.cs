@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Kehai.Aiko;
+using Kehai.Karen;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace Kehai.Replay
 {
-    // Stand-ins for what came and went during the shift: Aiko, customers, her understudy, items
+    // Stand-ins for what came and went during the shift: Karen, customers, her understudy, items
     // off their shelves, her props, spills, bags, footprints. Each is built the way the game
     // builds the real thing (its prefab, or the same code) and then stripped of everything
     // that acts: scripts, colliders, bodies, agents, sounds. The replay moves them.
@@ -71,11 +71,11 @@ namespace Kehai.Replay
 
         // ---- the people ------------------------------------------------------------------
 
-        public GameObject MakeAiko(out Renderer eye, out Light gaze)
+        public GameObject MakeKaren(out Renderer eye, out Light gaze)
         {
             var root = new GameObject(GameNames.Antagonist + " (replay)");
             root.transform.SetParent(parent, false);
-            (eye, gaze) = AikoBody.BuildLook(root.transform, new AikoConfig());
+            (eye, gaze) = KarenBody.BuildLook(root.transform, new KarenConfig());
             return root;
         }
 
@@ -143,7 +143,7 @@ namespace Kehai.Replay
             Object.DestroyImmediate(quad.GetComponent<Collider>());
             quad.transform.SetParent(root.transform, false);
             quad.transform.localScale = new Vector3(0.12f, 0.28f, 1f);
-            quad.GetComponent<Renderer>().sharedMaterial = AikoProps.Lit(new Color(0.12f, 0.1f, 0.08f));
+            quad.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(new Color(0.12f, 0.1f, 0.08f));
             return root;
         }
 
@@ -161,7 +161,7 @@ namespace Kehai.Replay
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             Object.DestroyImmediate(go.GetComponent<Collider>());
             go.name = name;
-            go.GetComponent<Renderer>().sharedMaterial = AikoProps.Lit(colour);
+            go.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(colour);
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
             go.transform.SetParent(root.transform, false);
@@ -171,7 +171,7 @@ namespace Kehai.Replay
 
         GameObject Box(string name, Vector3 size, Color colour)
         {
-            GameObject go = AikoProps.Box(name, Vector3.zero, size, colour, parent, collider: false);
+            GameObject go = KarenProps.Box(name, Vector3.zero, size, colour, parent, collider: false);
             return go;
         }
 

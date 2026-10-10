@@ -39,13 +39,13 @@ export const Captions: React.FC<{ edit: Edit; lang: Language }> = ({ edit, lang 
       }}>
         {chunk.words.map((w, i) => {
           const now = mode === 'words' && t >= w.start && t < (chunk.words[i + 1]?.start ?? chunk.end);
-          const her = w.speaker === 'aiko';
+          const her = w.speaker === 'karen';
           return (
             <React.Fragment key={i}>
               {i > 0 && ' '}
               <span style={{
                 display: 'inline-block',
-                color: now ? brand.colours.crimson : her ? brand.colours.game.aiko : brand.colours.paper,
+                color: now ? brand.colours.crimson : her ? brand.colours.game.karen : brand.colours.paper,
                 transform: now ? 'scale(1.04)' : 'none',
               }}>{w.text}</span>
             </React.Fragment>

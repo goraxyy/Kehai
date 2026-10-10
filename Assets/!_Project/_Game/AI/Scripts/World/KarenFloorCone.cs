@@ -2,15 +2,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Where Aiko is looking, painted on the floor: her field of view out to her sight
+    // Where Karen is looking, painted on the floor: her field of view out to her sight
     // range, cut short by shelves and walls the way her eyes are, brightest where she sees
     // best (close and straight ahead) and fading where she'd barely notice you. Its colour
     // is her mood, and it pulses red while she can see you. Her spotlight shows the same
     // thing, but a spotlight is hard to read in a lit store. Esc → Settings turns it off.
-    [RequireComponent(typeof(AikoBody))]
-    public sealed class AikoFloorCone : MonoBehaviour
+    [RequireComponent(typeof(KarenBody))]
+    public sealed class KarenFloorCone : MonoBehaviour
     {
         const int Rays = 48;
         const float EyeHeight = 1.3f;   // over counters, not over shelves
@@ -20,11 +20,11 @@ namespace Kehai.Aiko
 
         public static bool Enabled
         {
-            get => PlayerPrefs.GetInt("Kehai.AikoCone", 1) == 1;
-            set => PlayerPrefs.SetInt("Kehai.AikoCone", value ? 1 : 0);
+            get => PlayerPrefs.GetInt("Kehai.KarenCone", 1) == 1;
+            set => PlayerPrefs.SetInt("Kehai.KarenCone", value ? 1 : 0);
         }
 
-        AikoBody body;
+        KarenBody body;
         Mesh mesh;
         MeshRenderer view;
         readonly List<Vector3> vertices = new List<Vector3>();
@@ -38,7 +38,7 @@ namespace Kehai.Aiko
 
         void Start()
         {
-            body = GetComponent<AikoBody>();
+            body = GetComponent<KarenBody>();
             if (Application.isBatchMode) { enabled = false; return; }   // nothing to see headless
 
             var cone = new GameObject("Floor cone");
@@ -155,13 +155,13 @@ namespace Kehai.Aiko
             return best;
         }
 
-        internal static Color Tint(AikoBody.Mood mood)
+        internal static Color Tint(KarenBody.Mood mood)
         {
             switch (mood)
             {
-                case AikoBody.Mood.Alert: return new Color(1f, 0.62f, 0.1f);
-                case AikoBody.Mood.Hunt: return new Color(1f, 0.15f, 0.1f);
-                case AikoBody.Mood.Kind: return new Color(0.35f, 0.95f, 0.55f);
+                case KarenBody.Mood.Alert: return new Color(1f, 0.62f, 0.1f);
+                case KarenBody.Mood.Hunt: return new Color(1f, 0.15f, 0.1f);
+                case KarenBody.Mood.Kind: return new Color(0.35f, 0.95f, 0.55f);
                 default: return new Color(0.15f, 0.5f, 1f);
             }
         }

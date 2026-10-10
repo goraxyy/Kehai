@@ -19,15 +19,15 @@ from . import sessions
 from .notify import clock
 from .session import plan
 
-QUESTIONS = [("aiko", "Aiko felt…", ["Scary", "Unfair", "Annoying", "I didn't notice her"]),
+QUESTIONS = [("karen", "Karen felt…", ["Scary", "Unfair", "Annoying", "I didn't notice her"]),
              ("knew", "Did you know what to do?", ["Yes", "Mostly", "No"]),
              ("lost", "Did you get lost in the store?", ["Never", "Sometimes", "Often"]),
              ("more", "Would you play more?", ["Yes", "Maybe", "No"])]
 
 # The bars' colours, by the job they do (validated for colour blindness and contrast, light and
-# dark): "Aiko felt…" has unordered answers, so categorical slots in a fixed order; the other three
+# dark): "Karen felt…" has unordered answers, so categorical slots in a fixed order; the other three
 # run good → middle → bad, so a two-pole scale (blue, grey, red). Skipped answers aren't in the bar.
-FILLS = {"aiko": ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"]}
+FILLS = {"karen": ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"]}
 SCALE = ["var(--good)", "var(--mid)", "var(--bad)"]
 
 
@@ -153,10 +153,10 @@ def round_section(name: str, items: list) -> str:
             "yes" if any(f["task_list_opened"] for f in fs) else "no", sum(f["e_on_nothing"] for f in fs),
             ", ".join(sorted({f["ended"] for f in fs})),
             f"{statistics.mean(fps):.0f} / {min(lows):.0f}" if fps and lows else "–", sum(f["errors"] for f in fs),
-            a.get("aiko", "–"), a.get("knew", "–"), a.get("lost", "–"), a.get("more", "–"),
+            a.get("karen", "–"), a.get("knew", "–"), a.get("lost", "–"), a.get("more", "–"),
             sum(len(f["bugs"]) for f in fs)]) + "</tr>")
     heads = ["Tester", "Sessions", "Played", "Shifts", "First clock-in", "Task list", "E on nothing", "Ended",
-             "fps avg / low", "Errors", "Aiko felt", "Knew what to do", "Lost", "Play more", "Bugs"]
+             "fps avg / low", "Errors", "Karen felt", "Knew what to do", "Lost", "Play more", "Bugs"]
     out.append("<div class='card scroll'><table><tr>" + "".join(f"<th>{h}</th>" for h in heads) + "</tr>" +
                "".join(rows) + "</table></div>")
 
@@ -176,7 +176,7 @@ def session_section(folder: Path, f: dict, summary: dict | None, bugs: list) -> 
         if summary["confusions"]:
             out.append("<h3>Where it looks confusing</h3><ul>" +
                        "".join(f"<li><b>{e(c['when'])}</b> {e(c['what'])}</li>" for c in summary["confusions"]) + "</ul>")
-        out.append(f"<p>Aiko: <b>{e(summary['aiko']['verdict'])}</b>. {e(summary['aiko']['why'])}</p>")
+        out.append(f"<p>Karen: <b>{e(summary['karen']['verdict'])}</b>. {e(summary['karen']['why'])}</p>")
         if summary["suggestions"]:
             out.append("<h3>What to change</h3><ul>" + "".join(f"<li>{e(s)}</li>" for s in summary["suggestions"]) + "</ul>")
     else:

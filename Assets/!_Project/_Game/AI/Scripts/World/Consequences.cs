@@ -1,10 +1,10 @@
 using System.Collections;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // What happens to *you*. Being caught is not death — it's a written warning, a lecture
-    // and lost shift time (Aiko.md §8.6). Kehai's fail state is the clock, not the claw.
+    // and lost shift time (Karen.md §8.6). Kehai's fail state is the clock, not the claw.
     // And the three ways a career ends (§10.3).
     public static class Consequences
     {
@@ -27,13 +27,13 @@ namespace Kehai.Aiko
             "You may return to work. The shift has been extended to accommodate this conversation."
         };
 
-        public static IEnumerator Lecture(AikoBrain brain, int warning, float seconds, float overtime)
+        public static IEnumerator Lecture(KarenBrain brain, int warning, float seconds, float overtime)
         {
             LectureRunning = true;
             PlayerMotor motor = Object.FindAnyObjectByType<PlayerMotor>();
             if (motor != null) motor.movementLocked = true;
 
-            AikoScreen screen = AikoScreen.Ensure();
+            KarenScreen screen = KarenScreen.Ensure();
             screen.Banner($"<color=#FF6F61>WRITTEN WARNING #{warning}</color>\n<size=60%>{brain.Ledger.PlayerName}</size>", 4f);
             AddOvertime(overtime);
 
@@ -58,24 +58,24 @@ namespace Kehai.Aiko
         // ---- the endings ---------------------------------------------------------------
 
         // You burn out. The last thing that happens is that she makes you a coffee.
-        public static IEnumerator KehaiEnding(AikoBrain brain)
+        public static IEnumerator KehaiEnding(KarenBrain brain)
         {
             brain.Ledger.Data.endingReached = true;
             brain.Ledger.Save();
             Eyelids lids = Object.FindAnyObjectByType<Eyelids>();
             if (lids != null) lids.Close(6f);
             yield return new WaitForSecondsRealtime(6.5f);
-            AikoScreen screen = AikoScreen.Ensure();
+            KarenScreen screen = KarenScreen.Ensure();
             screen.SetFade(1f);
             screen.Banner("<size=160%>過労死</size>\nBURNED OUT\n\n<size=50%>" + brain.Review.EndingText("burnout") + "</size>" + ToTheMenu, 9999f);
             CareerOver = true;
         }
 
-        public static void QuitEnding(AikoBrain brain, string review)
+        public static void QuitEnding(KarenBrain brain, string review)
         {
             brain.Ledger.Data.endingReached = true;
             brain.Ledger.Save();
-            AikoScreen screen = AikoScreen.Ensure();
+            KarenScreen screen = KarenScreen.Ensure();
             screen.SetFade(0.92f);
             string kind = brain.Review.BrokeHer ? "broke" : "quit";
             screen.Banner("<size=120%>NOTICE ACCEPTED</size>\n\n<size=50%>" + brain.Review.EndingText(kind) + "</size>" + ToTheMenu, 9999f);

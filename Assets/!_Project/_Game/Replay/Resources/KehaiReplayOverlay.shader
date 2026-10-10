@@ -1,4 +1,4 @@
-// The replay's overlays: Aiko's mind (her belief map, her guess, her view cone, sound rings,
+// The replay's overlays: Karen's mind (her belief map, her guess, her view cone, sound rings,
 // her thought log) and the eyelids of the POV shot. Unlit, coloured per vertex, alpha
 // blended so a render on a transparent background keeps its alpha. `_ZTest` decides whether
 // the store hides it (a heat map under the shelves) or it draws over everything (text).

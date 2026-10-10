@@ -75,7 +75,7 @@
         "required": ["element", "editor", "how"],
         "properties": {
           "element": { "type": "string", "description": "The part of the reference's format." },
-          "editor": { "enum": ["shot", "trim", "speed", "speed-ramp", "zoom", "pan", "split-row", "split-column", "pip", "image", "colour-card", "cut", "transition-fade", "transition-slide", "transition-wipe", "transition-flip", "transition-clock", "hook", "label", "lower-third", "arrow", "circle", "meme-pov", "meme-top-bottom", "meme-nobody", "meme-caption-bar", "meme-expectation-reality", "image-overlay", "gif", "lottie", "captions-words", "captions-lines", "captions-off", "narrator", "aiko-voice", "music", "sfx", "game-sound", "end-card"] },
+          "editor": { "enum": ["shot", "trim", "speed", "speed-ramp", "zoom", "pan", "split-row", "split-column", "pip", "image", "colour-card", "cut", "transition-fade", "transition-slide", "transition-wipe", "transition-flip", "transition-clock", "hook", "label", "lower-third", "arrow", "circle", "meme-pov", "meme-top-bottom", "meme-nobody", "meme-caption-bar", "meme-expectation-reality", "image-overlay", "gif", "lottie", "captions-words", "captions-lines", "captions-off", "narrator", "karen-voice", "music", "sfx", "game-sound", "end-card"] },
           "how": { "type": "string", "description": "Exactly how: timing, position (x, y from the top left), size, text length, speed, zoom." }
         }
       }
@@ -89,7 +89,7 @@
         "required": ["camera", "subject", "layers", "use"],
         "properties": {
           "camera": { "enum": ["pov", "cctv", "chase", "orbit", "topdown"] },
-          "subject": { "enum": ["aiko", "you"] },
+          "subject": { "enum": ["karen", "you"] },
           "layers": { "type": "array", "items": { "enum": ["belief", "guess", "cone", "sound", "thoughts", "actors"] } },
           "use": { "type": "string", "description": "Which part of the format this shot serves." }
         }

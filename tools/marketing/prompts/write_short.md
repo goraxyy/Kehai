@@ -18,7 +18,7 @@ shot's start), and the asset library. Write the short as a draft.
 - Scenes of 1.5 to 6 seconds; cut on action. Use `cut` mostly, a transition only where the
   mood shifts. Trim each shot to start just before its beat: the events give you the times.
 - About 2.4 words a second of voice at most: a 30-second short has 50 to 75 words. Leave room for
-  the game's sound. Give {{aiko}} at most one or two lines, her real kind of line.
+  the game's sound. Give {{karen}} at most one or two lines, her real kind of line.
 - On-screen text: the hook, and at most one or two labels or a meme; never repeat the voice word
   for word on screen (the captions already do).
 - Music: one library track that suits the mood (`dark`, `tense`, …) at about 0.3, or none when

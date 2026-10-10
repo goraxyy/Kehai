@@ -34,7 +34,7 @@
       "properties": {
         "name": { "type": "string", "description": "Lowercase, unique within the pick, e.g. top or mind." },
         "camera": { "enum": ["pov", "cctv", "chase", "orbit", "topdown"] },
-        "subject": { "enum": ["aiko", "you"], "description": "Who the camera follows (pov is always yours)." },
+        "subject": { "enum": ["karen", "you"], "description": "Who the camera follows (pov is always yours)." },
         "layers": { "type": "array", "description": "Her mind drawn in; [] for the store alone.", "items": { "enum": ["belief", "guess", "cone", "sound", "thoughts", "actors"] } },
         "alpha": { "type": "boolean", "description": "Her mind alone on a transparent background, for a picture in picture (needs layers)." },
         "start_offset": { "type": "number", "description": "Seconds added to the moment's start (negative starts earlier); 0 to start with the moment." },

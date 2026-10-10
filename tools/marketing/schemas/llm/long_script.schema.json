@@ -23,7 +23,7 @@
               "additionalProperties": false,
               "required": ["speaker", "text", "cue"],
               "properties": {
-                "speaker": { "enum": ["narrator", "aiko"] },
+                "speaker": { "enum": ["narrator", "karen"] },
                 "text": { "type": "string", "description": "Written to be spoken, in English." },
                 "cue": { "type": "string", "description": "What is on screen under it: shot names from the outline, or a title card." }
               }

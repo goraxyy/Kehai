@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Kehai.Aiko;
+using Kehai.Karen;
 using Kehai.Store;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -16,7 +16,7 @@ namespace Kehai.Eval
         public float shiftSeconds = 180f;
         public int fps = 20;                 // fixed simulation step: 1/fps seconds per frame
         public bool render = true;
-        public bool aiko = true;
+        public bool karen = true;
         public bool freshLedger = true;
         public int startShift = 1;           // career position of the first shift
         public float overtimeCap = 240f;     // give up this long after the doors close
@@ -34,7 +34,7 @@ namespace Kehai.Eval
             c.shiftSeconds = (float)o.GetNumber("shift_seconds", c.shiftSeconds);
             c.fps = Mathf.Clamp((int)o.GetNumber("fps", c.fps), 5, 120);
             c.render = o.GetBool("render", c.render);
-            c.aiko = o.GetBool("aiko", c.aiko);
+            c.karen = o.GetBool("karen", c.karen);
             c.freshLedger = o.GetBool("fresh_ledger", c.freshLedger);
             c.startShift = Mathf.Max(1, (int)o.GetNumber("start_shift", c.startShift));
             c.overtimeCap = (float)o.GetNumber("overtime_cap", c.overtimeCap);
@@ -52,7 +52,7 @@ namespace Kehai.Eval
     //   step(action)  — run one macro-action to completion through the real body and hands
     //   observe()     — the structured snapshot (EnvWorld), plus a prose rendering
     //
-    // Determinism: a seed fixes UnityEngine.Random (customers, spills) and Aiko's own RNG,
+    // Determinism: a seed fixes UnityEngine.Random (customers, spills) and Karen's own RNG,
     // Time.captureDeltaTime fixes every frame's dt, the reload is synchronous and the planner
     // has no wall-clock budget. The first shift after launch replays exactly; later ones in
     // the same process drift a little (engine-side threading), so compare paired seeds. Headless: with render off the cameras stop drawing, and a
@@ -98,8 +98,8 @@ namespace Kehai.Eval
             if (!Ready) return;
             Metrics.Tick(Tasks, Burnout);
 
-            AikoScreen screen = AikoScreen.Instance;
-            PaSystem pa = AikoWorld.Instance != null ? AikoWorld.Instance.Pa : null;
+            KarenScreen screen = KarenScreen.Instance;
+            PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;
             if (pa != null && pa.Busy) LastSubtitle = CurrentPaText(pa);
         }
 
@@ -127,11 +127,11 @@ namespace Kehai.Eval
             Config = config ?? new EnvConfig();
             Metrics.Unsubscribe();
 
-            // Everything the next Aiko and the next shift will be built from.
-            AikoBootstrap.Disabled = !Config.aiko;
-            // An eval Aiko keeps her Ledger in a file of her own: resetting an episode must
+            // Everything the next Karen and the next shift will be built from.
+            KarenBootstrap.Disabled = !Config.karen;
+            // An eval Karen keeps her Ledger in a file of her own: resetting an episode must
             // never wipe what she has learned about the person who actually plays the game.
-            var aiko = new AikoConfig
+            var karen = new KarenConfig
             {
                 seed = Config.seed,
                 writeJsonl = false,
@@ -140,9 +140,9 @@ namespace Kehai.Eval
                     ? System.IO.Path.Combine(EvalDirectory, "eval_ledger.json")
                     : Config.ledgerPath
             };
-            if (AikoBootstrap.TryParseRung(Config.rung, out AikoRung rung)) aiko.rung = rung;
-            AikoBootstrap.Override = aiko;
-            if (Config.freshLedger) new AikoLedger(aiko) { Persistent = true }.Wipe();
+            if (KarenBootstrap.TryParseRung(Config.rung, out KarenRung rung)) karen.rung = rung;
+            KarenBootstrap.Override = karen;
+            if (Config.freshLedger) new KarenLedger(karen) { Persistent = true }.Wipe();
 
             Time.captureDeltaTime = 1f / Config.fps;
             Application.targetFrameRate = -1;
@@ -179,7 +179,7 @@ namespace Kehai.Eval
 
             if (Config.verbose)
             {
-                AikoBrain brain = AikoBrain.Instance;
+                KarenBrain brain = KarenBrain.Instance;
                 Debug.Log($"[env] reset seed {Config.seed}: {GameNames.Antagonist} {(brain != null ? $"online, rung {brain.config.rung}, seed {brain.config.seed}" : "absent")}; " +
                           $"shift {(Shift != null ? Shift.ShiftNumber : 0)} active={Shift != null && Shift.IsShiftActive}; player at {World.Map.NameAt(Driver.transform.position)}; " +
                           $"{NavMeshWalls.LastCount} walls carved, NavMesh agent radius {UnityEngine.AI.NavMesh.GetSettingsByIndex(0).agentRadius:0.00}");
@@ -209,7 +209,7 @@ namespace Kehai.Eval
         public IEnumerator ClockIn()
         {
             if (Shift == null || Shift.IsShiftActive) yield break;
-            if (AikoBrain.Instance != null && AikoBrain.Instance.Review != null) AikoBrain.Instance.Review.Visible = false;
+            if (KarenBrain.Instance != null && KarenBrain.Instance.Review != null) KarenBrain.Instance.Review.Visible = false;
             yield return Act(new EnvAction { verb = "clock_in" });
             shiftStartedAt = Time.time;
             wallStartedAt = Time.realtimeSinceStartup;
@@ -227,7 +227,7 @@ namespace Kehai.Eval
 
             bool clockedOut = !Shift.IsShiftActive && ShiftSeconds > 1f;
             bool timedOut = Shift.IsShiftActive && ShiftSeconds > Config.shiftSeconds + Config.overtimeCap
-                            + (AikoBrain.Instance != null ? AikoBrain.Instance.Stats.Overtimes * 120f : 0f);
+                            + (KarenBrain.Instance != null ? KarenBrain.Instance.Stats.Overtimes * 120f : 0f);
             if (!clockedOut && !timedOut) return false;
 
             Done = true;

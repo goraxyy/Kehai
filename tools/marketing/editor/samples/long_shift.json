@@ -8,7 +8,7 @@
   "languages": [
     "en"
   ],
-  "title": "One night shift with Aiko",
+  "title": "One night shift with Karen",
   "source": {
     "stem": "bot shift (sample)",
     "moments": [
@@ -371,7 +371,7 @@
             "end": 3.127
           },
           {
-            "text": "Aiko,",
+            "text": "Karen,",
             "start": 3.247,
             "end": 3.564
           },
@@ -713,7 +713,7 @@
         "src": "audio/sample/sample-long-shift.en.06.wav",
         "at": 48.5,
         "duration": 4.511,
-        "speaker": "aiko",
+        "speaker": "karen",
         "words": [
           {
             "text": "There",
@@ -804,7 +804,7 @@
         "src": "audio/sample/sample-long-shift.en.08.wav",
         "at": 58.5,
         "duration": 1.359,
-        "speaker": "aiko",
+        "speaker": "karen",
         "words": [
           {
             "text": "I",

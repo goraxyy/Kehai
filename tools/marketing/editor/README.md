@@ -29,7 +29,7 @@ Files in an edit are paths relative to the marketing working folder (`~/TokenLim
     - or a `split` of two shots (`row` or `column`);
     - or an `image` (zoomable);
     - or a `color`.
-  - a `pip`: picture in picture, for example Aiko's mind rendered alone with alpha
+  - a `pip`: picture in picture, for example Karen's mind rendered alone with alpha
     (`render_shot.sh -alpha … -out x.webm`, `transparent: true`).
   - `overlays` with `from`/`to` in scene seconds:
     - `hook`, `label`, `lowerThird`;
@@ -50,7 +50,7 @@ Files in an edit are paths relative to the marketing working folder (`~/TokenLim
 Everything comes from `../brand.json`:
 
 - **Colours:** crimson `#DC143C`, soft black `#151518` and white.
-- **Fonts:** Nunito (English and Russian) and M PLUS Rounded 1c (only the glyphs 気配 and 愛子),
+- **Fonts:** Nunito (English and Russian) and M PLUS Rounded 1c (only the glyphs 気配 and カレン),
   loaded from Google Fonts at render time.
 - **Vertical video:** text stays inside the safe area, clear of the platforms' buttons.
 

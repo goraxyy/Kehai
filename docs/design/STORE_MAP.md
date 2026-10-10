@@ -1,6 +1,6 @@
 # Kehai — Store Map
 
-The building as Aiko and the eval harness see it. **Generated** from the scene by
+The building as Karen and the eval harness see it. **Generated** from the scene by
 `Kehai/Map/Export STORE_MAP.md` (`StoreMap.cs` + `StoreMapReport.cs`) — do not edit by
 hand; move a shelf and re-export instead.
 
@@ -178,7 +178,7 @@ for something. `STORE_CATALOG.md` lists what each section sells.
 
 ## Chokepoints
 
-Regions whose loss cuts part of the store off. Aiko blocks these first; a player who
+Regions whose loss cuts part of the store off. Karen blocks these first; a player who
 knows them knows where not to be cornered.
 
 - **Door: Sales floor - Staff room** (24.6, -121.9) — cuts off 138 cells

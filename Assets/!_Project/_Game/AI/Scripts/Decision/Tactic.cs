@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // One entry in the tactic library (Aiko.md §8).
+    // One entry in the tactic library (Karen.md §8).
     //
     // The spec asks for ScriptableObject assets; this repository carries code only, so a
     // tactic is a class instead — with exactly the same contract. Adding a scare is adding a
     // subclass with its preconditions, cost, cooldown, expected-panic prior, the tell it
-    // must emit and the chore it leaves behind. Nothing else in Aiko has to change.
+    // must emit and the chore it leaves behind. Nothing else in Karen has to change.
     public abstract class Tactic
     {
         public abstract string Id { get; }
@@ -34,18 +34,18 @@ namespace Kehai.Aiko
         public bool OnCooldown(float now) => now - LastUsed < Cooldown;
 
         // Preconditions. `why` explains a refusal for the thought log.
-        public virtual bool Available(AikoContext c, out string why)
+        public virtual bool Available(KarenContext c, out string why)
         {
             why = null;
             return true;
         }
 
         // How exposed doing this leaves her (§6.3 w_risk). 0 = unseen, 1 = in plain view.
-        public virtual float ExposureRisk(AikoContext c) => 0f;
+        public virtual float ExposureRisk(KarenContext c) => 0f;
 
         // HTN decomposition into primitives. Build through PlanBuilder so a planning budget
         // overrun yields the best partial plan instead of a stall.
-        public abstract void Plan(AikoContext c, PlanBuilder plan);
+        public abstract void Plan(KarenContext c, PlanBuilder plan);
 
         public override string ToString() => Id;
     }
@@ -79,7 +79,7 @@ namespace Kehai.Aiko
             return this;
         }
 
-        public PlanBuilder Go(Vector3 at, AikoBody.Pace pace, string label, float arrive = 1.3f) =>
+        public PlanBuilder Go(Vector3 at, KarenBody.Pace pace, string label, float arrive = 1.3f) =>
             Add(MoveTo.Point(at, pace, label, arrive));
     }
 

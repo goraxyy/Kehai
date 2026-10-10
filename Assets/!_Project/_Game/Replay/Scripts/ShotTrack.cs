@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Kehai.Replay
 {
-    // Where Aiko and you are in a rendered shot's picture, ten times a second: written into the
+    // Where Karen and you are in a rendered shot's picture, ten times a second: written into the
     // shot's sidecar so the editor can point an arrow or draw a circle at her without anyone
     // looking at the frames (tools/marketing, Phase 6).
     //
@@ -15,13 +15,13 @@ namespace Kehai.Replay
         public const int Hz = 10;
         const float HalfWidth = 0.35f;
 
-        public readonly List<double[]> Aiko = new List<double[]>();
+        public readonly List<double[]> Karen = new List<double[]>();
         public readonly List<double[]> You = new List<double[]>();
 
-        public int Count => Aiko.Count;
+        public int Count => Karen.Count;
 
-        // The body's middle: halfway up Aiko (2.05 m to the top of her head) and you (1.6 m to your eyes).
-        public static float MiddleHeight(bool aiko) => aiko ? 1.05f : 0.85f;
+        // The body's middle: halfway up Karen (2.05 m to the top of her head) and you (1.6 m to your eyes).
+        public static float MiddleHeight(bool karen) => karen ? 1.05f : 0.85f;
 
         public static double[] Project(Camera cam, Vector3 middle)
         {
@@ -37,20 +37,20 @@ namespace Kehai.Replay
         public void SampleIfDue(int frame, int fps, Camera cam, ReplayData data, ReplayStage stage, float t)
         {
             if (!Due(frame, fps, Count)) return;
-            Aiko.Add(Where(cam, data, stage.AikoId, t, true));
+            Karen.Add(Where(cam, data, stage.KarenId, t, true));
             You.Add(Where(cam, data, stage.PlayerId, t, false));
         }
 
-        static double[] Where(Camera cam, ReplayData data, int id, float t, bool aiko)
+        static double[] Where(Camera cam, ReplayData data, int id, float t, bool karen)
         {
             if (id < 0 || !data.TryPose(id, t, out EntitySample pose) || !pose.Visible) return null;
-            return Project(cam, pose.Position + Vector3.up * MiddleHeight(aiko));
+            return Project(cam, pose.Position + Vector3.up * MiddleHeight(karen));
         }
 
         public Dictionary<string, object> ToJson() => new Dictionary<string, object>
         {
             ["hz"] = Hz,
-            ["aiko"] = Aiko,
+            ["karen"] = Karen,
             ["you"] = You,
         };
 

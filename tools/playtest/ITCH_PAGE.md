@@ -27,7 +27,7 @@ A private page testers download from. You make it; this is what to put in it.
 > **Thank you for playtesting Kehai.**
 >
 > You work the night shift in a 24-hour convenience store: clock in, stock the shelves, mop the
-> spills, take out the bins, serve the customers. Aiko, the store's management AI, is watching.
+> spills, take out the bins, serve the customers. Karen, the store's management AI, is watching.
 > She only knows what she can see and hear, and she remembers how you work.
 >
 > **How to play this test**
@@ -41,7 +41,7 @@ A private page testers download from. You make it; this is what to put in it.
 > - At the end: four quick questions in the game, and a link to a few more.
 >
 > **What gets sent:** with your OK, the game sends what happened in it (where you went, what
-> you pressed, what Aiko did, how smoothly it ran) so the developer can watch your session as a
+> you pressed, what Karen did, how smoothly it ran) so the developer can watch your session as a
 > 3D replay. Never your camera, microphone or screen.
 >
 > Keyboard and mouse. macOS (Apple silicon and Intel) and Windows 10/11 (64-bit).

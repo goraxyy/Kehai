@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
     // One kind of moment worth a clip: how good a clip it tends to make (weight), how much of
     // the shift to show before and after it, who is in it, and tags for the writer.
@@ -26,7 +26,7 @@ namespace Kehai.Aiko
     }
 
     // Everything that tunes the clip finder, in one table. Markers only observe the shift;
-    // they never change what Aiko or anyone else does.
+    // they never change what Karen or anyone else does.
     public static class ClipMarkers
     {
         public const float MergeGap = 8f;           // markers this close become one moment
@@ -67,22 +67,22 @@ namespace Kehai.Aiko
         public static readonly ClipMarkerKind[] All =
         {
             //   id                 weight  pre  post  subjects                   tags
-            K("blink_move",         10,     4f,  3f,   S("aiko", "player"),       T("blink")),
-            K("catch",              10,     8f,  5f,   S("aiko", "player"),       T("chase", "catch", "overtime")),
-            K("near_miss",           9,     5f,  3f,   S("aiko", "player"),       T("stealth", "close call")),
-            K("escape",              8,     3f,  3f,   S("aiko", "player"),       T("chase", "escape")),
-            K("found_blind",         8,     5f,  3f,   S("aiko", "player"),       T("her mind", "belief")),
-            K("blackout",            8,     3f,  3f,   S("aiko", "store"),        T("power", "trick")),
-            K("possessed",           8,     2f,  6f,   S("aiko", "customer"),     T("possession", "trick")),
-            K("learned",             7,     3f,  3f,   S("aiko"),                 T("learning", "her mind")),
-            K("undone_work",         7,     4f,  4f,   S("aiko", "player"),       T("work", "sabotage")),
-            K("pa_call",             6,     2f,  6f,   S("aiko"),                 T("pa", "voice")),
-            K("prop_trick",          6,     2f,  6f,   S("aiko"),                 T("trick", "prop")),
-            K("clock_refused",       6,     3f,  4f,   S("aiko", "player"),       T("overtime", "work")),
-            K("loud_mistake",        6,     2f,  5f,   S("player", "aiko"),       T("noise", "stealth")),
-            K("tell_then_trick",     5,     2f,  4f,   S("aiko"),                 T("tell", "trick", "fair play")),
+            K("blink_move",         10,     4f,  3f,   S("karen", "player"),       T("blink")),
+            K("catch",              10,     8f,  5f,   S("karen", "player"),       T("chase", "catch", "overtime")),
+            K("near_miss",           9,     5f,  3f,   S("karen", "player"),       T("stealth", "close call")),
+            K("escape",              8,     3f,  3f,   S("karen", "player"),       T("chase", "escape")),
+            K("found_blind",         8,     5f,  3f,   S("karen", "player"),       T("her mind", "belief")),
+            K("blackout",            8,     3f,  3f,   S("karen", "store"),        T("power", "trick")),
+            K("possessed",           8,     2f,  6f,   S("karen", "customer"),     T("possession", "trick")),
+            K("learned",             7,     3f,  3f,   S("karen"),                 T("learning", "her mind")),
+            K("undone_work",         7,     4f,  4f,   S("karen", "player"),       T("work", "sabotage")),
+            K("pa_call",             6,     2f,  6f,   S("karen"),                 T("pa", "voice")),
+            K("prop_trick",          6,     2f,  6f,   S("karen"),                 T("trick", "prop")),
+            K("clock_refused",       6,     3f,  4f,   S("karen", "player"),       T("overtime", "work")),
+            K("loud_mistake",        6,     2f,  5f,   S("player", "karen"),       T("noise", "stealth")),
+            K("tell_then_trick",     5,     2f,  4f,   S("karen"),                 T("tell", "trick", "fair play")),
             K("shift_review",        5,     4f,  0f,   S("player"),               T("review", "end of shift")),
-            K("aiko_stuck",          4,     2f,  2f,   S("aiko"),                 T("bug", "funny")),
+            K("karen_stuck",          4,     2f,  2f,   S("karen"),                 T("bug", "funny")),
             K("customer_chaos",      3,     3f,  3f,   S("customer"),             T("customer", "funny")),
             K("manual_good",        10,    15f,  3f,   S("player"),               T("manual"), alwaysKept: true),
             K("manual_bug",          0,    15f,  3f,   S("player"),               T("manual", "bug"), alwaysKept: true),

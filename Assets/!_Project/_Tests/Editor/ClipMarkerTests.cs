@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Kehai;
-using Kehai.Aiko;
+using Kehai.Karen;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -27,7 +27,7 @@ public class ClipMarkerTests
             { "blink_move", 10 }, { "catch", 10 }, { "near_miss", 9 }, { "escape", 8 }, { "found_blind", 8 },
             { "blackout", 8 }, { "possessed", 8 }, { "learned", 7 }, { "undone_work", 7 }, { "pa_call", 6 },
             { "prop_trick", 6 }, { "clock_refused", 6 }, { "loud_mistake", 6 }, { "tell_then_trick", 5 },
-            { "shift_review", 5 }, { "aiko_stuck", 4 }, { "customer_chaos", 3 }
+            { "shift_review", 5 }, { "karen_stuck", 4 }, { "customer_chaos", 3 }
         };
         foreach (var pair in expected)
         {
@@ -121,7 +121,7 @@ public class ClipMarkerTests
     public void SubjectsAndTagsComeFromTheMarkers()
     {
         var m = Build(new[] { M("possessed", 20f), M("pa_call", 24f) })[0];
-        CollectionAssert.AreEqual(new[] { "aiko", "customer" }, m.Subjects);
+        CollectionAssert.AreEqual(new[] { "karen", "customer" }, m.Subjects);
         CollectionAssert.IsSubsetOf(new[] { "possession", "trick", "pa", "voice" }, m.Tags);
     }
 
@@ -148,7 +148,7 @@ public class ClipMarkerTests
     [Test]
     public void TheMarkersFileParses_BestMomentFirst()
     {
-        var r = new ShiftRecording { ShiftNumber = 3, StartedAt = "2026-09-30 10:00", Length = 300f, ClockedOut = true, AikoRung = "F" };
+        var r = new ShiftRecording { ShiftNumber = 3, StartedAt = "2026-09-30 10:00", Length = 300f, ClockedOut = true, KarenRung = "F" };
         r.Markers.Add(M("near_miss", 40f));
         r.Markers.Add(new ClipMarker { Id = "blackout", T = 100f, End = 130f, Value = 30f, Text = "The lights were out for \"30\" seconds." });
         r.Markers.Add(M("catch", 200f));
@@ -173,12 +173,12 @@ public class ClipMarkerTests
 
     // ---- the rules ---------------------------------------------------------------------------------
 
-    static ShiftFrame Frame(float t, Vector2 player, Vector2 aiko, bool sees = false, bool chasing = false,
-                            AikoBody.Mood mood = AikoBody.Mood.Calm, Vector2? guess = null, float confidence = 0f) =>
+    static ShiftFrame Frame(float t, Vector2 player, Vector2 karen, bool sees = false, bool chasing = false,
+                            KarenBody.Mood mood = KarenBody.Mood.Calm, Vector2? guess = null, float confidence = 0f) =>
         new ShiftFrame
         {
-            T = t, Player = player, AikoPresent = true, Aiko = aiko, AikoSees = sees, Chasing = chasing,
-            AikoMood = (byte)mood, Guess = guess ?? new Vector2(999f, 999f), GuessConfidence = confidence
+            T = t, Player = player, KarenPresent = true, Karen = karen, KarenSees = sees, Chasing = chasing,
+            KarenMood = (byte)mood, Guess = guess ?? new Vector2(999f, 999f), GuessConfidence = confidence
         };
 
     static (ClipWatch watch, List<ClipMarker> markers, List<Vector2> chases) Watch()
@@ -241,11 +241,11 @@ public class ClipMarkerTests
     public void HuntingInPlaceIsStuck_HuntingOnTheMoveIsNot()
     {
         var (w, markers, _) = Watch();
-        for (float t = 0f; t <= 7f; t += 0.1f) w.Frame(Frame(t, Vector2.zero, new Vector2(20f, 0f), mood: AikoBody.Mood.Hunt));
-        CollectionAssert.AreEqual(new[] { "aiko_stuck" }, Ids(markers));
+        for (float t = 0f; t <= 7f; t += 0.1f) w.Frame(Frame(t, Vector2.zero, new Vector2(20f, 0f), mood: KarenBody.Mood.Hunt));
+        CollectionAssert.AreEqual(new[] { "karen_stuck" }, Ids(markers));
 
         var (moving, none, _) = Watch();
-        for (float t = 0f; t <= 7f; t += 0.1f) moving.Frame(Frame(t, Vector2.zero, new Vector2(20f + t, 0f), mood: AikoBody.Mood.Hunt));
+        for (float t = 0f; t <= 7f; t += 0.1f) moving.Frame(Frame(t, Vector2.zero, new Vector2(20f + t, 0f), mood: KarenBody.Mood.Hunt));
         Assert.IsEmpty(none);
     }
 
@@ -312,7 +312,7 @@ public class ClipMarkerTests
         var (w, markers, _) = Watch();
         w.Frame(Frame(9f, Vector2.zero, new Vector2(20f, 0f)));
         w.Noise(10f, NoiseKind.Sprint, NoiseAuthor.Player, Vector2.zero);
-        w.Story(11.5f, StoryKind.Heard, "Aiko heard running.", Vector2.zero, true);
+        w.Story(11.5f, StoryKind.Heard, "Karen heard running.", Vector2.zero, true);
         w.Frame(Frame(12f, Vector2.zero, new Vector2(18.5f, 0f)));
         CollectionAssert.AreEqual(new[] { "loud_mistake" }, Ids(markers));
         Assert.AreEqual(10f, markers[0].T);
@@ -359,10 +359,10 @@ public class ClipMarkerTests
     public void TheSmallerRules()
     {
         var (w, markers, _) = Watch();
-        w.Story(5f, StoryKind.Blink, "You blinked — and Aiko moved.", Vector2.zero, true);
-        w.Story(6f, StoryKind.Blink, "You blinked — and Aiko moved.", Vector2.zero, true);    // same blink burst
-        w.Story(20f, StoryKind.Learned, "Aiko noticed that the fog rattled you.", Vector2.zero, false);
-        w.Story(25f, StoryKind.Learned, "Aiko noticed that the spill didn't bother you.", Vector2.zero, false);   // cooling down
+        w.Story(5f, StoryKind.Blink, "You blinked — and Karen moved.", Vector2.zero, true);
+        w.Story(6f, StoryKind.Blink, "You blinked — and Karen moved.", Vector2.zero, true);    // same blink burst
+        w.Story(20f, StoryKind.Learned, "Karen noticed that the fog rattled you.", Vector2.zero, false);
+        w.Story(25f, StoryKind.Learned, "Karen noticed that the spill didn't bother you.", Vector2.zero, false);   // cooling down
         w.Pa(30f, "Thank you for your flexibility.");
         w.Pa(35f, "Five.");   // a countdown is one call
         w.PunchRefused(40f, Vector2.zero);

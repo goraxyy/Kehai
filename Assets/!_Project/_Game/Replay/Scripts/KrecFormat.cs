@@ -7,9 +7,9 @@ namespace Kehai.Replay
     // as the shift happens and read back in order. Snapshots, not a re-simulation: everything
     // that moves is sampled 30 times a second (the player's view 60 times), positions in
     // millimetres as deltas from the entity's last sample, rotations as three 16-bit numbers,
-    // and only what changed. Aiko's belief map is added twice a second, on a 3 m grid.
+    // and only what changed. Karen's belief map is added twice a second, on a 3 m grid.
     //
-    //   header   magic, version, the shift, the scene, Aiko's seed and rung, the maze's moves,
+    //   header   magic, version, the shift, the scene, Karen's seed and rung, the maze's moves,
     //            the belief grid, and the store as it was: shelf units, shelf slots, lights
     //   Tick     t                                    starts a 30 Hz sample
     //   Spawn    id, kind, key, label, pose, state, visible
@@ -21,7 +21,7 @@ namespace Kehai.Replay
     //   End      length, clocked out
     public enum KrecKind : byte
     {
-        Player = 0, Aiko = 1, Customer = 2, Understudy = 3, Item = 4, Door = 5, AutoDoorPanel = 6,
+        Player = 0, Karen = 1, Customer = 2, Understudy = 3, Item = 4, Door = 5, AutoDoorPanel = 6,
         ShelfUnit = 7, CrateWall = 8, Fog = 9, Cctv = 10, Coffee = 11, Footprint = 12, Spill = 13,
         Bin = 14, Bag = 15
     }
@@ -46,9 +46,9 @@ namespace Kehai.Replay
     {
         // Player: motion (0 still, 1 crouching, 2 walking, 3 sprinting) | 4 carrying | 8 holding a tool
         public const int PlayerCarrying = 4, PlayerHoldingTool = 8;
-        // Aiko: mood (0 calm, 1 alert, 2 hunt, 3 kind) | 4 sees you | 8 chasing
-        public const int AikoSees = 4, AikoChasing = 8;
-        // Item (tools are items): 0 loose, 1 in the player's hand, 2 held by someone else (Aiko
+        // Karen: mood (0 calm, 1 alert, 2 hunt, 3 kind) | 4 sees you | 8 chasing
+        public const int KarenSees = 4, KarenChasing = 8;
+        // Item (tools are items): 0 loose, 1 in the player's hand, 2 held by someone else (Karen
         // with the mop), 3 on a shelf | 8 switched on (the torch)
         public const int ItemLoose = 0, ItemInHand = 1, ItemHeld = 2, ItemOnShelf = 3, ItemLit = 8;
         // Door: 1 locked. Bin: how full. Bag: 1 disposed. Cctv: 1 bolted on | 2 dead.

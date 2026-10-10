@@ -105,17 +105,17 @@ def test_known_line_lengths_replace_the_estimate():
     assert any("takes 7.50s to say" in p for p in found), found
 
 
-def tracked_ctx(aiko=lambda t: (0.3 + 0.02 * t, 0.4, 0.04), you=lambda t: None):
+def tracked_ctx(karen=lambda t: (0.3 + 0.02 * t, 0.4, 0.04), you=lambda t: None):
     c = ctx()
     for s in c["shots"]:
         if s["id"] == "top":
-            s["track"] = track(20.13, aiko, you)
+            s["track"] = track(20.13, karen, you)
     return c
 
 
 def aimed(kind: str, scene: int = 2, **k) -> dict:
     d = draft()
-    d["scenes"][scene]["overlays"] = [ov(kind, start=1.0, to=2.0, target="aiko", x=0, y=0, **k)]
+    d["scenes"][scene]["overlays"] = [ov(kind, start=1.0, to=2.0, target="karen", x=0, y=0, **k)]
     return d
 
 
@@ -134,7 +134,7 @@ def test_a_circle_with_a_target_stays_around_her():
 
 
 def test_an_arrow_with_a_target_ends_at_her_edge_and_follows_her():
-    d, c = aimed("arrow"), tracked_ctx(aiko=lambda t: (0.6 + 0.01 * t, 0.3, 0.05))
+    d, c = aimed("arrow"), tracked_ctx(karen=lambda t: (0.6 + 0.01 * t, 0.3, 0.05))
     edit, _ = drafts.to_edit(d, c)
     a = edit["scenes"][2]["overlays"][0]
     assert a["from_x"] < a["to_x"] < 0.68 and a["from_y"] > a["to_y"] > 0.3, "from towards the middle, stopping short of her"
@@ -146,7 +146,7 @@ def test_a_target_follows_the_speed_and_the_zoom():
     d = aimed("circle", scene=0)
     d["scenes"][0]["visual"]["zoom"] = [{"at": 0, "scale": 2, "x": 0.5, "y": 0.5}]
     d["scenes"][0]["visual"]["speed"] = [{"at": 0, "rate": 2}]
-    c = tracked_ctx(aiko=lambda t: (0.55 + 0.01 * t, 0.5, 0.04))
+    c = tracked_ctx(karen=lambda t: (0.55 + 0.01 * t, 0.5, 0.04))
     edit, _ = drafts.to_edit(d, c)
     circle = edit["scenes"][0]["overlays"][0]
     # From scene time 1.0 at 2x after a 1.2 s trim: shot time 3.2; 0.05 + 0.032 right of the centre, doubled.
@@ -156,7 +156,7 @@ def test_a_target_follows_the_speed_and_the_zoom():
 
 def test_a_mark_waits_while_she_is_briefly_off_screen():
     d = aimed("circle")
-    c = tracked_ctx(aiko=lambda t: None if 8.3 <= t < 8.6 else (0.4, 0.4, 0.04))
+    c = tracked_ctx(karen=lambda t: None if 8.3 <= t < 8.6 else (0.4, 0.4, 0.04))
     edit, _ = drafts.to_edit(d, c)
     xs = [k["x"] for k in edit["scenes"][2]["overlays"][0]["follow"]]
     assert xs == pytest.approx([0.4] * 11)
@@ -164,7 +164,7 @@ def test_a_mark_waits_while_she_is_briefly_off_screen():
 
 def test_a_target_off_screen_is_refused_with_when_she_is_on_screen():
     d = aimed("circle")
-    c = tracked_ctx(aiko=lambda t: (0.5, 0.5, 0.04) if t < 5 else None)
+    c = tracked_ctx(karen=lambda t: (0.5, 0.5, 0.04) if t < 5 else None)
     found = drafts.problems(d, c)
     assert any("isn't in the picture" in p and "0.0–5.0s" in p for p in found), found
 
@@ -175,7 +175,7 @@ def test_a_target_needs_a_tracked_single_shot():
     found = drafts.problems(aimed("circle", scene=1), tracked_ctx())
     assert any("has no track" in p for p in found), found
     d = draft()
-    d["scenes"][0]["overlays"].append(ov("label", text="hi", target="aiko"))
+    d["scenes"][0]["overlays"].append(ov("label", text="hi", target="karen"))
     assert any("only arrows and circles take a target" in p for p in drafts.problems(d, tracked_ctx()))
 
 

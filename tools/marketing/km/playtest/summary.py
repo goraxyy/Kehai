@@ -1,4 +1,4 @@
-"""Claude reads one session (the playtest_summary step): what confused the tester, whether Aiko was
+"""Claude reads one session (the playtest_summary step): what confused the tester, whether Karen was
 too harsh or too soft, what to change, and each bug note rewritten as a neutral public issue.
 
 Runs only with ANTHROPIC_API_KEY set (or KEHAI_LLM_REPLAY, for tests); otherwise the session goes

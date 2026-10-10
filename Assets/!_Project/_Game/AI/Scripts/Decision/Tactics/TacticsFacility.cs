@@ -3,10 +3,10 @@ using System.Linq;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Tactics where Aiko acts as the building rather than the body: the lights, the shelves,
-    // the bins, the HUD, the PA (Aiko.md §8.1–8.3).
+    // Tactics where Karen acts as the building rather than the body: the lights, the shelves,
+    // the bins, the HUD, the PA (Karen.md §8.1–8.3).
 
     // ================================================================ §8.1 sight
 
@@ -25,13 +25,13 @@ namespace Kehai.Aiko
         public override string Chore => "find the torch, cross the maze to the breaker box, reset three breakers low hum to high";
         public override string Attacks => "sight";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             why = PowerSystem.PowerOn ? null : "the lights are already out";
             return PowerSystem.PowerOn;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Escalation by career: one wing first, the whole store later.
             bool full = c.ShiftNumber >= 5;
@@ -52,13 +52,13 @@ namespace Kehai.Aiko
             if (box.HasValue && c.Ledger.RoutePrior(c, c.Belief.PeakRegion, box.Value.Region, out int ambushRegion, out _))
             {
                 Vector3 at = c.Map.Regions[ambushRegion].Centroid;
-                plan.Go(at, AikoBody.Pace.Hurry, "wait on the route to the breakers", 1.5f);
+                plan.Go(at, KarenBody.Pace.Hurry, "wait on the route to the breakers", 1.5f);
                 plan.Add(new Hold(60f, k => k.A.Panic > k.Config.ambushAbortPanic || PowerSystem.PowerOn, "silent at " + c.RegionName(ambushRegion)));
             }
             else if (box.HasValue)
             {
                 Vector3 near = box.Value.Position + (believed - box.Value.Position).normalized * 8f;
-                plan.Go(TacticHelpers.OnFloor(near), AikoBody.Pace.Hurry, "wait near the breakers", 2f);
+                plan.Go(TacticHelpers.OnFloor(near), KarenBody.Pace.Hurry, "wait near the breakers", 2f);
                 plan.Add(new Hold(45f, k => k.A.Panic > k.Config.ambushAbortPanic, "silent near the breaker box"));
             }
         }
@@ -79,14 +79,14 @@ namespace Kehai.Aiko
         public override string Chore => "none — purely psychological";
         public override string Attacks => "sight";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             bool ok = PowerSystem.PowerOn && LightProbe.NearestOn(TacticHelpers.Believed(c), 6f) != null && c.A.Confidence > 0.2f;
             why = ok ? null : "no working light over the believed position";
             return ok;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             Vector3 believed = TacticHelpers.Believed(c);
             plan.Target = c.RegionName(c.Belief.PeakRegion);
@@ -109,7 +109,7 @@ namespace Kehai.Aiko
         public override string Chore => "cross it blind, or go the long way";
         public override string Attacks => "sight";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // The freezers stand along the back wall; flood whichever aisle end is nearest
             // to where she thinks you are.
@@ -138,7 +138,7 @@ namespace Kehai.Aiko
 
         int spot = -1;
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             spot = -1;
             foreach (int region in c.Ledger.ConcealmentRegions(c, 3))
@@ -152,12 +152,12 @@ namespace Kehai.Aiko
             return spot >= 0;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             if (spot < 0) return;
             Vector3 at = c.Map.Regions[spot].Centroid;
             plan.Target = c.RegionName(spot);
-            plan.Go(at, AikoBody.Pace.Walk, "go to your hiding place", 2f);
+            plan.Go(at, KarenBody.Pace.Walk, "go to your hiding place", 2f);
             plan.Add(new Tell(TellKind.Drilling, k => k.Body.Position, TellLead));
             plan.Add(new Effect("bolt a camera over " + plan.Target, k => k.World.BoltOnCamera(at)));
         }
@@ -181,7 +181,7 @@ namespace Kehai.Aiko
 
         ShelfUnit bay;
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             bay = TacticHelpers.BayToSweep(c, out string check);
             if (check != null) c.Think("CHECK", check);
@@ -189,16 +189,16 @@ namespace Kehai.Aiko
             return bay != null;
         }
 
-        public override float ExposureRisk(AikoContext c) =>
+        public override float ExposureRisk(KarenContext c) =>
             bay == null ? 0f : Mathf.Clamp01(1f - TacticHelpers.WalkFromBelief(c, bay.transform.position) / 25f);
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             if (bay == null) return;
             ShelfUnit target = bay;
             Vector3 standIn = TacticHelpers.StandIn(target);
             plan.Target = c.Where(standIn);
-            plan.Go(standIn, AikoBody.Pace.Walk, "walk to " + plan.Target, 1.5f);
+            plan.Go(standIn, KarenBody.Pace.Walk, "walk to " + plan.Target, 1.5f);
 
             // Don't get caught doing it: wait until no employee noise is close by.
             plan.Add(new WaitUntil(k => !k.Brain.HeardPlayerWithin(10f, 3f), 10f, "wait for quiet"));
@@ -217,7 +217,7 @@ namespace Kehai.Aiko
                 return ejected >= Mathf.Min(8, slots.Count);
             }));
             plan.Add(new Effect("mark sabotage", k => k.Brain.MarkSabotaged(target)));
-            plan.Go(TacticHelpers.Retreat(c), AikoBody.Pace.Walk, "retreat", 2.5f);
+            plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "retreat", 2.5f);
         }
     }
 
@@ -235,13 +235,13 @@ namespace Kehai.Aiko
         public override string Chore => "mop it (3 s standing still) or walk through and leave a trail";
         public override string Attacks => "work";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             why = c.World.DirtPrefab == null ? "no spill to make" : null;
             return c.World.DirtPrefab != null;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // A chokepoint you're likely to cross next — the neck of the pocket you're in.
             Region best = null;
@@ -258,10 +258,10 @@ namespace Kehai.Aiko
             plan.Target = best != null ? best.Name : c.Where(at);
             if (TacticHelpers.DenyVetoed(c, TaskManager.TaskKind.Mop, at, out string check)) { c.Think("CHECK", check); return; }
 
-            plan.Go(at, AikoBody.Pace.Walk, "go to " + plan.Target, 1.2f);
+            plan.Go(at, KarenBody.Pace.Walk, "go to " + plan.Target, 1.2f);
             plan.Add(new Tell(TellKind.BucketClank, k => k.Body.Position, 1f));
             plan.Add(new Effect("kick over a bucket at " + plan.Target, k => k.World.Spill(k.Body.Position)));
-            plan.Go(TacticHelpers.Retreat(c), AikoBody.Pace.Walk, "retreat", 2.5f);
+            plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "retreat", 2.5f);
         }
     }
 
@@ -281,7 +281,7 @@ namespace Kehai.Aiko
 
         Trashcan bin;
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             bin = null;
             foreach (Trashcan t in Trashcan.All)
@@ -290,13 +290,13 @@ namespace Kehai.Aiko
             return bin != null;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             if (bin == null) return;
             Trashcan target = bin;
             plan.Target = c.Where(TacticHelpers.OnFloor(target.transform.position));
             if (TacticHelpers.DenyVetoed(c, TaskManager.TaskKind.Trash, target.transform.position, out string check)) { c.Think("CHECK", check); return; }
-            plan.Go(TacticHelpers.OnFloor(target.transform.position), AikoBody.Pace.Walk, "go to the bin", 1.6f);
+            plan.Go(TacticHelpers.OnFloor(target.transform.position), KarenBody.Pace.Walk, "go to the bin", 1.6f);
             plan.Add(new Tell(TellKind.LidClatter, _ => target.transform.position, 0.9f));
             plan.Add(new Effect("refill " + plan.Target, k => { for (int i = 0; i < 3; i++) target.RegisterUse(); }));
         }
@@ -317,13 +317,13 @@ namespace Kehai.Aiko
         public override string Chore => "physically check the store — the HUD is no longer ground truth";
         public override string Attacks => "trust";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             why = HudFeed.Mode != Falsification.None ? "already lying" : null;
             return HudFeed.Mode == Falsification.None;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Early on she hides an unfinished job; later she adds jobs, and eventually real ones.
             TaskManager tasks = c.Tasks;
@@ -370,7 +370,7 @@ namespace Kehai.Aiko
 
         ToolSnapPoint rack;
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             rack = Object.FindObjectsByType<ToolSnapPoint>()
                          .FirstOrDefault(s => s.tool != null && s.tool.type == ItemType.Mop && s.IsToolHome);
@@ -379,7 +379,7 @@ namespace Kehai.Aiko
             return rack != null;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             if (rack == null) return;
             ToolSnapPoint home = rack;
@@ -388,10 +388,10 @@ namespace Kehai.Aiko
             Vector3 hide = c.Map.Regions[hideRegion].Centroid;
             plan.Target = "hide the mop in " + c.RegionName(hideRegion);
 
-            plan.Go(TacticHelpers.OnFloor(home.transform.position), AikoBody.Pace.Walk, "go to the mop rack", 1.5f);
+            plan.Go(TacticHelpers.OnFloor(home.transform.position), KarenBody.Pace.Walk, "go to the mop rack", 1.5f);
             plan.Add(new Tell(TellKind.MopRattle, _ => home.transform.position, 0.9f));
             plan.Add(new Effect("take the mop", k => k.Body.Carry(mop)));
-            plan.Go(hide, AikoBody.Pace.Walk, plan.Target, 1.5f);
+            plan.Go(hide, KarenBody.Pace.Walk, plan.Target, 1.5f);
             plan.Add(new Effect("leave the mop in " + c.RegionName(hideRegion), k =>
             {
                 k.Body.PutDown(mop);
@@ -415,14 +415,14 @@ namespace Kehai.Aiko
         public override string Chore => "more shift";
         public override string Attacks => "you";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             bool ok = c.A.TaskLoad >= 0.8f && !c.Brain.OvertimeArmed && UsesThisShift == 0;
             why = ok ? null : "not close enough to clocking out";
             return ok;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             plan.Target = "the time clock";
             plan.Add(new Effect("arm the overtime", k => k.Brain.ArmOvertime()));
@@ -437,7 +437,7 @@ namespace Kehai.Aiko
         public override float TellLead => 1.3f;
         public override string Attacks => "trust";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             if (c.World.Pa.Jammed) { why = "PA jammed"; return false; }
             if (c.World.Pa.Busy) { why = "PA busy"; return false; }
@@ -458,7 +458,7 @@ namespace Kehai.Aiko
         public override float PanicPrior => 0.12f;
         public override string Chore => "go and look — or don't";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // An aisle she is nowhere near, that you'd have to cross the store to check.
             Region decoy = c.Map.Regions
@@ -486,14 +486,14 @@ namespace Kehai.Aiko
         public override float PanicPrior => 0.18f;
         public override string Chore => "move before the customers finish staring";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             if (!base.Available(c, out why)) return false;
             if (c.A.Confidence < 0.25f) { why = "not sure enough to announce"; return false; }
             return true;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             Vector3 believed = TacticHelpers.Believed(c);
             string where = c.Map.RegionOf(believed)?.Section;
@@ -520,7 +520,7 @@ namespace Kehai.Aiko
         public override float PanicPrior => 0.05f;
         public override string Chore => "doubt your own list";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             var open = c.Tasks.Tasks.Where(t => !t.IsComplete).Select(t => t.Label.ToLowerInvariant()).ToList();
             open.Add(c.Rng.Pick(new[] { "polish the trolleys", "count the coins", "face up the cereal" }));
@@ -541,7 +541,7 @@ namespace Kehai.Aiko
         public override float PanicPrior => 0.07f;
         public override string Chore => "hurry";
 
-        public override bool Available(AikoContext c, out string why)
+        public override bool Available(KarenContext c, out string why)
         {
             if (!base.Available(c, out why)) return false;
             bool behind = c.Shift != null && c.Shift.TimeRemaining < 120f && c.A.TaskLoad < 0.7f;
@@ -549,7 +549,7 @@ namespace Kehai.Aiko
             return behind;
         }
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             int s = Mathf.CeilToInt(c.Shift.TimeRemaining);
             plan.Add(Speak.Line($"{TacticHelpers.PlayerName(c)}, you have {s / 60}:{s % 60:00} remaining. Your tasks are not complete."));
@@ -570,7 +570,7 @@ namespace Kehai.Aiko
         public override float TellLead => 0.9f;
         public override string Chore => "work out which footsteps are real";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Close to where she thinks you are, far from where she actually is.
             Vector3 believed = TacticHelpers.Believed(c);
@@ -597,7 +597,7 @@ namespace Kehai.Aiko
         public override string Chore => "check the doors";
         public override string Attacks => "sound";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             AutoDoubleDoor door = Object.FindObjectsByType<AutoDoubleDoor>()
                 .OrderBy(d => Vector3.Distance(d.transform.position, TacticHelpers.Believed(c)))
@@ -624,12 +624,12 @@ namespace Kehai.Aiko
         public override string Chore => "notice the absence";
         public override string Attacks => "sound";
 
-        public override void Plan(AikoContext c, PlanBuilder plan)
+        public override void Plan(KarenContext c, PlanBuilder plan)
         {
             plan.Target = c.RegionName(c.Belief.PeakRegion);
             plan.Add(new Tell(TellKind.SilenceFalls, k => k.Body.Position, TellLead));
             plan.Add(new SetSilent(true));
-            plan.Add(new MoveTo(k => TacticHelpers.Believed(k), AikoBody.Pace.Sneak, "creep toward " + plan.Target, 4f, 35f, follow: true));
+            plan.Add(new MoveTo(k => TacticHelpers.Believed(k), KarenBody.Pace.Sneak, "creep toward " + plan.Target, 4f, 35f, follow: true));
             plan.Add(new SetSilent(false));
         }
     }

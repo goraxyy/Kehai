@@ -1,9 +1,9 @@
 # Blink sidecar
 
-The webcam half of Aiko's blink channel (see `IDEAS.md` → *Blink*, and `BlinkTracker.cs`).
+The webcam half of Karen's blink channel (see `IDEAS.md` → *Blink*, and `BlinkTracker.cs`).
 A small helper process owns the camera, decides how shut your eyes are, and sends one JSON
 packet per frame to the game on `127.0.0.1:5066`. The game does the rest: calibration,
-hysteresis, predicting when your eyes will reopen, and what Aiko does with the window.
+hysteresis, predicting when your eyes will reopen, and what Karen does with the window.
 
 **Privacy.** Opt-in only (F8 in game shows what is used and asks first). Frames are processed
 in memory and thrown away; the helper never writes an image, never records, and only ever
@@ -88,7 +88,7 @@ keyboard fallback at any time.
 | method | needs | notes |
 |---|---|---|
 | `mac/build/BlinkVision` | a Mac, the Xcode command line tools | Apple Vision landmarks; what the game starts first on a Mac |
-| `--synthetic` | nothing | for testing Aiko's reactions; same generator the eval bots use |
+| `--synthetic` | nothing | for testing Karen's reactions; same generator the eval bots use |
 | `--method ear` | opencv, mediapipe | robust, adapts to your face automatically |
 | `--method blendshapes --model face_landmarker.task` | + the MediaPipe FaceLandmarker model file | most accurate off the shelf; download the `.task` file from the MediaPipe Face Landmarker docs |
 | `--method cnn --onnx eye_cnn.onnx` | + onnxruntime, your model | the "own training path" below |
@@ -103,7 +103,7 @@ python3 blink_server.py --method cnn --onnx eye_cnn.onnx
 
 The model contract — input `eye` `[n,1,24,24]` grayscale 0..1 with rows top-down, output
 `closed_logit` `[n,1]` — is the same one `SentisBlinkSource.cs` expects, so the same file can
-run in-engine: add `com.unity.ai.inference`, import the `.onnx`, and define `AIKO_SENTIS`.
+run in-engine: add `com.unity.ai.inference`, import the `.onnx`, and define `KAREN_SENTIS`.
 
 Datasets and models are personal and stay out of git (`.gitignore` here).
 
@@ -115,4 +115,4 @@ Datasets and models are personal and stay out of git (`.gitignore` here).
 ```
 
 `capture` → `sent` is the pipeline's own latency; the game subtracts it to date the true start
-of each blink, and Aiko acts in whatever is left of the ~300 ms.
+of each blink, and Karen acts in whatever is left of the ~300 ms.

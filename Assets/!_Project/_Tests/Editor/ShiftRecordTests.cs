@@ -3,20 +3,20 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Kehai;
-using Kehai.Aiko;
+using Kehai.Karen;
 using NUnit.Framework;
 using UnityEngine;
 
 // The shift record: the file the report page reads must parse whatever the names and
 // sentences contain, the analysis must count what happened, and the page must keep the
-// data inside its script tag. Plus the house rule that Aiko's name is never abbreviated.
+// data inside its script tag. Plus the house rule that Karen's name is never abbreviated.
 public class ShiftRecordTests
 {
     static ShiftRecording Sample()
     {
         var r = new ShiftRecording
         {
-            ShiftNumber = 3, PlayerName = "Employee \"#0417\"", AikoRung = "F_Blink",
+            ShiftNumber = 3, PlayerName = "Employee \"#0417\"", KarenRung = "F_Blink",
             StartedAt = "2026-09-26 05:38", Length = 12f, ClockedOut = true
         };
         for (int i = 0; i <= 60; i++)
@@ -24,7 +24,7 @@ public class ShiftRecordTests
             var f = new ShiftFrame
             {
                 T = i * 0.2f, Player = new Vector2(40f + i * 0.1f, -150f), PlayerYaw = 90f, Energy = 1f - i / 100f,
-                AikoPresent = true, Aiko = new Vector2(60f - i * 0.2f, -150f), AikoSees = i > 30,
+                KarenPresent = true, Karen = new Vector2(60f - i * 0.2f, -150f), KarenSees = i > 30,
                 Guess = new Vector2(45f, -150f), GuessConfidence = i == 10 ? float.NaN : 0.4f
             };
             f.Customers.Add(new PersonState { Id = 1, At = new Vector2(50f, -140f), State = i < 30 ? CustomerMark.Asking : CustomerMark.Following, Bay = 7 });
@@ -95,9 +95,9 @@ public class ShiftRecordTests
         Assert.IsFalse(html.Contains("__DATA__") || html.Contains("__TITLE__") || html.Contains("__ANTAGONIST__"));
     }
 
-    // "Aiko", never AIKO or A.I.K.O. — in the game's text and in the docs.
+    // "Karen", never KAREN or K.A.R.E.N. — in the game's text and in the docs.
     [Test]
-    public void AikosName_IsNeverAbbreviated()
+    public void KarensName_IsNeverAbbreviated()
     {
         string root = Directory.GetParent(Application.dataPath).FullName;
         var files = Directory.GetFiles(Path.Combine(Application.dataPath, "!_Project"), "*.cs", SearchOption.AllDirectories)
@@ -106,7 +106,7 @@ public class ShiftRecordTests
             .Concat(Directory.GetFiles(Path.Combine(root, "tools"), "*.*", SearchOption.AllDirectories)
                 .Where(p => (p.EndsWith(".md") || p.EndsWith(".py") || p.EndsWith(".swift"))
                          && !p.Contains(".venv") && !p.Contains("site-packages")));
-        var shouting = new Regex(@"\bAIKO\b|A\.I\.K\.O");
+        var shouting = new Regex(@"\bKAREN\b|K\.A\.R\.E\.N");
         var found = new List<string>();
         foreach (string file in files)
         {

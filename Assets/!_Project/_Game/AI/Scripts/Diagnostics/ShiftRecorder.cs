@@ -3,9 +3,9 @@ using System.IO;
 using Kehai.Store;
 using UnityEngine;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // Records the shift: where you, Aiko and every customer were five times a second, and
+    // Records the shift: where you, Karen and every customer were five times a second, and
     // everything that happened — sounds, her decisions, your jobs, customers asking and
     // queueing, the lights. Keeps a live picture for the F1 map, the whole shift for the F2
     // replay, and at clock-out writes it to disk with a report you can open in a browser:
@@ -69,7 +69,7 @@ namespace Kehai.Aiko
         void OnEnable()
         {
             NoiseBus.Emitted += OnNoise;
-            AikoNarrator.Said += OnStory;
+            KarenNarrator.Said += OnStory;
             GameEvents.SpillCleaned += OnSpill;
             GameEvents.ShelfRestocked += OnRestocked;
             GameEvents.BinBagged += OnBagged;
@@ -84,7 +84,7 @@ namespace Kehai.Aiko
         void OnDisable()
         {
             NoiseBus.Emitted -= OnNoise;
-            AikoNarrator.Said -= OnStory;
+            KarenNarrator.Said -= OnStory;
             GameEvents.SpillCleaned -= OnSpill;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.BinBagged -= OnBagged;
@@ -119,12 +119,12 @@ namespace Kehai.Aiko
 
         void Begin()
         {
-            AikoBrain brain = AikoBrain.Instance;
+            KarenBrain brain = KarenBrain.Instance;
             Current = new ShiftRecording
             {
                 ShiftNumber = shift != null ? shift.ShiftNumber : 0,
                 PlayerName = brain != null && brain.Ledger != null ? brain.Ledger.PlayerName : "",
-                AikoRung = brain != null ? brain.config.rung.ToString() : "",
+                KarenRung = brain != null ? brain.config.rung.ToString() : "",
                 StartedAt = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm")
             };
             shiftStartedAt = Time.time;
@@ -303,7 +303,7 @@ namespace Kehai.Aiko
             StoreMap map = StoreMap.Current;
             if (bay < 0 || bay >= map.Bays.Count) return "a shelf";
             Bay b = map.Bays[bay];
-            if (string.IsNullOrEmpty(b.Section)) return "a shelf near " + AikoNarrator.Place(b.Position);
+            if (string.IsNullOrEmpty(b.Section)) return "a shelf near " + KarenNarrator.Place(b.Position);
             int dot = b.Section.IndexOf(" · ", System.StringComparison.Ordinal);
             return dot < 0 ? $"the {b.Section} shelf" : $"the {b.Section.Substring(dot + 3)} shelf ({b.Section.Substring(0, dot)})";
         }
@@ -332,7 +332,7 @@ namespace Kehai.Aiko
         void OnNoise(NoiseEvent n)
         {
             if (n.Kind == NoiseKind.Tell) return;   // the warning itself is a story line
-            Add("sound", AikoNarrator.Noise(n.Kind), n.Position, true, AikoNarrator.Who(n.Author), n.Carry);
+            Add("sound", KarenNarrator.Noise(n.Kind), n.Position, true, KarenNarrator.Who(n.Author), n.Carry);
         }
 
         void OnStory(StoryLine line) => Add(line.Kind.ToString(), line.Text, line.At, line.HasPlace, GameNames.Antagonist);
@@ -341,8 +341,8 @@ namespace Kehai.Aiko
 
         static Vector3 PlayerAt => PlayerPresence.Current != null ? PlayerPresence.Current.Position : Vector3.zero;
 
-        void OnSpill(Dirt d) => Job("mopped a spill", $"You mopped a spill in {AikoNarrator.Place(d != null ? d.transform.position : PlayerAt)}.", d != null ? d.transform.position : PlayerAt);
-        void OnRestocked(ShelfUnit u, int n) => Job("restocked a shelf", $"You restocked a shelf in {AikoNarrator.Place(u != null ? TacticHelpers.StandIn(u) : PlayerAt)}.", u != null ? TacticHelpers.StandIn(u) : PlayerAt);
+        void OnSpill(Dirt d) => Job("mopped a spill", $"You mopped a spill in {KarenNarrator.Place(d != null ? d.transform.position : PlayerAt)}.", d != null ? d.transform.position : PlayerAt);
+        void OnRestocked(ShelfUnit u, int n) => Job("restocked a shelf", $"You restocked a shelf in {KarenNarrator.Place(u != null ? TacticHelpers.StandIn(u) : PlayerAt)}.", u != null ? TacticHelpers.StandIn(u) : PlayerAt);
         void OnBagged(Trashcan t) => Job("bagged a bin", "You bagged up a full bin — now take it to the skip outside.", t != null ? t.transform.position : PlayerAt);
         void OnDisposed(TrashBag b) => Job("took a bag to the skip", "You threw a rubbish bag in the skip.", PlayerAt);
         void OnCoffee(Vector3 at) => Job("drank a coffee", "You drank a coffee. Energy restored.", at);

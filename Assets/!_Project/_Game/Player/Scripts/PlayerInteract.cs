@@ -246,9 +246,9 @@ public class PlayerInteract : MonoBehaviour
         Item dropped = carrySlot.Drop();
         if (dropped == null) return;
 
-        dropped.lastAuthor = Kehai.Aiko.NoiseAuthor.Player;
+        dropped.lastAuthor = Kehai.Karen.NoiseAuthor.Player;
         GameEvents.RaisePlayerDroppedItem(dropped, dropped.transform.position);
-        Kehai.Aiko.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Aiko.NoiseKind.DroppedItem, Kehai.Aiko.NoiseAuthor.Player);
+        Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
 
         var body = dropped.GetComponent<Rigidbody>();
         if (body == null || throwSpeed <= 0f) return;

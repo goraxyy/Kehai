@@ -3,9 +3,9 @@ using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Kehai.Aiko
+namespace Kehai.Karen
 {
-    // The fairness contract (Aiko.md §9), enforced in code.
+    // The fairness contract (Karen.md §9), enforced in code.
     //
     // Some of the checks need the truth — whether the employee could still finish the
     // shift, whether they can see her path — and this is the one place outside the Director
@@ -65,7 +65,7 @@ namespace Kehai.Aiko
         }
 
         // Rule 2: the hint is withheld while the employee can see the path she's walking.
-        public static bool PlayerSeesPath(AikoBody body, PlayerPresence player)
+        public static bool PlayerSeesPath(KarenBody body, PlayerPresence player)
         {
             if (body == null || player == null) return false;
             Vector3 eye = player.Head;

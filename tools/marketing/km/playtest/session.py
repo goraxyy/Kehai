@@ -15,7 +15,7 @@ MOST_PATH_POINTS = 3000
 # The shift record's numbers worth carrying (ShiftAnalysis).
 NUMBERS = {
     "Walked (m)": "walked_m", "Sprinting (s)": "sprinting_s", "Crouching (s)": "crouching_s",
-    "Times Aiko spotted you": "spotted", "Seconds in her sight": "seen_s", "Closest she got (m)": "closest_m",
+    "Times Karen spotted you": "spotted", "Seconds in her sight": "seen_s", "Closest she got (m)": "closest_m",
     "Chases": "chases", "Catches": "catches", "Warning sounds": "warnings", "Customers served": "served",
     "Directions given": "directions", "Gave up asking": "gave_up_asking", "Gave up at the till": "gave_up_till",
     "Lowest energy (%)": "lowest_energy",
