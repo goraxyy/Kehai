@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renders the shots a plan asks for, one at a time, through render_shot.sh (BUILD_PLAN.md, Phase 6).
+"""Renders the shots a plan asks for, one at a time, through render_shot.sh (docs/MARKETING.md).
 
     uv run render_picks.py <plans/<week>/picks.json | long/<month>/outline.json> [--only NAME] [--dry-run] [--root DIR]
 

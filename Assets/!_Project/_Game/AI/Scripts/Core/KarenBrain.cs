@@ -15,7 +15,7 @@ namespace Kehai.Karen
     //   Director   5 Hz            panic, setpoint, tension, permissions
     //   Decide     2 Hz or event   goal by utility → tactic → plan (HTN, anytime)
     //
-    // The rung (IDEAS.md §2) decides how much of this is switched on. A and B are the old
+    // The rung (IDEAS.md, Ablation) decides how much of this is switched on. A and B are the old
     // patrol-and-chase guard, kept as the ablation floor; C and up are Karen.
     [DefaultExecutionOrder(100)]
     public sealed class KarenBrain : MonoBehaviour

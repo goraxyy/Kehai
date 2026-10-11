@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speaks the same lines in several candidate voices, so the owner can pick (Q10; BUILD_PLAN.md, Phase 6).
+"""Speaks the same lines in several candidate voices, so the owner can pick (docs/MARKETING.md, Still to decide).
 
     uv run voice_samples.py [--backend azure|say] [--role narrator|karen] [--lang en|ru] [--dry-run] [--root DIR]
 

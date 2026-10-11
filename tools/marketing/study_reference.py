@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Studies a reference video and saves it as a pattern for future shorts (BUILD_PLAN.md, Phase 8).
+"""Studies a reference video and saves it as a pattern for future shorts (docs/MARKETING.md).
 
     uv run study_reference.py <video file> [--note "what I like about it"] [--dry-run] [--root DIR]
     uv run study_reference.py <reference id> [--note "what you got wrong"]     (one Telegram brought in)

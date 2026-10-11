@@ -1,4 +1,4 @@
-"""Posting approved shorts, one per posting day (pipeline.json: Mon/Wed/Fri).
+"""Posting approved shorts, one per posting day (pipeline.json: Tuesdays and Fridays).
 
 The oldest approved short goes to each Buffer channel's queue (Buffer's own schedule picks the
 time: Q14), from a public copy of the file (km/media.publish). TikTok, and any platform Buffer

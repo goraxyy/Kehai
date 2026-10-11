@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Translates an edit's text (on-screen text and the voice-over script) from English (BUILD_PLAN.md, Phase 6).
+"""Translates an edit's text (on-screen text and the voice-over script) from English (docs/MARKETING.md).
 
     uv run translate.py <edit.json | edit folder | id> [--to ru] [--dry-run] [--root DIR]
 

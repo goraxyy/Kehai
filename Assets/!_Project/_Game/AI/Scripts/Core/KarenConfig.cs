@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    // The ablation ladder from IDEAS.md §2. Each rung adds exactly one mechanism to the one
+    // The ablation ladder from IDEAS.md (Ablation). Each rung adds exactly one mechanism to the one
     // below it, so any difference in the results table is attributable.
     public enum KarenRung
     {

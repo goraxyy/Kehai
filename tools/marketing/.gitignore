@@ -1,4 +1,4 @@
-# Code and docs only: never media, voices, music, fonts or keys (BUILD_PLAN.md, ground rules).
+# Code and docs only: never media, voices, music, fonts or keys (docs/MARKETING.md).
 .env
 .venv/
 __pycache__/

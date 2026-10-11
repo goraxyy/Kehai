@@ -1,4 +1,4 @@
-"""Reference videos the owner sends in Telegram, and what becomes of them (BUILD_PLAN.md, Phase 8).
+"""Reference videos the owner sends in Telegram, and what becomes of them (docs/MARKETING.md).
 
 1. The owner sends a video (as a video, under 20 MB; its caption is their note). The Telegram job
    saves it to references/<id>/ and queues a `reference` job.

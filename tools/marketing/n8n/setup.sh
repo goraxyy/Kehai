@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sets up the pipeline's schedule (BUILD_PLAN.md, Phase 7), on this Mac only. Two ways to run it:
+# Sets up the pipeline's schedule (docs/MARKETING.md), on this Mac only. Two ways to run it:
 #
 #   tools/marketing/n8n/setup.sh --launchd         macOS runs each job at its time (LaunchAgents com.tokenlimit.kehai.job.*);
 #                                                  nothing stays in memory between runs, and a time the Mac slept through runs

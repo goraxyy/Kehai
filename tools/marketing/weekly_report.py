@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The weekly report for the owner: what the pipeline made and spent, and what to try next
-(BUILD_PLAN.md, Phase 6; Phase 7 sends it to Telegram).
+(docs/MARKETING.md).
 
     uv run weekly_report.py [--week 2026-W40] [--dry-run] [--root DIR]
 

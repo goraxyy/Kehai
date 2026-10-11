@@ -1,1 +1,1 @@
-"""Kehai marketing: the pieces the pipeline's scripts share (BUILD_PLAN.md)."""
+"""Kehai marketing: the pieces the pipeline's scripts share (docs/MARKETING.md)."""

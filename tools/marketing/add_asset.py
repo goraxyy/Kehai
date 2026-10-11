@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Adds a file to the asset library: the only way music, sound effects, images, GIFs, Lottie
-animations, video or fonts get into an edit (BUILD_PLAN.md, Phase 5).
+animations, video or fonts get into an edit (docs/MARKETING.md).
 
     uv run add_asset.py <file> --type music --licence "CC0 1.0" --source <url or own> \\
         --cleared youtube,tiktok,instagram [--author ...] [--attribution ...] \\

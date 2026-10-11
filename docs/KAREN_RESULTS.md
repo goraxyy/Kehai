@@ -1,6 +1,6 @@
 # Karen — ablation results
 
-The ablation ladder from [`IDEAS.md`](../design/IDEAS.md) §2, run headless against three scripted players.
+The ablation ladder from [`IDEAS.md`](IDEAS.md#4-ablation), run headless against three scripted players.
 Each rung adds one mechanism, so a difference between neighbouring rungs is that mechanism.
 
 | rung | Karen | learns |

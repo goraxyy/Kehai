@@ -1102,7 +1102,7 @@ Sanity checks that fail loudly in CI:
 
 Everything in §§2–13 is built. This section maps the design onto the code and says where the
 code departs from the plan above. Results of the ablation ladder are in
-[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
+[`KAREN_RESULTS.md`](KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
 
@@ -1111,15 +1111,15 @@ code departs from the plan above. Results of the ablation ladder are in
 | §2 three minds | `AI/Scripts/Core/KarenBody.cs`, `KarenDirector.cs` (+ `PanicIndex`), `KarenLedger.cs`, tied together by `KarenBrain.cs` |
 | §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
 | §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
-| §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; readable export in [`STORE_MAP.md`](STORE_MAP.md) |
+| §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](STORE.md#karens-map) |
 | §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard) |
 | §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
 | §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`; Panic Index and PI pacing in `KarenDirector.cs` |
 | §8 tactic library | `AI/Scripts/Decision/Tactics/` — 35 tactics across tiers 0–4 |
 | §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
 | §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
-| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` §§1–2 |
-| blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md` → Blink) |
+| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` (the agent test environment, ablation) |
+| blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md`, the blink mechanic) |
 
 Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
 version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line.
@@ -1195,10 +1195,12 @@ the wall colliders, so the map is the store as it actually is.
   Across the final ablation (216 shifts, `KAREN_RESULTS.md`) the guard recorded none.
 - **A written warning always comes with a release window** (lecture + 15 s with no second catch), at
   every rung — without it the simplest rungs could catch you again the moment a lecture ended.
-- **Learning scope per rung** follows `IDEAS.md` §2 exactly: C uses the authored prior, D learns
+- **Learning scope per rung** follows the ablation table in `IDEAS.md` exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
   two shifts), F adds the blink channel.
-- **Not built:** the infinite maze (`IDEAS.md`), a second Karen body (§14), and the Sentis in-engine
+- **The endless maze** is built in a scene of its own and parked; Karen isn't in it yet
+  (`DECISIONS.md`).
+- **Not built:** a second Karen body (§14), and the Sentis in-engine
   blink model is written but only compiles once the `com.unity.ai.inference` package is added and
   `KAREN_SENTIS` is defined.
 

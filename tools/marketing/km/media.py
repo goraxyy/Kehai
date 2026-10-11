@@ -71,7 +71,7 @@ def megabytes(path: Path) -> float:
 def rclone() -> str:
     exe = shutil.which("rclone")
     if not exe:
-        raise NotSetUp("rclone isn't installed (brew install rclone; BUILD_PLAN.md, owner setup)")
+        raise NotSetUp("rclone isn't installed (brew install rclone; docs/MARKETING.md, Setup)")
     return exe
 
 
@@ -85,7 +85,7 @@ def _run(args: list[str], timeout: int = 3600) -> str:
 def drive_target(rel: str) -> str:
     remote = paths.DRIVE_REMOTE
     if remote not in _run(["listremotes"]).replace(":", "").split():
-        raise NotSetUp(f"rclone has no `{remote}` remote yet (rclone config; BUILD_PLAN.md, owner setup)")
+        raise NotSetUp(f"rclone has no `{remote}` remote yet (rclone config; docs/MARKETING.md, Setup)")
     return f"{remote}:{paths.DRIVE_FOLDER}/{rel}"
 
 

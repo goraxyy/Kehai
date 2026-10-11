@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speaks an edit's script into its voice track, in each language (BUILD_PLAN.md, Phase 6).
+"""Speaks an edit's script into its voice track, in each language (docs/MARKETING.md).
 
     uv run voice.py <edit.json | edit folder | id> [--lang en,ru] [--backend azure|elevenlabs|say] \\
         [--force] [--dry-run] [--root DIR]

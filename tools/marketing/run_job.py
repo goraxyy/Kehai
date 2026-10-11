@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The one entry point the n8n workflows call (BUILD_PLAN.md, Phase 7). Each subcommand is one
+"""The one entry point the n8n workflows call (docs/MARKETING.md). Each subcommand is one
 scheduled job; it prints what it did and ends with one JSON line for n8n.
 
     uv run run_job.py produce [--week 2026-W40] [--pick-now] [--dry-run]   new shifts, the week's picks, each short along its steps
