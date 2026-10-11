@@ -123,7 +123,7 @@ namespace Kehai.Store
             sb.AppendLine("## Planogram sections");
             sb.AppendLine();
             sb.AppendLine("Which regions each section of the sales floor covers — where to send a customer asking");
-            sb.AppendLine("for something. `STORE_CATALOG.md` lists what each section sells.");
+            sb.AppendLine("for something. `docs/STORE.md` says what each section sells.");
             sb.AppendLine();
             sb.AppendLine("| section | bays | regions |");
             sb.AppendLine("|---|---|---|");

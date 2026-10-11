@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 namespace Kehai.Eval
 {
-    // Drives the real player body from code (IDEAS.md §1 "Action space").
+    // Drives the real player body from code (IDEAS.md, the agent test environment).
     //
     // Everything goes through the same systems a person uses: PlayerMotor moves the
     // CharacterController (so walls, stamina and footstep noise are identical), and

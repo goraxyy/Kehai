@@ -2,7 +2,7 @@
   "name": "kehai-editor",
   "private": true,
   "version": "1.0.0",
-  "description": "Kehai's video editor: one Remotion composition driven by edit.json (see ../BUILD_PLAN.md, Phase 5).",
+  "description": "Kehai's video editor: one Remotion composition driven by edit.json (see docs/MARKETING.md).",
   "type": "module",
   "scripts": {
     "studio": "remotion studio src/index.ts",

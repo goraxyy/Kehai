@@ -1,9 +1,10 @@
 # Kehai marketing pipeline
 
 Scripts that turn recorded shifts into finished videos, from picking the moments to the text
-that goes with each post. The plan, its phases and the decisions behind them are in
-[`BUILD_PLAN.md`](BUILD_PLAN.md); the video editor has its own [`editor/README.md`](editor/README.md).
-Phase 7 chains these steps in n8n with approvals in Telegram; each one also runs by hand.
+that goes with each post. What it's for, the setup and the decisions still open are in
+[`docs/MARKETING.md`](../../docs/MARKETING.md); the video editor has its own
+[`editor/README.md`](editor/README.md). launchd runs these steps on a schedule, with approvals in
+Telegram; each one also runs by hand.
 
 ```bash
 uv sync                                   # once: Python 3.12, the Anthropic and Azure Speech SDKs
@@ -115,7 +116,7 @@ Not marketing, but it shares this pipeline's Telegram, Claude client and schedul
 job also pulls new playtest sessions from the upload service, reads and summarises them (the
 `playtest_summary` step), announces them in Telegram, and rebuilds the combined report; a bug
 note becomes a GitHub issue only when you tap 📝 (`pt:` buttons). `uv run playtest.py status`
-shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/production/PLAYTEST.md).
+shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/PLAYTEST.md).
 
 ## Exit codes (every script)
 

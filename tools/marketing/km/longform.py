@@ -1,4 +1,4 @@
-"""The monthly long video, with the owner's ✋ gates in Telegram (BUILD_PLAN.md, Phase 7).
+"""The monthly long video, with the owner's ✋ gates in Telegram (docs/MARKETING.md).
 
 outline ✋ → (the outline's shots render) script ✋ → (voice, the edit, the English cut)
 rough cut ✋ → (packaging, the Russian audio, subtitles) the final files on Drive for YouTube

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Picks the week's shorts from the shifts' clip moments, and the shots to render for each
-(BUILD_PLAN.md, Phase 6).
+(docs/MARKETING.md).
 
     uv run pick_moments.py [--week 2026-W40 | --files a.markers.json ...] [--shorts 3] [--pattern NAME ...] [--dry-run] [--root DIR]
 

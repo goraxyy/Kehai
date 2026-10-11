@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Revises a video from the owner's note (the ✏️ reply in Telegram), or undoes the last change
-(BUILD_PLAN.md, Phase 6).
+(docs/MARKETING.md).
 
     uv run revise.py <edit.json | edit folder | id> --note "make the hook about the blink" [--dry-run] [--root DIR]
     uv run revise.py <edit> --undo

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The monthly long video, in stages the owner approves one by one (BUILD_PLAN.md, Phases 6–7).
+"""The monthly long video, in stages the owner approves one by one (docs/MARKETING.md).
 
     uv run long_video.py outline --month 2026-10 [--note "…"] [--dry-run] [--root DIR]   sections, beats, shots to render
     uv run long_video.py script  --month 2026-10 [--note "…"] [--dry-run]                the voice-over, section by section
@@ -37,7 +37,8 @@ def month_docs(month: str) -> list[dict]:
 def changes(month: str) -> dict:
     """What changed in the game this month: CHANGELOG.md's entries and the commits' subjects."""
     start, end = moments.month_range(month)
-    log = (paths.REPO / "CHANGELOG.md").read_text(encoding="utf-8") if (paths.REPO / "CHANGELOG.md").exists() else ""
+    changelog = paths.REPO / "docs" / "CHANGELOG.md"
+    log = changelog.read_text(encoding="utf-8") if changelog.exists() else ""
     entries = [line.strip("- ").strip() for line in log.splitlines() if re.match(rf"- \*\*{month}-\d\d\*\*", line)]
     try:
         out = subprocess.run(["git", "-C", str(paths.REPO), "log", f"--since={start}", f"--until={end}", "--no-merges",

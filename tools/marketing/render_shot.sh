@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders one shot of a recorded shift with Unity, unattended (BUILD_PLAN.md, Phase 4).
+# Renders one shot of a recorded shift with Unity, unattended (docs/MARKETING.md).
 #
 #   tools/marketing/render_shot.sh -krec <file.krec> [-moment 1 | -from <s> -to <s>]
 #       [-shot pov|cctv|chase|orbit|topdown|path|<path.json>] [-subject karen|you]

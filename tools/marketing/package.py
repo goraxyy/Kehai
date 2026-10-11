@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Writes what goes with a video when it's posted: titles, descriptions, captions, hashtags, a
-pinned comment, per platform and language (BUILD_PLAN.md, Phase 6).
+pinned comment, per platform and language (docs/MARKETING.md).
 
     uv run package.py <edit.json | edit folder | id> [--dry-run] [--root DIR]
 

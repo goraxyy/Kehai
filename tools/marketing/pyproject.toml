@@ -1,7 +1,7 @@
 [project]
 name = "kehai-marketing"
 version = "0.1.0"
-description = "Kehai's marketing pipeline: the asset library, the Claude writing steps and the voice (publishing comes in Phase 7). See README.md and BUILD_PLAN.md."
+description = "Kehai's marketing pipeline: the asset library, the Claude writing steps and the voice (publishing comes in Phase 7). See README.md and docs/MARKETING.md."
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1.11.0",

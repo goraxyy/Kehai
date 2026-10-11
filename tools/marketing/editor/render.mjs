@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Renders an edit: one MP4 per language (BUILD_PLAN.md, Phase 5).
+// Renders an edit: one MP4 per language (docs/MARKETING.md).
 //
 //   node render.mjs <edit.json> [--lang en|ru|all] [--root <working folder>] [--out <folder>]
 //                   [--concurrency 1|2] [--scale 0.5] [--frames 0-150] [--dry-run]

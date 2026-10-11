@@ -3,13 +3,13 @@
   "version": 1,
   "timezone": "America/New_York",
   "production": {
-    "shorts_per_week": 3,
+    "shorts_per_week": 2,
     "pick_day": "sat",
     "min_moments": 3,
     "retries": 3
   },
   "posting": {
-    "days": ["mon", "wed", "fri"],
+    "days": ["tue", "fri"],
     "buffer": ["youtube", "instagram", "twitter"],
     "languages": ["en"],
     "tiktok": "manual",

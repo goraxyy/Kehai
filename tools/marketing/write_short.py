@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes a short from a picked moment: scenes, text, voice-over script, music (BUILD_PLAN.md, Phase 6).
+"""Writes a short from a picked moment: scenes, text, voice-over script, music (docs/MARKETING.md).
 
     uv run write_short.py --picks plans/<week>/picks.json --pick <name> [--dry-run] [--root DIR]
     uv run write_short.py --shots <folder of rendered shots> --brief "what it's about" [--moment <stem>#<rank>]

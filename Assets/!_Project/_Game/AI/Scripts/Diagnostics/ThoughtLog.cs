@@ -14,7 +14,7 @@ namespace Kehai.Karen
         public string Why;
     }
 
-    // One structured record per decision (IDEAS.md §4). Structured on purpose — sentences
+    // One structured record per decision (IDEAS.md, the thought log). Structured on purpose — sentences
     // can't be plotted. `Because` is the one free-text field, and it names the mechanism.
     public sealed class ThoughtRecord : IJsonWritable
     {

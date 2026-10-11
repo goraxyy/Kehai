@@ -3,11 +3,12 @@ using Kehai.Store;
 using UnityEditor;
 using UnityEngine;
 
-// Writes the store map out for people and agents to read. The map itself is rebuilt from
-// the scene every time the game runs; this only refreshes the readable copy in the repo.
+// Writes the full store map out for people and agents to read. The map itself is rebuilt from
+// the scene every time the game runs; this writes a readable copy into Library/ (not the repo:
+// docs/STORE.md has the short version).
 public static class StoreMapMenu
 {
-    const string MarkdownPath = "docs/design/STORE_MAP.md";
+    const string MarkdownPath = "Library/Kehai/STORE_MAP.md";
 
     [MenuItem("Kehai/Map/Export STORE_MAP.md")]
     public static void ExportMarkdown()
@@ -27,8 +28,9 @@ public static class StoreMapMenu
     public static string Export()
     {
         StoreMap map = StoreMap.Rebuild();
-        string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-        File.WriteAllText(Path.Combine(projectRoot, MarkdownPath), StoreMapReport.ToMarkdown(map));
+        string path = Path.Combine(Directory.GetParent(Application.dataPath).FullName, MarkdownPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.WriteAllText(path, StoreMapReport.ToMarkdown(map));
         return map.Summary();
     }
 }
