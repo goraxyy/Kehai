@@ -190,6 +190,7 @@ public static class StoreLayout
         foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include))
             plans.Add(PlanBay(unit, ZoneAt(unit.transform.position)));
         plans.Sort((a, b) => ComparePositions(a.Unit.transform.position, b.Unit.transform.position));
+        PlanAisles(plans);
         foreach (ItemType section in ProductCatalog.StockSections) FillGaps(plans, section);
 
         foreach (BayPlan plan in plans)
@@ -205,7 +206,7 @@ public static class StoreLayout
                 afterWrite?.Invoke(unit);
             }
 
-            int n = StockBay(plan, writeScene, stock, facingsPerProduct, null);
+            int n = StockBay(plan, writeScene, stock, facingsPerProduct, null, beforeWrite, afterWrite);
             slots += n;
 
             Tally(baysPerSection, zone.Section, 1);
@@ -245,8 +246,8 @@ public static class StoreLayout
         public string[] Ids;
     }
 
-    // Planogram picks the product for each board from its height (eye, waist or stoop level)
-    // and side.
+    // Each board's facings, with the product the bay's own layout would give them: what an end
+    // cap keeps, and what any other facing starts from before PlanAisles plans it with its aisle.
     static BayPlan PlanBay(ShelfUnit unit, Zone zone)
     {
         Transform bay = unit.transform;
@@ -263,6 +264,85 @@ public static class StoreLayout
             ids[i] = Planogram.ProductFor(zone.Section, seed, facings[i].Back, Planogram.BoardAt(facings[i].Height), endCap);
         return new BayPlan { Unit = unit, Zone = zone, Facings = facings, Ids = ids };
     }
+
+    // ------------------------------------------------------------------ aisles
+
+    // How long a block of one brand column runs along an aisle before the next takes over.
+    const float ColumnRun = 6f;
+
+    // One facing on one side of an aisle: where it is along the aisle, and where its edge is.
+    struct AisleFacing
+    {
+        public BayPlan Plan;
+        public int Index;
+        public float At, From, To;
+    }
+
+    // Products by aisle, not by bay. The facings that face the same way from the same line in
+    // one section are one side of one aisle: the two-sided bays, the pillars between them and
+    // the one-sided bays along it, whichever way each was turned when it was placed. The
+    // section's brand columns (Planogram.ColumnsFor) run along that side in blocks of about
+    // ColumnRun metres, each a brand stacked eye over waist over stoop, and the two sides of an
+    // aisle start on different columns. End caps keep their promotions.
+    static void PlanAisles(List<BayPlan> plans)
+    {
+        var aisles = new Dictionary<(ItemType section, int dir, int line), List<AisleFacing>>();
+        foreach (BayPlan plan in plans)
+        {
+            Transform bay = plan.Unit.transform;
+            if (Planogram.IsEndCap(bay)) continue;
+            for (int i = 0; i < plan.Facings.Count; i++)
+            {
+                ShelfGrid.Facing facing = plan.Facings[i];
+                if (facing.Squares.Count == 0) continue;
+                int dir = Heading(bay.TransformDirection(ShelfGrid.Outward(facing.Side)));
+                Vector3 across = Axis(dir), along = dir % 2 == 0 ? Vector3.forward : Vector3.right;
+                float line = 0f, from = float.MaxValue, to = float.MinValue, at = 0f;
+                foreach (ShelfGrid.Square sq in facing.Squares)
+                {
+                    line += Vector3.Dot(bay.TransformPoint(sq.Edge), across);
+                    float a = Vector3.Dot(bay.TransformPoint(sq.Centre), along);
+                    at += a;
+                    from = Mathf.Min(from, a - ShelfGrid.SquareSize * 0.5f);
+                    to = Mathf.Max(to, a + ShelfGrid.SquareSize * 0.5f);
+                }
+                line /= facing.Squares.Count;
+                at /= facing.Squares.Count;
+                var key = (plan.Zone.Section, dir, Mathf.RoundToInt(line * 4f));
+                if (!aisles.TryGetValue(key, out List<AisleFacing> side)) aisles[key] = side = new List<AisleFacing>();
+                side.Add(new AisleFacing { Plan = plan, Index = i, At = at, From = from, To = to });
+            }
+        }
+
+        foreach (var kv in aisles)
+        {
+            List<string[]> columns = Planogram.ColumnsFor(kv.Key.section);
+            if (columns.Count == 0) continue;
+            List<AisleFacing> side = kv.Value;
+            float start = float.MaxValue, end = float.MinValue;
+            foreach (AisleFacing f in side) { start = Mathf.Min(start, f.From); end = Mathf.Max(end, f.To); }
+            float length = Mathf.Max(0.01f, end - start);
+            int blocks = Mathf.Clamp(Mathf.RoundToInt(length / ColumnRun), 1, columns.Count);
+            int first = kv.Key.dir < 2 ? 0 : 1;   // facing +X or +Z, or -X or -Z: the aisle's two sides
+            foreach (AisleFacing f in side)
+            {
+                int block = Mathf.Clamp(Mathf.FloorToInt((f.At - start) / length * blocks), 0, blocks - 1);
+                string[] column = columns[(first + block) % columns.Count];
+                ShelfGrid.Facing facing = f.Plan.Facings[f.Index];
+                string id = column[(int)Planogram.BoardAt(facing.Height)];
+                if (!string.IsNullOrEmpty(id)) f.Plan.Ids[f.Index] = id;
+            }
+        }
+    }
+
+    // Which way a direction points, to the nearest of +X (0), +Z (1), -X (2), -Z (3).
+    static int Heading(Vector3 d) =>
+        Mathf.Abs(d.x) >= Mathf.Abs(d.z) ? (d.x >= 0f ? 0 : 2) : (d.z >= 0f ? 1 : 3);
+
+    static Vector3 Axis(int heading) => heading switch
+    {
+        0 => Vector3.right, 1 => Vector3.forward, 2 => Vector3.left, _ => Vector3.back,
+    };
 
     // A section's facings across all its bays, handed to the planogram to fill any product
     // that has none.
@@ -297,6 +377,7 @@ public static class StoreLayout
         var plans = new List<BayPlan>();
         foreach (ShelfUnit unit in units) plans.Add(PlanBay(unit, zone));
         plans.Sort((a, b) => ComparePositions(a.Unit.transform.position, b.Unit.transform.position));
+        PlanAisles(plans);
         FillGaps(plans, section);
 
         var made = new List<ShelfSlot>();
@@ -320,7 +401,7 @@ public static class StoreLayout
     // each slot starts full. With no `stock` it only counts them.
     // `lightMask`: what lights it, if not the room it stands in.
     static int StockBay(BayPlan plan, bool writeScene, ShelfStock stock, Dictionary<string, int> facingsPerProduct,
-                        uint? lightMask)
+                        uint? lightMask, System.Action<Object> beforeWrite = null, System.Action<Object> afterWrite = null)
     {
         Transform bay = plan.Unit.transform;
         ShelfUnit unit = plan.Unit;
@@ -343,7 +424,7 @@ public static class StoreLayout
             {
                 slots++;
                 if (stock == null) continue;
-                var slot = new ShelfSlot(unit, bay, cell.Centre, cell.Back, cell.Size, height);
+                var slot = new ShelfSlot(unit, bay, cell.Centre, cell.Side, cell.Size, height);
                 slot.lightMask = lightMask ?? RoomMask(slot.Position);
                 stock.Add(slot);
                 slot.Stock(section, id, filled: true);
@@ -351,6 +432,7 @@ public static class StoreLayout
             }
         }
         if (made != null) unit.SetSlots(made);
+        if (stock != null) PriceStrips(plan, beforeWrite, afterWrite);
 
         // A scene from before stock was data still has the shelf prefab's own slots, six to a
         // board, and the slots and items the old bake left: both are superseded (Kehai/Store/
@@ -362,6 +444,22 @@ public static class StoreLayout
                 if (old != null && old.gameObject.activeSelf) old.gameObject.SetActive(false);
             }
         return slots;
+    }
+
+    // Each price strip along a board's edge shows the price of what that board sells on its
+    // side (PriceTags), in the editor as in the game.
+    static void PriceStrips(BayPlan plan, System.Action<Object> beforeWrite, System.Action<Object> afterWrite)
+    {
+        foreach (ShelfGrid.Strip strip in ShelfGrid.Strips(plan.Unit.transform))
+        {
+            int f = plan.Facings.FindIndex(x => x.Side == strip.Side && Mathf.Abs(x.Height - strip.Height) < 0.03f);
+            if (f < 0) continue;
+            Material price = PriceTags.MaterialFor(plan.Ids[f], strip.Length);
+            if (price == null || strip.Renderer.sharedMaterial == price) continue;
+            beforeWrite?.Invoke(strip.Renderer);
+            strip.Renderer.sharedMaterial = price;
+            afterWrite?.Invoke(strip.Renderer);
+        }
     }
 
     static void Tally<T>(Dictionary<T, int> counts, T key, int amount)

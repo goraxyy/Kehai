@@ -99,9 +99,12 @@ every ceiling light (dark when its light is off).
 Nothing over 0.8 kg goes on the top shelf; the tests fail if a layout tries.
 
 **Which side and neighbours:**
-- **Brand blocks:** a brand's lines stack on one side of a bay, so you pass each brand once.
+- **Planned by aisle, not by bay:** each side of an aisle is one run (the two-sided bays, the
+  pillars between them, whichever way each was placed), and the section's **brand columns** run
+  along it in blocks of about 6 m: one brand stacked eye over waist over stoop, then the next.
+  The two sides of an aisle start on different columns. The columns are the faces of the
+  section's two layouts in `Planogram.cs`.
 - **Best sellers get more space:** bananas, whole milk and Ramyum cups.
-- **Two layouts per aisle**, alternating, so neighbouring bays don't look the same.
 - **End caps** carry the aisle's promotion or a partner product (cola on the crisps' ends).
 - **Every product is on sale somewhere**, even in aisles missing the shelf its layout wants.
 
@@ -111,8 +114,19 @@ two for long or wide packs (loaves, cereal boxes), up to 3 × 3 drinks, one for 
 One slot holds one item: **16,500 slots** in all. Products are shown **1.5× real size** (at most
 0.5 m tall) so their labels read from the aisle.
 
-Pillars' 1 m boards face both aisles, a different product each side; the narrow pillars and
-one-sided bays face one.
+**Which way a shelf faces** comes from the shelf models' price strips (the "Pricetag" pieces on
+the boards' front edges): they're on the sides that sell. Two-sided bays and "I" pillars face
+both aisles; a pillar where a perpendicular bay joins the run faces only its open sides (a "T"
+its front, an "L" its front and one side); "b" and "E" pieces face their back; some pillars
+face sideways. A square inside a board faces the way the stock in front of it does.
+
+**Prices on the shelves.** Every price strip shows what its board sells on that side: the
+name, the section, the price and a bar of the product's colour, a label a metre
+(`PriceTags.cs`). **Kehai → Products → 4. Make Price Tags** makes the labels (run it again
+after prices change); the stock puts them on as it's built, in the editor too.
+
+**Shelf colour.** The shelves are one plain grey (`M_ShelfGrey`), not the grid prototype
+materials they came in: **Kehai → Shelves → 4. Paint Shelves Grey** repaints the shelf prefabs.
 
 ---
 
@@ -184,6 +198,7 @@ writes the full map (floor plan, regions, chokepoints) to `Library/Kehai/STORE_M
 
 - **Add a product:** a row in `ProductCatalog.cs` and a shelf for it in `Planogram.cs` (a test
   fails until it has one).
-- **Re-stock an aisle:** edit its two layouts or its end cap in `Planogram.cs`.
+- **Re-stock an aisle:** edit its section's two layouts (their faces are its brand columns) or
+  its end cap in `Planogram.cs`.
 - **Move an aisle:** edit its rectangle in `StoreLayout.cs`.
 - **Count it:** **Kehai → Store → Report Layout** prints bays, shelves and slots per aisle.

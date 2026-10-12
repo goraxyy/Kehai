@@ -36,7 +36,7 @@ public static class Planogram
         public string At(bool back, Board board) => (back ? Back : Front)[(int)board];
     }
 
-    // Two layouts per section, alternated across its bays so neighbouring bays don't match.
+    // Two layouts per section; their four faces are the section's brand columns (ColumnsFor).
     // Listed eye, waist, stoop for the front, then the same for the back.
     static readonly Dictionary<ItemType, Bay[]> bays = new Dictionary<ItemType, Bay[]>
     {
@@ -179,6 +179,23 @@ public static class Planogram
 
     public static IReadOnlyList<Bay> LayoutsFor(ItemType section) =>
         bays.TryGetValue(section, out Bay[] list) ? list : System.Array.Empty<Bay>();
+
+    // A section's brand columns: each face of each of its layouts, eye over waist over stoop,
+    // once each. The store runs them along each side of an aisle in blocks (StoreLayout), so a
+    // shopper walking it passes each column, and each brand, once.
+    public static List<string[]> ColumnsFor(ItemType section)
+    {
+        var columns = new List<string[]>();
+        foreach (Bay bay in LayoutsFor(section))
+            foreach (string[] face in new[] { bay.Front, bay.Back })
+            {
+                bool known = false;
+                foreach (string[] c in columns)
+                    if (c[0] == face[0] && c[1] == face[1] && c[2] == face[2]) { known = true; break; }
+                if (!known) columns.Add(face);
+            }
+        return columns;
+    }
 
     public static IReadOnlyList<string> EndCapsFor(ItemType section) =>
         endCaps.TryGetValue(section, out string[] list) ? list : System.Array.Empty<string>();

@@ -205,6 +205,114 @@ public class MerchandisingTests
         Assert.IsTrue(FacingsOfBoard(4f, 0.5f, -0.25f).All(f => !f.Back), "one-sided");
     }
 
+    // A pillar board with price strips on some of its edges: those are the sides it sells to.
+    static List<ShelfGrid.Square> SquaresWithStrips(float width, float depth, float z, params ShelfGrid.Side[] sides)
+    {
+        var bay = new GameObject("TestPillar");
+        try
+        {
+            var board = new GameObject("Polka1");
+            board.transform.SetParent(bay.transform, false);
+            board.transform.localPosition = new Vector3(2.5f, 0.82f, z);
+            board.transform.localScale = new Vector3(width, 0.02f, depth);
+            foreach (ShelfGrid.Side side in sides)
+            {
+                GameObject strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                strip.name = "Pricetag " + side;
+                strip.transform.SetParent(bay.transform, false);
+                bool alongX = side == ShelfGrid.Side.Front || side == ShelfGrid.Side.Back;
+                float x = side == ShelfGrid.Side.Left ? 2.5f - width * 0.5f : side == ShelfGrid.Side.Right ? 2.5f + width * 0.5f : 2.5f;
+                float edgeZ = side == ShelfGrid.Side.Front ? z - depth * 0.5f : side == ShelfGrid.Side.Back ? z + depth * 0.5f : z;
+                strip.transform.localPosition = new Vector3(x, 0.79f, edgeZ);
+                strip.transform.localScale = alongX ? new Vector3(width, 0.15f, 0.04f) : new Vector3(0.04f, 0.15f, depth);
+            }
+            List<ShelfGrid.Board> boards = ShelfGrid.Boards(bay.transform);
+            return ShelfGrid.SquaresOf(boards[0], ShelfGrid.Strips(bay.transform, boards)).ToList();
+        }
+        finally { Object.DestroyImmediate(bay); }
+    }
+
+    // The shelf models' price strips are on the sides that sell: where a perpendicular bay
+    // covers a pillar's side, there's none, and nothing faces that way.
+    [Test]
+    public void APillar_SellsOnlyToTheSidesItsPriceStripsAreOn()
+    {
+        var front = ShelfGrid.Side.Front;
+        var back = ShelfGrid.Side.Back;
+        var left = ShelfGrid.Side.Left;
+        var right = ShelfGrid.Side.Right;
+        Assert.IsTrue(SquaresWithStrips(1f, 1f, -2f, front, back).Count(q => q.Side == front) == 2, "both aisles: a row each");
+        Assert.IsTrue(SquaresWithStrips(1f, 1f, -2f, front).All(q => q.Side == front), "a T's stem covers its back");
+        Assert.IsTrue(SquaresWithStrips(1f, 0.5f, -2.25f, back).All(q => q.Side == back), "a b pillar sells from its back");
+        List<ShelfGrid.Square> sideways = SquaresWithStrips(1f, 0.5f, -1.75f, left, right);
+        Assert.AreEqual(1, sideways.Count(q => q.Side == left), "one square to each side");
+        Assert.AreEqual(1, sideways.Count(q => q.Side == right));
+        // An L: the front row faces front, the back corner on the open side faces it, and the
+        // square inside faces front behind the row in front of it.
+        List<ShelfGrid.Square> l = SquaresWithStrips(1f, 1f, -2f, front, right);
+        Assert.AreEqual(3, l.Count(q => q.Side == front));
+        Assert.AreEqual(1, l.Count(q => q.Side == right));
+        Assert.IsTrue(l.Single(q => q.Side == right).Centre.z > -2f, "the corner behind the front row");
+    }
+
+    // A square that sells sideways has its packs turned a quarter: a long pack's length runs
+    // along the bay, not across it.
+    [Test]
+    public void ASidewaysSquare_TurnsItsPacks()
+    {
+        ProductDef bread = ProductCatalog.Get("bakery_shokupan");
+        var facing = new ShelfGrid.Facing(0.82f, ShelfGrid.Side.Right);
+        facing.Squares.Add(new ShelfGrid.Square(new Vector3(2.75f, 0.82f, -1.75f), new Vector2(0.5f, 0.5f), ShelfGrid.Side.Right));
+        var front = new ShelfGrid.Facing(0.82f, ShelfGrid.Side.Front);
+        front.Squares.Add(new ShelfGrid.Square(new Vector3(2.75f, 0.82f, -1.75f), new Vector2(0.5f, 0.5f), ShelfGrid.Side.Front));
+        ShelfGrid.Cell[] turned = ShelfGrid.CellsOf(facing, bread).ToArray();
+        ShelfGrid.Cell[] straight = ShelfGrid.CellsOf(front, bread).ToArray();
+        Assert.AreEqual(straight.Length, turned.Length);
+        Assert.AreEqual(straight[0].Size.x, turned[0].Size.y, 1e-4f);
+        Assert.AreEqual(straight[0].Size.y, turned[0].Size.x, 1e-4f);
+        Assert.IsTrue(turned.All(c => c.Side == ShelfGrid.Side.Right));
+    }
+
+    // One side of an aisle is planned as one run, whichever way each bay along it was turned:
+    // the section's brand columns run along it in blocks.
+    [Test]
+    public void AnAislesSide_RunsInBlocks_WhicheverWayEachBayFaces()
+    {
+        var made = new List<GameObject>();
+        try
+        {
+            var units = new List<ShelfUnit>();
+            for (int i = 0; i < 3; i++)
+            {
+                var bay = new GameObject("ShelfTwoside_test " + i);
+                made.Add(bay);
+                bay.transform.position = new Vector3(i * 4f, 0f, 0f);
+                // The middle bay was placed the other way round: its back faces this aisle.
+                bay.transform.rotation = Quaternion.Euler(0f, i == 1 ? 180f : 0f, 0f);
+                // Three boards, so every product of the section has one and none is moved.
+                foreach (float height in new[] { 0.23f, 0.82f, 1.41f })
+                {
+                    var board = new GameObject("Polka");
+                    board.transform.SetParent(bay.transform, false);
+                    board.transform.localPosition = new Vector3(0f, height, 0f);
+                    board.transform.localScale = new Vector3(4f, 0.02f, 1f);
+                }
+                units.Add(bay.AddComponent<ShelfUnit>());
+            }
+            var stock = new ShelfStock();
+            StoreLayout.StockBays(units, ItemType.Bakery, "Aisle test", stock);
+
+            // What each bay's eye-level board sells to the aisle on -Z.
+            string SouthOf(ShelfUnit u) => u.Slots.First(s => s.Outward.z < -0.5f && s.local.y > 1.2f).productId;
+            List<string[]> columns = Planogram.ColumnsFor(ItemType.Bakery);
+            int eye = (int)Board.Eye;
+            Assert.AreEqual(columns[1][eye], SouthOf(units[0]), "the first block");
+            Assert.AreEqual(columns[2][eye], SouthOf(units[1]), "the turned bay takes its block's product");
+            Assert.AreEqual(SouthOf(units[1]), SouthOf(units[2]), "and so does the next");
+        }
+        finally { foreach (GameObject go in made) Object.DestroyImmediate(go); }
+    }
+
     [Test]
     public void ThickBases_AreNotBoards()
     {
