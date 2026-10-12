@@ -191,6 +191,20 @@ public class MerchandisingTests
         Assert.AreEqual(1, FacingsOfBoard(0.5f, 0.5f, -0.25f).Sum(f => f.Squares.Count), "a tail");
     }
 
+    // A pillar's board sits off its origin (the 1 m pillars' at z = -2). Its two rows face the
+    // two aisles, each with its own facing, not both the front.
+    [Test]
+    public void APillarsBoard_FacesBothAisles_WhereverItSits()
+    {
+        List<ShelfGrid.Facing> pillar = FacingsOfBoard(1f, 1f, -2f);
+        Assert.AreEqual(1, pillar.Count(f => !f.Back), "a front facing");
+        Assert.AreEqual(1, pillar.Count(f => f.Back), "and a back one");
+        Assert.AreEqual(2, pillar.First(f => f.Back).Squares.Count);
+        // One square deep, a board faces the front, wherever it sits.
+        Assert.IsTrue(FacingsOfBoard(1f, 0.5f, -2.25f).All(f => !f.Back), "a b pillar");
+        Assert.IsTrue(FacingsOfBoard(4f, 0.5f, -0.25f).All(f => !f.Back), "one-sided");
+    }
+
     [Test]
     public void ThickBases_AreNotBoards()
     {

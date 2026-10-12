@@ -44,7 +44,7 @@ public class Item : MonoBehaviour
 
     // What the player is told they are holding: the SKU when there is one, the section
     // otherwise.
-    public string DisplayName => ProductCatalog.Label(type, productId);
+    public string DisplayName => TryGetComponent(out ProductBox box) ? box.Label : ProductCatalog.Label(type, productId);
 
     // Half the height of the placeholder box (Item_def), whose origin is its middle: how far
     // it stands off whatever it's on.

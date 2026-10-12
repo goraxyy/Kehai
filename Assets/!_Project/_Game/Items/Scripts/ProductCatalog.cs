@@ -52,6 +52,9 @@ public enum PackMaterial
 //
 // The shelf slot's trigger is 0.26 x 0.44 x 0.26, so nothing here is wider or deeper than
 // 0.25 or taller than 0.42 - anything bigger pokes through a neighbouring facing.
+// Where a product's boxes are kept out back: on the storage room's racks, or in the cold room.
+public enum StorageKind { Ambient, Cold }
+
 public class ProductDef
 {
     public readonly string Id;          // stable key, never shown to the player
@@ -67,6 +70,14 @@ public class ProductDef
     public readonly Color Accent;       // logo / band colour
     public readonly float Smoothness;   // URP smoothness
     public readonly float Metallic;     // URP metallic
+    public readonly StorageKind Storage;
+
+    // Dairy and frozen food are kept cold, and so are the few others that would spoil on a
+    // rack: fresh salad, fresh udon, and the drinks sold chilled.
+    static readonly HashSet<string> AlsoCold = new HashSet<string>
+    {
+        "produce_saladmix", "noodle_udon", "drink_chakra_tea", "drink_genki",
+    };
 
     public ProductDef(string id, string name, string brand, ItemType category,
                       PackShape shape, PackMaterial material, Vector3 size, float mass,
@@ -86,6 +97,8 @@ public class ProductDef
         Accent = ParseHex(accentHex, Color.white);
         Smoothness = smoothness;
         Metallic = metallic;
+        Storage = category == ItemType.Dairy || category == ItemType.Frozen || AlsoCold.Contains(id)
+            ? StorageKind.Cold : StorageKind.Ambient;
     }
 
     static Color ParseHex(string hex, Color fallback)

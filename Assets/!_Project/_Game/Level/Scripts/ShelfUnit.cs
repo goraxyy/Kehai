@@ -103,4 +103,13 @@ public class ShelfUnit : MonoBehaviour
             if (slot.Fill()) filled++;
         return filled;
     }
+
+    // Fills the empty slots planned for one product (a box of it from the back rooms).
+    public int FillProduct(string productId)
+    {
+        int filled = 0;
+        foreach (ShelfSlot slot in slots)
+            if (slot.productId == productId && slot.Fill()) filled++;
+        return filled;
+    }
 }

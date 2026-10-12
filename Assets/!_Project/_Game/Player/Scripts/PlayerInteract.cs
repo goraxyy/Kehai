@@ -65,6 +65,11 @@ public class PlayerInteract : MonoBehaviour
     [HideInInspector] public CarrySlot carrySlot;
     [HideInInspector] public PlayerTools tools;
 
+    // The employee's hands, for prompts that depend on what's held (a product's box).
+    public static PlayerInteract Local { get; private set; }
+    public static ProductBox HeldBox =>
+        Local != null && Local.carrySlot != null && Local.carrySlot.IsCarrying ? Local.carrySlot.currentItem.GetComponent<ProductBox>() : null;
+
     IInteractable currentTarget;
     IHoldInteractable holdTarget;
     float holdTimer;
@@ -91,6 +96,7 @@ public class PlayerInteract : MonoBehaviour
 
     void Awake()
     {
+        Local = this;
         carrySlot = GetComponent<CarrySlot>();
         tools = GetComponent<PlayerTools>();
         if (rayOrigin == null)
@@ -245,6 +251,13 @@ public class PlayerInteract : MonoBehaviour
 
         Item dropped = carrySlot.Drop();
         if (dropped == null) return;
+
+        // A product's box goes back to its spot in the back rooms, so they're never lost.
+        if (dropped.TryGetComponent(out ItemHome boxHome) && dropped.GetComponent<ProductBox>() != null)
+        {
+            boxHome.ReturnHome();
+            return;
+        }
 
         dropped.lastAuthor = Kehai.Karen.NoiseAuthor.Player;
         GameEvents.RaisePlayerDroppedItem(dropped, dropped.transform.position);
