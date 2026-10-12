@@ -105,9 +105,17 @@ public sealed class ShelfSlot : IInteractable
 
     public void Interact(PlayerInteract player)
     {
-        // Holding the stock crate restocks the whole shelf in one go.
+        // Holding a product's box restocks that product on this bay; the stock crate restocks
+        // the whole shelf in one go.
         if (player.carrySlot != null && player.carrySlot.IsCarrying)
         {
+            ProductBox box = player.carrySlot.currentItem.GetComponent<ProductBox>();
+            if (box != null)
+            {
+                if (!box.Fits(this)) Debug.Log(box.PromptFor(this));
+                else box.Restock(this);
+                return;
+            }
             StockCrate crate = player.carrySlot.currentItem.GetComponent<StockCrate>();
             if (crate != null)
             {
@@ -149,8 +157,12 @@ public sealed class ShelfSlot : IInteractable
         }
     }
 
-    public string GetPrompt() =>
-        isFilled ? "Pick up " + ProductCatalog.Label(requiredType, StockedId) : "Place " + Label;
+    public string GetPrompt()
+    {
+        ProductBox box = PlayerInteract.HeldBox;
+        if (box != null) return box.PromptFor(this);
+        return isFilled ? "Pick up " + ProductCatalog.Label(requiredType, StockedId) : "Place " + Label;
+    }
 
     // ---------------------------------------------------------------- stock coming and going
 

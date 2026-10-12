@@ -87,7 +87,13 @@ public static class ShelfGrid
                 var centre = new Vector3(board.Centre.x - board.Size.x * 0.5f + (i + 0.5f) * size.x,
                                          board.Centre.y,
                                          board.Centre.z - board.Size.y * 0.5f + (j + 0.5f) * size.y);
-                yield return new Square(centre, size, centre.z >= 0f);
+                // Two or more squares deep, a board faces both aisles: the half behind its own
+                // middle is the back. That's the bay's middle on a two-sided bay, but a pillar's
+                // board sits off its origin, and measured from the origin both its rows were the
+                // front, so it showed the same product to both aisles. One square deep, a board
+                // faces the front.
+                bool back = nz > 1 ? centre.z >= board.Centre.z : centre.z >= 0f;
+                yield return new Square(centre, size, back);
             }
     }
 

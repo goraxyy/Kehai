@@ -468,6 +468,8 @@ namespace Kehai.Replay
             foreach (Item item in Item.All)
             {
                 if (item == null || byOwner.ContainsKey(item) || item.isOnShelf || !item.gameObject.activeInHierarchy) continue;
+                // The back rooms' boxes (a couple of hundred) join once one is moved.
+                if (item.type == ItemType.Stock && item.TryGetComponent(out ProductBox box) && box.AtHome) continue;
                 TrackItem(item);
             }
         }

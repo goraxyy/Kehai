@@ -23,9 +23,11 @@ World coordinates in metres; north is the street (high Z), the store runs south.
 - **Sales floor:** a 60 × 45 m maze of 189 shelf bays (x 25…85, z −130…−175).
 - **Lobby:** two sets of automatic doors; the bins stand just inside.
 - **Tills:** three checkouts at the north-west, with mints on the counter.
-- **Staff rooms** (west): the time clock, the coffee machine, the radio, the mop. Their two
-  doors are chokepoints: lose one and a room is cut off.
-- **Stockroom** (south): the stock pallet (one crate restocks the whole shop).
+- **Staff rooms** (west): the time clock, the coffee machine, the radio with the stock crate
+  beside it (one crate restocks a whole shelf), the mop. Their two doors are chokepoints: lose
+  one and a room is cut off.
+- **Stockroom** (south), two rooms of product boxes (see [The back rooms](#the-back-rooms)):
+  the storage room's racks, and the cold room of fridges and freezers.
 - **Backstreet:** the breaker box and the skip.
 
 ```
@@ -108,6 +110,27 @@ side, sell one product. Each square holds as many slots as fit: 2 × 2 for small
 two for long or wide packs (loaves, cereal boxes), up to 3 × 3 drinks, one for anything bigger.
 One slot holds one item: **16,500 slots** in all. Products are shown **1.5× real size** (at most
 0.5 m tall) so their labels read from the aisle.
+
+Pillars' 1 m boards face both aisles, a different product each side; the narrow pillars and
+one-sided bays face one.
+
+---
+
+## The back rooms
+
+A box of every product, never used up: carry it to the shelf, and E on any
+slot of its product refills that product's empty slots on the bay. A box glows when looked at,
+and its spot shows a yellow ghost while it's away; drop it, or press E on the spot, and it goes
+back. Built when the store loads (`StorageBoxes.cs`), so nothing is baked into the scene.
+
+- **Storage room:** shelf-stable products in brown boxes (a band of the product's colour, its
+  name and section on a label, its packaging beside it). **One section to a rack**, named on
+  the rack's lowest board. Every board but the floor row is full: each product has a box in
+  reach, a second where there's room, and the top board repeats the box below it.
+- **Cold room:** products kept cold, in white insulated boxes labelled on both sides: frozen
+  food on the chest freezers, chilled food on the upright fridges. Kept cold
+  (`ProductDef.Storage`): all of dairy and frozen, the salad mix, fresh udon, Chakra green tea
+  and Genki.
 
 ---
 
