@@ -1,14 +1,15 @@
+using System.Collections.Generic;
 using Kehai;
 using Kehai.Karen;
 using Kehai.Blink;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Esc: the settings. Sound first: one slider for all game sounds at once, then each kind of
-// sound. Then restart the shift or leave it for the main menu, mouse sensitivity, Karen's floor
-// cone, the webcam, and a Keys tab listing every key in the game. The game pauses while it's
-// open, and everything chosen here is remembered. The main menu opens the same pages, without
-// the shift.
+// Esc: the settings, in black, red and white. One page of settings (sound, display, mouse,
+// Karen's floor cone, the webcam) and a Keys tab listing every key in the game; the shift's
+// own choices (resume, restart, main menu, quit) sit in the bar along the bottom. The game
+// pauses while it's open, and everything chosen here is remembered. The main menu opens the
+// same pages, without the shift.
 public sealed class SettingsMenu : MonoBehaviour
 {
     public static SettingsMenu Instance { get; private set; }
@@ -17,7 +18,8 @@ public sealed class SettingsMenu : MonoBehaviour
     enum Tab { Settings, Keys }
     Tab tab;
     Vector2 scroll;
-    GUIStyle body, heading, title, small, button, toggle;
+    GUIStyle text, dim, heading, title, centred;
+    Texture2D faintTexture, thumbTexture;
     int size;
     float labelWidth;
     int slider;              // numbers the sliders as they're drawn
@@ -28,6 +30,13 @@ public sealed class SettingsMenu : MonoBehaviour
 
     const string SensitivityKey = "Kehai.MouseSensitivity";
     const float MinSensitivity = 0.5f, MaxSensitivity = 10f;
+
+    // The three colours, and white at two strengths for what's secondary or behind.
+    static readonly Color Black = new Color(0.015f, 0.015f, 0.015f, 0.97f);
+    static readonly Color Red = new Color(0.863f, 0.078f, 0.235f);
+    static readonly Color White = Color.white;
+    static readonly Color Dim = new Color(1f, 1f, 1f, 0.55f);
+    static readonly Color Faint = new Color(1f, 1f, 1f, 0.1f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
@@ -48,6 +57,12 @@ public sealed class SettingsMenu : MonoBehaviour
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
         if (Visible) Close();
+    }
+
+    void OnDestroy()
+    {
+        if (faintTexture != null) Destroy(faintTexture);
+        if (thumbTexture != null) Destroy(thumbTexture);
     }
 
     // A restarted store has a new player, who gets your sensitivity too.
@@ -108,153 +123,172 @@ public sealed class SettingsMenu : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    // ---- drawing ------------------------------------------------------------------------------
+    // ---- the page -----------------------------------------------------------------------------
 
     void OnGUI()
     {
         if (!Visible) return;
         GUI.depth = -100;
-        size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 40f, 16f, 40f));
+        size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 42f, 15f, 36f));
         Styles();
 
-        Fill(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.75f));
-        float w = Mathf.Min(size * 40f, Screen.width - size * 2f);
+        Fill(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.8f));
+        float w = Mathf.Min(size * 34f, Screen.width - size * 2f);
         var panel = new Rect((Screen.width - w) * 0.5f, size, w, Screen.height - size * 2f);
-        Fill(panel, new Color(0.07f, 0.075f, 0.095f, 0.98f));
-        var inner = new Rect(panel.x + size, panel.y + size * 0.8f, panel.width - size * 2f, panel.height - size * 1.6f);
+        Fill(panel, Black);
+        Fill(new Rect(panel.x, panel.y, panel.width, Mathf.Max(2f, size * 0.12f)), Red);
+        var inner = new Rect(panel.x + size * 1.2f, panel.y + size, panel.width - size * 2.4f, panel.height - size * 2f);
 
-        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.5f, size * 2.2f), fromMainMenu ? "Settings" : "Paused", title);
-        float tabWidth = size * 7f;
-        if (Tab_(new Rect(inner.xMax - tabWidth * 2f - size * 0.5f, inner.y, tabWidth, size * 2f), "Settings", tab == Tab.Settings)) { tab = Tab.Settings; scroll = Vector2.zero; }
-        if (Tab_(new Rect(inner.xMax - tabWidth, inner.y, tabWidth, size * 2f), "Keys", tab == Tab.Keys)) { tab = Tab.Keys; scroll = Vector2.zero; }
+        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.5f, size * 2f), fromMainMenu ? "SETTINGS" : "PAUSED", title);
+        float tabWidth = size * 5.5f;
+        if (TabButton(new Rect(inner.xMax - tabWidth * 2f, inner.y, tabWidth, size * 2f), "SETTINGS", tab == Tab.Settings)) { tab = Tab.Settings; scroll = Vector2.zero; }
+        if (TabButton(new Rect(inner.xMax - tabWidth, inner.y, tabWidth, size * 2f), "KEYS", tab == Tab.Keys)) { tab = Tab.Keys; scroll = Vector2.zero; }
 
-        var content = new Rect(inner.x, inner.y + size * 3f, inner.width, inner.height - size * 6f);
-        labelWidth = content.width * 0.42f;
+        var content = new Rect(inner.x, inner.y + size * 2.8f, inner.width, inner.height - size * 5.6f);
+        labelWidth = content.width * 0.38f;
         slider = 0;
+
+        // The scroll bar, in the page's colours: the skin's own thumb is swapped for the length
+        // of this page, so nothing else drawn with IMGUI changes.
+        GUIStyle thumb = GUI.skin.verticalScrollbarThumb;
+        Texture2D thumbWas = thumb.normal.background;
+        thumb.normal.background = thumbTexture;
+        var bar = new GUIStyle(GUI.skin.verticalScrollbar) { normal = { background = faintTexture } };
         GUILayout.BeginArea(content);
-        scroll = GUILayout.BeginScrollView(scroll);
+        scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, bar);
         if (tab == Tab.Settings) DrawSettings(); else DrawKeys();
         GUILayout.EndScrollView();
         GUILayout.EndArea();
+        thumb.normal.background = thumbWas;
 
-        float y = inner.yMax - size * 2.2f;
-        if (GUI.Button(new Rect(inner.x, y, size * 9f, size * 2.2f), fromMainMenu ? "Back  (Esc)" : "Resume  (Esc)", button)) Close();
-        if (!fromMainMenu && GUI.Button(new Rect(inner.xMax - size * 9f, y, size * 9f, size * 2.2f), Application.isEditor ? "Stop playing" : "Quit the game", button)) Quit();
+        DrawBar(new Rect(inner.x, inner.yMax - size * 1.9f, inner.width, size * 1.9f));
     }
 
     void DrawSettings()
     {
-        // The one slider for every sound comes first, so it never has to be looked for.
-        Heading("Sound");
-        float master = Slider("All game sounds", SoundSettings.Master, out bool masterDone);
+        Heading("SOUND");
+        float master = Slider("All sounds", SoundSettings.Master, out bool masterDone);
         if (!Mathf.Approximately(master, SoundSettings.Master)) SoundSettings.Master = master;
         if (masterDone) Preview(SoundKind.Effects);
-        GUILayout.Label("Turns every sound in the game up or down at once: the store, you, " + GameNames.Antagonist +
-                        ", the radio and the PA. Below, each of them on its own.", small);
         foreach (SoundKind kind in System.Enum.GetValues(typeof(SoundKind)))
         {
-            float level = Slider(SoundSettings.Label(kind), SoundSettings.Get(kind), out bool done);
+            float level = Slider(ShortLabel(kind), SoundSettings.Get(kind), out bool done);
             if (!Mathf.Approximately(level, SoundSettings.Get(kind))) SoundSettings.Set(kind, level);
             if (done) Preview(kind);
         }
-        GUILayout.Label(GameNames.Antagonist + "'s warning sounds tell you a trick is coming, so keep her audible. You hear a sample when you let go of a slider.", small);
 
-        if (!fromMainMenu) DrawShift();
+        Heading("DISPLAY");
+        List<Vector2Int> sizes = DisplaySettings.Resolutions();
+        Vector2Int now = DisplaySettings.Resolution;
+        int at = Mathf.Max(0, sizes.IndexOf(now));
+        int step = Stepper("Resolution", $"{now.x} × {now.y}");
+        if (step != 0) DisplaySettings.SetResolution(sizes[Mathf.Clamp(at + step, 0, sizes.Count - 1)]);
+        bool full = Switch("Full screen", DisplaySettings.FullScreen);
+        if (full != DisplaySettings.FullScreen) DisplaySettings.FullScreen = full;
+        int quality = (int)DisplaySettings.Current + Stepper("Quality", DisplaySettings.Current.ToString());
+        quality = Mathf.Clamp(quality, 0, 2);
+        if (quality != (int)DisplaySettings.Current) DisplaySettings.SetQuality((DisplaySettings.Quality)quality);
+        if (Application.isEditor) GUILayout.Label("Resolution and full screen change in the built game.", dim);
 
-        Heading("Mouse");
+        Heading("MOUSE");
         float sensitivity = Sensitivity;
-        float picked = Slider("Look sensitivity", Mathf.InverseLerp(MinSensitivity, MaxSensitivity, sensitivity), out _, $"{sensitivity:0.0}");
+        float picked = Slider("Sensitivity", Mathf.InverseLerp(MinSensitivity, MaxSensitivity, sensitivity), out _, $"{sensitivity:0.0}");
         float value = Mathf.Round(Mathf.Lerp(MinSensitivity, MaxSensitivity, picked) * 10f) / 10f;
         if (!Mathf.Approximately(value, sensitivity)) Sensitivity = value;
 
-        Heading(GameNames.Antagonist);
-        bool cone = GUILayout.Toggle(KarenFloorCone.Enabled, "  Show where " + GameNames.Antagonist + " is looking, as a cone on the floor", toggle);
+        Heading(GameNames.Antagonist.ToUpperInvariant());
+        bool cone = Switch("Floor cone", KarenFloorCone.Enabled);
         if (cone != KarenFloorCone.Enabled) KarenFloorCone.Enabled = cone;
-        GUILayout.Label("Blue: walking her rounds. Orange: she noticed something. Red: she's hunting you, or can see you right now.", small);
 
-        Heading("Webcam blinking");
-        BlinkTracker tracker = BlinkTracker.Instance;
-        string status = !BlinkTracker.Consented ? "Off. " + GameNames.Antagonist + " can react when your real eyes close; the camera never records and nothing leaves this computer."
-            : tracker != null && tracker.WebcamLive ? $"On, reading your eyes through {BlinkSidecar.Which}." + (tracker.Calibrated ? " Calibrated." : " Not calibrated yet: press Calibrate.")
-            : "On, but no signal from the camera yet. Open the blink test to see why.";
-        GUILayout.Label(status, body);
-        if (fromMainMenu)
-        {
-            GUILayout.Label("Turn it on, calibrate it and test it from this menu once you're in the store (Esc).", small);
-            return;
-        }
-        GUILayout.BeginHorizontal();
-        if (tracker != null)
-        {
-            if (!BlinkTracker.Consented)
-            {
-                if (GUILayout.Button("Turn it on…", button, GUILayout.Width(size * 9f))) { Close(); tracker.AskConsent(); }
-            }
-            else
-            {
-                if (GUILayout.Button("Turn it off", button, GUILayout.Width(size * 8f))) tracker.RevokeConsent();
-                if (GUILayout.Button("Calibrate", button, GUILayout.Width(size * 8f))) { Close(); tracker.BeginCalibration(); }
-            }
-            if (GUILayout.Button("Blink test", button, GUILayout.Width(size * 8f)))
-            {
-                Close();
-                var panel = FindAnyObjectByType<BlinkTestPanel>();
-                if (panel != null) panel.Show();
-            }
-        }
-        GUILayout.EndHorizontal();
+        Heading("WEBCAM BLINKING");
+        DrawWebcam();
     }
 
-    void DrawShift()
+    void DrawWebcam()
     {
-        Heading("Shift");
-        if (confirmingRestart)
+        BlinkTracker tracker = BlinkTracker.Instance;
+        string status = !BlinkTracker.Consented ? "Off"
+            : tracker != null && tracker.WebcamLive ? (tracker.Calibrated ? "On" : "On, not calibrated")
+            : "On, no signal";
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("Status", text, GUILayout.Width(labelWidth));
+        GUILayout.Label(status, text);
+        GUILayout.EndHorizontal();
+        if (fromMainMenu)
         {
-            GUILayout.Label("Restart this shift? What you've done so far in it is lost; " + GameNames.Antagonist + " remembers earlier shifts.", body);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Yes, restart", button, GUILayout.Width(size * 8f))) restartNow = true;
-            if (GUILayout.Button("No", button, GUILayout.Width(size * 5f))) confirmingRestart = false;
-            GUILayout.EndHorizontal();
+            GUILayout.Label("Set it up in the store: Esc.", dim);
+            return;
         }
-        else if (confirmingMenu)
+        if (tracker == null) return;
+        GUILayout.BeginHorizontal();
+        GUILayout.Space(labelWidth);
+        if (!BlinkTracker.Consented)
         {
-            GUILayout.Label("Leave for the main menu? The shift under way, if there is one, is lost; " + GameNames.Antagonist + " remembers earlier shifts.", body);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Yes, main menu", button, GUILayout.Width(size * 9f))) menuNow = true;
-            if (GUILayout.Button("No", button, GUILayout.Width(size * 5f))) confirmingMenu = false;
-            GUILayout.EndHorizontal();
+            if (LayoutButton("TURN ON", size * 6f)) { Close(); tracker.AskConsent(); }
         }
         else
         {
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Restart this shift", button, GUILayout.Width(size * 11f))) confirmingRestart = true;
-            if (GUILayout.Button("Main menu", button, GUILayout.Width(size * 8f))) confirmingMenu = true;
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Restart starts the shift again from the beginning: the store resets and you go back to where you start.", small);
+            if (LayoutButton("TURN OFF", size * 6f)) tracker.RevokeConsent();
+            GUILayout.Space(size * 0.4f);
+            if (LayoutButton("CALIBRATE", size * 6f)) { Close(); tracker.BeginCalibration(); }
         }
+        GUILayout.Space(size * 0.4f);
+        if (LayoutButton("TEST", size * 4.5f))
+        {
+            Close();
+            var panel = FindAnyObjectByType<BlinkTestPanel>();
+            if (panel != null) panel.Show();
+        }
+        GUILayout.EndHorizontal();
     }
 
     void DrawKeys()
     {
         foreach (Controls.Section section in Controls.All)
         {
-            Heading(section.Title);
+            Heading(section.Title.ToUpperInvariant());
             foreach (Controls.Entry entry in section.Entries)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"<b>{entry.Keys}</b>", body, GUILayout.Width(labelWidth * 0.8f));
-                GUILayout.Label(entry.Action, body);
+                GUILayout.Label($"<b>{entry.Keys}</b>", text, GUILayout.Width(labelWidth * 0.8f));
+                GUILayout.Label(entry.Action, dim);
                 GUILayout.EndHorizontal();
             }
         }
-        GUILayout.Space(size * 0.5f);
-        GUILayout.Label("The same list is in CONTROLS.md, next to the project.", small);
     }
 
-    void Heading(string text)
+    // Along the bottom: back to the game, or out of the shift, each asked once.
+    void DrawBar(Rect r)
     {
-        GUILayout.Space(size * 0.6f);
-        GUILayout.Label(text, heading);
+        float gap = size * 0.5f, w = size * 7.5f;
+        if (fromMainMenu)
+        {
+            if (Button(new Rect(r.x, r.y, w, r.height), "BACK", true)) Close();
+            return;
+        }
+        if (confirmingRestart || confirmingMenu)
+        {
+            string question = confirmingRestart ? "Restart this shift? Its progress is lost." : "Leave the shift for the main menu?";
+            GUI.Label(new Rect(r.x, r.y, r.width - (w + gap) * 2f, r.height), question, text);
+            if (Button(new Rect(r.xMax - w * 2f - gap, r.y, w, r.height), "YES", true))
+            {
+                if (confirmingRestart) restartNow = true; else menuNow = true;
+            }
+            if (Button(new Rect(r.xMax - w, r.y, w, r.height), "NO")) confirmingRestart = confirmingMenu = false;
+            return;
+        }
+        if (Button(new Rect(r.x, r.y, w, r.height), "RESUME", true)) Close();
+        if (Button(new Rect(r.x + w + gap, r.y, w * 1.25f, r.height), "RESTART SHIFT")) confirmingRestart = true;
+        if (Button(new Rect(r.x + w * 2.25f + gap * 2f, r.y, w * 1.1f, r.height), "MAIN MENU")) confirmingMenu = true;
+        if (Button(new Rect(r.xMax - w, r.y, w, r.height), Application.isEditor ? "STOP" : "QUIT")) Quit();
+    }
+
+    // ---- the pieces ---------------------------------------------------------------------------
+
+    void Heading(string label)
+    {
+        GUILayout.Space(size * 0.9f);
+        GUILayout.Label(label, heading);
     }
 
     // A wide slider that's easy to grab: label, bar, value. `released` is true on the frame
@@ -264,12 +298,12 @@ public sealed class SettingsMenu : MonoBehaviour
         int id = slider++;
         released = false;
         GUILayout.BeginHorizontal();
-        GUILayout.Label(label, body, GUILayout.Width(labelWidth));
-        Rect r = GUILayoutUtility.GetRect(size * 6f, size * 1.7f, GUILayout.ExpandWidth(true));
-        GUILayout.Label(shown ?? $"{value01 * 100f:0}%", body, GUILayout.Width(size * 3.5f));
+        GUILayout.Label(label, text, GUILayout.Width(labelWidth));
+        Rect r = GUILayoutUtility.GetRect(size * 6f, size * 1.6f, GUILayout.ExpandWidth(true));
+        GUILayout.Label(shown ?? $"{value01 * 100f:0}%", dim, GUILayout.Width(size * 3f));
         GUILayout.EndHorizontal();
 
-        var track = new Rect(r.x + size * 0.5f, r.center.y - size * 0.2f, r.width - size, size * 0.4f);
+        var track = new Rect(r.x + size * 0.4f, r.center.y - size * 0.08f, r.width - size * 0.8f, Mathf.Max(2f, size * 0.16f));
         Event e = Event.current;
         if (e.type == EventType.MouseDown && r.Contains(e.mousePosition)) dragging = id;
         if (dragging == id && (e.type == EventType.MouseDown || e.type == EventType.MouseDrag))
@@ -285,18 +319,75 @@ public sealed class SettingsMenu : MonoBehaviour
         }
         if (e.type == EventType.Repaint)
         {
-            Fill(track, new Color(0.2f, 0.22f, 0.27f));
-            Fill(new Rect(track.x, track.y, track.width * value01, track.height), new Color(0.3f, 0.82f, 1f));
-            float knob = size * 0.9f;
-            Fill(new Rect(track.x + track.width * value01 - knob * 0.5f, r.center.y - knob * 0.5f, knob, knob), Color.white);
+            Fill(track, Faint);
+            Fill(new Rect(track.x, track.y, track.width * value01, track.height), Red);
+            float knob = size * 0.7f;
+            Fill(new Rect(track.x + track.width * value01 - knob * 0.5f, r.center.y - knob * 0.5f, knob, knob), White);
         }
         return value01;
     }
 
-    bool Tab_(Rect r, string text, bool on)
+    // "<  value  >": -1, 0 or +1 for the arrow pressed.
+    int Stepper(string label, string value)
     {
-        Fill(r, on ? new Color(0.24f, 0.28f, 0.36f) : new Color(0.13f, 0.14f, 0.18f));
-        return GUI.Button(r, text, button) && !on;
+        int step = 0;
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(label, text, GUILayout.Width(labelWidth));
+        if (LayoutButton("<", size * 2f)) step = -1;
+        GUILayout.Label(value, centred, GUILayout.Width(size * 8f), GUILayout.Height(size * 1.6f));
+        if (LayoutButton(">", size * 2f)) step = 1;
+        GUILayout.EndHorizontal();
+        return step;
+    }
+
+    // An ON / OFF switch: red when on.
+    bool Switch(string label, bool on)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(label, text, GUILayout.Width(labelWidth));
+        Rect r = GUILayoutUtility.GetRect(size * 4f, size * 1.6f, GUILayout.Width(size * 4f), GUILayout.Height(size * 1.6f));
+        GUILayout.EndHorizontal();
+        bool hover = r.Contains(Event.current.mousePosition);
+        Fill(r, on ? Red : hover ? new Color(1f, 1f, 1f, 0.2f) : Faint);
+        GUI.Label(r, on ? "ON" : "OFF", centred);
+        return GUI.Button(r, GUIContent.none, GUIStyle.none) ? !on : on;
+    }
+
+    bool LayoutButton(string label, float width) =>
+        Button(GUILayoutUtility.GetRect(width, size * 1.6f, GUILayout.Width(width), GUILayout.Height(size * 1.6f)), label);
+
+    // A flat button. The main one is white with black text; any button turns red under the mouse.
+    bool Button(Rect r, string label, bool main = false)
+    {
+        bool hover = r.Contains(Event.current.mousePosition);
+        Fill(r, hover ? Red : main ? White : Faint);
+        Color was = centred.normal.textColor;
+        centred.normal.textColor = main && !hover ? Color.black : White;
+        GUI.Label(r, label, centred);
+        centred.normal.textColor = was;
+        return GUI.Button(r, GUIContent.none, GUIStyle.none);
+    }
+
+    bool TabButton(Rect r, string label, bool on)
+    {
+        bool hover = r.Contains(Event.current.mousePosition);
+        Color was = centred.normal.textColor;
+        centred.normal.textColor = on || hover ? White : Dim;
+        GUI.Label(r, label, centred);
+        centred.normal.textColor = was;
+        if (on) Fill(new Rect(r.x + size, r.yMax - size * 0.3f, r.width - size * 2f, Mathf.Max(2f, size * 0.12f)), Red);
+        return GUI.Button(r, GUIContent.none, GUIStyle.none) && !on;
+    }
+
+    string ShortLabel(SoundKind kind)
+    {
+        switch (kind)
+        {
+            case SoundKind.Karen: return GameNames.Antagonist;
+            case SoundKind.Music: return "Music";
+            case SoundKind.Voice: return "Announcements";
+            default: return "Effects";
+        }
     }
 
     // ---- what the settings do -------------------------------------------------------------------
@@ -351,24 +442,30 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void Styles()
     {
-        if (body == null)
+        if (text == null)
         {
-            body = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true };
-            heading = new GUIStyle(body) { fontStyle = FontStyle.Bold };
-            title = new GUIStyle(heading);
-            small = new GUIStyle(body);
-            button = new GUIStyle(GUI.skin.button);
-            toggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true };
+            text = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, alignment = TextAnchor.MiddleLeft };
+            dim = new GUIStyle(text);
+            heading = new GUIStyle(text) { fontStyle = FontStyle.Bold };
+            title = new GUIStyle(text) { fontStyle = FontStyle.Bold };
+            centred = new GUIStyle(text) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
+            faintTexture = Solid(Faint);
+            thumbTexture = Solid(new Color(1f, 1f, 1f, 0.45f));
         }
-        body.fontSize = size;
-        heading.fontSize = Mathf.RoundToInt(size * 1.2f);
-        title.fontSize = Mathf.RoundToInt(size * 1.6f);
-        small.fontSize = Mathf.RoundToInt(size * 0.8f);
-        button.fontSize = size;
-        toggle.fontSize = size;
-        body.normal.textColor = heading.normal.textColor = title.normal.textColor = toggle.normal.textColor = new Color(0.94f, 0.94f, 0.92f);
-        toggle.onNormal.textColor = toggle.hover.textColor = toggle.onHover.textColor = toggle.normal.textColor;
-        small.normal.textColor = new Color(0.68f, 0.7f, 0.75f);
+        text.fontSize = dim.fontSize = centred.fontSize = size;
+        heading.fontSize = Mathf.RoundToInt(size * 0.8f);
+        title.fontSize = Mathf.RoundToInt(size * 1.5f);
+        text.normal.textColor = title.normal.textColor = centred.normal.textColor = White;
+        dim.normal.textColor = Dim;
+        heading.normal.textColor = Red;
+    }
+
+    static Texture2D Solid(Color c)
+    {
+        var t = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+        t.SetPixel(0, 0, c);
+        t.Apply();
+        return t;
     }
 
     static void Fill(Rect r, Color c)
