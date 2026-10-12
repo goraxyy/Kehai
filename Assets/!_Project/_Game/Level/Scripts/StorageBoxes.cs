@@ -16,16 +16,20 @@ using UnityEngine.SceneManagement;
 //     food sits on the chest freezers, chilled food on the upright fridges.
 //
 // Every box has its spot, marked like the stock crate's: it glows when looked at, a yellow
-// ghost shows the spot while the box is away, and E on the spot (or dropping the box) sends it
-// back. Built when the store loads, from the rooms the scene has; nothing is baked into it.
+// ghost shows the spot while the box is away, and E on the spot sends it back. Built when the
+// store loads, from the rooms the scene has; nothing is baked into it. While the scene is being
+// edited the same boxes stand there without their workings (StorageBoxesPreview), so the rooms
+// look stocked in the editor too.
 public static class StorageBoxes
 {
     public const string RootName = "Storage Boxes";
+    public const string PreviewName = "Storage Boxes (preview)";
     const string RacksName = "Storageracks", RackPrefix = "StorageRack";
     const string ColdRoomName = "Fridges", FreezerPrefix = "Prop_Fridge_03";
     static readonly string[] FridgePrefixes = { "Prop_Fridge_02", "Prop_Fridge_04" };
 
     public static readonly Vector3 RackBox = new Vector3(1.8f, 0.85f, 0.9f);   // along, up, deep
+    public static readonly Vector3 ColdBox = new Vector3(1.4f, 0.5f, 0.7f);    // the largest a cold-room unit takes
     const float MinRackLength = 3.8f;   // room for two boxes
     const float LowestBoard = 0.3f;     // lower than this is the floor row, kept clear
     const float ReachTop = 3.4f;        // boards above this are out of the player's reach
@@ -78,13 +82,26 @@ public static class StorageBoxes
     public static void Build(Scene scene)
     {
         if (!Application.isPlaying || !scene.IsValid() || !scene.isLoaded) return;
-        foreach (GameObject go in scene.GetRootGameObjects()) if (go.name == RootName) return;
-        Transform racks = FindIn(scene, RacksName), cold = FindIn(scene, ColdRoomName);
-        if (racks == null && cold == null) return;
+        foreach (GameObject go in scene.GetRootGameObjects())
+        {
+            if (go.name == RootName) return;
+            if (go.name == PreviewName) Object.Destroy(go);   // the editor's, if it slipped into play
+        }
+        Lay(scene, RootName, true, new Parts());
+    }
 
-        var root = new GameObject(RootName);
+    // The same boxes in the same places, but only to look at: no collider, no physics, no spot.
+    // Null when the scene has neither room.
+    public static GameObject Preview(Scene scene, Parts parts) =>
+        scene.IsValid() && scene.isLoaded ? Lay(scene, PreviewName, false, parts) : null;
+
+    static GameObject Lay(Scene scene, string name, bool working, Parts parts)
+    {
+        Transform racks = FindIn(scene, RacksName), cold = FindIn(scene, ColdRoomName);
+        if (racks == null && cold == null) return null;
+
+        var root = new GameObject(name);
         SceneManager.MoveGameObjectToScene(root, scene);
-        var parts = new Parts();
 
         if (racks != null)
         {
@@ -97,7 +114,7 @@ public static class StorageBoxes
                 List<ProductDef> own = products.FindAll(p => p.Category == sections[r].Value);
                 string[] ids = Assign(list[r].Spots, own, RackShare(list, sections, r));
                 for (int i = 0; i < ids.Length; i++)
-                    if (ids[i] != null) Make(ProductCatalog.Get(ids[i]), list[r].Spots[i], false, root.transform, parts);
+                    if (ids[i] != null) Make(ProductCatalog.Get(ids[i]), list[r].Spots[i], false, root.transform, parts, working);
                 Sign(list[r], ProductCatalog.SectionName(sections[r].Value), root.transform, parts);
             }
         }
@@ -116,16 +133,17 @@ public static class StorageBoxes
                 freezers = all.GetRange(0, split);
                 fridges = all.GetRange(split, all.Count - split);
             }
-            Stock(freezers, frozen, root.transform, parts);
-            Stock(fridges, chilled, root.transform, parts);
+            Stock(freezers, frozen, root.transform, parts, working);
+            Stock(fridges, chilled, root.transform, parts, working);
         }
+        return root;
     }
 
-    static void Stock(List<Spot> spots, List<ProductDef> products, Transform root, Parts parts)
+    static void Stock(List<Spot> spots, List<ProductDef> products, Transform root, Parts parts, bool working)
     {
         string[] ids = Assign(spots, products, (0, 1));
         for (int i = 0; i < ids.Length; i++)
-            if (ids[i] != null) Make(ProductCatalog.Get(ids[i]), spots[i], true, root, parts);
+            if (ids[i] != null) Make(ProductCatalog.Get(ids[i]), spots[i], true, root, parts, working);
     }
 
     public static List<ProductDef> ProductsKept(StorageKind kind)
@@ -343,8 +361,9 @@ public static class StorageBoxes
     // ---- a box ---------------------------------------------------------------------------------
 
     // The pieces every box shares: meshes, materials, and what the stock crate and its spot use
-    // for their glow, their ghost and their knock.
-    sealed class Parts
+    // for their glow, their ghost and their knock. `keep` sees each material as it's made and
+    // can hand back one to use instead: the editor keeps the island's as assets, so they save.
+    public sealed class Parts
     {
         public readonly Mesh Cube, Quad;
         public readonly Material Cardboard, Insulated, Paper, Sign;
@@ -352,15 +371,17 @@ public static class StorageBoxes
         public readonly AudioClip Impact;
         public readonly int Layer;
         readonly Dictionary<Color, Material> colours = new Dictionary<Color, Material>();
+        readonly System.Func<Material, Material> keep;
 
-        public Parts()
+        public Parts(System.Func<Material, Material> keep = null)
         {
+            this.keep = keep;
             Cube = Primitive(PrimitiveType.Cube);
             Quad = Primitive(PrimitiveType.Quad);
-            Cardboard = Lit(StorageBoxes.Cardboard, 0.08f);
-            Insulated = Lit(StorageBoxes.Insulated, 0.35f);
-            Paper = Lit(StorageBoxes.Paper, 0.05f);
-            Sign = Lit(SignColour, 0.25f);
+            Cardboard = Lit("Box_Cardboard", StorageBoxes.Cardboard, 0.08f);
+            Insulated = Lit("Box_Insulated", StorageBoxes.Insulated, 0.35f);
+            Paper = Lit("Box_Paper", StorageBoxes.Paper, 0.05f);
+            Sign = Lit("Box_Sign", SignColour, 0.25f);
             int layer = LayerMask.NameToLayer("Interactable");
             Layer = layer >= 0 ? layer : 0;
             StockCrate crate = Object.FindAnyObjectByType<StockCrate>(FindObjectsInactive.Include);
@@ -378,12 +399,13 @@ public static class StorageBoxes
                 Renderer marker = snap.emptyMarker.GetComponentInChildren<Renderer>(true);
                 if (marker != null && marker.sharedMaterial != null) { Ghost = marker.sharedMaterial; break; }
             }
-            if (Ghost == null) Ghost = Lit(StorageBoxes.Ghost, 0f);
+            if (Ghost == null) Ghost = Lit("Box_Ghost", StorageBoxes.Ghost, 0f);
         }
 
         public Material Colour(Color c)
         {
-            if (!colours.TryGetValue(c, out Material m)) colours[c] = m = Lit(c, 0.2f);
+            if (!colours.TryGetValue(c, out Material m))
+                colours[c] = m = Lit("Box_Band_" + ColorUtility.ToHtmlStringRGB(c), c, 0.2f);
             return m;
         }
 
@@ -391,36 +413,54 @@ public static class StorageBoxes
         {
             GameObject go = GameObject.CreatePrimitive(type);
             Mesh mesh = go.GetComponent<MeshFilter>().sharedMesh;
-            Object.Destroy(go);
+            if (Application.isPlaying) Object.Destroy(go);
+            else Object.DestroyImmediate(go);
             return mesh;
         }
 
-        static Material Lit(Color c, float smoothness)
+        Material Lit(string name, Color c, float smoothness)
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            var m = new Material(shader) { color = c };
+            var m = new Material(shader) { name = name, color = c };
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smoothness);
-            return m;
+            return keep != null ? keep(m) : m;
         }
     }
 
-    static GameObject Make(ProductDef product, Spot spot, bool cold, Transform parent, Parts parts)
+    // What a box of `product` looks like and nothing more: cardboard (or white insulation for
+    // the cold) with a band of the product's colour, and its label and art on the front, and on
+    // the back too when `twoFaced`. No collider, no physics, no scripts; the back rooms' boxes
+    // are built on it, and the island's showcase is just this.
+    public static GameObject Look(ProductDef product, Vector3 size, bool cold, bool twoFaced, Transform parent, Parts parts)
     {
-        if (product == null) return null;
         var go = new GameObject("Box " + product.Id);
-        go.SetActive(false);
-        go.layer = parts.Layer;
-        go.transform.SetPositionAndRotation(spot.Position, spot.Rotation);
-        go.transform.SetParent(parent, true);
-        Vector3 size = spot.Size;
-
+        go.transform.SetParent(parent, false);
         Part(go.transform, "Body", parts.Cube, cold ? parts.Insulated : parts.Cardboard, Vector3.zero, Quaternion.identity, size);
         Part(go.transform, "Band", parts.Cube, parts.Colour(product.Primary),
              new Vector3(0f, size.y * 0.34f, 0f), Quaternion.identity, new Vector3(size.x + 0.01f, size.y * 0.12f, size.z + 0.01f));
         Face(go.transform, product, size, 1f, parts);
-        if (spot.TwoFaced) Face(go.transform, product, size, -1f, parts);
+        Words(go.transform, product, size, 1f, cold);
+        if (twoFaced)
+        {
+            Face(go.transform, product, size, -1f, parts);
+            Words(go.transform, product, size, -1f, cold);
+        }
+        return go;
+    }
 
+    // A box in the back rooms: the look, and when `working` everything that makes it a box you
+    // carry, restock from and put back.
+    static GameObject Make(ProductDef product, Spot spot, bool cold, Transform parent, Parts parts, bool working)
+    {
+        if (product == null) return null;
+        GameObject go = Look(product, spot.Size, cold, spot.TwoFaced, parent, parts);
+        go.transform.SetPositionAndRotation(spot.Position, spot.Rotation);
+        if (!working) return go;
+
+        go.SetActive(false);
+        foreach (Transform t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = parts.Layer;
+        Vector3 size = spot.Size;
         var collider = go.AddComponent<BoxCollider>();
         collider.size = size;
         var body = go.AddComponent<Rigidbody>();
@@ -445,9 +485,6 @@ public static class StorageBoxes
         box.home = spot.Position;
         home.snapPoint = SnapPoint(item, spot, parent, parts).transform;
         go.SetActive(true);
-
-        Words(go.transform, product, size, 1f, cold);
-        if (spot.TwoFaced) Words(go.transform, product, size, -1f, cold);
         return go;
     }
 

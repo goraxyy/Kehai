@@ -66,6 +66,9 @@ namespace Kehai.Karen
         public float catchRadius = 1.1f;
         public float sightRange = 18f;
         public float sightFov = 120f;
+        [Tooltip("Where she stands when the game starts and when each shift begins: the floor nearest this point. " +
+                 "In a level with no floor near it she starts at the stock pallet instead.")]
+        public Vector3 start = new Vector3(32.5f, 0f, -172.5f);
 
         [Header("Goal selection (§6.3)")]
         public float wConfidence = 1f;

@@ -3,8 +3,8 @@ using UnityEngine;
 
 // A box of one product, from the back rooms (StorageBoxes puts one for every product there).
 // Carried like any item; with it in hand, E on a shelf slot of the same product refills every
-// empty slot of that product on the bay. It never runs out, and dropped it goes straight back
-// to the spot it was taken from, so the racks stay full.
+// empty slot of that product on the bay. It never runs out. Dropped, it lands where it falls,
+// like the stock crate, and its spot shows a ghost of it until it's put back.
 public class ProductBox : MonoBehaviour
 {
     public string productId;

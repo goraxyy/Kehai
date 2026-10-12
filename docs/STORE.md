@@ -120,8 +120,11 @@ one-sided bays face one.
 
 A box of every product, never used up: carry it to the shelf, and E on any
 slot of its product refills that product's empty slots on the bay. A box glows when looked at,
-and its spot shows a yellow ghost while it's away; drop it, or press E on the spot, and it goes
-back. Built when the store loads (`StorageBoxes.cs`), so nothing is baked into the scene.
+and its spot shows a see-through yellow ghost of it while it's away. Drop it (Q) and it lands
+where it falls, like the stock crate; press E on its spot to send it back. Built when the store
+loads (`StorageBoxes.cs`), so nothing is baked into the scene. In the editor the same boxes stand
+in place to look at, never saved and not clickable (`Kehai/Storage` turns them off), and
+`Kehai/Products/3` lays a box of every product on Models_Island, model and materials only.
 
 - **Storage room:** shelf-stable products in brown boxes (a band of the product's colour, its
   name and section on a label, its packaging beside it). **One section to a rack**, named on

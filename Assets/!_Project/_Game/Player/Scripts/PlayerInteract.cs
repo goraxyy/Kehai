@@ -252,13 +252,6 @@ public class PlayerInteract : MonoBehaviour
         Item dropped = carrySlot.Drop();
         if (dropped == null) return;
 
-        // A product's box goes back to its spot in the back rooms, so they're never lost.
-        if (dropped.TryGetComponent(out ItemHome boxHome) && dropped.GetComponent<ProductBox>() != null)
-        {
-            boxHome.ReturnHome();
-            return;
-        }
-
         dropped.lastAuthor = Kehai.Karen.NoiseAuthor.Player;
         GameEvents.RaisePlayerDroppedItem(dropped, dropped.transform.position);
         Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
