@@ -45,7 +45,7 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| Esc | Pause: restart the shift or leave for the main menu, volume, mouse, Karen's floor cone, webcam; closes any open panel |
+| Esc | Pause: settings (sound, display, mouse, Karen's floor cone, webcam), restart the shift or the main menu; closes any open panel |
 | F1 | Live map of the store and what Karen is doing, in plain words |
 | H (on the F1 map) | Karen's guess of where you are, as a heat map |
 | T (on the F1 map) | Technical view: goal scores and her thought log |
@@ -121,10 +121,11 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 
 ## Settings (Esc)
 
-- **Shift**: restart this shift. The store resets, you go back to where you start, and the same shift begins again when you clock in. Karen still remembers earlier shifts.
-- **Sound**, first on the page: **all game sounds** at once, then each kind on its own: sound effects, Karen (her footsteps and warnings), music (the radio) and announcements (the PA). You hear a sample when you let go of a slider.
-- **Mouse**: look sensitivity.
-- **Karen**: show where she is looking, as a cone on the floor. Blue: walking her rounds. Orange: she noticed something. Red: she's hunting you, or can see you right now.
-- **Webcam blinking**: turn it on or off, calibrate, open the blink test.
+- **Sound**: **all sounds** at once, then effects, Karen (her footsteps and warnings), music (the radio) and announcements (the PA). A sample plays when you let go of a slider.
+- **Display**: resolution, full screen, and quality (Low, Medium, High). High is the game as designed; Medium and Low draw fewer pixels, with less anti-aliasing and shorter shadows.
+- **Mouse**: sensitivity.
+- **Karen**: her floor cone, on or off. It shows where she's looking: blue while she walks her rounds, orange when she's noticed something, red while she hunts you or can see you.
+- **Webcam blinking**: turn it on or off, calibrate, test.
+- Along the bottom: **Resume**, **Restart shift** (the store resets and the same shift begins again; Karen still remembers earlier shifts), **Main menu** and **Quit**. Restart and Main menu ask first.
 
 The game pauses while the menu is open, and your choices are remembered.

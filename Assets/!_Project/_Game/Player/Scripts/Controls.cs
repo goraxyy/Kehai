@@ -46,7 +46,7 @@ public static class Controls
             K("Up / Down", "Choose an answer when a customer asks you something"),
             K("E / Enter", "Give that answer")),
         new Section("Menus and maps",
-            K("Esc", "Pause: restart the shift or leave for the main menu, volume, mouse, " + GameNames.Antagonist + "'s floor cone, webcam; closes any open panel"),
+            K("Esc", "Pause: settings (sound, display, mouse, " + GameNames.Antagonist + "'s floor cone, webcam), restart the shift or the main menu; closes any open panel"),
             K("F1", "Live map of the store and what " + GameNames.Antagonist + " is doing, in plain words"),
             K("H (on the F1 map)", GameNames.Antagonist + "'s guess of where you are, as a heat map"),
             K("T (on the F1 map)", "Technical view: goal scores and her thought log"),

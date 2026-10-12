@@ -8,6 +8,9 @@ Everything between today and a Steam release, in order. This is the file we foll
   milestone counts as reached. Milestones can overlap in time; their exit tests can't.
 - `[x]` done · `[~]` partly done (the note says what's left) · `[ ]` not started.
 - No dates yet. They come once the Steam page is live.
+- **Two passes.** Now: a quick pass, with placeholder art and level, good enough for the Steam
+  page and the beta. Before launch: everything redesigned (Milestone 7). Versions follow the
+  milestones (see [Versions](#versions)).
 
 ---
 
@@ -59,8 +62,8 @@ power cuts and the breaker box; the store radio; the flashlight; a 150 × 150 m 
 
 **Exit test: do 10 minutes of the game convince a stranger the full game is worth playing?**
 
-One shift, at final quality, with Karen in it. It's what the trailer, the demo and the Steam
-page are cut from.
+One shift with Karen in it, at quick-pass quality: placeholder art is fine, since everything is
+redesigned before launch (Milestone 7). It's what the first trailer and Steam page are cut from.
 
 ### Karen
 - [x] Karen in the store: perception, belief map, planner, 35 tactics, learning, fairness rules
@@ -81,8 +84,8 @@ page are cut from.
 ### The game around the shift
 - [x] Main menu, Esc menu, saved career, shift summary and endings
 - [x] Real products on full shelves, aisle signs, lamps
-- [~] Options: sensitivity, volumes, Karen's floor cone and the webcam are in;
-      resolution and quality aren't
+- [x] Options: sound, resolution, full screen, quality (Low / Medium / High), sensitivity,
+      Karen's floor cone and the webcam, on one simple page in black, red and white
 
 ### Builds
 - [x] macOS build (universal), with the webcam helper beside it
@@ -90,8 +93,8 @@ page are cut from.
 - [ ] Run the Windows build on a real Windows PC
 - [ ] Decide: a webcam helper for Windows, or keyboard blink only there
 - [~] Check with a person at the screen: menus in a window, webcam blinking, frame rate
-- [~] A real version scheme (the identifier is `com.tokenlimit.kehai`; the version is still
-      0.1.0, and each build records its commit)
+- [~] Version numbers per milestone ([Versions](#versions)); the identifier is
+      `com.tokenlimit.kehai`, and each build records its commit
 
 ---
 
@@ -110,6 +113,8 @@ Do this alongside the slice: a page that's live earlier collects more wishlists.
 - [ ] Tags, genre, system requirements (from real builds), age rating, Steam Deck yes/no
 - [ ] Submit for review (3–5 business days), then **live as "Coming Soon"**
 - [ ] Count wishlists every week from day one
+- [ ] After the redesign (Milestone 7): new capsule, screenshots and trailer; a before/after
+      post is a marketing beat of its own
 
 ---
 
@@ -138,7 +143,8 @@ notice she's learning?
 
 - [ ] Cut a demo from the slice: one or two shifts, then a wishlist screen
 - [ ] A separate demo app on Steam; track completion and where people quit
-- [ ] Pick a Steam Next Fest (February, June or October; a game gets **one**, before release)
+- [ ] Pick a Steam Next Fest (February, June or October; a game gets **one**, before release),
+      ideally after the redesign, since it's the biggest first impression
 - [ ] Apply 4–6 weeks ahead; plan videos for the festival week
 - [ ] Maybe a smaller festival first, as a rehearsal
 
@@ -170,7 +176,7 @@ The plan: [MARKETING.md](MARKETING.md).
 - [ ] All shifts present and playable; the difficulty curve tuned across a career
 - [ ] Decide the endless maze: its own game mode, or how it fits the store
       ([IDEAS.md](IDEAS.md#2-the-endless-maze))
-- [ ] Final art, audio and UI
+- [ ] Final art, audio and UI: Milestone 7
 - [ ] Languages: the store page in English and Russian at least
 - [ ] Accessibility: subtitles, remappable keys, colour-blind-safe markers, a head-bob toggle,
       text size
@@ -180,7 +186,39 @@ The plan: [MARKETING.md](MARKETING.md).
 
 ---
 
-## Milestone 7: Hardening
+## Milestone 7: Redesign before launch
+
+**Exit test: does every place and object look made for this game, not borrowed or placeholder?**
+
+Everything from the quick pass is redone. Level first, then models, then the look on top.
+
+### Level design
+- [ ] The store's floor plan, redesigned: aisles, loops and dead ends Karen can use, sightlines,
+      hiding spots, and landmarks so players don't get lost in a bad way
+- [ ] Back of house: stockroom, staff room, office, toilets, loading bay, breaker box
+- [ ] Outside: the parking lot, the street front, the bins and the skip, night lighting
+- [ ] Greybox first, playtest the layout (Karen's routes, the chase loops), then dress it
+- [ ] A lighting and mood pass per area
+
+### Models of the entire place
+- [ ] A style guide first: palette, texel density, polygon budget, so it reads as one place
+- [ ] The building: walls, floor, ceiling, roof, windows, storefront, doors, signage
+- [ ] Fixtures: shelves and end caps, fridges and freezers, the tills and counter, baskets and
+      trolleys, the coffee machine, the time clock, the breaker box, CCTV, speakers, lamps
+- [ ] The 80 products, redone or refined to the style guide
+- [ ] The little things: trash and litter, spills, bin bags, boxes and crates, the mop and bucket,
+      wet-floor signs, posters, price tags, cables, vents, a fire extinguisher, a cleaning cart
+- [ ] Outside: parked cars, parking lines, lamp posts, bollards, a trolley bay, kerbs, plants
+- [ ] Characters: the player's hands, the customers, Karen
+
+### The rest
+- [ ] UI redesigned to match: menus, HUD, task list, maps
+- [ ] Audio to match the new spaces
+- [ ] Every third-party model, sound and font replaced or licensed (see Milestone 6)
+
+---
+
+## Milestone 8: Hardening
 
 **Exit test: can it run for two hours without a crash or a memory leak?**
 
@@ -196,7 +234,7 @@ The plan: [MARKETING.md](MARKETING.md).
 
 ---
 
-## Milestone 8: Release
+## Milestone 9: Release
 
 **Exit test: is it live, and can people buy it?**
 
@@ -228,8 +266,28 @@ The slice gates the trailer, the trailer gates the Steam page, and the page coll
 wishlists.
 
 ```
-Prototype ──► Vertical slice ──┬──► Steam page ──► Demo ──► Next Fest
-  [done]                       │
-                               └──► Playtesting ──► Content complete ──► Hardening ──► Release
+Prototype ──► Vertical slice ──┬──► Steam page ──────────────────────► Demo ──► Next Fest
+  [done]      (quick pass)     │                                       ▲
+                               └──► Playtesting ──► Content complete ──► Redesign ──► Hardening ──► Release
+                                                    (beta)
 Setup and marketing run alongside all of it.
 ```
+
+---
+
+## Versions
+
+`MAJOR.MINOR.PATCH`. Below 1.0 the game is in development; `1.0.0` is the launch. A minor step
+marks a milestone; a patch is fixes only. A label says how finished it is.
+
+| version | what it is |
+|---|---|
+| `0.1.x` | prototype (now) |
+| `0.2.x` | vertical slice, quick pass: the first Steam page |
+| `0.3.x`–`0.5.x` | **alpha**: playtest rounds; features still coming |
+| `0.6.x`–`0.9.x` | **beta**: content complete, then the redesign and hardening |
+| `1.0.0-rc.1` | release candidate: the build that ships unless something's wrong |
+| `1.0.0` | launch; then `1.0.1` for fixes, `1.1.0` for updates |
+
+Steam doesn't read these: a build goes to a branch (default, beta, playtest), and the number
+is for the game's own screen, the patch notes and bug reports.
