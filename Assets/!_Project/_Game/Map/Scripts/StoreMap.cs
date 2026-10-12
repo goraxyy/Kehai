@@ -870,6 +870,8 @@ namespace Kehai.Store
 
             foreach (ToolSnapPoint snap in Object.FindObjectsByType<ToolSnapPoint>())
             {
+                // The back rooms' product boxes have spots too, hundreds of them; they're not landmarks.
+                if (snap.tool != null && snap.tool.GetComponent<ProductBox>() != null) continue;
                 bool isMop = snap.tool != null && snap.tool.type == ItemType.Mop;
                 AddLandmark(isMop ? LandmarkKind.MopHome : LandmarkKind.StockCrateHome,
                             isMop ? "Mop rack" : "Stock pallet", snap.transform.position, snap);

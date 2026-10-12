@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Kehai.Store;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Kehai.Karen
 {
@@ -87,8 +88,7 @@ namespace Kehai.Karen
             World = gameObject.GetOrAdd<KarenWorld>();
             Review = new PerformanceReview(this);
 
-            Landmark? home = Map.FindLandmark(LandmarkKind.StockCrateHome);
-            Body = KarenBody.Build(transform, config, home.HasValue ? home.Value.Position : transform.position);
+            Body = KarenBody.Build(transform, config, StartPosition());
             Body.Touched += OnTouched;
 
             RebuildBelief();
@@ -231,8 +231,7 @@ namespace Kehai.Karen
             Goals.Reset();
             AbortPlan();
             Body.Sight.ResetAwareness();
-            Landmark? home = Map.FindLandmark(LandmarkKind.StockCrateHome);
-            if (home.HasValue) Body.Warp(home.Value.Position);
+            Body.Warp(StartPosition());
             Body.SetMood(KarenBody.Mood.Calm);
 
             ShiftActive = true;
@@ -240,6 +239,15 @@ namespace Kehai.Karen
             decideNow = true;
 
             Note("SYSTEM", $"shift {number} begins — employee {Ledger.PlayerName}, shift {number} of the career");
+        }
+
+        // Where she starts the game and every shift: the floor nearest her config's spot, or the
+        // stock pallet in a level with no floor there.
+        Vector3 StartPosition()
+        {
+            if (NavMesh.SamplePosition(config.start, out NavMeshHit hit, 5f, NavMesh.AllAreas)) return hit.position;
+            Landmark? home = Map.FindLandmark(LandmarkKind.StockCrateHome);
+            return home.HasValue ? home.Value.Position : transform.position;
         }
 
         public void EndShift(bool clockedOut)
