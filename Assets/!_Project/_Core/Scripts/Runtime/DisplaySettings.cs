@@ -9,18 +9,23 @@ using UnityEngine.Rendering.Universal;
 // Quality is three presets over the project's own pipeline settings, not Unity's quality
 // levels: the other level has the GPU Resident Drawer off, so the shelves would cost more to
 // draw on "Low" than on "High". High is the project's settings as they are. Medium and Low
-// render fewer pixels, with less anti-aliasing and shorter, coarser shadows, on a copy of the
-// pipeline asset, so the asset itself is never changed (in the editor, the original is put back
-// when Play stops).
+// render fewer pixels with less anti-aliasing and a coarser sun shadow, set on the pipeline
+// asset in use, in place. Swapping in a different asset (a tuned copy, as this used to) makes
+// Unity tear the whole pipeline down and build it again, from inside the settings page's
+// drawing: the aisle signs lost their Japanese and stayed that way. The shadows' reach is
+// left alone: the walls only stop the room lights where they cast shadows, so shorter
+// shadows let light through them. In the editor the asset's own values go back when Play
+// stops, so it's never saved changed.
 public static class DisplaySettings
 {
     public enum Quality { Low, Medium, High }
 
     const string QualityKey = "Kehai.Quality";
 
-    static bool captured;
-    static RenderPipelineAsset levelOverride;   // what the quality level had: the asset, or none
-    static UniversalRenderPipelineAsset original, copy;
+    // The asset in use and the values it had, captured the first time quality is set.
+    static UniversalRenderPipelineAsset asset;
+    static float renderScale;
+    static int msaa, sunShadow;
 
     public static Quality Current { get; private set; } = Quality.High;
 
@@ -46,44 +51,30 @@ public static class DisplaySettings
 
     static void Apply()
     {
-        if (!captured)
+        if (asset == null)
         {
-            levelOverride = QualitySettings.renderPipeline;
-            original = (levelOverride ?? GraphicsSettings.defaultRenderPipeline) as UniversalRenderPipelineAsset;
-            captured = true;
-        }
-        if (original == null) return;
-
-        if (Current == Quality.High)
-        {
-            if (copy != null && QualitySettings.renderPipeline == copy) QualitySettings.renderPipeline = levelOverride;
-            return;
+            asset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            if (asset == null) return;
+            renderScale = asset.renderScale;
+            msaa = asset.msaaSampleCount;
+            sunShadow = asset.mainLightShadowmapResolution;
         }
 
-        if (copy == null)
-        {
-            copy = Object.Instantiate(original);
-            copy.name = original.name + " (quality)";
-            copy.hideFlags = HideFlags.DontSave;
-        }
-        bool low = Current == Quality.Low;
-        copy.renderScale = original.renderScale * (low ? 0.7f : 0.85f);
-        copy.msaaSampleCount = low ? 1 : Mathf.Min(original.msaaSampleCount, 2);
-        copy.shadowDistance = original.shadowDistance * (low ? 0.35f : 0.6f);
-        copy.shadowCascadeCount = low ? 1 : Mathf.Min(original.shadowCascadeCount, 2);
-        copy.mainLightShadowmapResolution = Mathf.Min(original.mainLightShadowmapResolution, low ? 1024 : 2048);
-        if (QualitySettings.renderPipeline != copy) QualitySettings.renderPipeline = copy;
+        bool low = Current == Quality.Low, high = Current == Quality.High;
+        asset.renderScale = high ? renderScale : renderScale * (low ? 0.7f : 0.85f);
+        asset.msaaSampleCount = high ? msaa : low ? 1 : Mathf.Min(msaa, 2);
+        asset.mainLightShadowmapResolution = high ? sunShadow : Mathf.Min(sunShadow, low ? 1024 : 2048);
     }
 
 #if UNITY_EDITOR
-    // The quality level's own asset goes back before the editor could save the settings.
+    // The asset's own values go back before the editor could save it.
     static void PutBack(UnityEditor.PlayModeStateChange change)
     {
-        if (change != UnityEditor.PlayModeStateChange.ExitingPlayMode || !captured) return;
-        if (copy != null && QualitySettings.renderPipeline == copy) QualitySettings.renderPipeline = levelOverride;
-        captured = false;
-        copy = null;
-        original = null;
+        if (change != UnityEditor.PlayModeStateChange.ExitingPlayMode || asset == null) return;
+        asset.renderScale = renderScale;
+        asset.msaaSampleCount = msaa;
+        asset.mainLightShadowmapResolution = sunShadow;
+        asset = null;
     }
 #endif
 

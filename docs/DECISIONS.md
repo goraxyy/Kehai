@@ -9,8 +9,9 @@ are from the dev Mac (M2, 8 GB), in the editor, at 1080p.
 4. [The endless maze](#4-the-endless-maze)
 5. [Karen plays fair](#5-karen-plays-fair)
 6. [Replays record, they don't re-simulate](#6-replays-record-they-dont-re-simulate)
-7. [The pipelines](#7-the-pipelines)
-8. [Still open](#8-still-open)
+7. [Quality without rebuilding the pipeline](#7-quality-without-rebuilding-the-pipeline)
+8. [The pipelines](#8-the-pipelines)
+9. [Still open](#9-still-open)
 
 ---
 
@@ -76,6 +77,18 @@ Gotcha: copies made with `InstantiateAsync` are never picked up by the drawer (1
 **Aiming without colliders.** The player's ray is tested against the boxes of nearby slots
 (`ShelfAim`) instead of 16,500 trigger colliders.
 
+**Which way a shelf faces comes from the model.** The shelf code used to guess: front and back by
+each bay's own middle. Pillars where a perpendicular bay joins the run then stocked a row facing
+into that bay, and the "b" and "E" end pieces faced their own back panel. The models already
+mark the sides that sell, with their price strips, so the strips decide. Gotcha: in Play the
+shelves are statically batched, and every strip's mesh becomes the scene's combined mesh, so its
+place is read from its renderer's box instead.
+
+**Planned by aisle, not by bay.** Each bay used to pick one of its section's two layouts from
+its position, front and back by the way it was turned, so one side of an aisle changed product
+at every bay, and at every pillar turned the other way. Now each side of an aisle is planned as
+one run of brand blocks.
+
 ---
 
 ## 4. The endless maze
@@ -135,7 +148,18 @@ recording moves things, so a replay looks exactly like the game.
 
 ---
 
-## 7. The pipelines
+## 7. Quality without rebuilding the pipeline
+
+**Before (#48):** Low and Medium were a tuned copy of the pipeline asset, swapped in. Unity tears
+the whole render pipeline down and builds it again for that, here from inside the settings
+page's drawing: the aisle signs' Japanese went missing and stayed missing, and the shorter
+shadows let room lights through the walls. **Now:** render scale, anti-aliasing and the sun's
+shadow resolution are set on the asset in use, which needs no rebuild; the shadows' reach is
+left alone. In the editor the asset's own values go back when Play stops.
+
+---
+
+## 8. The pipelines
 
 - **launchd, not a server.** The marketing and playtest jobs run on macOS's own scheduler. A
   time the Mac slept through runs when it wakes, and nothing stays in memory (8 GB).
@@ -146,7 +170,7 @@ recording moves things, so a replay looks exactly like the game.
 
 ---
 
-## 8. Still open
+## 9. Still open
 
 - **Karen's learning** doesn't beat planning alone against scripted players. It needs players who
   react to her tricks, or people ([KAREN_RESULTS.md](KAREN_RESULTS.md)).

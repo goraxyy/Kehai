@@ -25,8 +25,9 @@ public sealed class ShelfSlot : IInteractable
     // On the board, in the frame's space: the middle of the cell, at the board's surface.
     public readonly Vector3 local;
 
-    // Faces the frame's back (+Z) aisle rather than its front (-Z).
-    public readonly bool facesBack;
+    // Which side of the frame it sells to: its front (-Z) aisle, its back (+Z), or a side.
+    public readonly ShelfGrid.Side side;
+    public bool facesBack => side == ShelfGrid.Side.Back;
 
     // The cell's floor, in the frame's space: x along the board, y into it.
     public readonly Vector2 cell;
@@ -56,15 +57,18 @@ public sealed class ShelfSlot : IInteractable
     ShelfStock stock;
     string registeredFor;
 
-    public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, bool facesBack, Vector2 cell, float height)
+    public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, ShelfGrid.Side side, Vector2 cell, float height)
     {
         this.owner = owner;
         this.frame = frame;
         this.local = local;
-        this.facesBack = facesBack;
+        this.side = side;
         this.cell = cell;
         this.height = height;
     }
+
+    public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, bool facesBack, Vector2 cell, float height)
+        : this(owner, frame, local, facesBack ? ShelfGrid.Side.Back : ShelfGrid.Side.Front, cell, height) { }
 
     internal void Attach(ShelfStock to, int index)
     {
@@ -76,7 +80,7 @@ public sealed class ShelfSlot : IInteractable
     public Vector3 Position => frame.TransformPoint(local);
 
     // Which way what stands here faces: products are made with their label to -Z.
-    public Quaternion Rotation => facesBack ? frame.rotation * Quaternion.Euler(0f, 180f, 0f) : frame.rotation;
+    public Quaternion Rotation => frame.rotation * Quaternion.Euler(0f, ShelfGrid.Yaw(side), 0f);
 
     // Toward the aisle it faces.
     public Vector3 Outward => Rotation * Vector3.back;
