@@ -44,6 +44,20 @@ Chosen over hand-made instancing or static batching, which can't skip hidden obj
 slow, so without shadows they shone through walls. Each room is now on its own rendering layer,
 and its lights only reach that layer.
 
+**Still leaking, found by turning one room's lights off and looking (#52).** Three ways light
+still got in:
+- The layers were per part of the building, not per walled room. The storage room and the cold
+  room are both "Stockroom", so the cold room's lights (17 m reach) lit the storage room through
+  the wall between them, and the same between the two staff rooms. Every walled room StoreMap
+  finds now has its own layer; there are seven, which is exactly the named layers URP keeps.
+- Which room a wall faces came from the area table, whose lines don't sit on the walls: the west
+  wall is half a metre inside the table's line, so its inner face was counted as outside, lit by
+  the sun and not by its room. Each face now takes the room of the nearest floor on its side.
+- An outside wall keeps the outside layer, for its outer face, only if the sun can reach that
+  face. The west and north walls' outer faces never see the sun; on them the layer only let the
+  sun light the inner face.
+Rooms with their lights off now measure as dark as with the sun switched off too.
+
 **How we measure.** The same 4 views every time (a long run, the drinks aisle, produce from the
 door, the back wall), best of 3. Two rules learned the hard way: let a few frames pass before
 timing (the drawer picks objects up a frame late), and take a picture with every measurement
