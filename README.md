@@ -121,6 +121,7 @@ for the tools.
 | [`CONTROLS.md`](docs/CONTROLS.md) | Every key |
 | [`Karen.md`](docs/Karen.md) | Karen's full design, and where the code differs |
 | [`STORE.md`](docs/STORE.md) | The building, the products, how the shelves are stocked, Karen's map |
+| [`LEVEL_DESIGN.md`](docs/LEVEL_DESIGN.md) | Plans for the parking lot, the outside, the lobby, the restrooms and the staff rooms |
 | [`DECISIONS.md`](docs/DECISIONS.md) | The big technical choices and why |
 | [`IDEAS.md`](docs/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log |
 | [`MARKETING.md`](docs/MARKETING.md) | The pitch, the videos, the automation |

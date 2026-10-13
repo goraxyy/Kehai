@@ -197,6 +197,8 @@ Everything from the quick pass is redone. Level first, then models, then the loo
       hiding spots, and landmarks so players don't get lost in a bad way
 - [ ] Back of house: stockroom, staff room, office, toilets, loading bay, breaker box
 - [ ] Outside: the parking lot, the street front, the bins and the skip, night lighting
+- Plans and model lists for the lot, the outside, the lobby, the restrooms and the staff rooms:
+  [LEVEL_DESIGN.md](LEVEL_DESIGN.md)
 - [ ] Greybox first, playtest the layout (Karen's routes, the chase loops), then dress it
 - [ ] A lighting and mood pass per area
 
