@@ -182,7 +182,7 @@ the shop, and in the game the place a shift starts and ends, so it should read a
 
 | item | where | size, notes |
 |---|---|---|
-| Door to the restrooms | west wall, (25, −114) | single door, "Toilets" sign with pictograms |
+| Door to the restrooms | west wall, (25, −115) | single door, "Toilets" sign with pictograms |
 | Customer service counter | x 26 – 33, along the inner wall | 6 m counter, two stools, a till, returns and parcel shelf behind |
 | Coin lockers | x 33 – 37 | 2 × 6 lockers for bags |
 | Umbrella stand, wet-umbrella bag dispenser | by the lockers | |
@@ -206,20 +206,20 @@ Taken from the north end of the front staff room: **x 10 – 25, z −120 – �
 from the lobby, so customers never go through staff space.
 
 ```
- z −110 ┌──────────────────────────────────────┐
-        │ Women's                         │jan.│   3 stalls, 2 sinks, dryer, mirror,
-        │ ▯ ▯ ▯        ⌓ ⌓  dryer          │ ▤  │   fold-down baby change
-        ├──────────────────────── door ──┬─┴────┤
-        │ Accessible │◄──── corridor 1.8 m ◄────│◄ door from the lobby (25, −114)
-        │  WC, rails ├──────────────── door ──┬─┤
-        │  baby chg  │ Men's  ▯ ▯  ┃┃┃  ⌓ ⌓    │ │   2 stalls, 3 urinals, 2 sinks,
- z −120 └────────────┴────────────────────────┴─┘   dryer, mirror
-        x 10        14                         25
+ z −110 ┌────────────┬───────────────────────────────┐
+        │ Accessible │ Women's  ▯ ▯ ▯   ⌓ ⌓  dryer   │
+        │ and family │ baby change          │ jan. ▤ │
+        │  WC, rails ├──────────── door ────┴────────┤
+        │  baby chg  ◄─────── corridor 1.8 m ────────◄ door from the lobby (25, −115)
+        │  pull cord ├──────────── door ─────────────┤
+        │            │ Men's   ▯ ▯   ┃┃┃   ⌓ ⌓  dryer│
+ z −120 └────────────┴───────────────────────────────┘
+        x 10         14                             25
 ```
 
 | room | size | fixtures |
 |---|---|---|
-| Corridor | 1.8 m wide, z −114 | handrail, hand sanitiser, "Wet floor" sign |
+| Corridor | 1.8 m wide, z −115 | handrail, hand sanitiser, "Wet floor" sign |
 | Women's | 11 × 4 m | 3 stalls, 2 basins, hand dryer, mirror, fold-down baby change, bin |
 | Men's | 11 × 4 m | 2 stalls, 3 urinals with dividers, 2 basins, hand dryer, mirror, bin |
 | Accessible and family | 4 × 10 m end room | WC with grab rails, basin, emergency pull cord, baby change table, a child seat |
