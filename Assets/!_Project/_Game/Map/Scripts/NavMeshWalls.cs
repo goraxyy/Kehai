@@ -82,6 +82,7 @@ namespace Kehai.Store
             if (b.min.y > hit.position.y + 0.6f) return false;
 
             return c.GetComponentInParent<HingeDoor>() == null
+                && c.GetComponentInParent<FurnitureDoor>() == null
                 && c.GetComponentInParent<AutoDoubleDoor>() == null
                 && c.GetComponentInParent<Item>() == null
                 && c.GetComponentInParent<NavMeshAgent>() == null

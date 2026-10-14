@@ -392,6 +392,7 @@ public static class ProductImport
             }
         }
 
+        if (island.transform.Find("Island_Layout") != null) ModelIslandLayout.Organize();
         EditorSceneManager.MarkSceneDirty(island.scene);
         EditorSceneManager.SaveScene(island.scene);
         return $"Showcase: {placed} products on the floor of Models_Island in {order.Length} rows, " +

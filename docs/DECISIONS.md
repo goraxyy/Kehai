@@ -184,7 +184,26 @@ left alone. In the editor the asset's own values go back when Play stops.
 
 ---
 
-## 9. Still open
+## 9. Reproducible interior models and safe room circulation
+
+The staff room and office use generated low-poly meshes and local prefab assets, with their
+recipes committed as C#. Rigid parts are combined by material; moving leaves stay separate.
+Furniture is authored in metres and placed against measured wall faces. The model island uses
+fixed category plots with walking aisles and reserved space for later rooms.
+
+Locker/cabin interaction uses the aimed E system and checks the door sweep for obstructions.
+Room doors retain the existing HingeDoor integration for Karen, locking and recording.
+Existing coffee, radio, punch-clock and tool objects keep their gameplay references.
+
+**Problem: a lowered ceiling broke the ground-floor map.** Its upper face entered the navigation
+bake, moving the navigation bounds' midpoint above the floor. Map sampling then found only a
+handful of cells. Ceilings are now excluded from the bake, and StoreMap samples at the lowest
+navigation level. The added third west room also requires another named rendering layer so
+its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](INTERIOR_MODELS.md).
+
+---
+
+## 10. Still open
 
 - **Karen's learning** doesn't beat planning alone against scripted players. It needs players who
   react to her tricks, or people ([KAREN_RESULTS.md](KAREN_RESULTS.md)).

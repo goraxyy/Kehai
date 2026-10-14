@@ -1,5 +1,7 @@
 # Changelog
 
+- **2026-10-14** — Furnished the equal 200 m² staff room and office with 51 reusable low-poly models. Ten larger lockers and two changing cabins have aimed open/close interactions; the staff kitchen retains coffee, radio, punch-clock and tool behavior. Added the office entrance, moved the WC entrance clear of its new partition, rebuilt navigation, and expanded Models_Island to 120 × 120 m with labeled visual-only displays and reserved future plots. See `INTERIOR_MODELS.md`.
+
 - **2026-09-29** — Renamed: the game is now **Kehai** (気配) and its antagonist **Aiko** (愛子); they were Karoshi and Karen. The first launch copies the old save data and settings across (`KehaiMigration.cs`).
 - **2026-10-02** — A main menu: Continue picks the career up at its next shift (Karen's ledger is the save), New career wipes it, and the Esc menu can leave a shift for it. The first macOS build, from `KehaiBuild.MacOS`.
 - **2026-10-04** — A Windows build (64-bit), from `KehaiBuild.Windows`; the editor opens the store when it starts on an empty scene.

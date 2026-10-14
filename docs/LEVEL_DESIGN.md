@@ -1,5 +1,11 @@
 # Level design: outside, front of house, back of house
 
+**14 October implementation update:** the staff room and office now follow the equal
+200 m² west-room layout, with generated furniture and an expanded model island. See
+[INTERIOR_MODELS.md](INTERIOR_MODELS.md) for the current bounds, built inventory and menus.
+The older dimensions and furnishing proposals below are superseded where that document
+describes a built room. The rest of the environment remains planned work.
+
 Plans and model lists for the parts of the store that are still grey boxes: the parking lot, the
 building's outside, the lobby, the restrooms and the staff rooms. It feeds Milestone 7 of
 [RELEASE_PLAN.md](RELEASE_PLAN.md) (level design, models of the entire place). Greybox these
