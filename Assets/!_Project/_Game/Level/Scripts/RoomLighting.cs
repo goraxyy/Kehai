@@ -43,7 +43,7 @@ public static class RoomLighting
     public const int Stockroom = 1 << 4;
     public const int StaffRoom = 1 << 5;
     // For a second walled room in a part of the building that has two.
-    public static readonly int[] Spare = { 1 << 6, 1 << 7 };
+    public static readonly int[] Spare = { 1 << 6, 1 << 7, 1 << 8 };
     public const int AllRooms = Outside | SalesFloor | Lobby | Stockroom | StaffRoom | (1 << 6) | (1 << 7);
     public const uint Moving = 1;                       // the default layer
     public const uint Everything = 0xFFFFFFFF;
@@ -70,7 +70,9 @@ public static class RoomLighting
 
     // The layer of the room a point is in. In play, from the walled rooms (the map); out of
     // play, from the parts of the building alone, so the editor never builds a map for it.
-    public static int BitAt(Vector3 p) => BitAt(p, Application.isPlaying ? StoreMap.Current : null);
+    static StoreMap authoringMap;
+    static StoreMap ActiveMap => authoringMap ?? (Application.isPlaying ? StoreMap.Current : null);
+    public static int BitAt(Vector3 p) => BitAt(p, ActiveMap);
 
     public static int BitAt(Vector3 p, StoreMap map)
     {
@@ -85,7 +87,7 @@ public static class RoomLighting
     // of the nearest floor on that side of the box: the walls, not the area table, say where a
     // room ends (the west wall stands half a metre inside the table's line, and its inside face
     // was left to the sun).
-    public static int MaskFor(Bounds b) => MaskFor(b, Application.isPlaying ? StoreMap.Current : null);
+    public static int MaskFor(Bounds b) => MaskFor(b, ActiveMap);
 
     // Toward the sun, while Apply works out the masks; zero when there's no sun to think of.
     static Vector3 towardSun;
@@ -149,7 +151,12 @@ public static class RoomLighting
                 Area[r] = AreaOf(map.Rooms[r]);
                 int bit = BitFor(Area[r]);
                 // The first room of a part keeps its layer; another takes a spare one, while any are left.
-                if (bit != Outside && !taken.Add(Area[r]) && spare < Spare.Length) bit = Spare[spare++];
+                if (bit != Outside && !taken.Add(Area[r]))
+                {
+                    uint defined=RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue();
+                    while(spare<Spare.Length && (defined & (uint)Spare[spare])==0)spare++;
+                    if(spare<Spare.Length)bit=Spare[spare++];
+                }
                 Bit[r] = bit;
                 if (!ofArea.TryGetValue(Area[r], out List<int> list)) ofArea[Area[r]] = list = new List<int>();
                 list.Add(r);
@@ -249,6 +256,15 @@ public static class RoomLighting
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetRooms() => walledRooms = null;
 
+    // Builders have just changed the walls and navigation. Use those walled rooms in the
+    // editor too, instead of treating all three west rooms as one coarse "Staff room" area.
+    public static void Apply(StoreMap map)
+    {
+        authoringMap=map;
+        try { Apply(); }
+        finally { authoringMap=null; }
+    }
+
     public static void Apply()
     {
         if (!LayersDefined)
@@ -276,7 +292,8 @@ public static class RoomLighting
         foreach (MeshRenderer r in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include))
         {
             if (r == floor || r == roof || Moves(r)) continue;
-            r.renderingLayerMask = (uint)MaskFor(r.bounds);
+            var anchor=r.GetComponentInParent<InteriorLightAnchor>();
+            r.renderingLayerMask = (uint)(anchor!=null ? BitAt(anchor.Position) : MaskFor(r.bounds));
             still++;
         }
 
@@ -336,7 +353,7 @@ public static class RoomLighting
         if (whole == null) return;
         var filter = whole.GetComponent<MeshFilter>();
         // If the mesh can't be read, it stays lit by every room rather than by none.
-        whole.renderingLayerMask = (uint)AllRooms;
+        whole.renderingLayerMask = (uint)AllRooms | (RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue() & (1u << 8));
         if (filter == null || filter.sharedMesh == null) return;
         if (!FitUv(filter, up, out Vector3 o, out Vector3 du, out Vector3 dv, out float y))
         {
@@ -379,7 +396,7 @@ public static class RoomLighting
     // The walled rooms in play; out of it, the parts of the building.
     static List<(string name, int bit, Rect rect)> RoomRects(Bounds within)
     {
-        WalledRooms walled = RoomsOf(Application.isPlaying ? StoreMap.Current : null);
+        WalledRooms walled = RoomsOf(ActiveMap);
         int count = walled != null ? walled.Bit.Length : Rooms.Length;
         var min = new Vector2[count];
         var max = new Vector2[count];

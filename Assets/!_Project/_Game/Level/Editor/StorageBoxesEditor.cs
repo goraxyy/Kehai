@@ -159,6 +159,7 @@ public static class StorageBoxesShowcase
         }
 
         string grew = plane != null ? ExtendFloorEast(plane, headX + longest * BoxPitch + 1f) : "";
+        if (island.transform.Find("Island_Layout") != null) ModelIslandLayout.Organize();
         AssetDatabase.SaveAssets();
         EditorSceneManager.MarkSceneDirty(island.scene);
         if (clean) EditorSceneManager.SaveScene(island.scene);

@@ -22,6 +22,10 @@ settings stay on the developer's Mac, so this isn't a runnable Unity project on 
 that would normally live in assets (Karen's tactics, the products, the shelf plan) is written in
 code so it can be read here.
 
+The staff-room and office model libraries, layouts and organized Models_Island are generated
+by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
+[`docs/INTERIOR_MODELS.md`](docs/INTERIOR_MODELS.md) for their inventory, dimensions and saving steps.
+
 ---
 
 ## The game

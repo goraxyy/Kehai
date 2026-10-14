@@ -197,7 +197,10 @@ namespace Kehai.Store
                     int g = r * cols + c;
                     gridToCell[g] = -1;
 
-                    Vector3 centre = GridCentre(c, r, b.center.y);
+                    // This is the store's ground-floor map. A ceiling or tall prop can add
+                    // elevated NavMesh islands; their height must not pull every sample
+                    // above the real floor and outside the sampling radius.
+                    Vector3 centre = GridCentre(c, r, b.min.y);
                     if (!NavMesh.SamplePosition(centre, out NavMeshHit hit, CellSize, NavMesh.AllAreas)) continue;
 
                     // The sample must land inside this cell, or two cells would share one
@@ -312,6 +315,7 @@ namespace Kehai.Store
             bool skip = collider is CharacterController
                      || (collider.attachedRigidbody != null && !collider.attachedRigidbody.isKinematic)
                      || collider.GetComponentInParent<HingeDoor>() != null
+                     || collider.GetComponentInParent<FurnitureDoor>() != null
                      || collider.GetComponentInParent<AutoDoubleDoor>() != null
                      || collider.GetComponentInParent<Item>() != null
                      || collider.GetComponentInParent<NavMeshAgent>() != null

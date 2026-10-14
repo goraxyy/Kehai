@@ -10,6 +10,10 @@ public class HingeDoor : MonoBehaviour
     public float openAngle = 90f;  // How far the door swings open
     public float openSpeed = 3f;   // Swing speed
     public float interactRange = 3f; // Max distance to interact
+    [Tooltip("Use the aimed interaction component instead of the nearby-E shortcut.")]
+    public bool aimedInteraction;
+    [Tooltip("Use the signed openAngle as an authored swing instead of choosing a side.")]
+    public bool fixedSwingDirection;
 
     [Header("Audio")]
     public AudioClip openCreak;
@@ -42,7 +46,8 @@ public class HingeDoor : MonoBehaviour
     void Start()
     {
         closedRot = transform.rotation;
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        var playerObject = GameObject.FindGameObjectWithTag("Player");
+        player = playerObject != null ? playerObject.transform : null;
 
         // The panel is the widest solid collider that swings with the hinge.
         foreach (BoxCollider box in GetComponentsInChildren<BoxCollider>())
@@ -73,6 +78,7 @@ public class HingeDoor : MonoBehaviour
 
     void Update()
     {
+        if (aimedInteraction || player == null) return;
         // Check distance & E key press
         float dist = Vector3.Distance(transform.position, player.position);
         if (Input.GetKeyDown(KeyCode.E) && dist <= interactRange && !GamePause.Paused)
@@ -141,7 +147,7 @@ public class HingeDoor : MonoBehaviour
             toOpener.y = 0f;
             float plus = Vector3.Dot(Quaternion.Euler(0f, openAngle, 0f) * along, toOpener);
             float minus = Vector3.Dot(Quaternion.Euler(0f, -openAngle, 0f) * along, toOpener);
-            float angle = plus < minus ? openAngle : -openAngle;
+            float angle = fixedSwingDirection ? openAngle : plus < minus ? openAngle : -openAngle;
             openRot = Quaternion.Euler(closedRot.eulerAngles + new Vector3(0, angle, 0));
             openedAt = Time.time;
         }
