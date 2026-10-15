@@ -165,8 +165,9 @@ python3 eval_blink.py --data eye_dataset --per-session --json results.json
 
 Each helper's reading runs through a copy of the game's `BlinkTracker`: the session's own
 calibration, the smoothing (none as the eye closes, a 0.6 step per frame as it opens), the
-0.5 / 0.3 hysteresis, and the blink length it learns for `PredictedReopenIn`. So the numbers are what
-Karen would get. Sessions missing a helper are left out (or the helper is), so that every
+0.5 / 0.3 hysteresis, and the blink length it learns for `PredictedReopenIn` (until the reading
+itself falls back under 0.5, not until the hysteresis lets go). So the numbers are what Karen
+would get. Sessions missing a helper are left out (or the helper is), so that every
 helper is scored on the same frames; it says which and why.
 
 | column | meaning |
