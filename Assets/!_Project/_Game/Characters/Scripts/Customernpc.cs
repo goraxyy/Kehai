@@ -230,11 +230,15 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
             if (target == null) continue;
 
             yield return MoveTo(StandPoint(target));
+            var fridgeDoor=target.owner!=null&&target.owner.GetComponent<ColdFixture>()!=null?target.owner.GetComponentInChildren<FurnitureDoor>():null;
+            if(fridgeDoor!=null&&Vector3.Distance(transform.position,target.owner.transform.position)>3f)fridgeDoor=null;
+            if(fridgeDoor!=null){fridgeDoor.SetOpen(true);yield return Wait(1.2f);}
 
             float browseTime = UnityEngine.Random.Range(shelfStayDurationRange.x, shelfStayDurationRange.y);
             yield return Wait(browseTime * 0.5f);
 
             bool got = TakeProduct(want.Id);
+            if(fridgeDoor!=null)fridgeDoor.SetOpen(false);
             if (!got && request != null)
             {
                 // The facing is bare. Ask, and if they're shown another, take one there.
@@ -245,7 +249,12 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
                     if (request.Helped)
                     {
                         yield return MoveTo(StandPoint(elsewhere));
+                        var otherDoor=elsewhere.owner!=null&&elsewhere.owner.GetComponent<ColdFixture>()!=null?elsewhere.owner.GetComponentInChildren<FurnitureDoor>():null;
+                        if(otherDoor!=null&&Vector3.Distance(transform.position,elsewhere.owner.transform.position)<=3f)
+                        {otherDoor.SetOpen(true);yield return Wait(1.2f);}
+                        else otherDoor=null;
                         TakeProduct(want.Id);
+                        if(otherDoor!=null)otherDoor.SetOpen(false);
                     }
                 }
             }
@@ -313,6 +322,8 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     static Vector3 StandPoint(ShelfSlot slot)
     {
         Vector3 p = slot.Position;
+        if(slot.owner!=null&&slot.owner.GetComponent<ColdFixture>()!=null)
+            p=slot.owner.transform.TransformPoint(new Vector3(0,0,-2.4f));
         return NavMesh.SamplePosition(p, out NavMeshHit hit, 2.5f, NavMesh.AllAreas) ? hit.position : p;
     }
 
@@ -360,33 +371,27 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     // The caller decides whether this happens; this just walks there and does it.
     IEnumerator VisitTrashcan()
     {
-        Trashcan can = FindNearestTrashcan();
+        WasteStream stream=(WasteStream)UnityEngine.Random.Range(0,3);
+        Trashcan can = FindNearestTrashcan(stream,out Vector3 approach);
         if (can == null) yield break;
-
-        // Stand in front of it rather than inside it.
-        Vector3 approach = can.transform.position
-                         + (transform.position - can.transform.position).normalized * trashcanStandOffset;
-        if (!NavMesh.SamplePosition(approach, out NavMeshHit spot, 2f, NavMesh.AllAreas)) yield break;
-
-        // The bin sits out the back — only go if there is a real walkable route to it,
-        // otherwise the customer would stand against a wall and use it through the wall.
-        NavMeshPath path = new NavMeshPath();
-        if (!agent.CalculatePath(spot.position, path) || path.status != NavMeshPathStatus.PathComplete)
-            yield break;
-
-        yield return MoveTo(spot.position);
+        yield return MoveTo(approach);
 
         // Confirm we actually got there before counting it as a use. Distance alone isn't
         // enough — the bin sits against a wall, and a customer on the far side can easily be
         // within a couple of metres of it, so require clear line of sight as well.
-        if (Vector3.Distance(transform.position, can.transform.position) > trashcanStandOffset + 1.5f)
+        if (can == null || can.IsFull || Vector3.Distance(transform.position, approach) > agent.stoppingDistance + arriveDistance + .35f)
             yield break;
         if (!HasLineOfSight(can.transform))
             yield break;
 
-        yield return Wait(trashcanUseSeconds);
+        float remaining = trashcanUseSeconds;
+        while (remaining > 0 && can != null)
+        {
+            if (!isFrozen) { FaceTowards(can.transform.position); remaining -= Time.deltaTime; }
+            yield return null;
+        }
 
-        if (can != null) can.RegisterUse();
+        if (can != null && !can.IsFull && HasLineOfSight(can.transform)) can.RegisterUse();
     }
 
     // True when nothing solid sits between this customer and the target.
@@ -410,16 +415,28 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         return true;
     }
 
-    Trashcan FindNearestTrashcan()
+    Trashcan FindNearestTrashcan(WasteStream stream,out Vector3 approach)
     {
         var cans = Trashcan.All;
         Trashcan nearest = null;
-        float nearestSqr = float.MaxValue;
+        approach = transform.position;
+        if (agent == null || !agent.isOnNavMesh) return null;
+        float nearestDistance = float.MaxValue;
+        var path = new NavMeshPath();
 
         for (int i = 0; i < cans.Count; i++)
         {
-            float sqr = (transform.position - cans[i].transform.position).sqrMagnitude;
-            if (sqr < nearestSqr) { nearest = cans[i]; nearestSqr = sqr; }
+            var can = cans[i];
+            if (can == null || !can.isActiveAndEnabled || !can.customersAllowed || can.IsFull || can.stream!=stream) continue;
+            Vector3 wanted = can.customerStandPoint != null ? can.customerStandPoint.position
+                : can.transform.position + (transform.position - can.transform.position).normalized * trashcanStandOffset;
+            if (!NavMesh.SamplePosition(wanted, out NavMeshHit hit, .75f, agent.areaMask)) continue;
+            if (!agent.CalculatePath(hit.position, path) || path.status != NavMeshPathStatus.PathComplete) continue;
+            float distance = 0f;
+            var corners = path.corners;
+            for (int p = 1; p < corners.Length; p++) distance += Vector3.Distance(corners[p-1], corners[p]);
+            if (distance >= nearestDistance) continue;
+            nearest = can; nearestDistance = distance; approach = hit.position;
         }
 
         return nearest;
@@ -506,6 +523,8 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     // True when nothing but this slot's own shelf sits between the customer and the slot.
     bool CanReach(ShelfSlot slot)
     {
+        if(slot.owner!=null&&slot.owner.GetComponent<ColdFixture>()!=null)
+        {var door=slot.owner.GetComponentInChildren<FurnitureDoor>();if(door!=null&&!door.IsFullyOpen)return false;}
         Transform shelf = slot.owner != null ? slot.owner.transform : slot.frame.root;
 
         Vector3 from = transform.position + Vector3.up * 0.8f;

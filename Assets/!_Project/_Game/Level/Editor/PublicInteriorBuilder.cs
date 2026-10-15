@@ -182,8 +182,10 @@ public static class PublicInteriorBuilder
         =>Solid("Lobby wall lining",new Vector3((left+right)*.5f,1.825f,z),new Vector3(right-left,3.65f,.15f),wall);
     static void TileLines(float west,float east,float south,float north,float pitch)
     {
-        for(float x=west+pitch;x<east;x+=pitch)Solid("Floor joint",new Vector3(x,.03f,(south+north)*.5f),new Vector3(.025f,.006f,north-south),trim,false,true);
-        for(float z=south+pitch;z<north;z+=pitch)Solid("Floor joint",new Vector3((west+east)*.5f,.03f,z),new Vector3(east-west,.006f,.025f),trim,false,true);
+        // Grout belongs to the floor material; crossing strips flicker where they overlap.
+        foreach(var r in root.GetComponentsInChildren<MeshRenderer>())
+            if(r.name.EndsWith("floor",StringComparison.OrdinalIgnoreCase))
+                r.sharedMaterial=StoreFinishBuilder.FloorMaterial(root.name==WCRoot?"WC Tiles":"Lobby Tiles",east-west,north-south,pitch,new Color(.48f,.52f,.49f));
     }
     static void Sign(string value,Vector3 at,float yaw,float width)
     {

@@ -84,9 +84,9 @@ public static class PublicInteriorModels
             case "TrolleyCorral":Corral(p);break;
             case "SecurityGate":
                 B(p,"Foot",0,.04f,0,.32f,.08f,.65f,dark,true);
-                foreach(float z in new[]{-.23f,.23f})B(p,"Upright",0,.82f,z,.11f,1.55f,.09f,white,true);
-                B(p,"Top",0,1.58f,0,.11f,.09f,.55f,white);B(p,"Status",0,1.64f,0,.115f,.025f,.16f,red);
-                B(p,"Antenna",0,.83f,0,.07f,.85f,.35f,sage);break;
+                foreach(float z in new[]{-.23f,.23f})B(p,"Upright",0,1.04f,z,.11f,2,.09f,white,true);
+                B(p,"Top",0,2.02f,0,.11f,.09f,.55f,white);B(p,"Status",0,2.08f,0,.115f,.025f,.16f,red);
+                B(p,"Antenna",0,1.05f,0,.07f,1.3f,.35f,sage);break;
             case "Directory":
                 B(p,"Frame",0,.9f,0,2f,1.8f,.09f,dark);B(p,"Board",0,.9f,-.051f,1.86f,1.66f,.022f,white);
                 B(p,"Header",0,1.57f,-.065f,1.72f,.24f,.012f,sage);break;

@@ -5,5 +5,7 @@ using UnityEngine;
 public sealed class InteriorLightAnchor : MonoBehaviour
 {
     public Vector3 localPoint;
+    [Tooltip("Facade and rooftop fixtures receive outdoor light even above an indoor room.")]
+    public bool outdoors;
     public Vector3 Position => transform.TransformPoint(localPoint);
 }

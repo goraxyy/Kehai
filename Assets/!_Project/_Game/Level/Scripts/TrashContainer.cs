@@ -6,6 +6,7 @@ using UnityEngine;
 public class TrashContainer : MonoBehaviour
 {
     public AudioClip disposeSound;
+    public WasteStream stream;
 
     void Reset()
     {
@@ -27,7 +28,7 @@ public class TrashContainer : MonoBehaviour
     void TryDispose(Collider other)
     {
         TrashBag bag = other.GetComponentInParent<TrashBag>();
-        if (bag == null || bag.IsDisposed) return;   // OnTriggerStay keeps firing otherwise
+        if (bag == null || bag.IsDisposed || bag.stream != stream) return;
 
         // Ignore a bag still in the player's hands hovering over the skip.
         Item item = bag.GetComponent<Item>();

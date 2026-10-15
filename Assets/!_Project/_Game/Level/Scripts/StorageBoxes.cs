@@ -98,7 +98,8 @@ public static class StorageBoxes
     static GameObject Lay(Scene scene, string name, bool working, Parts parts)
     {
         Transform racks = FindIn(scene, RacksName), cold = FindIn(scene, ColdRoomName);
-        if (racks == null && cold == null) return null;
+        var cabinets=Object.FindObjectsByType<ColdFixture>();
+        if (racks == null && cold == null && cabinets.Length==0) return null;
 
         var root = new GameObject(name);
         SceneManager.MoveGameObjectToScene(root, scene);
@@ -118,7 +119,20 @@ public static class StorageBoxes
                 Sign(list[r], ProductCatalog.SectionName(sections[r].Value), root.transform, parts);
             }
         }
-        if (cold != null)
+        if(cabinets.Length>0)
+        {
+            foreach(var cabinet in cabinets)
+            {
+                if(cabinet.gameObject.scene!=scene||cabinet.retail||cabinet.hidingSpace||cabinet.products.Length==0)continue;
+                for(int i=0;i<cabinet.boxCentres.Length;i++)
+                {
+                    var product=ProductCatalog.Get(cabinet.products[i%cabinet.products.Length]);
+                    var spot=new Spot(cabinet.transform.TransformPoint(cabinet.boxCentres[i]),cabinet.transform.rotation*Quaternion.Euler(0,180,0),cabinet.boxSize,true,i,false);
+                    Make(product,spot,true,root.transform,parts,working);
+                }
+            }
+        }
+        else if (cold != null)
         {
             List<ProductDef> products = ProductsKept(StorageKind.Cold);
             List<ProductDef> frozen = products.FindAll(p => p.Category == ItemType.Frozen);
