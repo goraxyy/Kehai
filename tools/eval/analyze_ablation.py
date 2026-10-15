@@ -86,9 +86,17 @@ def paired(rows, base, key):
     return diff
 
 
-def belief_section(rows, by_rung, rungs, w):
-    if not any("belief_source" in r for r in rows):
+def belief_section(rows, rungs, w):
+    # Only shifts Karen was on: an episode whose shift never started (a failed clock-in
+    # between shifts) has no samples, and would otherwise shadow its rung's real row when
+    # pairing by (agent, seed, shift).
+    rows = [r for r in rows if r.get("belief_source")]
+    if not rows:
         return
+    by_rung = defaultdict(list)
+    for r in rows:
+        by_rung[r["rung"]].append(r)
+    rungs = [g for g in rungs if g in by_rung]
     cells = [r["belief_cells"] for r in rows if r.get("belief_cells")]
     n = round(mean(cells)) if cells else 0
 
@@ -102,16 +110,14 @@ def belief_section(rows, by_rung, rungs, w):
          if n else "") + "\n")
     for view, label in VIEWS:
         w(f"#### {label.capitalize()}\n")
-        w(f"| rung | belief | {label} | log p | top-1 (%) | top-5 (%) | top-10 (%) | error (m) |")
-        w("|---|---|---|---|---|---|---|---|")
+        w(f"| rung | belief | shifts | {label} | log p | top-1 (%) | top-5 (%) | top-10 (%) | error (m) |")
+        w("|---|---|---|---|---|---|---|---|---|")
         for g in rungs:
             rs = by_rung[g]
-            if not any("belief_source" in r for r in rs):
-                continue
             samples = sum(r.get(f"belief_{view}_samples", 0) for r in rs)
             total = sum(r.get("belief_in_view_samples", 0) + r.get("belief_out_of_view_samples", 0) for r in rs)
             source = next((r["belief_source"] for r in rs if r.get("belief_source")), "—")
-            w(f"| **{g}** | {source} | {pct(samples, total)} | " +
+            w(f"| **{g}** | {source} | {len(rs)} | {pct(samples, total)} | " +
               " | ".join(pm_or_dash(accs(rs, "belief", view, m), f) for m, f in
                          (("logp", "{:.2f}"), ("top1", "{:.1f}"), ("top5", "{:.1f}"), ("top10", "{:.1f}"), ("err_m", "{:.1f}"))) + " |")
         w("")
@@ -151,7 +157,7 @@ def belief_section(rows, by_rung, rungs, w):
     w("|---|---|---|---|---|---|---|---|---|")
     for g in rungs:
         for p in PROFILES:
-            rs = [r for r in by_rung[g] if r["agent"] == p and "belief_source" in r]
+            rs = [r for r in by_rung[g] if r["agent"] == p]
             if not rs:
                 continue
             samples = sum(r.get("belief_out_of_view_samples", 0) for r in rs)
@@ -237,7 +243,7 @@ def main(path):
                 w(f"| {g} | {n} | {pm(d['det'], '{:+.1f}')} | {pm(d['catch'], '{:+.2f}')} | {pm(d['panic'], '{:+.3f}')} | "
                   f"{pm(d['rmse'], '{:+.3f}')} | {pm(d['jobs'], '{:+.1f}')} | {pm(d['out'], '{:+.2f}')} |")
 
-    belief_section(rows, by_rung, rungs, w)
+    belief_section(rows, rungs, w)
 
     w("\n### By rung and player profile\n")
     w("| rung | profile | clocked out | detections / shift | catches / shift | mean panic | setpoint RMSE | jobs done / shift |")

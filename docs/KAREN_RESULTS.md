@@ -171,3 +171,84 @@ Most-used tactics (tier 1+) over all careers; the last column is the Jensen–Sh
 | D | 0% | 0% | 72% | 78% | 75% | 25% |
 | E | 3% | 0% | 69% | 83% | 75% | 31% |
 | F | 0% | 0% | 67% | 86% | 78% | 25% |
+
+## How well she knows where the player is (belief accuracy)
+
+Added 2026-10-15. Nothing above measures whether Karen's belief is *right*: detections and catches
+mix the belief with everything she does about it. This metric scores the belief on its own, and is
+the number a learned motion model (replacing the hand-written predict step) would have to beat.
+
+**What is measured** (`Eval/Scripts/BeliefAccuracy.cs`). Five times a second of sim time the
+harness, not Karen, looks up the player's true cell on her map (4713 cells of 1.5 m) and scores her
+belief on it:
+
+- **log p**: the belief's log-probability of the true cell, in nats, floored at 1e-6; 0 is
+  certainty, and a uniform guess scores −8.46. This is the per-step log-likelihood a learned
+  predict step would be trained to raise.
+- **top-k**: how often the true cell is among her k likeliest (k = 1, 5, 10).
+- **error**: metres from her likeliest cell to the true one.
+
+Each is split by whether her sight has the player that frame (`SightSensor.SeesNow`). Out of view
+is the number that matters.
+
+Rungs A and B keep no belief, so they are scored on a **last-seen baseline**: a Gaussian round her
+last fix on the player (the punch at the time clock, then every frame her sight has them),
+σ = 1.5 m + 1 m per second since. Ranking cells by it is ranking them by distance from the fix, so
+its top-k and error don't depend on those two constants; only its log p does. It is fed by the same
+sight sensor as the grid, including faint glimpses the grid ignores (below awareness 0.2). The
+baseline is scored on every rung, so C–F can be compared with it within the same shift.
+
+**The run.** A short first run, not the ablation's final word: 1 career of shifts 4–5 × 3 profiles
+× 6 rungs, 150 s shifts, on the local store as of 2026-10-15 (including level work not yet merged).
+Of the 36 episodes, 9 are dropped: after a timed-out shift the bot's walk back to the time clock
+timed out, so the next shift never started and the harness logged a copy of the last one (a harness
+bug, to fix before the full run). That leaves 27 shifts, 3–5 per rung, and 56,334 samples, none off
+the map. Mean ± standard error over shifts.
+
+| rung | belief | shifts | out of view | log p | top-1 | top-5 | top-10 | error (m) |
+|---|---|---|---|---|---|---|---|---|
+| A | last-seen | 4 | 68% | −7.34 ± 0.31 | 29% | 32% | 32% | 22.6 ± 10.3 |
+| B | last-seen | 4 | 96% | −7.61 ± 0.36 | 11% | 13% | 18% | 19.3 ± 4.0 |
+| C | grid | 4 | 61% | −5.88 ± 1.51 | 20% | 31% | 39% | 13.7 ± 5.4 |
+| D | grid | 5 | 71% | −6.74 ± 0.90 | 11% | 17% | 21% | 18.3 ± 3.4 |
+| E | grid | 5 | 67% | −6.64 ± 0.93 | 12% | 20% | 24% | 16.2 ± 3.7 |
+| F | grid | 5 | 63% | −6.88 ± 0.77 | 10% | 15% | 19% | 19.7 ± 3.5 |
+
+The grid against last-seen, in the same shifts (grid minus last-seen):
+
+| rung | Δ log p out of view | Δ top-5 out of view (pts) | Δ error out of view (m) | Δ top-1 in view | Δ error in view (m) |
+|---|---|---|---|---|---|
+| C | +0.73 ± 0.77 | −7.9 ± 3.2 | −0.4 ± 1.5 | −60 ± 12 pts | +3.0 ± 1.6 |
+| D | +0.12 ± 0.50 | −8.7 ± 3.2 | +2.6 ± 2.7 | −49 ± 13 pts | +3.3 ± 1.3 |
+| E | +0.03 ± 0.51 | −14.6 ± 11.9 | +0.4 ± 2.2 | −60 ± 5 pts | +2.7 ± 0.6 |
+| F | +0.19 ± 0.49 | −5.3 ± 1.3 | −0.2 ± 1.3 | −48 ± 13 pts | +2.7 ± 1.0 |
+
+**What it shows.**
+
+1. **Out of view she knows something, not much.** The grid's mean log p of −5.9 to −6.9 is, as a
+   geometric average, 5–13 times the probability a uniform guess puts on the true cell. But her
+   likeliest cell is still 14–20 m from the player, and the true cell is among her five likeliest
+   only 15–31% of the time.
+2. **C knows where you are better than the patrols, but the belief grid isn't why.** Paired against
+   C, the patrols' last-seen belief is 12–17 m further off out of view (B: +12.3 ± 3.5 m). Within
+   C–F's own shifts, though, last-seen does as well as the grid: log p within noise, error within
+   noise, and last-seen's top-5 is *better* by 5–15 points. C's edge comes from what she does
+   (searching, following), which keeps her sightings fresh. The hand-written predict step adds
+   nothing measurable over remembering the last sighting, which is the gap a learned motion model
+   has to open.
+3. **In view the grid is about 3 m off, while last-seen is exact.** The sight sensor reports where the
+   player is, but the grid takes each sighting as a Gaussian of σ 0.8–3 m, only once awareness
+   passes 0.2, so its top-1 in view is 40–52%. Her pursuit steers by the sensor's `LastSeenPosition`
+   for about 3 s after a sighting and only then by the grid's peak, so this matters less to her
+   behaviour than to anything that reads the grid itself, such as a motion model built on it.
+4. **The skittish player is lost.** Out of view her log p against it is −8.0 to −8.4 at every rung
+   (uniform is −8.46) and the error 19–30 m, for the grid and last-seen alike: it hides at the far
+   end of the store and nothing she senses says where.
+5. **D, E and F don't separate from C** (Δ log p out of view ≈ −0.8 ± 1.4).
+
+With 3–5 shifts per rung these are first numbers; the ± are wide. The next step is the full
+3-career run once the clock-in bug is fixed.
+
+Reproduce: `Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai-ablation -ablation-careers 1 -ablation-shifts 2 -ablation-start 4 -ablation-seconds 150`,
+then `python3 tools/eval/analyze_ablation.py <kehai_eval>/ablation_<time>.jsonl`; the
+belief tables are its "How well she knows where the player is" section.
