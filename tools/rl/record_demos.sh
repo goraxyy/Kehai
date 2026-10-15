@@ -15,5 +15,5 @@ mkdir -p "$here/demos"
 "${exe[0]}" -batchmode -nographics -logFile "$here/demos/record.log" \
   -kehai-ablation -ablation-rungs G -ablation-interleave -ablation-careers 1000 \
   -ablation-shifts 4 -ablation-start 4 -ablation-seconds 150 -kehai-no-records \
-  -karen-record-demos "$here/demos" -karen-demo-steps "$steps"
+  -karen-record-demos "$here/demos" -karen-demo-steps "$steps" >/dev/null
 ls -l "$here"/demos/*.demo

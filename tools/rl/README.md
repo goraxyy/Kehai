@@ -151,6 +151,11 @@ settling in or recovering from a chase (Karen.md §9, rule 4). It runs on every 
 shield on it must stay at zero; with it off, it measures what slipped through. Each violation
 also costs the policy 0.1 reward.
 
+The pacing check isn't the only thing to watch. In the first unshielded smoke run, a barely
+trained policy (610 steps) with no cooldowns picked `follow` 467 times in one shift: about 96%
+of its 484 tactics. `CheckPacing` stayed at zero, because `follow` is tier 1. So also read the
+tactic mix (`karen_top_tactics` in the ablation's jsonl), not just the violation count.
+
 ## The reward, and how it could be gamed
 
 At every Director tick the policy earns `−|Panic − Setpoint| · dt / shift length`. That is the
@@ -168,7 +173,11 @@ loopholes to look for in the unshielded runs and the thought logs:
 ## What it costs
 
 - **Decisions:** a decision happens only when a plan needs a tactic for a goal that has
-  learnable tactics. That's a few dozen per 150-second shift.
-- **Speed:** a headless shift takes 5–15 s.
-- **Per night:** two copies on the Mac manage a few hundred thousand decisions overnight. Eight
-  copies on a bigger Windows machine manage about four times that.
+  learnable tactics. That came to 60–100 per 150-second shift in the smoke runs.
+- **Speed:** the first smoke run on the M2 managed about 3.6 decisions a second with one copy of
+  the game and the trainer, roughly 13,000 an hour. That copy was slowed by errors from a
+  mismatched test scene, so treat it as a floor.
+- **Per night:** two copies on the Mac manage about 200,000 decisions in an 8-hour night. A
+  16-core Windows machine running eight copies manages about four times that.
+- **Size of a run:** `karen_ppo.yaml` stops at 2 million steps, so expect about ten Mac nights,
+  or two or three nights on a bigger machine. `--resume` continues a run.
