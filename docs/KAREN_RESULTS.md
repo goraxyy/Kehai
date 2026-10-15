@@ -179,7 +179,7 @@ mix the belief with everything she does about it. This metric scores the belief 
 the number a learned motion model (replacing the hand-written predict step) would have to beat.
 
 **What is measured** (`Eval/Scripts/BeliefAccuracy.cs`). Five times a second of sim time the
-harness, not Karen, looks up the player's true cell on her map (4713 cells of 1.5 m) and scores her
+harness, not Karen, looks up the player's true cell on her map (about 4,700 cells of 1.5 m) and scores her
 belief on it:
 
 - **log p**: the belief's log-probability of the true cell, in nats, floored at 1e-6; 0 is
@@ -198,57 +198,62 @@ its top-k and error don't depend on those two constants; only its log p does. It
 sight sensor as the grid, including faint glimpses the grid ignores (below awareness 0.2). The
 baseline is scored on every rung, so C–F can be compared with it within the same shift.
 
-**The run.** A short first run, not the ablation's final word: 1 career of shifts 4–5 × 3 profiles
-× 6 rungs, 150 s shifts, on the local store as of 2026-10-15 (including level work not yet merged).
-Of the 36 episodes, 9 are dropped: after a timed-out shift the bot's walk back to the time clock
-timed out, so the next shift never started and the harness logged a copy of the last one (a harness
-bug, to fix before the full run). That leaves 27 shifts, 3–5 per rung, and 56,334 samples, none off
-the map. Mean ± standard error over shifts.
+**The run** (2026-10-15, after the harness fixes below): the efficient player, 3 careers of shifts
+4–7 × 6 rungs, 150 s shifts, on the local store as of 2026-10-15 (including level work not yet
+merged). 72 shifts, 149,563 samples, none off the map, 4712 cells. Mean ± standard error over
+shifts. The 3-profile run (216 shifts) was stopped at 87: the Mac ran out of memory and shifts went
+from about 35 s to 340–480 s of wall time. The skittish and reckless careers are still to run
+(`-ablation-profiles skittish,reckless -ablation-careers 3`), and the 15 skittish shifts already run
+are left out here.
 
-| rung | belief | shifts | out of view | log p | top-1 | top-5 | top-10 | error (m) |
-|---|---|---|---|---|---|---|---|---|
-| A | last-seen | 4 | 68% | −7.34 ± 0.31 | 29% | 32% | 32% | 22.6 ± 10.3 |
-| B | last-seen | 4 | 96% | −7.61 ± 0.36 | 11% | 13% | 18% | 19.3 ± 4.0 |
-| C | grid | 4 | 61% | −5.88 ± 1.51 | 20% | 31% | 39% | 13.7 ± 5.4 |
-| D | grid | 5 | 71% | −6.74 ± 0.90 | 11% | 17% | 21% | 18.3 ± 3.4 |
-| E | grid | 5 | 67% | −6.64 ± 0.93 | 12% | 20% | 24% | 16.2 ± 3.7 |
-| F | grid | 5 | 63% | −6.88 ± 0.77 | 10% | 15% | 19% | 19.7 ± 3.5 |
+Harness fixes this run needed (before them every shift timed out and 9 of 36 rows were copies):
+the coffee machine and time clock are approached from their own side of the wall, the bot's
+"crate" is the stock crate (not one of the back rooms' product boxes, which are Stock too), a bot
+whose walk back to the clock fails is put at the clock (10 times here), and a shift that never
+started is never logged. Bots still rarely clock out (2 of 72): escorts often time out, and the
+staff room's back door, which swings in, can shut a bot into the corner by the lounge.
 
-The grid against last-seen, in the same shifts (grid minus last-seen):
+Out of view:
 
-| rung | Δ log p out of view | Δ top-5 out of view (pts) | Δ error out of view (m) | Δ top-1 in view | Δ error in view (m) |
-|---|---|---|---|---|---|
-| C | +0.73 ± 0.77 | −7.9 ± 3.2 | −0.4 ± 1.5 | −60 ± 12 pts | +3.0 ± 1.6 |
-| D | +0.12 ± 0.50 | −8.7 ± 3.2 | +2.6 ± 2.7 | −49 ± 13 pts | +3.3 ± 1.3 |
-| E | +0.03 ± 0.51 | −14.6 ± 11.9 | +0.4 ± 2.2 | −60 ± 5 pts | +2.7 ± 0.6 |
-| F | +0.19 ± 0.49 | −5.3 ± 1.3 | −0.2 ± 1.3 | −48 ± 13 pts | +2.7 ± 1.0 |
+| rung | belief | out of view | log p | top-1 | top-5 | top-10 | error (m) |
+|---|---|---|---|---|---|---|---|
+| A | last-seen | 97% | −7.55 ± 0.11 | 26% | 28% | 31% | 16.9 ± 1.8 |
+| B | last-seen | 89% | −6.87 ± 0.10 | 23% | 27% | 28% | 14.1 ± 0.7 |
+| C | grid | 57% | −6.82 ± 0.40 | 8% | 14% | 21% | 18.2 ± 1.9 |
+| D | grid | 56% | −7.51 ± 0.16 | 2% | 8% | 13% | 20.8 ± 1.7 |
+| E | grid | 57% | −6.91 ± 0.41 | 5% | 14% | 20% | 18.5 ± 2.3 |
+| F | grid | 68% | −7.72 ± 0.09 | 2% | 7% | 12% | 20.8 ± 1.1 |
+
+In view, the grid's top-1 is 43–67% and its error 1.3–2.4 m (C best); last-seen is exact.
+
+The grid against last-seen, in the same shifts (grid minus last-seen), and each rung against C:
+
+| rung | Δ log p out of view | Δ top-5 out of view (pts) | Δ error out of view (m) | vs C: Δ log p out of view |
+|---|---|---|---|---|
+| C | −0.18 ± 0.49 | −9.5 ± 4.4 | +3.2 ± 0.8 | — |
+| D | −0.92 ± 0.18 | −9.1 ± 3.4 | +3.9 ± 1.1 | −0.69 ± 0.40 |
+| E | −0.49 ± 0.25 | −11.4 ± 3.1 | +2.5 ± 1.6 | −0.09 ± 0.59 |
+| F | −0.86 ± 0.13 | −5.2 ± 2.5 | +0.9 ± 1.3 | −0.90 ± 0.40 |
 
 **What it shows.**
 
-1. **Out of view she knows something, not much.** The grid's mean log p of −5.9 to −6.9 is, as a
-   geometric average, 5–13 times the probability a uniform guess puts on the true cell. But her
-   likeliest cell is still 14–20 m from the player, and the true cell is among her five likeliest
-   only 15–31% of the time.
-2. **C knows where you are better than the patrols, but the belief grid isn't why.** Paired against
-   C, the patrols' last-seen belief is 12–17 m further off out of view (B: +12.3 ± 3.5 m). Within
-   C–F's own shifts, though, last-seen does as well as the grid: log p within noise, error within
-   noise, and last-seen's top-5 is *better* by 5–15 points. C's edge comes from what she does
-   (searching, following), which keeps her sightings fresh. The hand-written predict step adds
-   nothing measurable over remembering the last sighting, which is the gap a learned motion model
-   has to open.
-3. **In view the grid is about 3 m off, while last-seen is exact.** The sight sensor reports where the
-   player is, but the grid takes each sighting as a Gaussian of σ 0.8–3 m, only once awareness
-   passes 0.2, so its top-1 in view is 40–52%. Her pursuit steers by the sensor's `LastSeenPosition`
-   for about 3 s after a sighting and only then by the grid's peak, so this matters less to her
-   behaviour than to anything that reads the grid itself, such as a motion model built on it.
-4. **The skittish player is lost.** Out of view her log p against it is −8.0 to −8.4 at every rung
-   (uniform is −8.46) and the error 19–30 m, for the grid and last-seen alike: it hides at the far
-   end of the store and nothing she senses says where.
-5. **D, E and F don't separate from C** (Δ log p out of view ≈ −0.8 ± 1.4).
+1. **Out of view she barely beats a guess.** The grid's log p of −6.8 to −7.7 is 2–5 times the
+   probability a uniform guess puts on the true cell (−8.46). Her likeliest cell is 18–21 m from the
+   player, and the true cell is among her five likeliest only 7–14% of the time.
+2. **The hand-written belief is worse than remembering the last sighting.** In the same shifts,
+   last-seen beats the grid on every out-of-view measure at every rung from C up: 5–11 points more
+   top-5, 1–4 m less error, and higher log p (clearly at D and F, −0.9 ± 0.2 and −0.9 ± 0.1).
+   Prediction, hearing, traces, testimony and negative evidence together subtract information.
+   This is the gap a learned motion model has to close first, before it can open one.
+3. **The learning rungs know less, not more.** Against C, D and F lose about 0.7–0.9 nats out of
+   view (about 2 standard errors); E is level with C.
+4. **In view the grid is now 1–2 m off** (the first, buggy run said about 3 m): sightings are taken
+   as a Gaussian of σ 0.8–3 m, and only once awareness passes 0.2.
+5. **One player, so a narrow claim.** The skittish player, which the first run found she loses
+   almost entirely, isn't in these numbers.
 
-With 3–5 shifts per rung these are first numbers; the ± are wide. The next step is the full
-3-career run once the clock-in bug is fixed.
-
-Reproduce: `Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai-ablation -ablation-careers 1 -ablation-shifts 2 -ablation-start 4 -ablation-seconds 150`,
+Reproduce: `Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai-ablation -ablation-careers 3 -ablation-shifts 4 -ablation-start 4 -ablation-seconds 150 -ablation-profiles efficient -eval-timeout-min 180`,
 then `python3 tools/eval/analyze_ablation.py <kehai_eval>/ablation_<time>.jsonl`; the
-belief tables are its "How well she knows where the player is" section.
+belief tables are its "How well she knows where the player is" section. On an 8 GB Mac, run one
+`-ablation-careers 1` process per career (`-ablation-seed 1000`, `1100`, `1200` give the same
+seeds as careers 1–3) and join the files.
