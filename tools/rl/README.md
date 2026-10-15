@@ -47,7 +47,11 @@ These four must match: the trainer refuses a Unity package it doesn't speak to.
    The same package also unlocks the blink CNN's in-engine path (`KAREN_SENTIS`).
 2. **Python side.** Run `tools/rl/setup.sh` on macOS, or `tools\rl\setup.ps1` on Windows. Either
    one makes `tools/rl/.venv`. With [uv](https://docs.astral.sh/uv/) installed it fetches Python
-   3.10.12 itself; otherwise it needs `python3.10` (macOS) or `py -3.10` (Windows).
+   3.10.12 itself; otherwise it needs `python3.10` (macOS) or `py -3.10` (Windows). On an
+   Apple Silicon Mac it also builds `grpcio` 1.48.2 from source, the only version both `mlagents`
+   and TensorBoard accept, which takes a minute or two and needs the Xcode command line tools.
+   The script handles the two quirks: it builds against macOS's own zlib, and pins a setuptools
+   that still has `pkg_resources`.
 
 ## Build the training player
 
