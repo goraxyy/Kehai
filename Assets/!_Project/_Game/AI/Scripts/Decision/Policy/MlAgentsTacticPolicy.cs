@@ -139,13 +139,13 @@ namespace Kehai.Karen
 
         public KarenContext Context => context;
 
-        public bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, KarenContext c, out int chosen, out string why)
+        public bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, Tactic bandit, KarenContext c, out int chosen, out string why)
         {
             chosen = -1;
             context = c;
             this.goal = goal;
             mask = PolicyMask.Build(candidates);
-            heuristic = TacticLibrary.IndexOf(BanditPick(candidates, c));
+            heuristic = TacticLibrary.IndexOf(bandit);
             action = -1;
 
             RequestDecision();
@@ -170,19 +170,6 @@ namespace Kehai.Karen
             return true;
         }
 
-        // The bandit's choice among the candidates — the heuristic, and the teacher.
-        static Tactic BanditPick(IReadOnlyList<Tactic> candidates, KarenContext c)
-        {
-            Tactic best = candidates[0];
-            float bestScore = float.NegativeInfinity;
-            foreach (Tactic t in candidates)
-            {
-                float s = t.Learnable ? c.Ledger.BanditScore(t, c, out _) : c.Ledger.PriorScore(t, c);
-                if (s > bestScore) { bestScore = s; best = t; }
-            }
-            return best;
-        }
-
         public override void CollectObservations(VectorSensor sensor)
         {
             if (context != null) sensor.AddObservation(PolicyObservation.Build(goal, context));
@@ -200,7 +187,7 @@ namespace Kehai.Karen
         public override void Heuristic(in ActionBuffers actionsOut)
         {
             ActionSegment<int> discrete = actionsOut.DiscreteActions;
-            discrete[0] = heuristic >= 0 ? heuristic : 0;
+            discrete[0] = heuristic >= 0 ? heuristic : 0;   // the bandit's pick: rung F, the teacher
         }
 
         // ---- the episode ------------------------------------------------------------------

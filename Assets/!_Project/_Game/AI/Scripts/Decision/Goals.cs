@@ -262,15 +262,6 @@ namespace Kehai.Karen
                 return null;
             }
 
-            // On rung G the policy picks (Policy/TacticPolicy.cs). Movement-only goals aren't
-            // its business, as they aren't the bandit's.
-            Tactic picked = null;
-            string pickedWhy = null;
-            if (c.Features.Policy && c.Policy != null && candidates.Any(t => t.Learnable) &&
-                c.Policy.TryChoose(goal, candidates, c, out int index, out pickedWhy) &&
-                index >= 0 && index < candidates.Count)
-                picked = candidates[index];
-
             // Score every candidate. The bandit (rungs D+) learns per player; below that the
             // authored prior alone decides, with a seeded jitter to break ties.
             var scored = new List<(Tactic t, float s, string why)>();
@@ -291,7 +282,13 @@ namespace Kehai.Karen
             }
             scored.Sort((x, y) => y.s.CompareTo(x.s));
 
-            if (picked != null) PolicyFirst(scored, picked, pickedWhy);
+            // On rung G the policy picks (Policy/TacticPolicy.cs), told what the bandit would
+            // have: rung F's choice, exactly. Movement-only goals aren't its business, as they
+            // aren't the bandit's.
+            if (c.Features.Policy && c.Policy != null && candidates.Any(t => t.Learnable) &&
+                c.Policy.TryChoose(goal, candidates, scored[0].t, c, out int index, out string pickedWhy) &&
+                index >= 0 && index < candidates.Count)
+                PolicyFirst(scored, candidates[index], pickedWhy);
 
             foreach (var entry in scored.Take(4))
                 options.Add(new ThoughtOption { Name = entry.t.Id, Utility = entry.s, Why = entry.why });

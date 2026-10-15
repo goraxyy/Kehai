@@ -17,9 +17,10 @@ namespace Kehai.Karen
         // Where the choices come from, for the thought log: a model, a trainer, the heuristic.
         string Name { get; }
 
-        // Pick one of `candidates`, every one of them legal for `goal` right now. False means
-        // no decision was made, and the planner falls back to the bandit's order.
-        bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, KarenContext c, out int chosen, out string why);
+        // Pick one of `candidates`, every one of them legal for `goal` right now; `bandit` is
+        // the one rung F would take. False means no decision was made, and the planner keeps
+        // the bandit's order.
+        bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, Tactic bandit, KarenContext c, out int chosen, out string why);
 
         // Reward since the last decision; handed to the trainer with the next one.
         void AddReward(float reward);
