@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 // The island's transform stays put because its NavMeshSurface volume covers the store.
 public static class ModelIslandLayout
 {
-    const string Staff="Staff_Furniture_Showcase",Office="Office_Furniture_Showcase",Fixtures="Shop_Fixtures_Showcase",Labels="Island_Layout";
+    const string Staff="Staff_Furniture_Showcase",Office="Office_Furniture_Showcase",WC="WC_Furniture_Showcase",Lobby="Lobby_Furniture_Showcase",Fixtures="Shop_Fixtures_Showcase",Labels="Island_Layout";
 
     [MenuItem("Kehai/Staff Room/3. Organize Model Island")]
     public static void Organize()
@@ -19,7 +19,7 @@ public static class ModelIslandLayout
         var island=GameObject.Find("Models_Island");if(island==null)throw new InvalidOperationException("Models_Island is missing.");
         if(StaffRoomModels.Prefab("Locker")==null)StaffRoomModels.BuildLibrary();
         Undo.RegisterFullObjectHierarchyUndo(island,"Organize model island");
-        foreach(string name in new[]{Staff,Office,Labels}){var old=island.transform.Find(name);if(old!=null)Undo.DestroyObjectImmediate(old.gameObject);}
+        foreach(string name in new[]{Staff,Office,WC,Lobby,Labels}){var old=island.transform.Find(name);if(old!=null)Undo.DestroyObjectImmediate(old.gameObject);}
         var staff=Group(island.transform,Staff);var labels=Group(island.transform,Labels);
         int index=0;
         foreach(string name in StaffRoomModels.Names)
@@ -45,10 +45,20 @@ public static class ModelIslandLayout
             }
         }
 
+        bool hasPublic=PublicInteriorModels.Prefab("ToiletCabin")!=null;
+        if(hasPublic)
+        {
+            PublicGallery(island.transform,WC,PublicInteriorModels.WC,48,labels);
+            var wc=island.transform.Find(WC);
+            var cabin=(GameObject)PrefabUtility.InstantiatePrefab(PublicInteriorModels.Prefab("ToiletCabin"),wc);
+            cabin.name="Toilet cabin - open interior";cabin.GetComponentInChildren<FurnitureDoor>().transform.localRotation=Quaternion.Euler(0,-95,0);
+            VisualOnly(cabin);Slot(cabin,PublicInteriorModels.WC.Length,44,48,6,6,labels);
+            PublicGallery(island.transform,Lobby,PublicInteriorModels.Lobby,64,labels);
+        }
         var fixtures=island.transform.Find(Fixtures);if(fixtures==null)fixtures=Group(island.transform,Fixtures);
         var loose=new List<Transform>();
         foreach(Transform t in island.transform)
-            if(t.name!="Plane_test"&&t.name!=Staff&&t.name!=Office&&t.name!=Labels&&t.name!=Fixtures&&t.name!="Products_Showcase"&&t.name!="Boxes_Showcase")loose.Add(t);
+            if(t.name!="Plane_test"&&t.name!=Staff&&t.name!=Office&&t.name!=WC&&t.name!=Lobby&&t.name!=Labels&&t.name!=Fixtures&&t.name!="Products_Showcase"&&t.name!="Boxes_Showcase")loose.Add(t);
         foreach(var t in loose)t.SetParent(fixtures,true);
         var sorted=new List<Transform>();foreach(Transform t in fixtures)sorted.Add(t);
         sorted.Sort((a,b)=>string.CompareOrdinal(a.name,b.name));
@@ -64,7 +74,8 @@ public static class ModelIslandLayout
         Heading(labels,"03 / PRODUCTS",100,2,1);
         Heading(labels,"04 / RESTOCKING BOXES",100,47,1);
         Heading(labels,hasOffice?"05 / OFFICE":"OFFICE / NEXT",22,47,1);
-        Heading(labels,"WC + LOBBY / NEXT",62,52,1);
+        Heading(labels,hasPublic?"06 / WC":"WC / NEXT",62,47,1);
+        Heading(labels,hasPublic?"07 / LOBBY":"LOBBY / NEXT",62,62,1);
         Heading(labels,"EXTERIOR / PARKING / SERVICE / NEXT",42,88,.75f);
         Heading(labels,"REAL SCALE  /  METRES  /  VISUAL MODELS ONLY",42,116,.55f);
 
@@ -99,6 +110,16 @@ public static class ModelIslandLayout
     static Transform Group(Transform parent,string name)
     {
         var t=new GameObject(name).transform;t.SetParent(parent,false);t.position=Vector3.zero;t.rotation=Quaternion.identity;t.localScale=Vector3.one;return t;
+    }
+
+    static void PublicGallery(Transform island,string group,string[] names,float z,Transform labels)
+    {
+        var parent=Group(island,group);
+        for(int i=0;i<names.Length;i++)
+        {
+            var go=(GameObject)PrefabUtility.InstantiatePrefab(PublicInteriorModels.Prefab(names[i]),parent);
+            go.name=names[i];VisualOnly(go);Slot(go,i,44,z,6,6,labels);
+        }
     }
 
     static void Slot(GameObject go,int index,float startX,float startZ,int columns,float cell,Transform labels)

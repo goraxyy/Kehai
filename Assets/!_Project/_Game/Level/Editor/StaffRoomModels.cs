@@ -187,7 +187,7 @@ public static class StaffRoomModels
         for(int i=0;i<3;i++) Box(p,"Coat hook",new Vector3(-.55f+i*.55f,1.8f,1.22f),new Vector3(.045f,.12f,.12f),dark);
     }
 
-    static Transform Door(Transform p,string label,Vector3 at,float width,float height,float bottom,Material material,float angle)
+    public static Transform Door(Transform p,string label,Vector3 at,float width,float height,float bottom,Material material,float angle)
     {
         var hinge = new GameObject("Hinge - " + label).transform;
         hinge.SetParent(p,false); hinge.localPosition=at;
