@@ -96,7 +96,7 @@ namespace Kehai.Eval
         void Update()
         {
             if (!Ready) return;
-            Metrics.Tick(Tasks, Burnout);
+            Metrics.Tick(Tasks, Burnout, Driver != null ? Driver.transform : null);
 
             KarenScreen screen = KarenScreen.Instance;
             PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;

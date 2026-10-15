@@ -98,7 +98,8 @@ namespace Kehai.Eval
                                   $"{(m.ClockedOut ? "clocked out" : m.TimedOut ? "timed out" : "ended")} at {m.SimSeconds:0}s sim / {m.WallSeconds:0}s wall, " +
                                   $"steps {m.Steps}, mopped {m.SpillsMopped}, restocked {m.ShelvesRestocked}, served {m.CustomersServed}, " +
                                   $"detections {m.Detections}, catches {m.Catches}, tactics {m.TacticsUsed} [{m.TopTactics}], " +
-                                  $"panic {m.MeanPanic:0.00}, failures [{string.Join(",", m.Failures)}]");
+                                  $"panic {m.MeanPanic:0.00}, belief out of view ({m.Belief.Source}) log p {m.Belief.OutOfView.LogP:0.00} " +
+                                  $"top-5 {m.Belief.OutOfView.Top5:0%} error {m.Belief.OutOfView.Error:0.0} m, failures [{string.Join(",", m.Failures)}]");
 
                         if (s < Plan.shiftsPerCareer - 1) yield return env.ClockIn();
                     }
@@ -133,6 +134,27 @@ namespace Kehai.Eval
             sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
             foreach (var g in Results.GroupBy(r => (r.Rung, r.Agent)).OrderBy(g => g.Key.Rung).ThenBy(g => g.Key.Agent))
                 Row(sb, $"{g.Key.Rung} | {g.Key.Agent}", g.ToList());
+
+            sb.AppendLine();
+            sb.AppendLine("### How well " + GameNames.Antagonist + " knew where the player was, out of view");
+            sb.AppendLine();
+            sb.AppendLine("Her belief scored 5×/s against the player's true cell while her sight didn't have them: log p of the true cell " +
+                          "(nats, floored at 1e-6), how often it was among her 5 likeliest cells, and metres from her likeliest cell to it. " +
+                          "Rungs A–B keep no belief and are scored on the last-seen baseline, which is also scored on every rung for comparison.");
+            sb.AppendLine();
+            sb.AppendLine("| rung | belief | out of view | log p | top-5 | error (m) | last-seen log p | last-seen top-5 | last-seen error (m) |");
+            sb.AppendLine("|---|---|---|---|---|---|---|---|---|");
+            foreach (var g in Results.GroupBy(r => r.Rung).OrderBy(g => g.Key))
+            {
+                var seen = g.Where(r => r.Belief.OutOfView.Samples > 0).ToList();
+                int all = g.Sum(r => r.Belief.InView.Samples + r.Belief.OutOfView.Samples);
+                string source = g.Select(r => r.Belief.Source).FirstOrDefault(s => s.Length > 0) ?? "—";
+                string M(System.Func<EpisodeMetrics, float> f, string format) =>
+                    seen.Count > 0 ? seen.Average(f).ToString(format, CultureInfo.InvariantCulture) : "—";
+                sb.AppendLine($"| {g.Key} | {source} | {Pct(g.Sum(r => r.Belief.OutOfView.Samples), all)} | " +
+                              $"{M(r => r.Belief.OutOfView.LogP, "0.00")} | {M(r => r.Belief.OutOfView.Top5, "0%")} | {M(r => r.Belief.OutOfView.Error, "0.0")} | " +
+                              $"{M(r => r.Belief.LastSeenOutOfView.LogP, "0.00")} | {M(r => r.Belief.LastSeenOutOfView.Top5, "0%")} | {M(r => r.Belief.LastSeenOutOfView.Error, "0.0")} |");
+            }
 
             sb.AppendLine();
             sb.AppendLine("### What " + GameNames.Antagonist + " reached for, per profile (rungs D–F)");

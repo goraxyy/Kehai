@@ -56,6 +56,15 @@ detections/catches/tactics, the Panic Index, and a **failure taxonomy** — star
 thrashing, interference blindness, clock blindness, resource mismanagement, spurious
 completion — computed from the action trace.
 
+**Belief accuracy** (`BeliefAccuracy.cs`): five times a second of sim time the harness looks up
+the player's true cell on Karen's map and scores her belief on it — the log-probability of the
+true cell (nats, floored at 1e-6), whether it is among her 1/5/10 likeliest cells, and metres from
+her likeliest cell to it — split by whether her sight has the player that frame. Rungs A–B keep
+no belief and are scored on a *last-seen* baseline (a Gaussian round her last sighting, or the
+clock-in, widening at 1 m/s); that baseline is recorded on every rung as `last_seen_*`, so C–F
+can be compared with it within the same shift. Only the harness reads the player for this;
+Karen's code still can't.
+
 ## The ablation
 
 `Kehai → Eval → Run Quick/Full Ablation`, or headless:

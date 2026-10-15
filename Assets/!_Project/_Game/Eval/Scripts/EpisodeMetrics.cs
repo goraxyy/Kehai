@@ -41,6 +41,9 @@ namespace Kehai.Eval
         public int FairnessViolations;
         int violationsAtStart;
 
+        // How well she knew where the player was, scored against where they were.
+        public readonly BeliefAccuracy Belief = new BeliefAccuracy();
+
         // The trace: what the agent tried, when, and at what.
         public struct Step { public float T; public string Verb; public string Kind; public bool Ok; }
         public readonly List<Step> Trace = new List<Step>();
@@ -61,6 +64,7 @@ namespace Kehai.Eval
             Rung = rung;
             started = Time.time;
             violationsAtStart = FairnessGuard.Violations;
+            Belief.Begin();
             Subscribe();
         }
 
@@ -116,8 +120,10 @@ namespace Kehai.Eval
         public float WaitedFor(CustomerNPC c) => c != null && waitingSince.TryGetValue(c, out float since) ? Time.time - since : 0f;
 
         // Called every frame by the environment.
-        public void Tick(TaskManager tasks, BurnoutSystem burnout)
+        public void Tick(TaskManager tasks, BurnoutSystem burnout, Transform player)
         {
+            if (player != null) Belief.Tick(Time.deltaTime, player.position);
+
             foreach (CustomerNPC c in CustomerNPC.All)
             {
                 if (c == null) continue;
@@ -180,27 +186,33 @@ namespace Kehai.Eval
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
+            Belief.End();
             Failures = FailureTaxonomy.Classify(this);
             Unsubscribe();
         }
 
-        public Dictionary<string, object> ToDictionary() => new Dictionary<string, object>
+        public Dictionary<string, object> ToDictionary()
         {
-            ["seed"] = Seed, ["shift"] = Shift, ["agent"] = Agent, ["rung"] = Rung,
-            ["clocked_out"] = ClockedOut, ["timed_out"] = TimedOut,
-            ["sim_seconds"] = SimSeconds, ["wall_seconds"] = WallSeconds, ["steps"] = Steps,
-            ["spills_mopped"] = SpillsMopped, ["shelves_restocked"] = ShelvesRestocked, ["bins_bagged"] = BinsBagged,
-            ["bags_disposed"] = BagsDisposed, ["customers_served"] = CustomersServed, ["directions_given"] = DirectionsGiven,
-            ["coffees"] = Coffees, ["spills_left_standing"] = SpillsLeftStanding, ["customers_lost"] = CustomersLost,
-            ["mean_wait_s"] = MeanWait, ["longest_wait_s"] = LongestWait, ["energy_at_end"] = EnergyAtEnd, ["min_energy"] = MinEnergy,
-            ["spurious_clock_outs"] = SpuriousClockOuts,
-            ["karen_first_detection_s"] = FirstDetection, ["karen_detections"] = Detections, ["karen_catches"] = Catches,
-            ["karen_chases"] = Chases, ["karen_overtimes"] = Overtimes, ["karen_tactic_entropy_bits"] = TacticEntropy,
-            ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
-            ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
-            ["karen_fairness_violations"] = FairnessViolations,
-            ["failures"] = Failures
-        };
+            var d = new Dictionary<string, object>
+            {
+                ["seed"] = Seed, ["shift"] = Shift, ["agent"] = Agent, ["rung"] = Rung,
+                ["clocked_out"] = ClockedOut, ["timed_out"] = TimedOut,
+                ["sim_seconds"] = SimSeconds, ["wall_seconds"] = WallSeconds, ["steps"] = Steps,
+                ["spills_mopped"] = SpillsMopped, ["shelves_restocked"] = ShelvesRestocked, ["bins_bagged"] = BinsBagged,
+                ["bags_disposed"] = BagsDisposed, ["customers_served"] = CustomersServed, ["directions_given"] = DirectionsGiven,
+                ["coffees"] = Coffees, ["spills_left_standing"] = SpillsLeftStanding, ["customers_lost"] = CustomersLost,
+                ["mean_wait_s"] = MeanWait, ["longest_wait_s"] = LongestWait, ["energy_at_end"] = EnergyAtEnd, ["min_energy"] = MinEnergy,
+                ["spurious_clock_outs"] = SpuriousClockOuts,
+                ["karen_first_detection_s"] = FirstDetection, ["karen_detections"] = Detections, ["karen_catches"] = Catches,
+                ["karen_chases"] = Chases, ["karen_overtimes"] = Overtimes, ["karen_tactic_entropy_bits"] = TacticEntropy,
+                ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
+                ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
+                ["karen_fairness_violations"] = FairnessViolations,
+                ["failures"] = Failures
+            };
+            Belief.AddTo(d);
+            return d;
+        }
     }
 
     // IDEAS.md, the agent test environment: a failure taxonomy. Each episode can carry several labels.
