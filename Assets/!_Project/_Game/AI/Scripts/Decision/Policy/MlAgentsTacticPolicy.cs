@@ -134,7 +134,8 @@ namespace Kehai.Karen
         bool[] mask;
         int heuristic = -1;
         int action = -1;
-        int decisionsThisShift;
+        int decisionsThisShift, agreedThisShift;
+        float rewardThisShift;
 
         public KarenContext Context => context;
 
@@ -150,6 +151,7 @@ namespace Kehai.Karen
             RequestDecision();
             Academy.Instance.EnvironmentStep();
             decisionsThisShift++;
+            if (action == heuristic) agreedThisShift++;
 
             if (action < 0 || action >= PolicyMask.Size)
             {
@@ -203,18 +205,26 @@ namespace Kehai.Karen
 
         // ---- the episode ------------------------------------------------------------------
 
-        void ITacticPolicy.AddReward(float reward) => AddReward(reward);
+        void ITacticPolicy.AddReward(float reward)
+        {
+            AddReward(reward);
+            rewardThisShift += reward;
+        }
 
         // The shift is over: hand its last reward to the trainer now, not with the next
         // shift's first decision. A shift with no decision in it has nothing to credit.
         public void EndShift()
         {
-            if (decisionsThisShift == 0)
+            Debug.Log($"{GameNames.Antagonist} policy: {decisionsThisShift} decisions this shift, {agreedThisShift} the bandit's pick too; " +
+                      $"reward {rewardThisShift:0.000}; {Name}");
+            int decisions = decisionsThisShift;
+            decisionsThisShift = agreedThisShift = 0;
+            rewardThisShift = 0f;
+            if (decisions == 0)
             {
                 SetReward(0f);
                 return;
             }
-            decisionsThisShift = 0;
             EndEpisode();
             Academy.Instance.EnvironmentStep();
             if (!Mathf.Approximately(Time.timeScale, 1f) && Academy.Instance.IsCommunicatorOn)
