@@ -88,6 +88,7 @@ namespace Kehai.Blink
         UdpBlinkSource webcam;
         double blinkStartedAt, readingOpenedAt;
         bool readingOpened;
+        int blinksLearnt;
         readonly float[] closedForMarks = { 0.5f, 1f, 2f };
         int nextMark;
         Eyelids lids;
@@ -234,8 +235,14 @@ namespace Kehai.Blink
                     LastBlinkSeconds = length;
                     // Learn this player's blink length, for predicting the next reopening. Learning
                     // the detected length made PredictedReopenIn late by those frames; which blinks
-                    // are learnt from is still judged on it.
-                    if (detected > 0.08f && detected < 0.8f) ExpectedBlinkSeconds = Mathf.Lerp(ExpectedBlinkSeconds, length, 0.1f);
+                    // are learnt from is still judged on it. The 0.3 s guess counts as one blink:
+                    // the average of the blinks so far until there are ten, then a moving average,
+                    // so a guess longer than this player's blinks is gone in a few, not a minute.
+                    if (detected > 0.08f && detected < 0.8f)
+                    {
+                        blinksLearnt++;
+                        ExpectedBlinkSeconds = Mathf.Lerp(ExpectedBlinkSeconds, length, Mathf.Max(0.1f, 1f / (blinksLearnt + 1)));
+                    }
                     OnBlinkEnd?.Invoke(length);
                 }
             }

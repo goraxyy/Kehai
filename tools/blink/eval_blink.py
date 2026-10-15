@@ -96,7 +96,7 @@ def track(reading, t, open_level=0.0, closed_level=1.0) -> Track:
     span = closed_level - open_level
     c01, shut, started, on, predicted = 0.0, False, 0.0, 0, 0.0
     opened, reading_opened = 0.0, False
-    expected = EXPECTED_BLINK_SECONDS
+    expected, learnt = EXPECTED_BLINK_SECONDS, 0
     for i in range(n):
         v = min(1.0, max(0.0, (float(reading[i]) - open_level) / span)) if span != 0 else 0.0
         c01 = v if v > c01 else c01 + (v - c01) * FALL_LERP
@@ -112,8 +112,9 @@ def track(reading, t, open_level=0.0, closed_level=1.0) -> Track:
                 shut = False
                 detected = t[i] - started
                 length = opened - started if reading_opened else detected
-                if 0.08 < detected < 0.8:
-                    expected += (length - expected) * 0.1
+                if 0.08 < detected < 0.8:           # the guess as one blink, then a moving average
+                    learnt += 1
+                    expected += (length - expected) * max(0.1, 1 / (learnt + 1))
                 blinks.append((on, i, predicted))
         closed[i] = shut
     if shut:
