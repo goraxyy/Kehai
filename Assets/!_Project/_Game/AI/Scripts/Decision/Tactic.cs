@@ -128,6 +128,15 @@ namespace Kehai.Karen
 
         public static Tactic Get(string id) => All.FirstOrDefault(t => t.Id == id);
 
+        // A tactic's place in the library — the action number a trained policy uses for it.
+        public static int IndexOf(Tactic t)
+        {
+            IReadOnlyList<Tactic> list = All;
+            for (int i = 0; i < list.Count; i++)
+                if (list[i] == t) return i;
+            return -1;
+        }
+
         public static void ResetShift()
         {
             foreach (Tactic t in All)

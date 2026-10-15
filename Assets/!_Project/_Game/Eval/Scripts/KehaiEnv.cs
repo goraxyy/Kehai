@@ -82,7 +82,30 @@ namespace Kehai.Eval
         bool cancel;
         PaAnnouncement lastSeenAnnouncement;
 
-        public static string EvalDirectory => System.IO.Path.Combine(Application.persistentDataPath, "kehai_eval");
+        // RL training runs several copies of the game at once (tools/rl), each told its own
+        // trainer port. They get a folder each, or they would share one eval Ledger and one
+        // results file.
+        public static string EvalDirectory
+        {
+            get
+            {
+                string dir = System.IO.Path.Combine(Application.persistentDataPath, "kehai_eval");
+                int port = TrainerPort;
+                return port > 0 ? System.IO.Path.Combine(dir, "worker_" + port) : dir;
+            }
+        }
+
+        // ML-Agents hands each copy of the game `--mlagents-port <n>`; 0 when there is none.
+        public static int TrainerPort
+        {
+            get
+            {
+                string[] args = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i + 1 < args.Length; i++)
+                    if (args[i] == "--mlagents-port" && int.TryParse(args[i + 1], out int port)) return port;
+                return 0;
+            }
+        }
 
         public static KehaiEnv Ensure()
         {

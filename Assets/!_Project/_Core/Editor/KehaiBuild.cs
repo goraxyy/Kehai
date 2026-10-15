@@ -219,7 +219,7 @@ public static class KehaiBuild
     }
 
     // <folder>.zip beside the build's folder, without the crash-debugging symbols.
-    static void ZipForTesters(string appPath)
+    internal static void ZipForTesters(string appPath)
     {
         string folder = Path.GetDirectoryName(appPath);
         string zip = folder + ".zip";

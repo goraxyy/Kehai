@@ -49,6 +49,7 @@ namespace Kehai.Karen
         public BurnoutSystem Burnout { get; private set; }
 
         public PlanTree CurrentPlan { get; private set; }
+        public ITacticPolicy Policy { get; private set; }   // rung G only
         public bool ShiftActive { get; private set; }
         public float ShiftTime => ShiftActive ? Time.time - shiftStartedAt : 0f;
         public bool CareerOverride => careerOverride;
@@ -59,6 +60,7 @@ namespace Kehai.Karen
         bool decideNow;
         float planStartedAt;
         bool chasing;
+        int violationsSeen;
 
         readonly Dictionary<int, float> lastVisited = new Dictionary<int, float>();
         readonly Dictionary<int, float> closedUntil = new Dictionary<int, float>();
@@ -99,6 +101,7 @@ namespace Kehai.Karen
                 Brain = this, Body = Body, Map = Map, Belief = Belief, Director = Director, Ledger = Ledger,
                 World = World, Log = Log, Rng = Rng, Config = config, Tasks = Tasks, Shift = Shift
             };
+            InstallPolicy();
 
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
@@ -178,7 +181,21 @@ namespace Kehai.Karen
             config.rung = rung;
             Ledger.Persistent = config.Features.Persistent;
             ApplyRungToSenses();
+            InstallPolicy();
             Note("SYSTEM", $"rung → {rung} ({config.Features})");
+        }
+
+        // Rung G's tactic chooser. Without the ML-Agents bridge compiled in there is none, and
+        // the planner keeps the bandit's choice — said once, so a results table can't pass it
+        // off as a policy.
+        void InstallPolicy()
+        {
+            Policy = config.Features.Policy ? TacticPolicy.Create(config) : null;
+            Ctx.Policy = Policy;
+            if (!config.Features.Policy) return;
+            Note("SYSTEM", Policy != null
+                ? $"tactic choice: {Policy.Name}{(config.shield ? string.Empty : " — UNSHIELDED: the Director's gates are off")}"
+                : "rung G, but the ML-Agents bridge isn't compiled in (KAREN_MLAGENTS) — the bandit chooses, as on rung F");
         }
 
         // ---- shifts ---------------------------------------------------------------------
@@ -237,6 +254,7 @@ namespace Kehai.Karen
             ShiftActive = true;
             shiftStartedAt = Time.time;
             decideNow = true;
+            violationsSeen = FairnessGuard.Violations;
 
             Note("SYSTEM", $"shift {number} begins — employee {Ledger.PlayerName}, shift {number} of the career");
         }
@@ -256,6 +274,7 @@ namespace Kehai.Karen
             ShiftActive = false;
             AbortPlan();
             Director.EndShift();
+            Policy?.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
             Ledger.EndShift(ShiftTime, energy, clockedOut);
             Stats.EndShift(this);
@@ -322,7 +341,20 @@ namespace Kehai.Karen
             Director.Tick(step, Ctx);
             Director.ObserveForLedger(Ctx, step);
             if (ShiftActive) Stats.SamplePacing(Director.Panic, Director.Setpoint);
+            if (ShiftActive) PayPolicy(step);
             SettleRewards();
+        }
+
+        // Rung G's reward (PolicyReward): how close panic sat to the setpoint over this tick,
+        // less anything the fairness guard caught since the last one.
+        void PayPolicy(float dt)
+        {
+            if (Policy == null) return;
+            float length = Shift != null ? Shift.shiftDurationSeconds : 300f;
+            Policy.AddReward(PolicyReward.Pacing(Director.Panic, Director.Setpoint, dt, length));
+            int violations = FairnessGuard.Violations;
+            if (violations > violationsSeen) Policy.AddReward(PolicyReward.ViolationPenalty * (violations - violationsSeen));
+            violationsSeen = violations;
         }
 
         // ---- believe ----------------------------------------------------------------------
@@ -555,9 +587,14 @@ namespace Kehai.Karen
 
             if (tactic.TensionCost > 0f && !Director.TrySpend(tactic.TensionCost))
             {
-                Note("PLAN", $"PLAN     {tactic.Id} unaffordable at the last moment → patrol");
-                return;
+                if (HtnPlanner.Shielded(Ctx))
+                {
+                    Note("PLAN", $"PLAN     {tactic.Id} unaffordable at the last moment → patrol");
+                    return;
+                }
+                Note("PLAN", $"PLAN     {tactic.Id} over the tension budget — unshielded, so it goes ahead");
             }
+            FairnessGuard.CheckPacing(tactic, Director);
 
             tactic.LastUsed = Time.time;
             tactic.UsesThisShift++;

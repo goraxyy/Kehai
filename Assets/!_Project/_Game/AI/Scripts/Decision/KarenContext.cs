@@ -43,6 +43,7 @@ namespace Kehai.Karen
         public KarenConfig Config;
         public TaskManager Tasks;
         public ShiftManager Shift;
+        public ITacticPolicy Policy;   // rung G only (Policy/TacticPolicy.cs)
         public Appraisal A;
 
         public float Now => Time.time;

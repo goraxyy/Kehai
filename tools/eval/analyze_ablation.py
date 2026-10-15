@@ -4,7 +4,8 @@
     python analyze_ablation.py path/to/ablation_20260925_231500.jsonl > results.md
 
 Rungs see the same seeds (paired design), so differences against rung C are computed per
-(seed, shift) pair. Standard library only.
+(seed, shift) pair, and rung G (a trained tactic chooser, tools/rl) against rung F, the one
+thing it changes. Standard library only.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import math
 import sys
 from collections import Counter, defaultdict
 
-RUNGS = "ABCDEF"
+RUNGS = "ABCDEFG"
 PROFILES = ("efficient", "skittish", "reckless")
 
 
@@ -73,6 +74,29 @@ def jensen_shannon(p: Counter, q: Counter) -> float:
     return (kl(a) + kl(b)) / 2
 
 
+def paired(w, by_rung, base_rung, rungs):
+    base = {(r["agent"], r["seed"], r["shift"]): r for r in by_rung[base_rung]}
+    w("| rung | pairs | Δ detections | Δ catches | Δ mean panic | Δ setpoint RMSE | Δ jobs done | Δ clocked out |")
+    w("|---|---|---|---|---|---|---|---|")
+    for g in rungs:
+        d = defaultdict(list)
+        for r in by_rung[g]:
+            b = base.get((r["agent"], r["seed"], r["shift"]))
+            if not b:
+                continue
+            jobs = lambda x: x["spills_mopped"] + x["shelves_restocked"] + x["customers_served"] + x["bins_bagged"]
+            d["det"].append(r["karen_detections"] - b["karen_detections"])
+            d["catch"].append(r["karen_catches"] - b["karen_catches"])
+            d["panic"].append(r["mean_panic"] - b["mean_panic"])
+            d["rmse"].append(r["panic_setpoint_rmse"] - b["panic_setpoint_rmse"])
+            d["jobs"].append(jobs(r) - jobs(b))
+            d["out"].append(int(r["clocked_out"]) - int(b["clocked_out"]))
+        n = len(d["det"])
+        if n:
+            w(f"| {g} | {n} | {pm(d['det'], '{:+.1f}')} | {pm(d['catch'], '{:+.2f}')} | {pm(d['panic'], '{:+.3f}')} | "
+              f"{pm(d['rmse'], '{:+.3f}')} | {pm(d['jobs'], '{:+.1f}')} | {pm(d['out'], '{:+.2f}')} |")
+
+
 def main(path):
     rows = load(path)
     by_rung = defaultdict(list)
@@ -100,32 +124,15 @@ def main(path):
           f"{pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
           f"{pm((r['customers_lost'] for r in rs), '{:.1f}')} | {sum(r.get('karen_fairness_violations', 0) for r in rs)} |")
 
-    # Paired differences against C.
+    # Paired differences against C, and G against F (the one thing G changes).
     if "C" in by_rung:
-        base = {(r["agent"], r["seed"], r["shift"]): r for r in by_rung["C"]}
         w("\n### Each rung against rung C, paired by seed and shift\n")
         w("Positive = more than C. Pairs share the same customers and spills; Karen is the only difference.\n")
-        w("| rung | pairs | Δ detections | Δ catches | Δ mean panic | Δ setpoint RMSE | Δ jobs done | Δ clocked out |")
-        w("|---|---|---|---|---|---|---|---|")
-        for g in rungs:
-            if g == "C":
-                continue
-            d = defaultdict(list)
-            for r in by_rung[g]:
-                b = base.get((r["agent"], r["seed"], r["shift"]))
-                if not b:
-                    continue
-                jobs = lambda x: x["spills_mopped"] + x["shelves_restocked"] + x["customers_served"] + x["bins_bagged"]
-                d["det"].append(r["karen_detections"] - b["karen_detections"])
-                d["catch"].append(r["karen_catches"] - b["karen_catches"])
-                d["panic"].append(r["mean_panic"] - b["mean_panic"])
-                d["rmse"].append(r["panic_setpoint_rmse"] - b["panic_setpoint_rmse"])
-                d["jobs"].append(jobs(r) - jobs(b))
-                d["out"].append(int(r["clocked_out"]) - int(b["clocked_out"]))
-            n = len(d["det"])
-            if n:
-                w(f"| {g} | {n} | {pm(d['det'], '{:+.1f}')} | {pm(d['catch'], '{:+.2f}')} | {pm(d['panic'], '{:+.3f}')} | "
-                  f"{pm(d['rmse'], '{:+.3f}')} | {pm(d['jobs'], '{:+.1f}')} | {pm(d['out'], '{:+.2f}')} |")
+        paired(w, by_rung, "C", [g for g in rungs if g != "C"])
+    if "F" in by_rung and "G" in by_rung:
+        w("\n### Rung G against rung F, paired by seed and shift\n")
+        w("G is F with the bandit's pick handed to the trained policy. Positive = more than F.\n")
+        paired(w, by_rung, "F", ["G"])
 
     w("\n### By rung and player profile\n")
     w("| rung | profile | clocked out | detections / shift | catches / shift | mean panic | setpoint RMSE | jobs done / shift |")

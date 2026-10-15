@@ -67,3 +67,8 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
 
 runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–F and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
+
+Rung G (a trained tactic chooser) isn't in the default list, as it needs the ML-Agents package
+and a model: add it with `-ablation-rungs FG` (`tools/rl/README.md`). `-ablation-interleave`
+plays the profiles in turn, career by career, rather than one profile's careers at a time; RL
+training uses it to keep the profiles mixed.
