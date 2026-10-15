@@ -107,11 +107,16 @@ namespace Kehai.Eval
         public static Item Tool(ItemType type)
         {
             foreach (ToolSnapPoint s in Object.FindObjectsByType<ToolSnapPoint>())
-                if (s.tool != null && s.tool.type == type) return s.tool;
+                if (s.tool != null && s.tool.type == type && IsTool(s.tool)) return s.tool;
             foreach (Item i in Object.FindObjectsByType<Item>())
-                if (i.type == type) return i;
+                if (i.type == type && IsTool(i)) return i;
             return null;
         }
+
+        // The back rooms' product boxes are Stock items too (7f90835); "crate" is the stock
+        // crate, which restocks a whole bay. Without this the crate could resolve to any box,
+        // often one with no path to it, and a box only fills its own product's slots.
+        static bool IsTool(Item i) => i.type != ItemType.Stock || i.GetComponent<StockCrate>() != null;
 
         // ---- observing ---------------------------------------------------------------------
 
@@ -267,7 +272,7 @@ namespace Kehai.Eval
         {
             if (i == null) return null;
             if (i.type == ItemType.Mop) return "mop";
-            if (i.type == ItemType.Stock) return "crate";
+            if (i.type == ItemType.Stock && IsTool(i)) return "crate";
             if (i.type == ItemType.TrashBag) return "trash bag";
             if (i.type == ItemType.Flashlight) return "flashlight";
             return i.DisplayName;

@@ -369,6 +369,57 @@ namespace Kehai.Eval
             if (Driver.DistanceTo(target) > within + 1.2f) r.Fail("couldn't get close enough to " + World.Map.NameAt(target));
         }
 
+        // Where to stand to use something fixed in place (the time clock, the coffee machine):
+        // the nearest walkable spot with nothing solid between it and the thing. The plain
+        // nearest NavMesh point can be on the far side of a wall: since the staff room was
+        // fitted out (#54) the coffee machine's is out in the west alley, and the walk round to
+        // it jammed in the staff room's back door.
+        static Vector3 StandPoint(Landmark l)
+        {
+            Transform owner = l.Source is Component c ? c.transform : null;
+            Vector3 aim = l.Position + Vector3.up * 0.3f;
+            for (int ring = 1; ring <= 6; ring++)
+            {
+                float r = 0.35f * ring;
+                Vector3 best = Vector3.zero;
+                float bestSqr = float.PositiveInfinity;
+                for (int i = 0; i < 16; i++)
+                {
+                    float angle = i * Mathf.PI / 8f;
+                    Vector3 p = l.Position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * r;
+                    if (!UnityEngine.AI.NavMesh.SamplePosition(p, out UnityEngine.AI.NavMeshHit hit, 2.5f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                    Vector3 off = hit.position - p;
+                    off.y = 0f;
+                    if (off.sqrMagnitude > 0.3f * 0.3f) continue;            // nowhere to stand right here
+                    Vector3 to = hit.position - l.Position;
+                    to.y = 0f;
+                    if (to.sqrMagnitude >= bestSqr || !InReach(hit.position + Vector3.up * 1.3f, aim, owner)) continue;
+                    best = hit.position;
+                    bestSqr = to.sqrMagnitude;
+                }
+                if (bestSqr < float.PositiveInfinity) return best;
+            }
+            return l.Position;
+        }
+
+        // Nothing solid on the line but the thing itself, other things you use, the people
+        // about and loose items: a wall or a counter in the way means the wrong side.
+        static bool InReach(Vector3 from, Vector3 to, Transform owner)
+        {
+            int interactable = LayerMask.NameToLayer("Interactable");
+            Vector3 d = to - from;
+            foreach (RaycastHit h in Physics.RaycastAll(from, d, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Collider col = h.collider;
+                if (owner != null && col.transform.IsChildOf(owner)) continue;
+                if (interactable >= 0 && col.gameObject.layer == interactable) continue;
+                if (col.GetComponentInParent<CharacterController>() != null || col.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null ||
+                    col.GetComponentInParent<Item>() != null) continue;
+                return false;
+            }
+            return true;
+        }
+
         IEnumerator Face(Vector3 point)
         {
             Driver.LookAt(point);
@@ -571,7 +622,7 @@ namespace Kehai.Eval
         {
             Landmark? l = World.Map.NearestLandmark(kind, Driver.transform.position);
             if (!l.HasValue || !(l.Value.Source is IInteractable target)) { r.Fail($"no {kind}"); yield break; }
-            yield return Approach(l.Value.Position, 1.7f, a, r);
+            yield return Approach(StandPoint(l.Value), 0.6f, a, r);
             if (r.Finished) yield break;
             yield return Tap(target, l.Value.Position);
             r.Pass(kind.ToString());
@@ -584,7 +635,7 @@ namespace Kehai.Eval
 
             Landmark? clock = World.Map.FindLandmark(LandmarkKind.TimeClock);
             if (!clock.HasValue || !(clock.Value.Source is IInteractable puncher)) { r.Fail("no time clock"); yield break; }
-            yield return Approach(clock.Value.Position, 1.6f, a, r);
+            yield return Approach(StandPoint(clock.Value), 0.6f, a, r);
             if (r.Finished) yield break;
             yield return Tap(puncher, clock.Value.Position);
             yield return null;
