@@ -205,18 +205,44 @@ namespace Kehai.Eval
             if (blink != null && Config.syntheticBlinks) blink.UseSynthetic(Config.seed);
         }
 
-        // Walk to the time clock and punch in — the first thing every shift.
+        // Walk to the time clock and punch in — the first thing every shift. If the walk fails
+        // (between shifts the employee can be anywhere, including somewhere the walk back
+        // can't get out of), they're put at the clock and punch from there: what's measured is
+        // the shift, not the walk to it. A punch that still doesn't take leaves Metrics
+        // unstarted, and nothing records an unstarted episode.
         public IEnumerator ClockIn()
         {
-            if (Shift == null || Shift.IsShiftActive) yield break;
+            if (Shift == null || Shift.IsShiftActive)
+            {
+                Metrics = new EpisodeMetrics();
+                yield break;
+            }
             if (KarenBrain.Instance != null && KarenBrain.Instance.Review != null) KarenBrain.Instance.Review.Visible = false;
             yield return Act(new EnvAction { verb = "clock_in" });
+            if (!Shift.IsShiftActive && WarpToClock())
+                yield return Act(new EnvAction { verb = "clock_in" });
+
+            Metrics = new EpisodeMetrics();
+            LastResult = null;
+            if (!Shift.IsShiftActive)
+            {
+                Debug.LogWarning($"[env] shift {Shift.ShiftNumber + 1} never started: the punch didn't take, even at the clock");
+                yield break;
+            }
             shiftStartedAt = Time.time;
             wallStartedAt = Time.realtimeSinceStartup;
-            Metrics = new EpisodeMetrics();
             Metrics.Begin(Config.seed, Shift.ShiftNumber, Config.agent, Config.rung);
-            LastResult = null;
             Done = false;
+        }
+
+        bool WarpToClock()
+        {
+            Landmark? clock = World.Map.FindLandmark(LandmarkKind.TimeClock);
+            if (!clock.HasValue) return false;
+            Vector3 from = Driver.transform.position;
+            if (!Driver.Warp(StandPoint(clock.Value))) return false;
+            Debug.Log($"[env] the walk to the time clock failed from {World.Map.NameAt(from)} {from}; put at the clock to punch in");
+            return true;
         }
 
         // The episode ends when the employee clocks out, or runs this far past closing.

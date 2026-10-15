@@ -14,6 +14,9 @@ namespace Kehai.Eval
         public string Agent = "unknown";
         public string Rung = "";
 
+        // Set by Begin, once the punch has taken. A shift that never started has nothing to say.
+        public bool Started { get; private set; }
+
         public bool ClockedOut;
         public bool TimedOut;
         public float SimSeconds;
@@ -62,6 +65,7 @@ namespace Kehai.Eval
             Shift = shift;
             Agent = agent;
             Rung = rung;
+            Started = true;
             started = Time.time;
             violationsAtStart = FairnessGuard.Violations;
             Belief.Begin();

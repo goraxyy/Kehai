@@ -76,3 +76,9 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
 
 runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–F and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
+
+A career's shifts are played back to back: between them the bot walks to the time clock, and if
+that walk fails it is put at the clock to punch in. A shift that still never starts is not
+written (the rest of that career is skipped, with a warning in the log), and no (rung, player,
+seed, shift) is written twice. `analyze_ablation.py` drops such repeated rows from runs made
+before 2026-10-15, when a failed clock-in logged a copy of the previous shift.

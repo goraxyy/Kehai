@@ -38,6 +38,7 @@ namespace Kehai.Eval
         public string Progress { get; private set; } = "starting";
         public string JsonlPath { get; private set; }
         public string MarkdownPath { get; private set; }
+        public int Skipped { get; private set; }
         public System.Action<AblationRunner> Completed;
 
         float startedAt;
@@ -62,6 +63,7 @@ namespace Kehai.Eval
 
             int total = Plan.rungs.Length * Plan.profiles.Length * Plan.careers * Plan.shiftsPerCareer;
             int done = 0;
+            var log = new EpisodeLog(JsonlPath);
 
             foreach (PlayerProfile profile in Plan.profiles)
             for (int career = 0; career < Plan.careers; career++)
@@ -86,14 +88,29 @@ namespace Kehai.Eval
 
                     for (int s = 0; s < Plan.shiftsPerCareer; s++)
                     {
+                        // The punch didn't take, even at the clock: the rest of this career
+                        // can't be played, and is left out rather than logged as copies.
+                        if (!env.Metrics.Started)
+                        {
+                            Skipped += Plan.shiftsPerCareer - s;
+                            done += Plan.shiftsPerCareer - s;
+                            Debug.LogWarning($"Ablation: rung {config.rung} {config.agent} career {career + 1}: shift {Plan.startShift + s} never started; " +
+                                             $"its {Plan.shiftsPerCareer - s} remaining shift(s) are not recorded");
+                            break;
+                        }
+
                         Progress = $"{done + 1}/{total}: rung {config.rung}, {config.agent}, career {career + 1}, shift {Plan.startShift + s}";
                         var bot = new SimulatedPlayer(env, profile, seed * 31 + s);
                         yield return bot.PlayShift();
 
                         EpisodeMetrics m = env.Metrics;
-                        Results.Add(m);
-                        File.AppendAllText(JsonlPath, MiniJson.Serialize(m.ToDictionary()) + "\n");
                         done++;
+                        if (log.TryAppend(m, out string refused)) Results.Add(m);
+                        else
+                        {
+                            Skipped++;
+                            Debug.LogWarning($"Ablation: rung {m.Rung} {m.Agent} shift {m.Shift} not recorded: {refused}");
+                        }
                         Debug.Log($"Ablation {done}/{total} rung {m.Rung} {m.Agent} shift {m.Shift}: " +
                                   $"{(m.ClockedOut ? "clocked out" : m.TimedOut ? "timed out" : "ended")} at {m.SimSeconds:0}s sim / {m.WallSeconds:0}s wall, " +
                                   $"steps {m.Steps}, mopped {m.SpillsMopped}, restocked {m.ShelvesRestocked}, served {m.CustomersServed}, " +
@@ -107,7 +124,7 @@ namespace Kehai.Eval
             }
 
             File.WriteAllText(MarkdownPath, Summarise());
-            Progress = $"done: {Results.Count} shifts in {(Time.realtimeSinceStartup - startedAt) / 60f:0.0} min";
+            Progress = $"done: {Results.Count} shifts{(Skipped > 0 ? $" ({Skipped} not recorded: never started)" : "")} in {(Time.realtimeSinceStartup - startedAt) / 60f:0.0} min";
             Finished = true;
             Completed?.Invoke(this);
         }
@@ -204,6 +221,37 @@ namespace Kehai.Eval
         }
 
         static string Pct(int k, int n) => n == 0 ? "—" : $"{100f * k / n:0}%";
+    }
+
+    // The run's jsonl. Only shifts that really started go in, and each (rung, player, seed,
+    // shift) once: a shift that never started used to be logged as a copy of the one before
+    // (same shift number, one step, her stats repeated), and a later copy then took the real
+    // row's place when the analysis paired rungs by seed and shift.
+    public sealed class EpisodeLog
+    {
+        readonly string path;
+        readonly HashSet<string> written = new HashSet<string>();
+
+        public EpisodeLog(string path) => this.path = path;
+
+        public int Count => written.Count;
+
+        public static string Key(EpisodeMetrics m) => $"{m.Rung}|{m.Agent}|{m.Seed}|{m.Shift}";
+
+        // Why `m` can't be recorded, or null if it can.
+        public string Refusal(EpisodeMetrics m) =>
+            !m.Started ? "the shift never started"
+            : written.Contains(Key(m)) ? $"shift {m.Shift} of this career is already recorded"
+            : null;
+
+        public bool TryAppend(EpisodeMetrics m, out string refusal)
+        {
+            refusal = Refusal(m);
+            if (refusal != null) return false;
+            written.Add(Key(m));
+            if (path != null) File.AppendAllText(path, MiniJson.Serialize(m.ToDictionary()) + "\n");
+            return true;
+        }
     }
 
     // Command-line entry for builds (IDEAS.md, the agent test environment):

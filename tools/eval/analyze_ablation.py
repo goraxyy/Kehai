@@ -19,7 +19,24 @@ PROFILES = ("efficient", "skittish", "reckless")
 
 def load(path):
     with open(path, encoding="utf-8") as f:
-        return [karens_keys(json.loads(line)) for line in f if line.strip()]
+        return first_of_each_shift([karens_keys(json.loads(line)) for line in f if line.strip()])
+
+
+# Runs before 2026-10-15's fix logged a shift that never started (a failed clock-in between
+# shifts) as a copy of the one before: same rung, player, seed and shift. Keep the first,
+# the real one; a copy would otherwise replace it when rungs are paired.
+def first_of_each_shift(rows):
+    kept, seen = [], set()
+    for r in rows:
+        key = (r["rung"], r["agent"], r["seed"], r["shift"])
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(r)
+    if len(kept) < len(rows):
+        print(f"analyze_ablation: dropped {len(rows) - len(kept)} repeated (rung, player, seed, shift) rows: "
+              "shifts that never started", file=sys.stderr)
+    return kept
 
 
 # Runs recorded while she was called Aiko (2026-09-29 to 2026-10-10) name her numbers
