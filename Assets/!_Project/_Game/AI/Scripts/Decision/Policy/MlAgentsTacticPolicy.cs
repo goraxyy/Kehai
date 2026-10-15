@@ -81,22 +81,24 @@ namespace Kehai.Karen
 
             go.AddComponent<BeliefSensorComponent>();
 
+            var agent = go.AddComponent<MlAgentsTacticPolicy>();
+            agent.behavior = behavior;
+            agent.MaxStep = 0;
+
+            // After the agent: DemonstrationRecorder [RequireComponent(typeof(Agent))], and added
+            // first it gets a plain Agent of its own and records that one, which never decides.
             string demos = Arg("-karen-record-demos");
-            DemonstrationRecorder recorder = null;
             if (demos != null)
             {
-                recorder = go.AddComponent<DemonstrationRecorder>();
+                DemonstrationRecorder recorder = go.AddComponent<DemonstrationRecorder>();
                 recorder.Record = true;
                 recorder.DemonstrationName = Behavior;
                 recorder.DemonstrationDirectory = Path.GetFullPath(demos);
                 recorder.NumStepsToRecord = int.TryParse(Arg("-karen-demo-steps"), out int steps) ? steps : 0;
                 behavior.BehaviorType = BehaviorType.HeuristicOnly;
+                agent.recorder = recorder;
             }
 
-            var agent = go.AddComponent<MlAgentsTacticPolicy>();
-            agent.behavior = behavior;
-            agent.recorder = recorder;
-            agent.MaxStep = 0;
             agent.Configure(config);
             go.SetActive(true);
             Application.quitting += () => { if (agent != null && agent.recorder != null) agent.recorder.Close(); };
