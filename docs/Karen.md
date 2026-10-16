@@ -1120,9 +1120,12 @@ code departs from the plan above. Results of the ablation ladder are in
 | §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
 | §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` (the agent test environment, ablation) |
 | blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md`, the blink mechanic) |
+| rung G, a trained tactic chooser | `AI/Scripts/Decision/Policy/` (the seam, observation, mask, reward; the ML-Agents agent) + `_Core/Editor/KehaiRl.cs` + `tools/rl/` |
 
 Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
-version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line.
+version control. `-nokaren`, `-karen-rung <A-G>` and `-karen-seed <n>` work on the command line, and
+rung G adds `-karen-shield on|off` and `-karen-policy <model>` (`tools/rl/README.md`).
+`-kehai-no-records` turns off shift records, replays and clip markers for long training runs.
 
 ### Keys
 
@@ -1197,7 +1200,11 @@ the wall colliders, so the map is the store as it actually is.
   every rung — without it the simplest rungs could catch you again the moment a lecture ended.
 - **Learning scope per rung** follows the ablation table in `IDEAS.md` exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
-  two shifts), F adds the blink channel.
+  two shifts), F adds the blink channel. G is F with the bandit's final pick handed to a policy
+  trained by PPO (Unity ML-Agents): the arms still learn, feed goal utility and order the
+  fallbacks, and the policy starts by imitating them. Its action mask is the planner's candidate
+  list, so with the shield on it can only pick what the Director allows; with it off,
+  `FairnessGuard.CheckPacing` (rule 4, checked on every rung) counts what gets through.
 - **The endless maze** is built in a scene of its own and parked; Karen isn't in it yet
   (`DECISIONS.md`).
 - **Not built:** a second Karen body (§14), and the Sentis in-engine

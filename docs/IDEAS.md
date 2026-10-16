@@ -104,7 +104,7 @@ clock never stops, which is exactly where today's agents fail.
 ingredient out of a recipe at a time to find out what each adds. If the dish tastes the same
 without it, it wasn't doing anything.
 
-**For Karen** there are six versions, each adding exactly one thing to the one before. They play
+**For Karen** there are seven versions, each changing exactly one thing from the one before. They play
 the same shifts (same seeds) against the same simulated players, so any difference comes from
 that one thing:
 
@@ -116,15 +116,18 @@ that one thing:
 | D | learning which tricks work, during a shift | does short-term learning help? |
 | E | memory across shifts (the Ledger) | does long-term learning help? |
 | F | the blink | does acting while your eyes are shut help? |
+| G | a trained network picks the trick instead of D's learner (PPO, [`tools/rl`](../tools/rl/README.md)) | does deep RL beat the bandit? |
 
-`-karen-rung A`…`F` picks a version on the command line.
+`-karen-rung A`…`G` picks a version on the command line. G needs the ML-Agents package and a
+trained model; it is built, but not yet trained or measured.
 
 **What we found** (216 simulated shifts, [KAREN_RESULTS.md](KAREN_RESULTS.md)): the belief map
 finds players about twice as fast as patrols (51 s against about 100 s), and the fairness rules
 were never broken. **Learning (D–F) didn't beat C**: the bots don't react to her tricks, so
 there's little for her to learn from.
 
-**Next.** Bots that react to her warnings, and then real players.
+**Next.** Bots that react to her warnings, and then real players — they come before rung G can
+be trained on anything worth learning.
 
 ---
 

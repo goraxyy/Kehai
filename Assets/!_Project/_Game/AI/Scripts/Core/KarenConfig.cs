@@ -11,7 +11,8 @@ namespace Kehai.Karen
         C_BeliefGrid,        // + belief grid, negative information, goals, tactics, pacing
         D_Bandit,            // + learns which tactics land on this player, within a shift
         E_Ledger,            // + remembers the player across shifts (routes, hiding spots)
-        F_Blink              // + the blink channel from the webcam
+        F_Blink,             // + the blink channel from the webcam
+        G_Policy             // F, with the bandit's tactic choice replaced by a trained policy (tools/rl)
     }
 
     // What each rung switches on. Kept as flags rather than scattered `rung >= X` checks,
@@ -23,7 +24,11 @@ namespace Kehai.Karen
         public readonly bool Bandit;       // tactic selection learns from panic deltas
         public readonly bool Persistent;   // bandit + player model survive between shifts
         public readonly bool Blink;        // eyes-closed windows are exploited
+        public readonly bool Policy;       // a trained policy picks the tactic instead of the bandit
 
+        // Rung G keeps the bandit's arms learning, exactly as in F: they still feed goal utility,
+        // they order the fallbacks, and their pick is what the policy imitates before RL starts.
+        // Only the final choice of tactic moves to the policy.
         public RungFeatures(KarenRung rung)
         {
             Belief = rung >= KarenRung.C_BeliefGrid;
@@ -31,10 +36,11 @@ namespace Kehai.Karen
             Bandit = rung >= KarenRung.D_Bandit;
             Persistent = rung >= KarenRung.E_Ledger;
             Blink = rung >= KarenRung.F_Blink;
+            Policy = rung == KarenRung.G_Policy;
         }
 
         public override string ToString() =>
-            $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} blink={Blink}";
+            $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} blink={Blink} policy={Policy}";
     }
 
     // Every tunable in one place, with the Karen.md section it comes from. Plain data so an
@@ -115,6 +121,13 @@ namespace Kehai.Karen
         [Header("Blink channel (IDEAS.md)")]
         public float blinkAdvanceSpeed = 11f;
         public float blinkAdvanceMaxDistance = 3f;
+
+        [Header("Trained policy (rung G, tools/rl)")]
+        [Tooltip("The policy may only pick what the Director allows: tier permission, cooldowns, tension budget. " +
+                 "Off is for finding loopholes — it drops those gates, and FairnessGuard counts what slips through.")]
+        public bool shield = true;
+        [Tooltip("Model under Resources/KarenPolicy/ (no extension). Empty or missing = the trainer if one is connected, else the bandit's choice.")]
+        public string policyModel = "";
 
         [Header("Debug")]
         public bool logToConsole = false;

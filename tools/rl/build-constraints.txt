@@ -1,0 +1,3 @@
+# For building grpcio 1.48.2 from source (Apple Silicon): its setup.py imports pkg_resources,
+# which newer setuptools no longer ship.
+setuptools<70

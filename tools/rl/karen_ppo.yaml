@@ -1,0 +1,46 @@
+# PPO for rung G's tactic chooser (README.md). One behaviour, "Karen": she decides when the
+# planner needs a tactic, a few times a minute, and a shift is one episode.
+behaviors:
+  Karen:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 256
+      buffer_size: 4096
+      learning_rate: 3.0e-4
+      learning_rate_schedule: linear
+      beta: 5.0e-3              # entropy bonus: keep trying tactics while it learns
+      epsilon: 0.2              # PPO's clip
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: false          # the observation is already scaled to 0..1 (PolicyObservation)
+      hidden_units: 128
+      num_layers: 2
+      vis_encode_type: simple   # the 32×32 belief picture (BeliefRaster)
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    # Start from imitating the bandit (rung F's choice), recorded with record_demos.sh,
+    # so the policy begins at rung F's level instead of at random.
+    behavioral_cloning:
+      demo_path: demos
+      strength: 0.5
+      steps: 150000
+    time_horizon: 64
+    max_steps: 2000000
+    summary_freq: 5000
+    checkpoint_interval: 50000
+    keep_checkpoints: 5
+
+engine_settings:
+  # Required. The game runs a fixed step of 1/15 s (the ablation's -ablation-fps), set
+  # through Time.captureDeltaTime; ML-Agents' defaults (time scale 20, capture 60 fps)
+  # would change the simulation itself.
+  time_scale: 1
+  capture_frame_rate: 15
+  target_frame_rate: -1
+  no_graphics: true
+
+torch_settings:
+  device: cpu                   # the network is small; a GPU doesn't help

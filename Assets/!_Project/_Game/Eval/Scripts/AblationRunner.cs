@@ -22,6 +22,10 @@ namespace Kehai.Eval
         public bool render = false;
         public bool verbose = false;
         public string outDirectory;
+        // Careers outer, profiles inner: every profile in turn, career after career. RL training
+        // (tools/rl) runs an "ablation" of one rung and thousands of careers, and the default
+        // order would spend every one of them on the first profile.
+        public bool interleave = false;
     }
 
     // The ablation ladder (IDEAS.md, Ablation), run end to end with simulated players.
@@ -65,8 +69,7 @@ namespace Kehai.Eval
             int done = 0;
             var log = new EpisodeLog(JsonlPath);
 
-            foreach (PlayerProfile profile in Plan.profiles)
-            for (int career = 0; career < Plan.careers; career++)
+            foreach ((PlayerProfile profile, int career) in Order())
             {
                 int seed = Plan.baseSeed + career * 100 + (int)profile * 10;
                 foreach (KarenRung rung in Plan.rungs)
@@ -129,6 +132,20 @@ namespace Kehai.Eval
             Completed?.Invoke(this);
         }
 
+        IEnumerable<(PlayerProfile, int)> Order()
+        {
+            if (Plan.interleave)
+            {
+                for (int career = 0; career < Plan.careers; career++)
+                    foreach (PlayerProfile profile in Plan.profiles) yield return (profile, career);
+            }
+            else
+            {
+                foreach (PlayerProfile profile in Plan.profiles)
+                    for (int career = 0; career < Plan.careers; career++) yield return (profile, career);
+            }
+        }
+
         // ---- the table ---------------------------------------------------------------------
 
         public string Summarise()
@@ -174,7 +191,7 @@ namespace Kehai.Eval
             }
 
             sb.AppendLine();
-            sb.AppendLine("### What " + GameNames.Antagonist + " reached for, per profile (rungs D–F)");
+            sb.AppendLine("### What " + GameNames.Antagonist + " reached for, per profile (rungs D and up)");
             sb.AppendLine();
             sb.AppendLine("| rung | profile | most-used tactics across the career |");
             sb.AppendLine("|---|---|---|");
@@ -283,9 +300,11 @@ namespace Kehai.Eval
                         startShift = Int(args, "-ablation-start", 3),
                         shiftSeconds = Int(args, "-ablation-seconds", 150),
                         fps = Int(args, "-ablation-fps", 15),
-                        baseSeed = Int(args, "-ablation-seed", 1000),
+                        // RL training's parallel copies (one trainer port each) play different shifts.
+                        baseSeed = Int(args, "-ablation-seed", 1000) + KehaiEnv.TrainerPort % 100 * 10000000,
                         outDirectory = Str(args, "-ablation-out", null),
-                        verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0
+                        verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0,
+                        interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0
                     };
                     string rungs = Str(args, "-ablation-rungs", null);
                     if (rungs != null)

@@ -82,3 +82,8 @@ that walk fails it is put at the clock to punch in. A shift that still never sta
 written (the rest of that career is skipped, with a warning in the log), and no (rung, player,
 seed, shift) is written twice. `analyze_ablation.py` drops such repeated rows from runs made
 before 2026-10-15, when a failed clock-in logged a copy of the previous shift.
+
+Rung G (a trained tactic chooser) isn't in the default list, as it needs the ML-Agents package
+and a model: add it with `-ablation-rungs FG` (`tools/rl/README.md`). `-ablation-interleave`
+plays the profiles in turn, career by career, rather than one profile's careers at a time; RL
+training uses it to keep the profiles mixed.

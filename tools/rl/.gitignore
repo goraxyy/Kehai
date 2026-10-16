@@ -1,0 +1,7 @@
+# Personal, large, or both: the trainer's environment, recorded demonstrations, training runs
+# and the models they export. None of it goes in the repository.
+.venv/
+demos/
+results/
+*.onnx
+*.demo

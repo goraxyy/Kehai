@@ -9,13 +9,18 @@ namespace Kehai.Karen
     // Command line (for builds and the eval harness):
     //   -replay <file.krec>  watch a recorded shift instead (ReplayMode)
     //   -nokaren              run the store without her
-    //   -karen-rung <A..F>    choose the ablation rung
+    //   -karen-rung <A..G>    choose the ablation rung
     //   -karen-seed <n>       seed every decision (0 = clock)
+    //   -karen-shield on|off  rung G: keep the policy inside the Director's gates (default on)
+    //   -karen-policy <name>  rung G: the model under Resources/KarenPolicy/ to run
+    //   -kehai-no-records     write no shift records, replays or clip markers (RL training runs
+    //                         thousands of shifts)
     public static class KarenBootstrap
     {
         // Set by the eval harness before a scene load to configure the next Karen.
         public static KarenConfig Override;
         public static bool Disabled;
+        public static bool NoRecords;
 
         // Every later load of the store gets a Karen too — the eval harness reloads the scene
         // on each reset, and RuntimeInitializeOnLoadMethod only fires for the first one.
@@ -64,16 +69,19 @@ namespace Kehai.Karen
             if (Override != null) brain.config = Override.Clone();
             ApplyCommandLine(brain.config);
             KeepBelowSprint(brain.config);
-            root.AddComponent<ShiftRecorder>();
-            root.AddComponent<ClipMarkerRecorder>();
-            root.AddComponent<Kehai.Replay.ReplayRecorder>();
+            if (!NoRecords)
+            {
+                root.AddComponent<ShiftRecorder>();
+                root.AddComponent<ClipMarkerRecorder>();
+                root.AddComponent<Kehai.Replay.ReplayRecorder>();
+            }
             root.AddComponent<KarenDebugOverlay>();
             root.AddComponent<ReviewScreen>();
             root.AddComponent<Kehai.Blink.BlinkTracker>();
             root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
-        static string rungArg, seedArg;
+        static string rungArg, seedArg, shieldArg, policyArg;
 
         static void ReadCommandLine()
         {
@@ -83,6 +91,9 @@ namespace Kehai.Karen
                 if (args[i] == "-nokaren") Disabled = true;
                 if (args[i] == "-karen-rung" && i + 1 < args.Length) rungArg = args[i + 1];
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
+                if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
+                if (args[i] == "-karen-policy" && i + 1 < args.Length) policyArg = args[i + 1];
+                if (args[i] == "-kehai-no-records") NoRecords = true;
             }
         }
 
@@ -107,6 +118,19 @@ namespace Kehai.Karen
         {
             if (!string.IsNullOrEmpty(rungArg) && TryParseRung(rungArg, out KarenRung rung)) config.rung = rung;
             if (!string.IsNullOrEmpty(seedArg) && int.TryParse(seedArg, out int seed)) config.seed = seed;
+            if (!string.IsNullOrEmpty(shieldArg)) config.shield = ParseSwitch(shieldArg, config.shield);
+            if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
+        }
+
+        // "on", "off", "true", "false", "1", "0".
+        public static bool ParseSwitch(string text, bool fallback)
+        {
+            switch (text.Trim().ToLowerInvariant())
+            {
+                case "on": case "true": case "1": case "yes": return true;
+                case "off": case "false": case "0": case "no": return false;
+                default: return fallback;
+            }
         }
 
         // "C", "c", "C_BeliefGrid" and "2" all mean rung C.
@@ -115,9 +139,10 @@ namespace Kehai.Karen
             rung = KarenRung.F_Blink;
             if (string.IsNullOrEmpty(text)) return false;
             text = text.Trim();
-            if (int.TryParse(text, out int index) && index >= 0 && index <= 5) { rung = (KarenRung)index; return true; }
+            int last = (int)KarenRung.G_Policy;
+            if (int.TryParse(text, out int index) && index >= 0 && index <= last) { rung = (KarenRung)index; return true; }
             char letter = char.ToUpperInvariant(text[0]);
-            if (letter >= 'A' && letter <= 'F') { rung = (KarenRung)(letter - 'A'); return true; }
+            if (letter >= 'A' && letter <= 'A' + last) { rung = (KarenRung)(letter - 'A'); return true; }
             return false;
         }
     }

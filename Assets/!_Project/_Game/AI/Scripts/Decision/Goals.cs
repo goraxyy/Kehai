@@ -198,24 +198,30 @@ namespace Kehai.Karen
             var result = new List<Tactic>();
             foreach (Tactic t in TacticLibrary.For(goal))
             {
-                string why = null;
-                bool ok =
-                    Introduced(t, c, ref why) &&
-                    Permitted(t, c, ref why) &&
-                    OffCooldown(t, c, ref why) &&
-                    Affordable(t, c, ref why) &&
-                    t.Available(c, out why);
-
+                bool ok = Gated(t, c, out string why) && t.Available(c, out why);
                 if (ok) result.Add(t);
                 else refusals?.Add($"{t.Id}: {why}");
             }
             return result;
         }
 
+        // The rung's and the Director's say, before the tactic's own (Available).
+        public static bool Gated(Tactic t, KarenContext c, out string why)
+        {
+            why = null;
+            return Introduced(t, c, ref why) &&
+                   (!Shielded(c) || Permitted(t, c, ref why) && OffCooldown(t, c, ref why) && Affordable(t, c, ref why));
+        }
+
+        // The Director's gates — tier permission, cooldowns, the tension budget — hold on every
+        // rung but one: rung G with its shield off, which exists to find out what a trained
+        // policy does without them (FairnessGuard.CheckPacing counts it).
+        public static bool Shielded(KarenContext c) => !c.Features.Policy || c.Config.shield;
+
         static bool Introduced(Tactic t, KarenContext c, ref string why)
         {
             if (!c.Features.Goals && t.Tier > 0) { why = "rung has no tactics"; return false; }
-            if (c.Brain.CareerOverride || t.IntroducedShift <= c.ShiftNumber) return true;
+            if ((c.Brain != null && c.Brain.CareerOverride) || t.IntroducedShift <= c.ShiftNumber) return true;
             why = $"introduced on shift {t.IntroducedShift}";
             return false;
         }
@@ -276,6 +282,14 @@ namespace Kehai.Karen
             }
             scored.Sort((x, y) => y.s.CompareTo(x.s));
 
+            // On rung G the policy picks (Policy/TacticPolicy.cs), told what the bandit would
+            // have: rung F's choice, exactly. Movement-only goals aren't its business, as they
+            // aren't the bandit's.
+            if (c.Features.Policy && c.Policy != null && candidates.Any(t => t.Learnable) &&
+                c.Policy.TryChoose(goal, candidates, scored[0].t, c, out int index, out string pickedWhy) &&
+                index >= 0 && index < candidates.Count)
+                PolicyFirst(scored, candidates[index], pickedWhy);
+
             foreach (var entry in scored.Take(4))
                 options.Add(new ThoughtOption { Name = entry.t.Id, Utility = entry.s, Why = entry.why });
 
@@ -293,6 +307,18 @@ namespace Kehai.Karen
 
             because = "every candidate decomposed to nothing";
             return null;
+        }
+
+        // The policy's pick goes first; the rest keep the bandit's order, as the fallback if the
+        // pick decomposes to nothing. Its utility stays the bandit's score, so the numbers in the
+        // thought log remain comparable.
+        public static void PolicyFirst(List<(Tactic t, float s, string why)> scored, Tactic picked, string pickedWhy)
+        {
+            int k = scored.FindIndex(x => x.t == picked);
+            if (k < 0) return;
+            var pick = scored[k];
+            scored.RemoveAt(k);
+            scored.Insert(0, (pick.t, pick.s, $"policy: {pickedWhy} (bandit {pick.s:0.00})"));
         }
 
         public static string Describe(List<ThoughtOption> options)
