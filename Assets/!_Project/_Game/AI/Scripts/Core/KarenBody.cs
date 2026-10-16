@@ -255,9 +255,24 @@ namespace Kehai.Karen
                     transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(d), 240f * Time.deltaTime);
             }
 
+            KeepPersonalSpace();
             Head.localRotation = Quaternion.Euler(8f, headYaw, 0f);
             Footsteps();
             OpenDoorsInTheWay();
+        }
+
+        // Her touch kills (KarenBrain.OnTouched), so walking up to you is something she only
+        // does running — a chase, a lunge. Following, stalking, searching, she stops short of
+        // where she sees you and watches; she moves again when you do.
+        void KeepPersonalSpace()
+        {
+            if (CurrentPace == Pace.Run || burstUntil > 0f || !Agent.isOnNavMesh || Agent.isStopped) return;
+            if (Sight == null || !Sight.SeesNow) return;
+            Vector3 d = Sight.LastSeenPosition - transform.position;
+            d.y = 0f;
+            if (d.magnitude >= config.personalSpace) return;
+            Agent.isStopped = true;
+            TurnToward(Sight.LastSeenPosition);
         }
 
         // She doesn't walk through doors: she opens them, and you hear it. Locked ones are

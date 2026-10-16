@@ -69,6 +69,8 @@ namespace Kehai.Karen
         public float runSpeed = 6.8f;
         [Tooltip("Hurry and run as a multiple of the player's walk and sprint.")]
         public float fasterThanPlayer = 1.05f;
+        [Tooltip("Unless she's running (a chase), she stops this far from you: her touch kills, and she doesn't walk into you by accident.")]
+        public float personalSpace = 2.2f;
         [Tooltip("Her touch: contact within this of her centre (plus your own radius) gets you.")]
         public float catchRadius = 0.7f;
         [Tooltip("Her body: a capsule this tall and wide — the player's own size, set at install by KarenBootstrap.")]
