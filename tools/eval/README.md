@@ -81,6 +81,32 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
 runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–E and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
 
+### The simulated players
+
+They play through the same actions and senses as any agent (`EnvWorld.Observe`, which they read
+and nothing else; a test checks they never touch Karen):
+- Karen in view, her footsteps close by.
+- Her warnings as far as they carry (`heard`): the PA, the HUD and blackouts anywhere, the rest
+  within 60 m.
+- Her blink dash as a person would notice it: `dash:close_in`, `dash:vanish`, `appeared`.
+
+What they sense frightens them (`BotFear.cs`):
+
+| profile | most sensitive to | how fear shows |
+|---|---|---|
+| efficient | her close by, HUD lies | detours, hurries, rarely hides |
+| skittish | everything, darkness and sound most | looks round, freezes, drops things, abandons jobs, hides |
+| reckless | being followed or chased only | sprints, keeps working, never hides |
+| cautious (held out) | seeing her, her dashes | checks behind, shuns where she was, hides early |
+
+How fear shows is exactly what the Panic Index reads. So now her tricks change the reward
+(`karen_reward_mean_abs` in the jsonl, alongside `bot_mean_fear`, `bot_startles` and `bot_hides`).
+
+- **Cautious is held out:** it's not in the default profiles and never used in RL training. Add it
+  to test with `-ablation-profiles efficient,skittish,reckless,cautious`.
+- **The old players:** `-ablation-static-bots` brings back the ones that don't react to her tricks
+  (only the skittish one flees, on seeing or hearing her), as a control.
+
 A career's shifts are played back to back: between them the bot walks to the time clock, and if
 that walk fails it is put at the clock to punch in. A shift that still never starts is not
 written (the rest of that career is skipped, with a warning in the log), and no (rung, player,

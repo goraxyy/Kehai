@@ -26,6 +26,9 @@ namespace Kehai.Eval
         // (tools/rl) runs an "ablation" of one rung and thousands of careers, and the default
         // order would spend every one of them on the first profile.
         public bool interleave = false;
+        // The old players, who don't react to her tricks (SimulatedPlayer): a control, to
+        // compare a run with reacting players against.
+        public bool staticBots = false;
     }
 
     // The ablation ladder (IDEAS.md, Ablation), run end to end with simulated players.
@@ -103,7 +106,7 @@ namespace Kehai.Eval
                         }
 
                         Progress = $"{done + 1}/{total}: rung {config.rung}, {config.agent}, career {career + 1}, shift {Plan.startShift + s}";
-                        var bot = new SimulatedPlayer(env, profile, seed * 31 + s);
+                        var bot = new SimulatedPlayer(env, profile, seed * 31 + s, reactive: !Plan.staticBots);
                         yield return bot.PlayShift();
 
                         EpisodeMetrics m = env.Metrics;
@@ -304,7 +307,8 @@ namespace Kehai.Eval
                         baseSeed = Int(args, "-ablation-seed", 1000) + KehaiEnv.TrainerPort % 100 * 10000000,
                         outDirectory = Str(args, "-ablation-out", null),
                         verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0,
-                        interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0
+                        interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0,
+                        staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0
                     };
                     string rungs = Str(args, "-ablation-rungs", null);
                     if (rungs != null)

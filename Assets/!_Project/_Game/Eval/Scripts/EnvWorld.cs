@@ -17,7 +17,10 @@ namespace Kehai.Eval
     //
     // Fair by construction: the agent sees the HUD's task list (which Karen can falsify),
     // Karen only when she is in its view cone with a clear line of sight, and her footsteps
-    // only when they're close enough to hear. It is told nothing a player couldn't know.
+    // only when they're close enough to hear. It hears her warnings (tells) as a player would
+    // — near ones within TellFar, the PA and blackouts anywhere — and notices what a person
+    // would of her blink dash: that she was suddenly nearer, that she was gone, that she
+    // stepped out. It is told nothing a player couldn't know.
     public sealed class EnvWorld
     {
         readonly Dictionary<Object, string> ids = new Dictionary<Object, string>();
@@ -26,7 +29,24 @@ namespace Kehai.Eval
         float[] fromPlayer;
         long noiseCursor;
         readonly List<NoiseEvent> noises = new List<NoiseEvent>();
-        float heardKarenAt = -99f;
+        float heardKarenAt = -99f, stepsNotedAt = -99f;
+
+        // Everything of hers the employee has noticed lately: tells, footsteps, dash cues.
+        public struct Heard
+        {
+            public int Id;
+            public float Time;
+            public string Kind, Category;
+            public Vector3 At;
+        }
+        readonly List<Heard> heard = new List<Heard>();
+        int nextHeard = 1;
+        const float HeardFor = 5f;
+
+        // Her last sighting, for the dash cues.
+        bool sawHer;
+        float lastSeenAt = -99f, lastSeenDistance;
+        Vector3 lastSeenPosition;
 
         public StoreMap Map => StoreMap.Current;
 
@@ -36,6 +56,82 @@ namespace Kehai.Eval
             objects.Clear();
             nextSpill = nextCustomer = nextBag = 1;
             noiseCursor = NoiseBus.Latest;
+            heard.Clear();
+            sawHer = false;
+            lastSeenAt = heardKarenAt = stepsNotedAt = -99f;
+        }
+
+        // ---- what a person notices of her ----------------------------------------------------
+
+        // A warning, as KarenBrain.Told reports it (KehaiEnv subscribes). Heard if it carries
+        // that far: the PA, the HUD and a blackout reach everywhere; the rest, TellFar.
+        public void OnTold(TellKind kind, Vector3 at, float lead)
+        {
+            PlayerPresence me = PlayerPresence.Current;
+            if (me == null) return;
+            if (!Storewide(kind) && Vector3.Distance(at, me.Position) > TellFar) return;
+            Note("tell:" + kind.ToString().ToLowerInvariant(), TellCategory(kind), at);
+        }
+
+        public const float TellFar = 60f;   // as KarenWorld plays a tell
+
+        public static bool Storewide(TellKind kind) =>
+            kind == TellKind.PaChime || kind == TellKind.SpeakerCrackle || kind == TellKind.HoldMusic ||
+            kind == TellKind.CrtTick || kind == TellKind.BallastWhine;
+
+        // What kind of warning it is, as a person would class it.
+        public static string TellCategory(TellKind kind)
+        {
+            switch (kind)
+            {
+                case TellKind.BallastWhine:
+                case TellKind.Flicker:
+                    return "light";
+                case TellKind.PaChime:
+                case TellKind.SpeakerCrackle:
+                case TellKind.HoldMusic:
+                    return "pa";
+                case TellKind.CrtTick:
+                case TellKind.PunchBuzz:
+                    return "hud";
+                case TellKind.CustomerFreeze:
+                    return "social";
+                case TellKind.Screech:
+                case TellKind.EyeFlicker:
+                case TellKind.RevealSting:
+                    return "her";
+                default:
+                    return "sound";
+            }
+        }
+
+        void Note(string kind, string category, Vector3 at)
+        {
+            heard.Add(new Heard { Id = nextHeard++, Time = Time.time, Kind = kind, Category = category, At = at });
+            heard.RemoveAll(h => Time.time - h.Time > HeardFor);
+        }
+
+        // Whether the employee can see her: in the view cone, nothing solid in between.
+        public static bool CanSee(PlayerPresence me, KarenBrain brain, out float distance)
+        {
+            distance = 0f;
+            if (me == null || brain == null || brain.Body == null) return false;
+            Vector3 her = brain.Body.Position + Vector3.up * 1.4f;
+            Vector3 d = her - me.Head;
+            distance = d.magnitude;
+            if (distance > 35f || Vector3.Angle(me.Facing, d) > 55f) return false;
+            return !Physics.Linecast(me.Head, her, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
+                   || hit.collider.transform.IsChildOf(brain.Body.transform);
+        }
+
+        // Is that spot in view, and clear? (Where she was a moment ago, to tell a vanish from
+        // her simply walking behind a shelf or you turning away.)
+        static bool SpotInView(PlayerPresence me, Vector3 spot)
+        {
+            Vector3 p = spot + Vector3.up * 1.4f;
+            Vector3 d = p - me.Head;
+            if (d.magnitude > 35f || Vector3.Angle(me.Facing, d) > 50f) return false;
+            return !Physics.Linecast(me.Head, p, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) || (hit.point - p).magnitude < 0.8f;
         }
 
         string Id(Object o, string prefix, ref int counter)
@@ -236,6 +332,12 @@ namespace Kehai.Eval
             o["power"] = power;
 
             o["karen"] = KarenAsSeen(me);
+            heard.RemoveAll(h => Time.time - h.Time > HeardFor);
+            o["heard"] = heard.Select(h => (object)new Dictionary<string, object>
+            {
+                ["id"] = h.Id, ["kind"] = h.Kind, ["category"] = h.Category, ["age_s"] = Round(Time.time - h.Time),
+                ["distance_m"] = Round(Vector3.Distance(h.At, here)), ["region"] = Map.NameAt(h.At)
+            }).ToList();
             o["pa_subtitle"] = env.LastSubtitle;
             o["events"] = env.DrainEvents();
             o["last_action"] = env.LastResult;
@@ -250,20 +352,41 @@ namespace Kehai.Eval
 
             NoiseBus.ReadSince(ref noiseCursor, noises);
             foreach (NoiseEvent n in noises)
-                if (n.Kind == NoiseKind.KarenStep && Vector3.Distance(n.Position, me.Position) < 12f) heardKarenAt = Time.time;
+                if (n.Kind == NoiseKind.KarenStep && Vector3.Distance(n.Position, me.Position) < 12f)
+                {
+                    heardKarenAt = Time.time;
+                    if (Time.time - stepsNotedAt > 1f) { stepsNotedAt = Time.time; Note("her_steps", "steps", n.Position); }
+                }
             result["heard"] = Time.time - heardKarenAt < 2f;
 
-            Vector3 her = brain.Body.Position + Vector3.up * 1.4f;
-            Vector3 d = her - me.Head;
-            bool inView = d.magnitude < 35f && Vector3.Angle(me.Facing, d) < 55f;
-            bool clear = inView && (!Physics.Linecast(me.Head, her, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
-                                    || hit.collider.transform.IsChildOf(brain.Body.transform));
+            bool clear = CanSee(me, brain, out float distance);
             if (clear)
             {
+                // The dash, as a person sees it: a moment ago she was further off (close-in), or
+                // she wasn't in sight at all and is now close (she stepped out).
+                if (sawHer && Time.time - lastSeenAt < 0.6f && lastSeenDistance - distance >= 3f) Note("dash:close_in", "close_in", brain.Body.Position);
+                else if (!sawHer && Time.time - lastSeenAt > 2f && distance < 8f) Note("appeared", "appeared", brain.Body.Position);
+
+                sawHer = true;
+                lastSeenAt = Time.time;
+                lastSeenDistance = distance;
+                lastSeenPosition = brain.Body.Position;
                 result["visible"] = true;
                 result["region"] = Map.NameAt(brain.Body.Position);
-                result["distance_m"] = Round(d.magnitude);
+                result["distance_m"] = Round(distance);
                 result["eye_colour"] = brain.Body.CurrentMood.ToString().ToLowerInvariant();
+            }
+            else if (sawHer)
+            {
+                // Out of sight. If the spot she stood on a moment ago is still in plain view,
+                // she didn't walk off or get blocked: she vanished.
+                if (Time.time - lastSeenAt < 0.6f && SpotInView(me, lastSeenPosition)) Note("dash:vanish", "vanish", lastSeenPosition);
+                sawHer = false;
+            }
+            if (lastSeenAt > 0f)
+            {
+                result["last_seen_s"] = Round(Time.time - lastSeenAt);
+                result["last_seen_region"] = Map.NameAt(lastSeenPosition);
             }
             return result;
         }
@@ -302,6 +425,11 @@ namespace Kehai.Eval
             var karen = (Dictionary<string, object>)o["karen"];
             if ((bool)karen["visible"]) sb.AppendLine($"{GameNames.Antagonist} is visible in {karen["region"]}, {karen["distance_m"]} m away, eye {karen["eye_colour"]}.");
             else if ((bool)karen["heard"]) sb.AppendLine("You can hear " + GameNames.Antagonist + "'s footsteps nearby.");
+            if (karen.TryGetValue("last_seen_s", out object ago) && !(bool)karen["visible"])
+                sb.AppendLine($"You last saw {GameNames.Antagonist} {ago} s ago in {karen["last_seen_region"]}.");
+            if (o.TryGetValue("heard", out object h) && h is List<object> hs && hs.Count > 0)
+                sb.AppendLine("Lately you noticed: " + string.Join("; ", hs.Cast<Dictionary<string, object>>()
+                    .Select(x => $"{x["kind"]} ({x["distance_m"]} m away, in {x["region"]}, {x["age_s"]} s ago)")) + ".");
             var power = (Dictionary<string, object>)o["power"];
             if (!(bool)power["lights_on"]) sb.AppendLine("The lights are out. Breakers: " + string.Join(", ",
                 ((List<object>)power["breakers"]).Cast<Dictionary<string, object>>().Select(b => $"{b["id"]} {((bool)b["on"] ? "on" : "off")} (hum pitch {b["hum_pitch_rank"]})")));

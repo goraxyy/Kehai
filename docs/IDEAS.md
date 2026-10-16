@@ -150,8 +150,9 @@ finds players about twice as fast as patrols (51 s against about 100 s), and the
 were never broken. **Learning (D–E) didn't beat C**: the bots don't react to her tricks, so
 there's little for her to learn from. (That run's rung F was the old blink rung; it's gone.)
 
-**Next.** Bots that react to her warnings, and then real players — they come before rung F can
-be trained on anything worth learning.
+**Next.** The bots now react to her warnings and dashes, each profile in its own way, with a
+held-out fourth (`tools/eval/README.md`). Next is the full ladder rerun with them, then real
+players — before rung F is trained on anything worth learning.
 
 ---
 

@@ -116,11 +116,13 @@ namespace Kehai.Eval
 
         // Her touch kills, so — like a person who can see her — the employee's body bends its
         // path round Karen when she's just ahead, instead of walking into her and finding out.
+        // Only when she's in view (EnvWorld.CanSee): nobody steers round what they can't see.
         // It only steers; whether to run or hide is still the player's (or the bot's) call.
         static Vector3 AroundKaren(Vector3 here, Vector3 move)
         {
             Kehai.Karen.KarenBrain karen = Kehai.Karen.KarenBrain.Instance;
             if (karen == null || karen.Body == null || move.sqrMagnitude < 1e-4f) return move;
+            if (!EnvWorld.CanSee(Kehai.Karen.PlayerPresence.Current, karen, out _)) return move;
             Vector3 to = karen.Body.Position - here;
             to.y = 0f;
             float distance = to.magnitude;

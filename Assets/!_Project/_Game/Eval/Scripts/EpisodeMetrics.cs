@@ -38,6 +38,12 @@ namespace Kehai.Eval
         public float FirstDetection = -1f;
         public int Detections, Catches, Chases, Overtimes;
         public int CloseIns, Vanishes, Reveals;   // the blink dash (BlinkDash): catches are kills now
+        public float RewardMeanAbs;               // mean |Δpanic| over the tactics she was rewarded for: the signal learning gets
+
+        // The simulated player's side (SimulatedPlayer, BotFear), set as its shift ends.
+        public float BotMeanFear, BotPeakFear;
+        public int BotStartles, BotHides;
+        public bool BotReactive = true;
         public float TacticEntropy;
         public float MeanPanic, PanicSetpointRmse;
         public int TacticsUsed;
@@ -177,6 +183,8 @@ namespace Kehai.Eval
                 Detections = s.Detections;
                 Catches = s.Catches;
                 Chases = s.Chases;
+                var rewards = s.TacticRewards.Values.SelectMany(v => v).ToList();
+                RewardMeanAbs = rewards.Count > 0 ? rewards.Average(r => Mathf.Abs(r)) : 0f;
                 CloseIns = brain.Dash.CloseIns;
                 Vanishes = brain.Dash.Vanishes;
                 Reveals = brain.Dash.Reveals;
@@ -214,6 +222,9 @@ namespace Kehai.Eval
                 ["karen_first_detection_s"] = FirstDetection, ["karen_detections"] = Detections, ["karen_catches"] = Catches,
                 ["karen_chases"] = Chases, ["karen_overtimes"] = Overtimes, ["karen_tactic_entropy_bits"] = TacticEntropy,
                 ["karen_dash_close_ins"] = CloseIns, ["karen_dash_vanishes"] = Vanishes, ["karen_dash_reveals"] = Reveals,
+                ["karen_reward_mean_abs"] = RewardMeanAbs,
+                ["bot_reactive"] = BotReactive, ["bot_mean_fear"] = BotMeanFear, ["bot_peak_fear"] = BotPeakFear,
+                ["bot_startles"] = BotStartles, ["bot_hides"] = BotHides,
                 ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
                 ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
                 ["karen_fairness_violations"] = FairnessViolations,
