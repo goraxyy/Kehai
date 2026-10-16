@@ -661,6 +661,7 @@ namespace Kehai.Karen
 
             CurrentPlan = null;
             decideNow = true;
+            Body.Stop();   // a finished plan doesn't leave her walking on towards its last destination
         }
 
         // The dash takes over after a vanish, and hands back when she steps out or gives up.
@@ -675,6 +676,7 @@ namespace Kehai.Karen
             if (chasing) SetChasing(false);
             Body.Silent = false;
             Body.SweepHead(0f);
+            Body.Stop();
         }
 
         // ---- learning -----------------------------------------------------------------------
