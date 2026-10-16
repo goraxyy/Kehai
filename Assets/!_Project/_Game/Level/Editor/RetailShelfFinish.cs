@@ -41,8 +41,8 @@ public static class RetailShelfFinish
         var parts=new List<Renderer>();Bounds bounds=new Bounds();bool first=true;
         foreach(Transform t in bay.transform)
         {
-            var r=t.GetComponent<MeshRenderer>();if(r==null||t.name.StartsWith(ShelfGrid.StripPrefix))continue;
-            if(!t.name.StartsWith("Wall",System.StringComparison.OrdinalIgnoreCase)&&!ShelfGrid.IsDeck(t))continue;
+            var r=t.GetComponent<MeshRenderer>();if(!t.gameObject.activeSelf||r==null||t.name.StartsWith(ShelfGrid.StripPrefix))continue;
+            if(!t.name.StartsWith("Wall",System.StringComparison.OrdinalIgnoreCase)&&!ShelfGrid.IsDeck(t)&&t.name!="Solid lower plinth")continue;
             parts.Add(r);Bounds b=LocalBounds(bay.transform,r.bounds);
             if(first){bounds=b;first=false;}else bounds.Encapsulate(b);
             Undo.RecordObject(r,"Finish shelf metal");r.sharedMaterial=ShelfGrid.IsDeck(t)?board:frame;
@@ -69,6 +69,11 @@ public static class RetailShelfFinish
         foreach(var r in parts)
         {
             Bounds b=LocalBounds(bay,r.bounds);
+            if(r.name=="Solid lower plinth")
+            {
+                foreach(float sign in new[]{-1f,1f})Box(p,"Plinth kick strip",new Vector3(b.center.x,.06f,b.center.z+sign*(b.extents.z-.008f)),new Vector3(b.size.x*.94f,.12f,.012f),slot,bounds);
+                continue;
+            }
             if(ShelfGrid.IsDeck(r.transform))
             {
                 if(b.center.y>.4f)continue;
@@ -82,6 +87,13 @@ public static class RetailShelfFinish
                 Box(p,"Upright",pos,new Vector3(.09f,b.size.y,.09f),frame,bounds);
             }
             Box(p,"Top cap",new Vector3(b.center.x,b.max.y-.025f,b.center.z),alongX?new Vector3(length,.05f,.1f):new Vector3(.1f,.05f,length),frame,bounds);
+            if(bay.name.IndexOf("pillar",System.StringComparison.OrdinalIgnoreCase)>=0)
+                foreach(float side in new[]{-1f,1f})
+                {
+                    var at=new Vector3(b.center.x,b.max.y-.18f,b.center.z);
+                    if(alongX)at.z+=side*(b.extents.z+.004f);else at.x+=side*(b.extents.x+.004f);
+                    Box(p,"Pillar header trim",at,alongX?new Vector3(length*.86f,.09f,.01f):new Vector3(.01f,.09f,length*.86f),slot,bounds);
+                }
             int columns=Mathf.Max(1,Mathf.FloorToInt(length/.35f));
             for(int i=0;i<columns;i++)for(int j=0;j<7;j++)foreach(float side in new[]{-1f,1f})
             {
@@ -106,6 +118,13 @@ public static class RetailShelfFinish
             if(s.x<s.z)s.x=.04f;else s.z=.04f;t.localScale=s;
         }
         decks.Sort((a,b)=>a.localPosition.y.CompareTo(b.localPosition.y));
+        var walls=new List<Renderer>();
+        foreach(Transform t in bay)
+        {
+            var renderer=t.GetComponent<Renderer>();if(renderer==null||!t.name.StartsWith("Wall")||!t.gameObject.activeSelf)continue;
+            bool duplicate=walls.Exists(r=>(r.bounds.center-renderer.bounds.center).sqrMagnitude<.000001f&&(r.bounds.size-renderer.bounds.size).sqrMagnitude<.000001f);
+            if(duplicate){Undo.RecordObject(t.gameObject,"Remove coincident pillar back");t.gameObject.SetActive(false);}else walls.Add(renderer);
+        }
         if(bay.name.StartsWith("Shelfpillar_b",System.StringComparison.OrdinalIgnoreCase)&&bay.Find("Solid lower plinth")==null&&decks.Count>=2)
         {
             var bottom=decks[0];float height=decks[1].localPosition.y-decks[1].localScale.y*.5f;

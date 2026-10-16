@@ -41,8 +41,6 @@ public static class ColdStoreBuilder
                 B(p,"Compressor header",new Vector3(0,2.38f,-depth*.5f+.08f),new Vector3(1.64f,.24f,.16f),trim);
                 for(int i=0;i<12;i++)B(p,"Vent slit",new Vector3(-.7f+i*.125f,2.38f,-depth*.5f-.005f),new Vector3(.045f,.15f,.012f),steel);
                 var hinge=StaffRoomModels.Door(p,retail?"retail chiller":"cold-storage cabinet",new Vector3(-.8f,0,-depth*.5f-.01f),1.6f,2.16f,.09f,retail?glass:shell,100);
-                foreach(float x in new[]{.04f,1.56f})B(hinge,"Door frame",new Vector3(x,1.17f,0),new Vector3(.08f,2.16f,.08f),trim);
-                foreach(float y in new[]{.13f,2.21f})B(hinge,"Door frame",new Vector3(.8f,y,0),new Vector3(1.6f,.08f,.08f),trim);
                 if(!hide&&!retail)for(int i=0;i<3;i++)B(p,"Box deck",new Vector3(0,.45f+i*.5f,0),new Vector3(1.58f,.04f,1.04f),steel,true);
             });
             if(name=="OutdoorWasteContainer"||name=="RecyclingBin")continue;
@@ -51,14 +49,23 @@ public static class ColdStoreBuilder
             try
             {
                 var marker=go.AddComponent<ColdFixture>();marker.retail=name=="RetailChiller";marker.hidingSpace=name=="HideChiller";
+                var door=go.GetComponentInChildren<FurnitureDoor>();
+                var frameMeshes=new List<MeshFilter>();
+                foreach(float x in new[]{.04f,1.56f})frameMeshes.Add(Primitive(door.transform,"Door frame side",new Vector3(x,1.17f,0),new Vector3(.08f,2.16f,.085f),trim,false).GetComponent<MeshFilter>());
+                foreach(float y in new[]{.13f,2.21f})frameMeshes.Add(Primitive(door.transform,"Door frame rail",new Vector3(.8f,y,0),new Vector3(1.6f,.08f,.085f),trim,false).GetComponent<MeshFilter>());
+                door.GetComponent<OutlineHighlight>().targetMeshes=frameMeshes.ToArray();
                 if(marker.retail)
                 {
                     go.AddComponent<ShelfUnit>();
+                    var shelfOutline=go.GetComponent<OutlineHighlight>();
+                    shelfOutline.targetMeshes=frameMeshes.ToArray();
+                    shelfOutline.shape=OutlineHighlight.OutlineShape.PerMesh;
+                    shelfOutline.outlineMaterial=door.GetComponent<OutlineHighlight>().outlineMaterial;
                     for(int i=0;i<3;i++)
                     {
                         float y=.4f+i*.55f;
                         Primitive(go.transform,"Shelf deck "+(i+1),new Vector3(0,y,0),new Vector3(1.5f,.035f,1),steel,true);
-                        Primitive(go.transform,"Pricetag "+(i+1),new Vector3(0,y+.01f,-.5f),new Vector3(1.5f,.10f,.025f),shell,false);
+                        PriceRail(go.transform,"Pricetag "+(i+1),new Vector3(0,y-.025f,-.515f),1.5f,.10f,shell);
                     }
                 }
                 if(marker.hidingSpace)go.AddComponent<ColdHideInterior>().insideMaterial=Glass("Chiller interior view",.23f);
@@ -82,19 +89,26 @@ public static class ColdStoreBuilder
         // Finish the sales-floor south-west corner without projecting into its cross aisle.
         foreach(float z in new[]{-171.3f,-168.9f})Cabinet(retail,"RetailChiller",new Vector3(25.72f,0,z),-90,products,ref next);
         next=0;
-        foreach(float x in new[]{57f,59f,61f,63f,65f,67f,69f,71f,73f,75f,77f,79f,81f,83f})
-            Cabinet(storage,"StorageChiller",new Vector3(x,0,-189.3f),180,products,ref next);
-        // Back-to-back islands interrupt long sight lines. Their ends form a loop, not a trap.
-        foreach(float x in new[]{59f,61f,63f,65f,72f,74f,76f,78f,80f})
-            foreach(float z in new[]{-180.55f,-181.8f})Cabinet(storage,"StorageChiller",new Vector3(x,0,z),z>-181?180:0,products,ref next);
-        foreach(float x in new[]{60f,62f,64f,71f,73f,75f,77f,79f})
-            Cabinet(storage,"StorageChiller",new Vector3(x,0,-185.4f),0,products,ref next);
-        foreach(var p in new[]{new Vector3(56.2f,0,-178.8f),new Vector3(83.8f,0,-182.9f),new Vector3(56.2f,0,-187f)})
-            Cabinet(storage,"HideChiller",p,p.x<60?-90:90,products,ref next);
-        // The missing partition: keep the existing 1.7m doorway at z=-183.5.
-        foreach(var b in new[]{new Vector3(-178.825f,7.65f,0),new Vector3(-187.175f,5.65f,0)})
+        // Fill usable wall runs exactly. Square corner closures stop cabinets interpenetrating.
+        WallRun(storage,56.275f,66.1f,-175.075f,0,products,ref next,new[]{1,4});
+        WallRun(storage,68.9f,83.725f,-175.075f,0,products,ref next,new[]{1,5});
+        WallRun(storage,56.275f,83.725f,-189.925f,180,products,ref next,new[]{1,5,8,12});
+        WallRun(storage,-188.725f,-183.9f,55.075f,-90,products,ref next,new int[0]);
+        WallRun(storage,-181.1f,-176.275f,55.075f,-90,products,ref next,new int[0]);
+        WallRun(storage,-188.725f,-176.275f,84.925f,90,products,ref next,new int[0]);
+        foreach(float x in new[]{55.675f,84.325f})foreach(float z in new[]{-175.675f,-189.325f})
+            Primitive(storage,"Insulated corner closure",new Vector3(x,1.3f,z),new Vector3(1.2f,2.6f,1.2f),shell,true);
+        int islandNumber=0;
+        foreach(float centre in new[]{60.1f,66.1f,73.9f,79.9f})
+        {
+            var island=new GameObject("Back-to-back island "+(++islandNumber)).transform;island.SetParent(storage,false);
+            foreach(float x in new[]{centre-.9f,centre+.9f})foreach(float z in new[]{-181.9f,-183.1f})
+                Cabinet(island,"StorageChiller",new Vector3(x,0,z),z>-182.5f?180:0,products,ref next);
+        }
+        // The original hinge is at z=-183.5; its 2m leaf opens across -183.5 .. -181.5.
+        foreach(var b in new[]{new Vector3(-178.25f,6.5f,0),new Vector3(-186.75f,6.5f,0)})
             Primitive(root,"Storage / cold-room partition",new Vector3(55,4,b.x),new Vector3(.15f,8,b.y),shell,true);
-        Primitive(root,"Partition door header",new Vector3(55,5.3f,-183.5f),new Vector3(.15f,5.4f,1.7f),shell,true);
+        Primitive(root,"Partition door header",new Vector3(55,5.25f,-182.5f),new Vector3(.15f,5.5f,2),shell,true);
         Label(root,"COLD STORAGE  /  KEEP CLOSED",new Vector3(68.5f,3,-175.14f),0,4,.32f);
         Label(root,"CHILLED + FROZEN",new Vector3(56,3,-173.9f),180,7,.4f);
         foreach(float x in new[]{61f,74f,81f})
@@ -108,7 +122,19 @@ public static class ColdStoreBuilder
         StorageBoxesPreview.Refresh(true);StoreLayout.ApplyToScene();ShelfDrawer.Ensure();
     }
     static Transform Group(string name){var t=new GameObject(name).transform;t.SetParent(root,false);return t;}
-    static void Cabinet(Transform parent,string model,Vector3 position,float yaw,List<ProductDef> products,ref int next)
+    static void WallRun(Transform parent,float from,float to,float wall,float yaw,List<ProductDef> products,ref int next,int[] empty)
+    {
+        int count=Mathf.FloorToInt((to-from)/1.8f);float width=(to-from)/count;
+        for(int i=0;i<count;i++)
+        {
+            bool hide=Array.IndexOf(empty,i)>=0;float depth=hide?2.1f:1.2f;
+            float along=from+(i+.5f)*width;
+            Vector3 at=Mathf.Abs(yaw)==90?new Vector3(wall+(yaw<0?depth*.5f:-depth*.5f),0,along):new Vector3(along,0,wall+(yaw==0?-depth*.5f:depth*.5f));
+            var go=Cabinet(parent,hide?"HideChiller":"StorageChiller",at,yaw,products,ref next);
+            go.transform.localScale=new Vector3(width/1.8f,1,1);
+        }
+    }
+    static GameObject Cabinet(Transform parent,string model,Vector3 position,float yaw,List<ProductDef> products,ref int next)
     {
         var go=(GameObject)PrefabUtility.InstantiatePrefab(StoreFinishModels.Prefab(model),parent);
         go.transform.SetPositionAndRotation(position,Quaternion.Euler(0,yaw,0));var marker=go.GetComponent<ColdFixture>();
@@ -122,6 +148,7 @@ public static class ColdStoreBuilder
         float labelFront=marker.hidingSpace?-1.095f:-.645f;
         Primitive(go.transform,"Temperature label plate",new Vector3(0,2.38f,labelFront),new Vector3(1.45f,.18f,.008f),shell,false);
         Label(go.transform,marker.hidingSpace?"EMPTY / OUT OF SERVICE":marker.frozen?"FROZEN  -18 C":"CHILLED  +4 C",new Vector3(0,2.38f,labelFront-.008f),0,1.3f,.14f,false);
+        return go;
     }
     static void OutdoorContainer(Transform p)
     {
@@ -145,6 +172,19 @@ public static class ColdStoreBuilder
     {
         var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.name=name;go.transform.SetParent(p,false);go.transform.localPosition=at;go.transform.localScale=size;go.GetComponent<Renderer>().sharedMaterial=m;
         if(!solid)Object.DestroyImmediate(go.GetComponent<Collider>());return go;
+    }
+    public static GameObject PriceRail(Transform p,string name,Vector3 at,float width,float height,Material material)
+    {
+        string path=StoreFinishModels.Folder+"/Meshes/Price rail face.asset";
+        var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if(mesh==null)
+        {
+            mesh=new Mesh{name="Price rail face"};
+            mesh.vertices=new[]{new Vector3(-.5f,-.5f,0),new Vector3(.5f,-.5f,0),new Vector3(.5f,.5f,0),new Vector3(-.5f,.5f,0)};
+            mesh.uv=new[]{Vector2.zero,Vector2.right,Vector2.one,Vector2.up};mesh.triangles=new[]{0,2,1,0,3,2};mesh.RecalculateNormals();mesh.RecalculateBounds();AssetDatabase.CreateAsset(mesh,path);
+        }
+        var go=new GameObject(name);go.transform.SetParent(p,false);go.transform.localPosition=at;go.transform.localScale=new Vector3(width,height,1);
+        go.AddComponent<MeshFilter>().sharedMesh=mesh;go.AddComponent<MeshRenderer>().sharedMaterial=material;return go;
     }
     public static void Label(Transform p,string text,Vector3 at,float yaw,float width,float height,bool world=true)
     {

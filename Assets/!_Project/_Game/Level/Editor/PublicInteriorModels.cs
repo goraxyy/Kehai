@@ -9,7 +9,7 @@ public static class PublicInteriorModels
 {
     public const string Folder="Assets/!_Project/_Art/Generated/PublicInteriors";
     public static readonly string[] WC={"ToiletCabin","Toilet","DoubleVanity","HandDryer","PaperDispenser",
-        "SoapDispenser","SanitaryBin","CleaningStation","CautionSign","VentGrille"};
+        "SoapDispenser","SanitaryBin","CleaningStation","CleaningHideCabinet","DryingStation","CleaningBucket","CleaningSupplies","CautionSign","VentGrille"};
     public static readonly string[] Lobby={"LobbyBench","DrinksVending","SnacksVending","ServiceCounter",
         "ParcelShelf","BagLockers","UmbrellaStand","SanitiserStand","BasketStack","Trolley",
         "TrolleyCorral","SecurityGate","Directory","QueuePost","LobbyPlanter","ReturnCart","EntryMat"};
@@ -28,6 +28,25 @@ public static class PublicInteriorModels
         ceramic=StaffRoomModels.Material("Sanitary Ceramic",new Color(.92f,.94f,.91f));ceramic.SetFloat("_Smoothness",.5f);
         foreach(var name in WC)StaffRoomModels.BuildCustom(name,Folder,p=>Build(p,name));
         foreach(var name in Lobby)StaffRoomModels.BuildCustom(name,Folder,p=>Build(p,name));
+        foreach(string cabinetName in new[]{"CleaningStation","CleaningHideCabinet"})
+        {
+            string path=Folder+"/Prefabs/"+cabinetName+".prefab";
+            var cabinet=PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                if(cabinetName=="CleaningHideCabinet")
+                {
+                    var inside=cabinet.AddComponent<ColdHideInterior>();inside.interior=new Bounds(new Vector3(0,1.25f,0),new Vector3(1.32f,2.35f,1.22f));
+                    inside.insideMaterial=ColdStoreBuilder.Glass("Cupboard interior view",.23f);
+                }
+                var door=cabinet.GetComponentInChildren<FurnitureDoor>();var targets=new System.Collections.Generic.List<MeshFilter>();
+                foreach(float x in new[]{.025f,1.295f})targets.Add(ColdStoreBuilder.Primitive(door.transform,"Frame side",new Vector3(x,1.24f,0),new Vector3(.05f,2.32f,.07f),white,false).GetComponent<MeshFilter>());
+                foreach(float y in new[]{.105f,2.375f})targets.Add(ColdStoreBuilder.Primitive(door.transform,"Frame rail",new Vector3(.66f,y,0),new Vector3(1.32f,.05f,.07f),white,false).GetComponent<MeshFilter>());
+                door.GetComponent<OutlineHighlight>().targetMeshes=targets.ToArray();
+                PrefabUtility.SaveAsPrefabAsset(cabinet,path);
+            }
+            finally{PrefabUtility.UnloadPrefabContents(cabinet);}
+        }
         AssetDatabase.SaveAssets();
     }
 
@@ -59,9 +78,19 @@ public static class PublicInteriorModels
                 B(p,"Bin",0,.28f,0,.24f,.56f,.35f,white,true);B(p,"Lid",0,.58f,0,.25f,.045f,.36f,sage);
                 B(p,"Pedal",0,.045f,-.2f,.15f,.035f,.08f,steel);break;
             case "CleaningStation":
-                B(p,"Cabinet",0,1.1f,0,1.2f,2.2f,.55f,white,true);
-                for(int i=0;i<2;i++){float x=-.3f+i*.6f;B(p,"Door",x,1.1f,-.283f,.58f,2.05f,.03f,sage);B(p,"Pull",x*.25f,1.2f,-.32f,.035f,.25f,.05f,dark);}
-                B(p,"Label",0,1.65f,-.304f,.42f,.18f,.012f,paper);break;
+            case "CleaningHideCabinet":CleaningCabinet(p,name=="CleaningStation");break;
+            case "DryingStation":
+                B(p,"Shared mounting panel",0,.25f,.09f,.84f,.7f,.035f,white,true);
+                Build(Child(p,"Hand dryer",new Vector3(-.22f,0,0)),"HandDryer");
+                Build(Child(p,"Paper towels",new Vector3(.22f,.04f,.02f)),"PaperDispenser");break;
+            case "CleaningBucket":
+                C(p,"Bucket",new Vector3(0,.2f,0),.22f,.4f,blue,Vector3.zero,.8f);
+                C(p,"Bucket opening",new Vector3(0,.401f,0),.185f,.012f,dark,Vector3.zero);
+                foreach(float x in new[]{-.22f,.22f})R(p,"Handle side",new Vector3(x,.25f,0),new Vector3(x,.57f,0),.012f,steel);
+                R(p,"Handle grip",new Vector3(-.22f,.57f,0),new Vector3(.22f,.57f,0),.018f,dark);break;
+            case "CleaningSupplies":
+                for(int i=0;i<3;i++){var at=new Vector3(-.2f+i*.2f,.16f,0);C(p,"Cleaning bottle",at,.065f,.32f,i==0?blue:i==1?sage:white,Vector3.zero);B(p,"Bottle cap",at.x,.34f,0,.055f,.06f,.055f,dark);}
+                B(p,"Cloth stack",0,.035f,-.2f,.4f,.07f,.24f,paper);break;
             case "CautionSign":
                 foreach(float s in new[]{-1f,1f}){var b=StaffRoomModels.Box(p,"Folding panel",new Vector3(0,.42f,s*.19f),new Vector3(.48f,.84f,.035f),yellow,false);b.transform.localEulerAngles=new Vector3(s*24,0,0);}
                 B(p,"Warning",0,.46f,-.205f,.28f,.26f,.02f,dark);break;
@@ -143,10 +172,10 @@ public static class PublicInteriorModels
     {
         B(p,"Double base",0,.4f,0,3.6f,.8f,1.6f,sage,true);
         B(p,"Counter",0,.85f,0,3.7f,.1f,1.7f,ceramic,true);
-        B(p,"Mirror spine",0,1.65f,0,3.5f,1.35f,.09f,steel);
+        B(p,"Mirror spine",0,1.65f,0,3.5f,1.35f,.09f,steel,true);
         foreach(float side in new[]{-1f,1f})
         {
-            B(p,"Mirror",0,1.68f,side*.052f,3.36f,1.2f,.014f,steel);
+            B(p,"Mirror",0,1.68f,side*.055f,3.36f,1.2f,.014f,blue,true);
             for(int i=0;i<3;i++)
             {
                 float x=-1.2f+i*1.2f,z=side*.46f;
@@ -164,6 +193,21 @@ public static class PublicInteriorModels
     {
         B(p,"Dispenser",0,.13f,0,.13f,.26f,.105f,white);B(p,"Window",0,.13f,-.058f,.05f,.1f,.012f,blue);
         B(p,"Nozzle",0,.015f,-.07f,.045f,.03f,.07f,dark);
+    }
+    static void CleaningCabinet(Transform p,bool stocked)
+    {
+        foreach(float x in new[]{-.71f,.71f})B(p,"Side",x,1.25f,0,.08f,2.5f,1.4f,white,true);
+        B(p,"Back",0,1.25f,.66f,1.34f,2.5f,.08f,white,true);
+        B(p,"Top",0,2.46f,0,1.34f,.08f,1.4f,white,true);
+        B(p,"Low threshold",0,.035f,0,1.34f,.07f,1.4f,white,true);
+        var hinge=StaffRoomModels.Door(p,stocked?"cleaning supplies cupboard":"empty cupboard",new Vector3(-.66f,0,-.715f),1.32f,2.32f,.08f,sage,90);
+        if(stocked)
+        {
+            foreach(float y in new[]{.65f,1.15f,1.65f})B(p,"Supplies shelf",.31f,y,0,.65f,.04f,1.2f,white,true);
+            B(p,"Tool partition",-.05f,1.25f,.1f,.04f,2.35f,1.1f,white,true);
+            Build(Child(p,"Bucket",new Vector3(.31f,.07f,-.1f)),"CleaningBucket");
+            foreach(float y in new[]{.67f,1.17f,1.67f})Build(Child(p,"Supplies",new Vector3(.3f,y,.1f)),"CleaningSupplies");
+        }
     }
     static void Bench(Transform p)
     {

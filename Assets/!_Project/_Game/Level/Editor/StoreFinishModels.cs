@@ -161,12 +161,12 @@ public static class StoreFinishModels
             var rack=new GameObject("Checkout impulse shelf");rack.transform.SetParent(go.transform,false);
             rack.transform.localPosition=new Vector3(.35f,1.05f,-.95f);rack.transform.localRotation=Quaternion.Euler(0,-90,0);
             rack.AddComponent<ShelfUnit>();
-            ColdStoreBuilder.Primitive(rack.transform,"Wall",new Vector3(0,.4f,.16f),new Vector3(2,.8f,.04f),grey,true);
-            for(int i=0;i<3;i++)
+            ColdStoreBuilder.Primitive(rack.transform,"Wall",new Vector3(0,.29f,.16f),new Vector3(2,.58f,.04f),grey,true);
+            for(int i=0;i<2;i++)
             {
                 float y=.08f+i*.27f;
                 ColdStoreBuilder.Primitive(rack.transform,"Shelf deck "+(i+1),new Vector3(0,y,0),new Vector3(2,.025f,.35f),light,true);
-                ColdStoreBuilder.Primitive(rack.transform,"Pricetag "+(i+1),new Vector3(0,y+.01f,-.175f),new Vector3(2,.07f,.015f),paper,false);
+                ColdStoreBuilder.PriceRail(rack.transform,"Pricetag "+(i+1),new Vector3(0,y-.025f,-.183f),2,.08f,paper);
             }
             PrefabUtility.SaveAsPrefabAsset(go,path);
         }

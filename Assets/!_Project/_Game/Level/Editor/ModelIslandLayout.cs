@@ -53,7 +53,7 @@ public static class ModelIslandLayout
             var cabin=(GameObject)PrefabUtility.InstantiatePrefab(PublicInteriorModels.Prefab("ToiletCabin"),wc);
             cabin.name="Toilet cabin - open interior";cabin.GetComponentInChildren<FurnitureDoor>().transform.localRotation=Quaternion.Euler(0,-95,0);
             VisualOnly(cabin);Slot(cabin,PublicInteriorModels.WC.Length,44,48,6,6,labels);
-            PublicGallery(island.transform,Lobby,PublicInteriorModels.Lobby,64,labels);
+            PublicGallery(island.transform,Lobby,PublicInteriorModels.Lobby,70,labels);
         }
         bool hasStore=StoreFinishModels.Prefab("Checkout")!=null;
         if(hasStore)
@@ -88,14 +88,14 @@ public static class ModelIslandLayout
         Heading(labels,"04 / RESTOCKING BOXES",100,47,1);
         Heading(labels,hasOffice?"05 / OFFICE":"OFFICE / NEXT",22,47,1);
         Heading(labels,hasPublic?"06 / WC":"WC / NEXT",62,47,1);
-        Heading(labels,hasPublic?"07 / LOBBY":"LOBBY / NEXT",62,62,1);
+        Heading(labels,hasPublic?"07 / LOBBY":"LOBBY / NEXT",62,68,1);
         Heading(labels,hasStore?"08 / SHOP + EXTERIOR + TOOLS":"EXTERIOR / PARKING / SERVICE / NEXT",42,88,.75f);
         Heading(labels,"REAL SCALE  /  METRES  /  VISUAL MODELS ONLY",42,116,.55f);
 
         Material border=StaffRoomModels.Material("Island Markings",new Color(.28f,.38f,.35f));
         Material slate=StaffRoomModels.Material("Island Floor",new Color(.56f,.6f,.57f));
         foreach(float x in new[]{2f,42f,82f,118f})Line(labels,new Vector3(x,.006f,60),new Vector3(.07f,.012f,116),border);
-        foreach(float z in new[]{0f,45f,84f,114f})Line(labels,new Vector3(60,.006f,z),new Vector3(116,.012f,.07f),border);
+        foreach(float z in new[]{0f,45f,88f,114f})Line(labels,new Vector3(60,.006f,z),new Vector3(116,.012f,.07f),border);
         // Ten one-metre marks and a 2m height gauge make intended scale visible.
         for(int i=0;i<=10;i++)
         {

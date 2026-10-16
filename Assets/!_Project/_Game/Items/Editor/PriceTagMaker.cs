@@ -114,6 +114,18 @@ public static class PriceTagMaker
                "The shelves take them as the stock is next built (Play, or the editor's stock preview).";
     }
 
+    public static void EnsureStripMaterials()
+    {
+        var shader=Shader.Find("Universal Render Pipeline/Lit");
+        foreach(var product in ProductCatalog.All)
+        {
+            var texture=AssetDatabase.LoadAssetAtPath<Texture2D>($"{TexturesFolder}/T_Price_{product.Id}.png");
+            if(texture==null)continue;
+            foreach(var length in PriceTags.Lengths)Keep($"{MaterialsFolder}/{product.Id}_{length.suffix}.mat",shader,texture,length.length);
+        }
+        PriceTags.Forget();AssetDatabase.SaveAssets();
+    }
+
     // A material for a strip of `length`: the label once a metre along it.
     static void Keep(string path, Shader lit, Texture2D tex, float length)
     {

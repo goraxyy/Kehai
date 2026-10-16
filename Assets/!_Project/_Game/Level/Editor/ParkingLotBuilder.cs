@@ -83,10 +83,10 @@ public static class ParkingLotBuilder
         foreach(float x in new[]{24.5f,54.5f,79.5f}){Arrow(x-2,-74,180);Arrow(x+2,-86,0);}
         foreach(float x in new[]{20f,49f,79f}){Arrow(x,-59,270);Arrow(x,-63,90);Arrow(x,-99.5f,270);Arrow(x,-103.5f,90);}
         for(float x=-4;x<104;x+=7)Mark("Public road centre dash",x,-48.5f,3,.12f,white);
-        foreach(var p in new[]{new Vector3(13.75f,0,-71),new Vector3(13.75f,0,-90),new Vector3(37.25f,0,-71),new Vector3(37.25f,0,-90),new Vector3(89.75f,0,-72),new Vector3(89.75f,0,-90)})
+        foreach(var p in LightPositions())
         {
             var go=Place("ParkingLamp","Parking lighting",p,0);var lamp=new GameObject("Downlight");lamp.transform.SetParent(go.transform,false);lamp.transform.localPosition=new Vector3(0,5.8f,0);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
-            var l=lamp.AddComponent<Light>();l.type=LightType.Spot;l.spotAngle=120;l.range=18;l.intensity=10;l.color=new Color(1,.9f,.73f);
+            var l=lamp.AddComponent<Light>();l.type=LightType.Spot;l.spotAngle=125;l.range=20;l.intensity=20;l.color=new Color(1,.9f,.73f);
         }
         foreach(var p in new[]{new Vector3(20,0,-55.25f),new Vector3(35,0,-55.25f),new Vector3(54,0,-55.25f),new Vector3(76,0,-55.25f),new Vector3(37.25f,0,-75),new Vector3(37.25f,0,-85),new Vector3(37.25f,0,-94),new Vector3(-3,0,-70),new Vector3(-3,0,-88)})Place("ParkingTree","Parking tree",p,0);
         var surface=Kehai.Karen.KarenWorld.StoreSurface();if(surface!=null)
@@ -95,8 +95,16 @@ public static class ParkingLotBuilder
             c.z=(south+north)*.5f;surface.center=surface.transform.InverseTransformPoint(c);surface.size=new Vector3(surface.size.x,surface.size.y,north-south);
         }
         ModelIslandLayout.Organize();StaffRoomBuilder.BakeNavigation();StaffRoomBuilder.RefreshLighting();
+        EnvironmentPolishBuilder.Midnight();
         AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(scene);
         Debug.Log("Parking built: "+spaces+" bays, "+cars+" stationary cars, protected walking routes, four EV points and two trolley returns.");
+    }
+    public static IEnumerable<Vector3> LightPositions()
+    {
+        foreach(float x in new[]{13.75f,37.25f,89.75f})foreach(float z in new[]{-70f,-82f,-94f})yield return new Vector3(x,0,z);
+        foreach(float x in new[]{23f,45f,65f,84f})yield return new Vector3(x,0,-55.25f);
+        foreach(float z in new[]{-69f,-84f,-99f})yield return new Vector3(100,0,z);
+        foreach(float z in new[]{-70f,-92f})yield return new Vector3(-2,0,z);
     }
     static void Bay(float x,float z,float width,string type,bool car,bool aisleOnLeft=false)
     {

@@ -48,6 +48,7 @@ public static class StoreFinishBuilder
             {var r=t.GetComponent<Renderer>();if(r!=null){Undo.RecordObject(r,"Finish automatic door glass");r.sharedMaterial=glass;}DoorFrame(t);}
         }
         FinishWallsAndSecurity(layout.transform);
+        EnvironmentPolishBuilder.ApplyDetails();EnvironmentPolishBuilder.RefineWC();PriceTagMaker.EnsureStripMaterials();
         ModelIslandLayout.Organize();RetailShelfFinish.Apply();
         // Include the pedestrian apron so customers can reach the front bins; no car surfaces.
         var surface=Kehai.Karen.KarenWorld.StoreSurface();
@@ -58,6 +59,7 @@ public static class StoreFinishBuilder
             {Undo.RecordObject(surface,"Include entrance apron in navigation");centre.z=(south-103f)*.5f;surface.center=surface.transform.InverseTransformPoint(centre);surface.size=new Vector3(surface.size.x,surface.size.y,-103f-south);}
         }
         StaffRoomBuilder.BakeNavigation();StaffRoomBuilder.RefreshLighting();
+        EnvironmentPolishBuilder.Midnight();
         AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(scene);Undo.CollapseUndoOperations(undo);
         Selection.activeGameObject=root.gameObject;Debug.Log("Supermarket finish built. Save SampleScene with Cmd+S. Roads and parking are unchanged.");
     }

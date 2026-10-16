@@ -57,6 +57,7 @@ public static class PublicInteriorBuilder
         // Light anchors stay in the common aisle if coarse map sampling misses a cabin.
         foreach(var anchor in root.GetComponentsInChildren<InteriorLightAnchor>())
             if(anchor.name.StartsWith("WC cabin",StringComparison.Ordinal))anchor.localPoint=new Vector3(0,0,-1.9f);
+        EnvironmentPolishBuilder.RefineWC();
         Finish("WC built: ten 2.65 x 3.4m cabins, six basins, drying stations; inward cabin doors and a 2.3m+ aisle on both sides of the vanity.");
     }
 
