@@ -336,7 +336,8 @@ namespace Kehai.Eval
             o["heard"] = heard.Select(h => (object)new Dictionary<string, object>
             {
                 ["id"] = h.Id, ["kind"] = h.Kind, ["category"] = h.Category, ["age_s"] = Round(Time.time - h.Time),
-                ["distance_m"] = Round(Vector3.Distance(h.At, here)), ["region"] = Map.NameAt(h.At)
+                ["distance_m"] = Round(Vector3.Distance(h.At, here)), ["region"] = Map.NameAt(h.At),
+                ["at"] = new[] { Round(h.At.x), Round(h.At.z) }
             }).ToList();
             o["pa_subtitle"] = env.LastSubtitle;
             o["events"] = env.DrainEvents();
@@ -373,6 +374,7 @@ namespace Kehai.Eval
                 lastSeenPosition = brain.Body.Position;
                 result["visible"] = true;
                 result["region"] = Map.NameAt(brain.Body.Position);
+                result["at"] = new[] { Round(brain.Body.Position.x), Round(brain.Body.Position.z) };
                 result["distance_m"] = Round(distance);
                 result["eye_colour"] = brain.Body.CurrentMood.ToString().ToLowerInvariant();
             }

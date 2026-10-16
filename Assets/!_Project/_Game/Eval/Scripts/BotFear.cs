@@ -40,6 +40,9 @@ namespace Kehai.Eval
         public float AvoidPenalty = 25f;   // metres added to a job's walk in a shunned region
         public float LookBase, LookGain;   // looking round: base + gain × fear
         public bool Hurries = true;        // takes long walks at a run when energy allows
+        // Her touch kills, so everyone backs away from her: when she's in view nearer than
+        // KeepClear, or her footsteps are nearer than StepsClear (0: doesn't mind them).
+        public float KeepClear = 6f, StepsClear;
 
         public float this[Stimulus s] => Susceptibility[(int)s];
 
@@ -60,21 +63,25 @@ namespace Kehai.Eval
                     row = Skittish;
                     t.Tau = 30f; t.SprintAt = 0.3f; t.AbandonAt = 0.4f; t.HideAt = 0.65f; t.FreezeOnStartle = true;
                     t.DropChance = 0.3f; t.AvoidSeconds = 30f; t.AvoidPenalty = 40f; t.LookBase = 0.9f; t.LookGain = 0.8f;
+                    t.KeepClear = 8f; t.StepsClear = 10f;
                     break;
                 case PlayerProfile.Reckless:
                     row = Reckless;
                     t.Tau = 8f; t.SprintAt = 0f; t.AbandonAt = 0.9f; t.HideAt = 2f;
                     t.AvoidSeconds = 10f; t.AvoidPenalty = 10f; t.LookBase = 0.2f; t.LookGain = 0.3f;
+                    t.KeepClear = 4f; t.StepsClear = 0f;
                     break;
                 case PlayerProfile.Cautious:
                     row = Cautious;
                     t.Tau = 20f; t.SprintAt = 0.5f; t.AbandonAt = 0.6f; t.HideAt = 0.55f; t.FreezeOnStartle = true;
                     t.AvoidSeconds = 30f; t.AvoidPenalty = 80f; t.LookBase = 0.5f; t.LookGain = 0.6f; t.Hurries = false;
+                    t.KeepClear = 9f; t.StepsClear = 10f;
                     break;
                 default:
                     row = Efficient;
                     t.Tau = 10f; t.SprintAt = 0.45f; t.AbandonAt = 0.8f; t.HideAt = 0.95f;
                     t.AvoidSeconds = 20f; t.AvoidPenalty = 25f; t.LookBase = 0f; t.LookGain = 0.4f;
+                    t.KeepClear = 6f; t.StepsClear = 5f;
                     break;
             }
 

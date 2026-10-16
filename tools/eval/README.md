@@ -50,7 +50,9 @@ customer being escorted doesn't physically block the guide. An action that stays
 a message rather than burning the shift.
 
 Since Karen's touch kills (2026-10-16), the body also bends its path round her when she's just
-ahead, the way a person who can see her would; it only steers, and choosing to run or hide is
+ahead, the way a person who can see her would, and within 3 m takes no step toward her. It also
+turns round before walking back the way it came, rather than stepping off backwards — which is
+when a person would see her standing behind them. It only steers; choosing to run or hide is
 still the agent's.
 
 ## What comes back
@@ -98,6 +100,11 @@ What they sense frightens them (`BotFear.cs`):
 | skittish | everything, darkness and sound most | looks round, freezes, drops things, abandons jobs, hides |
 | reckless | being followed or chased only | sprints, keeps working, never hides |
 | cautious (held out) | seeing her, her dashes | checks behind, shuns where she was, hides early |
+
+Her touch kills, so every reacting player also backs away when it sees her close (4 m for the
+reckless one, up to 9 m for the cautious one) or, all but the reckless one, hears her footsteps
+right behind. It runs to a nearby spot whose way leads away from her, never past her, and hides
+the same way.
 
 How fear shows is exactly what the Panic Index reads. So now her tricks change the reward
 (`karen_reward_mean_abs` in the jsonl, alongside `bot_mean_fear`, `bot_startles` and `bot_hides`).

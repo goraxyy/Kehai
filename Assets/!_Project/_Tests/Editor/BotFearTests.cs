@@ -39,6 +39,13 @@ public class BotFearTests
         Assert.IsFalse(BotTraits.For(PlayerProfile.Reckless, 1).FreezeOnStartle);
         Assert.Greater(BotTraits.For(PlayerProfile.Skittish, 1).DropChance, 0f);
         Assert.IsFalse(BotTraits.For(PlayerProfile.Cautious, 1).Hurries);
+
+        // Everyone keeps out of her reach; the reckless the least, and not for footsteps.
+        foreach (PlayerProfile p in System.Enum.GetValues(typeof(PlayerProfile)))
+            Assert.Greater(BotTraits.For(p, 1).KeepClear, 2.2f, $"{p} should back off before she's within reach");
+        Assert.Less(BotTraits.For(PlayerProfile.Reckless, 1).KeepClear, BotTraits.For(PlayerProfile.Efficient, 1).KeepClear);
+        Assert.AreEqual(0f, BotTraits.For(PlayerProfile.Reckless, 1).StepsClear);
+        Assert.Greater(BotTraits.For(PlayerProfile.Cautious, 1).KeepClear, BotTraits.For(PlayerProfile.Skittish, 1).KeepClear);
     }
 
     [Test]

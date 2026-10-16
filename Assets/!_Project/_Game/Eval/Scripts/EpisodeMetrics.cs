@@ -42,7 +42,7 @@ namespace Kehai.Eval
 
         // The simulated player's side (SimulatedPlayer, BotFear), set as its shift ends.
         public float BotMeanFear, BotPeakFear;
-        public int BotStartles, BotHides;
+        public int BotStartles, BotHides, BotBackOffs;
         public bool BotReactive = true;
         public float TacticEntropy;
         public float MeanPanic, PanicSetpointRmse;
@@ -224,7 +224,7 @@ namespace Kehai.Eval
                 ["karen_dash_close_ins"] = CloseIns, ["karen_dash_vanishes"] = Vanishes, ["karen_dash_reveals"] = Reveals,
                 ["karen_reward_mean_abs"] = RewardMeanAbs,
                 ["bot_reactive"] = BotReactive, ["bot_mean_fear"] = BotMeanFear, ["bot_peak_fear"] = BotPeakFear,
-                ["bot_startles"] = BotStartles, ["bot_hides"] = BotHides,
+                ["bot_startles"] = BotStartles, ["bot_hides"] = BotHides, ["bot_back_offs"] = BotBackOffs,
                 ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
                 ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
                 ["karen_fairness_violations"] = FairnessViolations,

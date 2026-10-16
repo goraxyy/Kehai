@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Kehai.Store;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Kehai.Eval
 {
@@ -14,7 +15,8 @@ namespace Kehai.Eval
     // What they sense frightens them (BotFear), each in its own way, and the fear shows
     // through the body: looking round, sprinting, freezing, giving up on a job, taking the
     // long way, dropping things, hiding — the very signals her Panic Index reads. Fear drains,
-    // and they go back to work.
+    // and they go back to work. Her touch kills, so all of them back away when she's close,
+    // by a way that doesn't pass her.
     //
     // Static bots (-ablation-static-bots) are the old ones, kept as a control: they don't
     // react to her tricks, and only the skittish one flees, when it sees or hears her.
@@ -42,8 +44,11 @@ namespace Kehai.Eval
         int lastHeardId;
         bool lightsWereOn = true, startled;
         string lastSeenRegion, lastThreatRegion;
+        Vector3? lastThreatAt;
+        float lastThreatTime = -99f;
 
         public int Hides { get; private set; }
+        public int BackOffs { get; private set; }
 
         public SimulatedPlayer(KehaiEnv env, PlayerProfile profile, int seed, bool reactive = true)
         {
@@ -66,6 +71,12 @@ namespace Kehai.Eval
             {
                 var obs = env.World.Observe(env);
                 Sense(obs);
+
+                if (reactive && TooClose(obs, out Vector3 threat))
+                {
+                    yield return BackOff(threat);
+                    continue;
+                }
 
                 if (reactive && fear.Fear >= traits.HideAt && Time.time > calmUntil)
                 {
@@ -90,7 +101,9 @@ namespace Kehai.Eval
                 if (reactive && startled)
                 {
                     startled = false;
-                    yield return AfterStartle(env.World.Observe(env));
+                    // Freezing within her reach is how people die: backing off comes first.
+                    var after = env.World.Observe(env);
+                    if (!TooClose(after, out _)) yield return AfterStartle(after);
                 }
                 else if (!reactive && profile == PlayerProfile.Skittish && Threatened(env.World.Observe(env)))
                     yield return Flee();
@@ -102,6 +115,7 @@ namespace Kehai.Eval
             env.Metrics.BotPeakFear = fear.Peak;
             env.Metrics.BotStartles = fear.Startles;
             env.Metrics.BotHides = Hides;
+            env.Metrics.BotBackOffs = BackOffs;
             env.Metrics.BotReactive = reactive;
         }
 
@@ -132,6 +146,7 @@ namespace Kehai.Eval
                 lastSeenRegion = (string)karen["region"];
                 Shun(lastSeenRegion);
                 lastThreatRegion = lastSeenRegion;
+                Threat(Point(karen["at"]));
             }
 
             if (obs.TryGetValue("heard", out object h) && h is List<object> heard)
@@ -148,6 +163,7 @@ namespace Kehai.Eval
                     {
                         Shun((string)e["region"]);
                         lastThreatRegion = (string)e["region"];
+                        Threat(Point(e["at"]));
                     }
                 }
 
@@ -196,6 +212,25 @@ namespace Kehai.Eval
 
         bool Shunned(string region) => region != null && shunned.TryGetValue(region, out float until) && Time.time < until;
 
+        void Threat(Vector3 at)
+        {
+            lastThreatAt = at;
+            lastThreatTime = Time.time;
+        }
+
+        // Where the observation puts something ([x, z]), at the player's own height.
+        Vector3 Point(object at)
+        {
+            var xz = (float[])at;
+            return new Vector3(xz[0], env.Driver.transform.position.y, xz[1]);
+        }
+
+        static Vector3 Flat(Vector3 v)
+        {
+            v.y = 0f;
+            return v;
+        }
+
         // Runs alongside an action: keeps sensing, sprints while frightened, and drops the job
         // on a big enough startle — or to go and hide.
         IEnumerator Monitor(EnvAction action)
@@ -206,10 +241,11 @@ namespace Kehai.Eval
                 if (Time.time >= next)
                 {
                     next = Time.time + 0.25f;
-                    Sense(env.World.Observe(env));
+                    var obs = env.World.Observe(env);
+                    Sense(obs);
                     env.Driver.Sprint = action.sprint || fear.Fear >= traits.SprintAt;
                     bool hide = fear.Fear >= traits.HideAt && Time.time > calmUntil;
-                    if ((startled && fear.Fear >= traits.AbandonAt) || hide) env.Cancel();
+                    if ((startled && fear.Fear >= traits.AbandonAt) || hide || TooClose(obs, out _)) env.Cancel();
                 }
                 yield return null;
             }
@@ -222,6 +258,81 @@ namespace Kehai.Eval
                 yield return env.Act(new EnvAction { verb = "drop" });
             if (traits.FreezeOnStartle)
                 yield return env.Act(new EnvAction { verb = "wait", seconds = 1f + (float)random.NextDouble() * 2f });
+        }
+
+        // ---- keeping out of reach -------------------------------------------------------------
+
+        // Too close: in view and nearer than this player lets her get, or her footsteps right
+        // behind. `threat` is where she is, as a person would place her.
+        bool TooClose(Dictionary<string, object> obs, out Vector3 threat)
+        {
+            threat = default;
+            var karen = (Dictionary<string, object>)obs["karen"];
+            if ((bool)karen["visible"] && (float)karen["distance_m"] < traits.KeepClear)
+            {
+                threat = Point(karen["at"]);
+                return true;
+            }
+            if (traits.StepsClear <= 0f || !obs.TryGetValue("heard", out object h) || !(h is List<object> heard)) return false;
+            foreach (var e in heard.Cast<Dictionary<string, object>>())
+                if ((string)e["category"] == "steps" && (float)e["age_s"] < 1f && (float)e["distance_m"] < traits.StepsClear)
+                {
+                    threat = Point(e["at"]);
+                    return true;
+                }
+            return false;
+        }
+
+        // Backs off at a run to somewhere near whose way leads away from her, not past her.
+        // Cornered, it holds still a moment and looks again.
+        IEnumerator BackOff(Vector3 threat)
+        {
+            BackOffs++;
+            string there = env.World.Map.NameAt(threat);
+            Shun(there);
+            lastThreatRegion = there;
+            Threat(threat);
+
+            Vector3 me = env.Driver.transform.position;
+            Vector3 away = Flat(me - threat);
+            away = away.sqrMagnitude > 0.01f ? away.normalized : -Flat(env.Driver.transform.forward).normalized;
+            float now = Flat(me - threat).magnitude;
+            var options = env.World.Map.Regions
+                .Where(r => !r.IsDoor)
+                .Select(r => (r, d: Flat(r.Centroid - me)))
+                .Where(x => x.d.magnitude >= 5f && x.d.magnitude <= 18f && Vector3.Dot(x.d.normalized, away) > 0.2f)
+                .OrderByDescending(x => Vector3.Dot(x.d.normalized, away) + (float)random.NextDouble() * 0.3f)
+                .Select(x => x.r)
+                .Take(8)
+                .ToList();
+            Region to = options.FirstOrDefault(r => WayKeepsClear(r.Centroid, threat, Mathf.Min(now * 0.9f, Mathf.Max(2.5f, traits.KeepClear * 0.7f))))
+                        ?? options.FirstOrDefault(r => WayKeepsClear(r.Centroid, threat, Mathf.Min(now * 0.9f, 2f)));
+            if (to == null)
+            {
+                yield return env.Act(new EnvAction { verb = "wait", seconds = 0.5f });
+                yield break;
+            }
+            yield return env.Act(new EnvAction { verb = "move_to", target = to.Name, sprint = true, timeout = 8f });
+        }
+
+        // Whether the walk from here to `to` stays at least `clearance` from the threat all the
+        // way: the store's layout, which any player knows, not where she's going.
+        bool WayKeepsClear(Vector3 to, Vector3 threat, float clearance)
+        {
+            if (!NavMesh.SamplePosition(env.Driver.transform.position, out NavMeshHit from, 2f, NavMesh.AllAreas) ||
+                !NavMesh.SamplePosition(to, out NavMeshHit end, 2f, NavMesh.AllAreas))
+                return false;
+            var path = new NavMeshPath();
+            if (!NavMesh.CalculatePath(from.position, end.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
+                return false;
+            Vector3[] c = path.corners;
+            for (int i = 1; i < c.Length; i++)
+            {
+                int steps = Mathf.Max(1, Mathf.CeilToInt(Flat(c[i] - c[i - 1]).magnitude));
+                for (int k = 1; k <= steps; k++)
+                    if (Flat(Vector3.Lerp(c[i - 1], c[i], k / (float)steps) - threat).magnitude < clearance) return false;
+            }
+            return true;
         }
 
         // ---- the static control ------------------------------------------------------------
@@ -255,12 +366,15 @@ namespace Kehai.Eval
             Vector3 me = env.Driver.transform.position;
             StoreMap map = env.World.Map;
             Region threat = lastThreatRegion != null ? map.Regions.FirstOrDefault(r => r.Name == lastThreatRegion) : null;
-            Vector3 from = threat != null ? threat.Centroid : me;
+            bool placed = reactive && lastThreatAt.HasValue && Time.time - lastThreatTime < 15f;
+            Vector3 from = placed ? lastThreatAt.Value : threat != null ? threat.Centroid : me;
 
-            var hide = map.Regions
+            var options = map.Regions
                 .Where(r => !r.IsDoor && r.Area == "Sales floor" && r.Cells.Count >= 4 && !Shunned(r.Name))
                 .OrderByDescending(r => Vector3.Distance(r.Centroid, from) - Vector3.Distance(r.Centroid, me) * 0.3f + (float)random.NextDouble() * 6f)
-                .FirstOrDefault();
+                .ToList();
+            // The reacting players don't run past her to get there.
+            Region hide = placed ? options.Take(8).FirstOrDefault(r => WayKeepsClear(r.Centroid, from, 2.5f)) ?? options.FirstOrDefault() : options.FirstOrDefault();
             if (hide == null) yield break;
 
             Hides++;
