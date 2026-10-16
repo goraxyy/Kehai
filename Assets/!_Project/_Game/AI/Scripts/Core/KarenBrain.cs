@@ -43,13 +43,14 @@ namespace Kehai.Karen
         public KarenContext Ctx { get; private set; }
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
+        public BlinkDash Dash { get; } = new BlinkDash();   // her move while you blink (Decision/BlinkDash.cs)
 
         public TaskManager Tasks { get; private set; }
         public ShiftManager Shift { get; private set; }
         public BurnoutSystem Burnout { get; private set; }
 
         public PlanTree CurrentPlan { get; private set; }
-        public ITacticPolicy Policy { get; private set; }   // rung G only
+        public ITacticPolicy Policy { get; private set; }   // rung F only
         public bool ShiftActive { get; private set; }
         public float ShiftTime => ShiftActive ? Time.time - shiftStartedAt : 0f;
         public bool CareerOverride => careerOverride;
@@ -185,7 +186,7 @@ namespace Kehai.Karen
             Note("SYSTEM", $"rung → {rung} ({config.Features})");
         }
 
-        // Rung G's tactic chooser. Without the ML-Agents bridge compiled in there is none, and
+        // Rung F's tactic chooser. Without the ML-Agents bridge compiled in there is none, and
         // the planner keeps the bandit's choice — said once, so a results table can't pass it
         // off as a policy.
         void InstallPolicy()
@@ -195,7 +196,7 @@ namespace Kehai.Karen
             if (!config.Features.Policy) return;
             Note("SYSTEM", Policy != null
                 ? $"tactic choice: {Policy.Name}{(config.shield ? string.Empty : " — UNSHIELDED: the Director's gates are off")}"
-                : "rung G, but the ML-Agents bridge isn't compiled in (KAREN_MLAGENTS) — the bandit chooses, as on rung F");
+                : "rung F, but the ML-Agents bridge isn't compiled in (KAREN_MLAGENTS) — the bandit chooses, as on rung E");
         }
 
         // ---- shifts ---------------------------------------------------------------------
@@ -204,7 +205,7 @@ namespace Kehai.Karen
         {
             if (Shift == null) return;
             if (Shift.IsShiftActive && !ShiftActive) BeginShift();
-            else if (!Shift.IsShiftActive && ShiftActive) EndShift(true);
+            else if (!Shift.IsShiftActive && ShiftActive) EndShift(!KilledThisShift);
         }
 
         public void BeginShift()
@@ -223,6 +224,8 @@ namespace Kehai.Karen
             sabotaged.Clear();
             peakOutstanding.Clear();
             OvertimeArmed = false;
+            KilledThisShift = false;
+            Dash.BeginShift();
 
             // Between shifts the store may be rearranged (§5.5). Done before anything reads
             // the map for this shift.
@@ -272,6 +275,7 @@ namespace Kehai.Karen
         {
             if (!ShiftActive) return;
             ShiftActive = false;
+            Dash.Cancel(Ctx);
             AbortPlan();
             Director.EndShift();
             Policy?.EndShift();
@@ -317,6 +321,14 @@ namespace Kehai.Karen
 
             TickDirector(dt);
 
+            // After a vanish she does nothing but wait (BlinkDash.TickLurk).
+            if (Dash.Lurking)
+            {
+                Dash.TickLurk(Ctx);
+                ExpireClosures();
+                return;
+            }
+
             decideTimer += dt;
             if (decideNow || decideTimer >= 1f / config.decideHz)
             {
@@ -339,13 +351,14 @@ namespace Kehai.Karen
 
             Ctx.A = Appraised();
             Director.Tick(step, Ctx);
+            if (ShiftActive) Dash.Tick(Ctx);
             Director.ObserveForLedger(Ctx, step);
             if (ShiftActive) Stats.SamplePacing(Director.Panic, Director.Setpoint);
             if (ShiftActive) PayPolicy(step);
             SettleRewards();
         }
 
-        // Rung G's reward (PolicyReward): how close panic sat to the setpoint over this tick,
+        // Rung F's reward (PolicyReward): how close panic sat to the setpoint over this tick,
         // less anything the fairness guard caught since the last one.
         void PayPolicy(float dt)
         {
@@ -650,6 +663,10 @@ namespace Kehai.Karen
             decideNow = true;
         }
 
+        // The dash takes over after a vanish, and hands back when she steps out or gives up.
+        public void HandOverToDash() => AbortPlan();
+        public void ResumeDeciding() => decideNow = true;
+
         void AbortPlan()
         {
             if (CurrentPlan == null) return;
@@ -747,10 +764,6 @@ namespace Kehai.Karen
             if (sees && !wasSeeing) Stats.Detected(ShiftTime);
             wasSeeing = sees;
 
-            // Even the simplest guard lets you go after a lecture (§9: the recovery window
-            // is a rule of the game, not a feature of the smarter rungs).
-            if (Time.time < releasedUntil) sees = false;
-
             if (sees)
             {
                 if (!chasing) SetChasing(true);
@@ -807,36 +820,39 @@ namespace Kehai.Karen
 
         // ---- being caught -------------------------------------------------------------------
 
+        // Contact kills (§8.6). Only when she's bringing you something (the Assist goal) is a
+        // touch not an attack.
         void OnTouched(Collider other)
         {
-            if (!ShiftActive || Consequences.LectureRunning || Time.time < releasedUntil) return;
+            if (!ShiftActive || KilledThisShift) return;
 
             // Contact is the one certain observation she ever gets.
             if (Belief != null) Belief.Apply(new Observation(SenseChannel.Touch, Body.Position, 1f, 1f, "touch"));
 
-            if (chasing) Caught();
-            else decideNow = true;
+            if (CurrentPlan != null && CurrentPlan.Goal == GoalId.Assist) { decideNow = true; return; }
+            Kill();
         }
 
-        float releasedUntil = -1f;
+        // Set when she gets you; the shift then ends without counting as clocked out.
+        public bool KilledThisShift { get; private set; }
 
-        void Caught()
+        void Kill()
         {
+            KilledThisShift = true;
             Stats.Caught();
             Ledger.Data.caughtCount++;
-            Ledger.Data.warnings++;
+            Dash.Cancel(Ctx);
             AbortPlan();
             Body.Stop();
-            Body.SetMood(KarenBody.Mood.Calm);
-            SetChasing(false);
+            Body.SetMood(KarenBody.Mood.Hunt);
+            chasing = false;
+            Burnout?.SetChaseState(false);
 
-            Log.Write(Record("CAUGHT", $"CAUGHT   written warning #{Ledger.Data.warnings} at {Map.Describe(Body.Position)}", null, null,
-                                "caught during a chase — lecture, overtime, then a guaranteed recovery window"));
-            StartCoroutine(Consequences.Lecture(this, Ledger.Data.warnings, config.lectureSeconds, config.overtimePerCatch));
-            KarenNarrator.Say(StoryKind.Chase, $"{GameNames.Antagonist} caught you! Written warning #{Ledger.Data.warnings}: a {config.lectureSeconds:0}-second lecture and {config.overtimePerCatch:0} seconds of overtime. After it, she has to leave you alone for a while.", Body.Position);
-            releasedUntil = Time.time + config.lectureSeconds + 15f;   // no second catch until you've had a chance to walk away
-            if (config.Features.Goals) Director.StartRecovery(Mathf.Max(config.recoverySeconds, config.lectureSeconds + 15f), Ctx, "caught");
-            CustomerMemory.MakeNearbyJumpy(Body.Position, 20f, 90f);
+            Log.Write(Record("CAUGHT", $"CAUGHT   she got you at {Map.Describe(Body.Position)}", null, null,
+                                "contact — the shift starts again"));
+            World.PlayTell(TellKind.RevealSting, Body.Position, 0f);
+            KarenNarrator.Say(StoryKind.Chase, $"{GameNames.Antagonist} got you. The shift starts again.", Body.Position);
+            StartCoroutine(Consequences.Death(this, config.deathScreenSeconds));
         }
 
         public void SetChasing(bool on)
@@ -974,13 +990,13 @@ namespace Kehai.Karen
         public bool EyesClosed { get; set; }
         public float PredictedReopenIn { get; set; }
 
+        // Every blink: the Panic Index counts it, and the dash may use it (BlinkDash).
         public void OnBlinkStarted()
         {
             Director?.Index.NoteBlink();
-            if (!config.Features.Blink || !ShiftActive) return;
+            if (!ShiftActive || KilledThisShift) return;
             Stats.BlinkSeen();
-            if (CurrentPlan != null && CurrentPlan.Tactic != null && CurrentPlan.Tactic.Id == "blink_advance")
-                KarenNarrator.Say(StoryKind.Blink, "You blinked — and " + GameNames.Antagonist + " moved.", Body.Position);
+            Dash.OnBlink(Ctx);
         }
 
         // ---- telling the player what she's doing ---------------------------------------------
@@ -991,7 +1007,8 @@ namespace Kehai.Karen
             get
             {
                 if (!ShiftActive) return GameNames.Antagonist + " is off duty until you clock in.";
-                if (Consequences.LectureRunning) return GameNames.Antagonist + " is lecturing you.";
+                if (KilledThisShift) return GameNames.Antagonist + " got you.";
+                if (Dash.Lurking) return GameNames.Antagonist + " is nowhere to be seen.";
                 if (chasing) return GameNames.Antagonist + " is chasing you!";
                 if (CurrentPlan == null) return GameNames.Antagonist + " is thinking.";
                 string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.Goal(CurrentPlan.Goal);

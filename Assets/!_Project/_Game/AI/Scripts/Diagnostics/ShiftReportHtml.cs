@@ -185,7 +185,7 @@ function draw(){
   }
   const ux=X(f[1]),uy=Y(f[2]),ur=Math.max(10*u,px*1.1); g.save(); g.translate(ux,uy); g.rotate(f[3]*Math.PI/180);
   g.beginPath(); g.moveTo(0,-ur); g.lineTo(ur*0.62,ur*0.8); g.lineTo(0,ur*0.35); g.lineTo(-ur*0.62,ur*0.8); g.closePath(); g.fillStyle=COL.you; g.fill(); g.strokeStyle='#fff'; g.lineWidth=2*u; g.stroke(); g.restore();
-  label(ux+ur*1.2,uy,f[5]?'You (lectured)':'You',COL.you,fs);
+  label(ux+ur*1.2,uy,f[5]?'You (caught)':'You',COL.you,fs);
   $('time').textContent = fmt(T)+' / '+fmt(END);
   $('slider').value = END? Math.round(1000*T/END) : 0;
   $('mcur').style.left = (END ? 100*T/END : 0)+'%';

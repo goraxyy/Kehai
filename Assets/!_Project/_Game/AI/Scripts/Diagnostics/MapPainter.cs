@@ -169,7 +169,7 @@ namespace Kehai.Karen
             Vector2 me = ToScreen(f.Player);
             Rotated(arrow, me, Mathf.Max(18f, Px(2.2f)) + 4f, f.PlayerYaw, Color.white);
             Rotated(arrow, me, Mathf.Max(18f, Px(2.2f)), f.PlayerYaw, You);
-            Text(me + new Vector2(Mathf.Max(12f, Px(1.4f)), 0f), f.PlayerHeld ? "You (lectured)" : "You", You, fontSize, TextAnchor.MiddleLeft, true);
+            Text(me + new Vector2(Mathf.Max(12f, Px(1.4f)), 0f), f.PlayerHeld ? "You (caught)" : "You", You, fontSize, TextAnchor.MiddleLeft, true);
         }
 
         // Karen's belief as a heat layer (H on the F1 map).

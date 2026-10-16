@@ -16,7 +16,7 @@ public class ShiftRecordTests
     {
         var r = new ShiftRecording
         {
-            ShiftNumber = 3, PlayerName = "Employee \"#0417\"", KarenRung = "F_Blink",
+            ShiftNumber = 3, PlayerName = "Employee \"#0417\"", KarenRung = "E_Ledger",
             StartedAt = "2026-09-26 05:38", Length = 12f, ClockedOut = true
         };
         for (int i = 0; i <= 60; i++)

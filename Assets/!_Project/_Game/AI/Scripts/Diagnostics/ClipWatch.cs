@@ -221,7 +221,7 @@ namespace Kehai.Karen
             {
                 case "CAUGHT":
                     lastCatch = t;
-                    Add("catch", t, karenAt, true, $"{Her} caught you: a lecture and overtime.");
+                    Add("catch", t, karenAt, true, $"{Her} got you.");
                     break;
 
                 case "PLAN":

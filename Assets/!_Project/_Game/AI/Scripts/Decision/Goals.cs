@@ -214,7 +214,7 @@ namespace Kehai.Karen
         }
 
         // The Director's gates — tier permission, cooldowns, the tension budget — hold on every
-        // rung but one: rung G with its shield off, which exists to find out what a trained
+        // rung but one: rung F with its shield off, which exists to find out what a trained
         // policy does without them (FairnessGuard.CheckPacing counts it).
         public static bool Shielded(KarenContext c) => !c.Features.Policy || c.Config.shield;
 
@@ -282,8 +282,8 @@ namespace Kehai.Karen
             }
             scored.Sort((x, y) => y.s.CompareTo(x.s));
 
-            // On rung G the policy picks (Policy/TacticPolicy.cs), told what the bandit would
-            // have: rung F's choice, exactly. Movement-only goals aren't its business, as they
+            // On rung F the policy picks (Policy/TacticPolicy.cs), told what the bandit would
+            // have: rung E's choice, exactly. Movement-only goals aren't its business, as they
             // aren't the bandit's.
             if (c.Features.Policy && c.Policy != null && candidates.Any(t => t.Learnable) &&
                 c.Policy.TryChoose(goal, candidates, scored[0].t, c, out int index, out string pickedWhy) &&

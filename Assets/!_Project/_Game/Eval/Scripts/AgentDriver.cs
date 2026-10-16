@@ -192,7 +192,7 @@ namespace Kehai.Eval
                     // Wedged on a corner or a customer: re-plan, then give up.
                     Vector3 moved = here - lastPosition;
                     moved.y = 0f;
-                    // Held still by Karen's lecture: that's waiting, not being stuck.
+                    // Held still by the death screen: that's waiting, not being stuck.
                     bool held = motor != null && motor.movementLocked;
                     if (held) progressFrom = here;
                     stuckFor = !held && moved.magnitude < 0.3f * dt ? stuckFor + dt : 0f;

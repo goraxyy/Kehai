@@ -6,7 +6,7 @@ using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// Rung G (tools/rl/README.md): the pieces of the trained tactic chooser that can be checked
+// Rung F (tools/rl/README.md): the pieces of the trained tactic chooser that can be checked
 // without the ML-Agents package — the rung itself, the shield, the planner's ordering, and
 // what the policy sees and is paid. The agent and the trainer are checked by the smoke run.
 public class KarenPolicyTests
@@ -19,22 +19,21 @@ public class KarenPolicyTests
     }
 
     [Test]
-    public void RungG_ParsesAndIsFWithThePolicy()
+    public void RungF_ParsesAndIsEWithThePolicy()
     {
-        Assert.IsTrue(KarenBootstrap.TryParseRung("g", out KarenRung r) && r == KarenRung.G_Policy);
-        Assert.IsTrue(KarenBootstrap.TryParseRung("6", out r) && r == KarenRung.G_Policy);
-        Assert.IsFalse(KarenBootstrap.TryParseRung("H", out _));
+        Assert.IsTrue(KarenBootstrap.TryParseRung("f", out KarenRung r) && r == KarenRung.F_Policy);
+        Assert.IsTrue(KarenBootstrap.TryParseRung("5", out r) && r == KarenRung.F_Policy);
+        Assert.IsFalse(KarenBootstrap.TryParseRung("G", out _));
 
-        var f = new RungFeatures(KarenRung.F_Blink);
-        var g = new RungFeatures(KarenRung.G_Policy);
-        Assert.IsFalse(f.Policy);
-        Assert.IsTrue(g.Policy);
-        // Everything else as F: the arms still learn (goal utility, fallbacks, the teacher).
-        Assert.AreEqual(f.Belief, g.Belief);
-        Assert.AreEqual(f.Goals, g.Goals);
-        Assert.AreEqual(f.Bandit, g.Bandit);
-        Assert.AreEqual(f.Persistent, g.Persistent);
-        Assert.AreEqual(f.Blink, g.Blink);
+        var e = new RungFeatures(KarenRung.E_Ledger);
+        var f = new RungFeatures(KarenRung.F_Policy);
+        Assert.IsFalse(e.Policy);
+        Assert.IsTrue(f.Policy);
+        // Everything else as E: the arms still learn (goal utility, fallbacks, the teacher).
+        Assert.AreEqual(e.Belief, f.Belief);
+        Assert.AreEqual(e.Goals, f.Goals);
+        Assert.AreEqual(e.Bandit, f.Bandit);
+        Assert.AreEqual(e.Persistent, f.Persistent);
     }
 
     [Test]
@@ -48,11 +47,11 @@ public class KarenPolicyTests
     // ---- the shield ---------------------------------------------------------------------------
 
     [Test]
-    public void Shield_OnlyRungGCanDropIt()
+    public void Shield_OnlyRungFCanDropIt()
     {
-        Assert.IsTrue(HtnPlanner.Shielded(Context(KarenRung.F_Blink, shield: false)), "the shield switch belongs to rung G alone");
-        Assert.IsTrue(HtnPlanner.Shielded(Context(KarenRung.G_Policy, shield: true)));
-        Assert.IsFalse(HtnPlanner.Shielded(Context(KarenRung.G_Policy, shield: false)));
+        Assert.IsTrue(HtnPlanner.Shielded(Context(KarenRung.E_Ledger, shield: false)), "the shield switch belongs to rung F alone");
+        Assert.IsTrue(HtnPlanner.Shielded(Context(KarenRung.F_Policy, shield: true)));
+        Assert.IsFalse(HtnPlanner.Shielded(Context(KarenRung.F_Policy, shield: false)));
     }
 
     [Test]
@@ -63,7 +62,7 @@ public class KarenPolicyTests
 
         foreach (bool shield in new[] { true, false })
         {
-            KarenContext c = Context(KarenRung.G_Policy, shield);
+            KarenContext c = Context(KarenRung.F_Policy, shield);
             c.Director.BeginShift(1, 300f);                // settling in: nothing above tier 1
             c.A = new Appraisal { Tension = 0f };          // and no budget
 
@@ -78,7 +77,7 @@ public class KarenPolicyTests
         {
             foreach (bool shield in new[] { true, false })
             {
-                KarenContext c = Context(KarenRung.G_Policy, shield);
+                KarenContext c = Context(KarenRung.F_Policy, shield);
                 c.Director.BeginShift(1, 300f);
                 c.A = new Appraisal { Tension = 1f };
                 cheap.LastUsed = c.Now;
@@ -91,7 +90,7 @@ public class KarenPolicyTests
     [Test]
     public void PacingCheck_CatchesBigTacticsWhileSettlingIn()
     {
-        KarenContext c = Context(KarenRung.G_Policy);
+        KarenContext c = Context(KarenRung.F_Policy);
         c.Director.BeginShift(1, 300f);
         Tactic small = TacticLibrary.All.First(t => t.Tier == 1);
         Tactic big = TacticLibrary.All.First(t => t.Tier == 3);
@@ -141,7 +140,7 @@ public class KarenPolicyTests
     [Test]
     public void Observation_IsFixedLengthFiniteAndInRange()
     {
-        KarenContext c = Context(KarenRung.G_Policy);
+        KarenContext c = Context(KarenRung.F_Policy);
         c.Director.BeginShift(3, 300f);
         c.A = new Appraisal { Confidence = 2f, Pressure = -5f, Panic = float.NaN, Staleness = 1e9f, Tension = 0.4f };
 

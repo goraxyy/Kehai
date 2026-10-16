@@ -1,4 +1,4 @@
-# PPO for rung G's tactic chooser (README.md). One behaviour, "Karen": she decides when the
+# PPO for rung F's tactic chooser (README.md). One behaviour, "Karen": she decides when the
 # planner needs a tactic, a few times a minute, and a shift is one episode.
 behaviors:
   Karen:
@@ -21,8 +21,8 @@ behaviors:
       extrinsic:
         gamma: 0.99
         strength: 1.0
-    # Start from imitating the bandit (rung F's choice), recorded with record_demos.sh,
-    # so the policy begins at rung F's level instead of at random.
+    # Start from imitating the bandit (rung E's choice), recorded with record_demos.sh,
+    # so the policy begins at rung E's level instead of at random.
     behavioral_cloning:
       demo_path: demos
       strength: 0.5

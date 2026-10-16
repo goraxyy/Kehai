@@ -5,7 +5,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-// Kehai → RL: what rung G's training needs from the editor (tools/rl/README.md).
+// Kehai → RL: what rung F's training needs from the editor (tools/rl/README.md).
 //
 //   Set Up ML-Agents           adds com.unity.ml-agents to Packages/manifest.json and, once
 //                              it's in, the KAREN_MLAGENTS define the bridge compiles under
@@ -126,6 +126,6 @@ public static class KehaiRl
         if (DefineSet()) return;
         string defines = PlayerSettings.GetScriptingDefineSymbols(Standalone);
         PlayerSettings.SetScriptingDefineSymbols(Standalone, string.IsNullOrEmpty(defines) ? Define : defines + ";" + Define);
-        Debug.Log($"Kehai RL: {Define} defined — rung G's ML-Agents bridge compiles in.");
+        Debug.Log($"Kehai RL: {Define} defined — rung F's ML-Agents bridge compiles in.");
     }
 }

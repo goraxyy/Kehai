@@ -67,7 +67,7 @@ redesigned before launch (Milestone 7). It's what the first trailer and Steam pa
 
 ### Karen
 - [x] Karen in the store: perception, belief map, planner, 35 tactics, learning, fairness rules
-- [x] Losing: a written warning, a lecture, overtime; the burnout and notice endings
+- [x] Losing: her touch kills and the shift starts again (was a written warning and a lecture until 2026-10-16); the burnout and notice endings
 - [ ] **Tune her with real people.** So far only bots have played against her
 - [ ] Fix: she can stand on a stuck player without catching them (a touch only counts at the
       start of a chase)

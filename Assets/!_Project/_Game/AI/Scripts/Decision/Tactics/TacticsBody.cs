@@ -455,7 +455,7 @@ namespace Kehai.Karen
         public override float Cooldown => 90f;
         public override float PanicPrior => 0.35f;
         public override TellKind Tell => TellKind.Screech;
-        public override string Chore => "a written warning, a lecture, and overtime if she catches you";
+        public override string Chore => "get out of her sight: if she touches you, she gets you";
         public override string Attacks => "you";
 
         public override void Plan(KarenContext c, PlanBuilder plan)
@@ -532,49 +532,6 @@ namespace Kehai.Karen
             plan.Add(Speak.Line(last ? $"{TacticHelpers.PlayerName(c)}. I made you a coffee. You've earned it."
                                      : "I've made you a coffee. Stay a little longer."));
             plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "give you space", 3f);
-        }
-    }
-
-    // ================================================================ IDEAS.md: blink
-
-    // Exploit the window, don't chase the latency: a blink is ~300 ms and she learns of it
-    // ~100 ms in, so she knows how long you have left with your eyes shut — and moves then.
-    public sealed class BlinkAdvanceTactic : Tactic
-    {
-        public override string Id => "blink_advance";
-        public override string Title => "Blink advance";
-        public override GoalId[] Goals => new[] { GoalId.Stalk, GoalId.Pursue };
-        public override int Tier => 1;
-        public override int IntroducedShift => 1;
-        public override float TensionCost => 0.05f;
-        public override float Cooldown => 8f;
-        public override float PanicPrior => 0.2f;
-        public override TellKind Tell => TellKind.EyeFlicker;
-        public override float TellLead => 0.9f;
-        public override string Chore => "don't blink";
-        public override string Attacks => "you";
-
-        public override bool Available(KarenContext c, out string why)
-        {
-            if (!c.Features.Blink) { why = "rung has no blink channel"; return false; }
-            if (!c.Brain.BlinkLive) { why = "no blink signal"; return false; }
-            SightSensor s = c.Body.Sight;
-            if (!s.SeesNow || !s.IsWatched) { why = "not being looked at"; return false; }
-            why = null;
-            return true;
-        }
-
-        public override void Plan(KarenContext c, PlanBuilder plan)
-        {
-            plan.Target = "move while your eyes are shut";
-            plan.Add(new Tell(TellKind.EyeFlicker, k => k.Body.Position, TellLead));
-            plan.Add(new WaitUntil(k => k.Brain.EyesClosed, 12f, "wait for a blink", failOnTimeout: true));
-            plan.Add(new Effect("advance inside the blink", k =>
-            {
-                float window = Mathf.Max(0.08f, k.Brain.PredictedReopenIn);
-                k.Body.BurstToward(k.Body.Sight.LastSeenPosition, k.Config.blinkAdvanceSpeed, window, k.Config.blinkAdvanceMaxDistance);
-            }));
-            plan.Add(new Wait(0.6f, "stand very still"));
         }
     }
 }

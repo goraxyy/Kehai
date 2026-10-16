@@ -57,23 +57,25 @@ public class KarenRuleTests
         Assert.IsEmpty(leaks, GameNames.Antagonist + " read the player directly:\n" + string.Join("\n", leaks));
     }
 
-    // ---- her speed: fast, but a sprint always gets away -------------------------------------
+    // ---- her speed: slightly faster than you ---------------------------------------------------
 
     [Test]
-    public void Karen_NeverOutrunsASprintingEmployee()
+    public void Karen_IsSlightlyFasterThanTheEmployee()
     {
         var motor = new GameObject("player").AddComponent<PlayerMotor>();
         try
         {
             var config = new KarenConfig();
-            foreach (float pace in new[] { config.sneakSpeed, config.walkSpeed, config.hurrySpeed, config.runSpeed })
-                Assert.Less(pace, motor.sprintSpeed, "a default pace is faster than the default sprint");
+            Assert.Greater(config.runSpeed, motor.sprintSpeed, "running, she should just outpace a sprint");
+            Assert.LessOrEqual(config.runSpeed, motor.sprintSpeed * 1.1f, "only slightly");
             Assert.Greater(config.hurrySpeed, motor.walkSpeed, "hurrying, she should outpace a walking employee");
+            Assert.Less(config.walkSpeed, motor.walkSpeed, "on her rounds she walks slower than you");
 
-            // A scene with a slower sprint pulls her paces down with it.
-            KarenBootstrap.KeepBelowSprint(config, 5f);
-            foreach (float pace in new[] { config.sneakSpeed, config.walkSpeed, config.hurrySpeed, config.runSpeed })
-                Assert.Less(pace, 5f);
+            // A scene with other speeds moves hers with them.
+            KarenBootstrap.MatchPlayer(config, 3f, 5f);
+            Assert.AreEqual(5f * config.fasterThanPlayer, config.runSpeed, 1e-4f);
+            Assert.AreEqual(3f * config.fasterThanPlayer, config.hurrySpeed, 1e-4f);
+            Assert.Less(config.walkSpeed, 3f);
         }
         finally { Object.DestroyImmediate(motor.gameObject); }
     }
@@ -204,7 +206,7 @@ public class KarenRuleTests
     [Test]
     public void Director_GatesBigTacticsOffShiftAndWhileSettling()
     {
-        KarenContext c = Context(KarenRung.F_Blink, out KarenConfig config);
+        KarenContext c = Context(KarenRung.E_Ledger, out KarenConfig config);
         var director = new KarenDirector(config, new KarenLedger(config));
         Assert.IsTrue(director.PermitsTier(0, c), "movement is always allowed");
         Assert.IsFalse(director.PermitsTier(1, c), "tactics before the shift starts");
@@ -289,12 +291,14 @@ public class KarenRuleTests
     public void Rungs_ParseFromLetters()
     {
         Assert.IsTrue(KarenBootstrap.TryParseRung("a", out KarenRung r) && r == KarenRung.A_RandomPatrol);
-        Assert.IsTrue(KarenBootstrap.TryParseRung("F", out r) && r == KarenRung.F_Blink);
+        Assert.IsTrue(KarenBootstrap.TryParseRung("F", out r) && r == KarenRung.F_Policy);
+        Assert.IsFalse(KarenBootstrap.TryParseRung("G", out _), "there is no rung G");
         Assert.IsFalse(new RungFeatures(KarenRung.C_BeliefGrid).Bandit);
         Assert.IsTrue(new RungFeatures(KarenRung.D_Bandit).Bandit);
         Assert.IsFalse(new RungFeatures(KarenRung.D_Bandit).Persistent);
         Assert.IsTrue(new RungFeatures(KarenRung.E_Ledger).Persistent);
-        Assert.IsTrue(new RungFeatures(KarenRung.F_Blink).Blink);
+        Assert.IsTrue(new RungFeatures(KarenRung.F_Policy).Policy);
+        Assert.IsFalse(new RungFeatures(KarenRung.E_Ledger).Policy);
     }
 
     // ---- the blink sidecar's packets --------------------------------------------------------------

@@ -28,7 +28,8 @@ namespace Kehai.Karen
         SpeakerCrackle,   // the PA about to play something that isn't speech
         DoorMotor,        // automatic doors about to cycle
         PaChime,          // an announcement
-        Footsteps         // her own steps, from somewhere else
+        Footsteps,        // her own steps, from somewhere else
+        RevealSting       // not a warning: the stab as she steps out after a vanish, or gets you
     }
 
     // All of Karen's sounds, synthesised at load. The project keeps audio clips out of the
@@ -130,6 +131,9 @@ namespace Kehai.Karen
                     return PaChime();
                 case TellKind.Footsteps:
                     return Make("farSteps", 3f, t => Footstep(Mathf.Repeat(t, 0.6f)) * 0.8f);
+                case TellKind.RevealSting:
+                    return Make("sting", 1.4f, t => 0.7f * Env(t, 0.005f, 0.3f, 1.4f) *
+                        (Sine(311f, t) * 0.5f + Sine(330f, t) * 0.4f + Sine(659f, t) * 0.3f + White(t) * Mathf.Exp(-t * 9f) * 0.6f));
             }
             return PaChime();
         }

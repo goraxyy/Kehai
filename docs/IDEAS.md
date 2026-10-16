@@ -17,16 +17,41 @@ did what it did; and the **blink** gives Karen an information edge to test.
 
 ## 1. The blink mechanic
 
-**The idea.** With your permission, the webcam watches your eyes, and Karen can move while
-they're shut.
+**The idea.** With your permission, the webcam watches your eyes, and when you blink, Karen
+*dashes*. It's a horror instrument for wave dramaturgy, not a rung of the ablation ladder.
+
+**The two dashes** ([`BlinkDash.cs`](../Assets/!_Project/_Game/AI/Scripts/Decision/BlinkDash.cs)):
+- **Close in.** She's in your view and far away. You blink, and she is suddenly much nearer:
+  a jump of about 45% of the gap along her path to you (2.5–9 m), never ending closer than 6 m.
+- **Vanish.** She's in your view. You blink, and she's gone. She reappears 8–16 m from where she
+  last saw you, out of your sight, usually ahead of where you were heading (sometimes behind
+  you), and waits there in silence. Come within 6 m and she steps out with a sting: that's the
+  peak of the wave.
+
+**The waves.** The Director now runs repeated waves: settle → build → spike → recover → build
+→ … (`KarenDirector.UpdatePhase`).
+- **Settle and recover:** no dashes at all, so the tension really drops between waves.
+- **Build:** up to two close-ins, rising dread. If she's already near you, the wave's one
+  vanish happens instead.
+- **Spike:** the wave's one vanish. Close-ins only if the vanish is spent and she's far.
+- **Crunch** (the end of the shift): close-ins, and a vanish if the wave hasn't had one.
+
+When she steps out after a vanish, the wave breaks: the Director starts a recovery, and she
+backs off.
+
+**Fair, like every trick:**
+- Each wave starts with her eye-flicker tell, at least 0.8 s before any dash.
+- She only dashes while she can see you and you're looking her way.
+- Never during a chase, never in recovery, and never to within 6 m, so a blink can't kill you.
+  Only touch kills.
 
 **How it works.**
 - A small helper reads your eyes: Apple Vision on macOS, or MediaPipe
   ([`tools/blink`](../tools/blink/README.md)). It sends the game one number per frame over
   your own computer (localhost).
-- The game calibrates to your eyes (**F9**, 12 s), allows for the helper's delay, and lets Karen
-  act inside the ~300 ms a blink lasts. Blinks are always about that long, so once one is seen
-  ~120 ms in, the game can *predict* when your eyes open instead of racing to react.
+- The game calibrates to your eyes (**F9**, 12 s) and allows for the helper's delay. A dash is
+  instant, so it lands inside the ~300 ms a blink lasts. The simulated players blink too (a
+  synthetic, human-shaped trace), so the dash runs in the eval harness.
 - **B** blinks from the keyboard, with or without a camera.
 
 **Rules we don't break.**
@@ -104,29 +129,28 @@ clock never stops, which is exactly where today's agents fail.
 ingredient out of a recipe at a time to find out what each adds. If the dish tastes the same
 without it, it wasn't doing anything.
 
-**For Karen** there are seven versions, each changing exactly one thing from the one before. They play
+**For Karen** there are six versions, each changing exactly one thing from the one before. They play
 the same shifts (same seeds) against the same simulated players, so any difference comes from
-that one thing:
+that one thing. (The blink dash isn't a rung: it's part of the Director, on every rung from C.)
 
 | version | adds | the question |
 |---|---|---|
 | A | random patrol | the floor |
 | B | fixed patrol routes | does structure beat chance? |
-| C | the belief map (where you are, and where you aren't) | does guessing well help? |
+| C | the belief map (where you are, and where you aren't), goals, the Director and its blink dash | does guessing well help? |
 | D | learning which tricks work, during a shift | does short-term learning help? |
 | E | memory across shifts (the Ledger) | does long-term learning help? |
-| F | the blink | does acting while your eyes are shut help? |
-| G | a trained network picks the trick instead of D's learner (PPO, [`tools/rl`](../tools/rl/README.md)) | does deep RL beat the bandit? |
+| F | a trained network picks the trick instead of D's learner (PPO, [`tools/rl`](../tools/rl/README.md)) | does deep RL beat the bandit? |
 
-`-karen-rung A`…`G` picks a version on the command line. G needs the ML-Agents package and a
+`-karen-rung A`…`F` picks a version on the command line. F needs the ML-Agents package and a
 trained model; it is built, but not yet trained or measured.
 
 **What we found** (216 simulated shifts, [KAREN_RESULTS.md](KAREN_RESULTS.md)): the belief map
 finds players about twice as fast as patrols (51 s against about 100 s), and the fairness rules
-were never broken. **Learning (D–F) didn't beat C**: the bots don't react to her tricks, so
-there's little for her to learn from.
+were never broken. **Learning (D–E) didn't beat C**: the bots don't react to her tricks, so
+there's little for her to learn from. (That run's rung F was the old blink rung; it's gone.)
 
-**Next.** Bots that react to her warnings, and then real players — they come before rung G can
+**Next.** Bots that react to her warnings, and then real players — they come before rung F can
 be trained on anything worth learning.
 
 ---

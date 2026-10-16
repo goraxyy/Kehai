@@ -172,7 +172,6 @@ namespace Kehai.Karen
                 case "chase": return "chasing you!";
                 case "follow": return "walking after you";
                 case "favour": return "doing you a favour";
-                case "blink_advance": return "moving while your eyes are shut";
                 default: return id.Replace('_', ' ');
             }
         }

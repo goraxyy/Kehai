@@ -136,9 +136,13 @@ namespace Kehai.Karen
             else
             {
                 CurrentPhase = Phase.Build;
-                // The spike comes when the integral says the player has been coasting, or
-                // halfway through regardless — a calm player gets a bigger one.
-                bool due = spikeStarted < 0f && (Integral > config.integralLimit * 0.5f || t > shiftLength * 0.5f);
+                // Waves: after each spike and its recovery the tension builds again, and the
+                // next spike comes once the build has run long enough — sooner when the
+                // integral says the player has been coasting, and the first by halfway
+                // regardless. Between waves, real quiet (the blink dash keeps to the waves too).
+                float building = Time.time - Mathf.Max(shiftStarted + settle, Mathf.Max(spikeEnded, recoveryUntil));
+                bool due = building > 35f * scale &&
+                           (Integral > config.integralLimit * 0.5f || building > 75f * scale || (spikeStarted < 0f && t > shiftLength * 0.5f));
                 if (due)
                 {
                     spikeStarted = Time.time;
@@ -218,6 +222,7 @@ namespace Kehai.Karen
         // setpoint with no major tactic and no ambush.
         public void StartRecovery(float seconds, KarenContext c, string why)
         {
+            if (spikeStarted > 0f && spikeEnded < 0f) spikeEnded = Time.time;   // a recovery ends the wave's spike
             recoveryUntil = Mathf.Max(recoveryUntil, Time.time + seconds);
             Integral = Mathf.Min(Integral, 0f);
             c.Think("DIRECTOR", $"recovery window {seconds:0}s — {why}");

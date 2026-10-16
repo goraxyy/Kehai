@@ -11,7 +11,7 @@ namespace Kehai.Eval
 {
     public sealed class AblationPlan
     {
-        public KarenRung[] rungs = { KarenRung.A_RandomPatrol, KarenRung.B_ScriptedPatrol, KarenRung.C_BeliefGrid, KarenRung.D_Bandit, KarenRung.E_Ledger, KarenRung.F_Blink };
+        public KarenRung[] rungs = { KarenRung.A_RandomPatrol, KarenRung.B_ScriptedPatrol, KarenRung.C_BeliefGrid, KarenRung.D_Bandit, KarenRung.E_Ledger };
         public PlayerProfile[] profiles = { PlayerProfile.Efficient, PlayerProfile.Skittish, PlayerProfile.Reckless };
         public int careers = 1;
         public int shiftsPerCareer = 4;
