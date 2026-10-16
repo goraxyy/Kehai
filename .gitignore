@@ -99,7 +99,7 @@ My project/
 # Playtest settings (upload key)
 tools/playtest/.env
 
-# Trained models for Karen's rung G (tools/rl): personal, and binary
+# Trained models for Karen's rung F (tools/rl): personal, and binary
 Assets/!_Project/_Game/AI/Resources/
 Assets/!_Project/_Game/AI/Resources.meta
 
