@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    // Rung G: a trained policy picks the tactic (tools/rl/README.md).
+    // Rung F: a trained policy picks the tactic (tools/rl/README.md).
     //
-    // Everything else stays as rung F has it. The goal is still chosen by utility, the
+    // Everything else stays as rung E has it. The goal is still chosen by utility, the
     // candidates are still the ones the Director allows, and the chosen tactic is still
     // decomposed by the HTN planner, with its tell. The policy only answers one question
     // that the bandit answers on the rungs below: of these legal tactics, which one?
@@ -18,7 +18,7 @@ namespace Kehai.Karen
         string Name { get; }
 
         // Pick one of `candidates`, every one of them legal for `goal` right now; `bandit` is
-        // the one rung F would take. False means no decision was made, and the planner keeps
+        // the one rung E would take. False means no decision was made, and the planner keeps
         // the bandit's order.
         bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, Tactic bandit, KarenContext c, out int chosen, out string why);
 

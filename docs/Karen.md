@@ -775,9 +775,10 @@ silent — no pathing, no audio, no highlight. Waits up to 90 s. Aborts if panic
 (pillar 4). This is where the Ledger cashes out.
 
 **The chase.** Rare and expensive. Costs almost the whole tension budget, has a guaranteed
-recovery window afterwards, and drains burnout via the existing `SetChaseState(true)`. Being
-caught is not death — it's **a written warning, thirty seconds of lecture, and lost shift time.**
-Kehai's fail state is the clock, not the claw.
+recovery window afterwards, and drains burnout via the existing `SetChaseState(true)`. **Her
+touch kills** (changed 2026-10-16): the screen goes black and the shift starts again from the
+beginning. What she has learnt about you stays in the Ledger. The one exception is the favour
+below: a touch while she's bringing you something isn't an attack.
 
 **The favour.** Below `energy < 0.15`, Karen turns helpful: it brews you a coffee, it mops a spill,
 it tells you where the mop is, and it means it. A burnt-out employee who stays is the outcome it
@@ -797,7 +798,7 @@ constraints, enforced in code, asserted in tests.
    trigger while the player is in line of sight of the Body's current path.
 3. **Every tactic has a tell**, ≥ 0.8 s of lead time, perceivable through at least one sense the
    player currently has. If the lights are out, the tell must be audible.
-4. **Recovery windows are guaranteed.** After a chase or a caught event: ≥ 45 s at reduced
+4. **Recovery windows are guaranteed.** After a chase (a catch now ends the shift): ≥ 45 s at reduced
    setpoint, no major tactics, no ambush.
 5. **Never deny a nearly-finished task.** No sabotage of a task above 80% completion — that reads
    as spite, not tension. (Exception: the final shift of the career, deliberately, once.)
@@ -1119,12 +1120,12 @@ code departs from the plan above. Results of the ablation ladder are in
 | §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
 | §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
 | §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` (the agent test environment, ablation) |
-| blink channel | `Blink/Scripts/` + `tools/blink/` (see `IDEAS.md`, the blink mechanic) |
-| rung G, a trained tactic chooser | `AI/Scripts/Decision/Policy/` (the seam, observation, mask, reward; the ML-Agents agent) + `_Core/Editor/KehaiRl.cs` + `tools/rl/` |
+| blink channel | `Blink/Scripts/` + `tools/blink/` (the signal); `AI/Scripts/Decision/BlinkDash.cs` (what she does with it: the dash, in waves — see `IDEAS.md`, the blink mechanic) |
+| rung F, a trained tactic chooser | `AI/Scripts/Decision/Policy/` (the seam, observation, mask, reward; the ML-Agents agent) + `_Core/Editor/KehaiRl.cs` + `tools/rl/` |
 
 Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
-version control. `-nokaren`, `-karen-rung <A-G>` and `-karen-seed <n>` work on the command line, and
-rung G adds `-karen-shield on|off` and `-karen-policy <model>` (`tools/rl/README.md`).
+version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line, and
+rung F adds `-karen-shield on|off` and `-karen-policy <model>` (`tools/rl/README.md`).
 `-kehai-no-records` turns off shift records, replays and clip markers for long training runs.
 
 ### Keys
@@ -1145,12 +1146,18 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 
 ### Her speed
 
-Sneak 2, walk 3.4, hurry 5 and run 6.1 m/s (`KarenConfig`). Walking she is a little slower
-than a walking employee (4 m/s); hurrying she outpaces one; running she is only just slower
-than a sprint. `KarenBootstrap` caps every pace at 94% of the player's actual sprint speed, so a
-sprinting employee can always pull away, whatever the scene sets the sprint to. The one
-exception is the blink lunge (up to 3 m at 11 m/s while your eyes are shut), which is the
-point of the blink channel.
+She is slightly faster than you (changed 2026-10-16). `KarenBootstrap` sets her hurry and run to
+1.05 × the player's actual walk and sprint (`fasterThanPlayer`): with the default player, hurry
+4.2 and run 6.8 m/s against a 4 m/s walk and a 6.5 m/s sprint. On her rounds she still walks
+slower (3.4 m/s) and sneaks at 2. In the open a chase is lost; breaking her line of sight is
+how you get away. Her blink dash isn't movement at all — it's a jump while your eyes are shut
+(`IDEAS.md`, the blink mechanic).
+
+### Her body
+
+A black capsule the size of the player (and the shoppers): `KarenBootstrap` reads the player's
+own `CharacterController` and builds her to its height and radius. A silhouette, with nothing
+to read in it but where she is. Her gaze still shows, as the spot light and on the floor.
 
 ### Her gaze on the floor
 
@@ -1196,11 +1203,14 @@ the wall colliders, so the map is the store as it actually is.
   an unrelated PA chime can't count for (or against) it; a PA line is a tell in itself (the chime
   always plays 1.3 s before the words), and tells are timed on the clock, not by counting frames.
   Across the final ablation (216 shifts, `KAREN_RESULTS.md`) the guard recorded none.
-- **A written warning always comes with a release window** (lecture + 15 s with no second catch), at
-  every rung — without it the simplest rungs could catch you again the moment a lecture ended.
+- **A catch ends the shift** (since 2026-10-16; it used to be a written warning and a lecture).
+  In play the store loads again with the same shift; in the eval harness the episode ends,
+  counted as neither clocked out nor timed out.
+- **The blink dash isn't a rung.** It used to be: rung F added acting inside a blink. It's now
+  part of the Director's waves on every rung from C. The trained-policy rung that was G is now F.
 - **Learning scope per rung** follows the ablation table in `IDEAS.md` exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
-  two shifts), F adds the blink channel. G is F with the bandit's final pick handed to a policy
+  two shifts). F is E with the bandit's final pick handed to a policy
   trained by PPO (Unity ML-Agents): the arms still learn, feed goal utility and order the
   fallbacks, and the policy starts by imitating them. Its action mask is the planner's candidate
   list, so with the shield on it can only pick what the Director allows; with it off,

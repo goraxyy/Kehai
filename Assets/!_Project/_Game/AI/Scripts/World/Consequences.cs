@@ -3,50 +3,49 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    // What happens to *you*. Being caught is not death — it's a written warning, a lecture
-    // and lost shift time (Karen.md §8.6). Kehai's fail state is the clock, not the claw.
-    // And the three ways a career ends (§10.3).
+    // What happens to *you*. If she touches you, she gets you: the screen goes black and
+    // the shift starts again from the beginning (Karen.md §8.6). What she has learnt about
+    // you stays — it lives in her Ledger, not in the scene. And the three ways a career ends
+    // (§10.3).
     public static class Consequences
     {
-        public static bool LectureRunning { get; private set; }
+        // The death screen is up: the player is held still.
+        public static bool PlayerHeld { get; private set; }
 
         // A career has ended and its last screen is up: Enter goes to the main menu.
         public static bool CareerOver { get; internal set; }
         const string ToTheMenu = "\n\n<size=40%>[Enter] main menu</size>";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => CareerOver = false;
-
-        static readonly string[] LectureLines =
+        static void ResetStatics()
         {
-            "This is a formal conversation about your performance.",
-            "Running on the shop floor is a hazard to our customers.",
-            "Your wellbeing is a tracked metric. It has been tracked.",
-            "I'll be adding this to your file. The file is very long.",
-            "We are a family here. Families have rules.",
-            "You may return to work. The shift has been extended to accommodate this conversation."
-        };
+            CareerOver = false;
+            PlayerHeld = false;
+        }
 
-        public static IEnumerator Lecture(KarenBrain brain, int warning, float seconds, float overtime)
+        // In the eval harness (and any batch run) the shift simply ends: the next episode is
+        // a reset anyway. In play, the store loads again with the shift you were on.
+        public static IEnumerator Death(KarenBrain brain, float seconds)
         {
-            LectureRunning = true;
+            PlayerHeld = true;
             PlayerMotor motor = Object.FindAnyObjectByType<PlayerMotor>();
             if (motor != null) motor.movementLocked = true;
 
-            KarenScreen screen = KarenScreen.Ensure();
-            screen.Banner($"<color=#FF6F61>WRITTEN WARNING #{warning}</color>\n<size=60%>{brain.Ledger.PlayerName}</size>", 4f);
-            AddOvertime(overtime);
-
-            float per = seconds / LectureLines.Length;
-            foreach (string line in LectureLines)
+            if (KarenBootstrap.Override != null || Application.isBatchMode)
             {
-                if (brain.World != null && !brain.World.Pa.Jammed) brain.World.Pa.Announce(line);
-                else screen.Subtitle("<color=#FF6F61>" + GameNames.Antagonist + "</color>\n" + line, per);
-                yield return new WaitForSeconds(per);
+                ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
+                if (shift != null && shift.IsShiftActive) shift.EndShift();
+                if (motor != null) motor.movementLocked = false;
+                PlayerHeld = false;
+                yield break;
             }
 
-            if (motor != null) motor.movementLocked = false;
-            LectureRunning = false;
+            KarenScreen screen = KarenScreen.Ensure();
+            screen.SetFade(1f);
+            screen.Banner($"<color=#FF6F61>{GameNames.Antagonist.ToUpperInvariant()} GOT YOU</color>\n<size=50%>The shift starts again.</size>", seconds);
+            yield return new WaitForSecondsRealtime(seconds);
+            PlayerHeld = false;
+            ShiftRestart.Restart();
         }
 
         public static void AddOvertime(float seconds)

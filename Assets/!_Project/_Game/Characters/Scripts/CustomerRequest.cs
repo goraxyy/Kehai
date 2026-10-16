@@ -16,14 +16,10 @@ public class CustomerRequest : MonoBehaviour
 {
     public enum Stage { None, Asking, Talking, Escorting, Returning }
 
-    [Header("Chance")]
-    [Range(0f, 1f)]
-    [Tooltip("Odds of asking for help with the next thing on the list.")]
-    public float askChance = 0.5f;
-
-    [Range(0f, 1f)]
-    [Tooltip("Odds of asking when the shelf they walked to is empty.")]
-    public float missingAskChance = 0.85f;
+    // Odds that a shopper asks you for a product, at each chance to: the next thing on their
+    // list, or a shelf they found empty. Fixed here rather than on the prefab, so the scene
+    // can't quietly bring back the old 50–85 %.
+    public const float AskChance = 0.1f;
 
     [Tooltip("Give up and carry on shopping after this long unattended. 0 waits forever.")]
     public float patienceSeconds = 120f;
@@ -150,7 +146,7 @@ public class CustomerRequest : MonoBehaviour
     public IEnumerator Run()
     {
         Helped = false;
-        if (!ShouldAsk(askChance)) yield break;
+        if (!ShouldAsk(AskChance)) yield break;
         if (!PickDestination()) yield break;
 
         yield return Converse();
@@ -162,7 +158,7 @@ public class CustomerRequest : MonoBehaviour
     {
         Helped = false;
         if (product == null || target == null) yield break;
-        if (!ShouldAsk(missing ? missingAskChance : askChance)) yield break;
+        if (!ShouldAsk(AskChance)) yield break;
         if (!AimAt(target)) yield break;
 
         wantedProduct = product;

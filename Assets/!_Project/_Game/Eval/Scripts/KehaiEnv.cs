@@ -274,10 +274,12 @@ namespace Kehai.Eval
             if (Done) return true;
             if (Shift == null) return false;
 
-            bool clockedOut = !Shift.IsShiftActive && ShiftSeconds > 1f;
+            // If she got you, the shift is over but nobody clocked out.
+            bool killed = KarenBrain.Instance != null && KarenBrain.Instance.KilledThisShift;
+            bool clockedOut = !killed && !Shift.IsShiftActive && ShiftSeconds > 1f;
             bool timedOut = Shift.IsShiftActive && ShiftSeconds > Config.shiftSeconds + Config.overtimeCap
                             + (KarenBrain.Instance != null ? KarenBrain.Instance.Stats.Overtimes * 120f : 0f);
-            if (!clockedOut && !timedOut) return false;
+            if (!clockedOut && !timedOut && !killed) return false;
 
             Done = true;
             Metrics.End(clockedOut, timedOut, Burnout, Time.realtimeSinceStartup - wallStartedAt);

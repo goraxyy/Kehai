@@ -1,4 +1,4 @@
-// Rung G's bridge to Unity ML-Agents (tools/rl/README.md).
+// Rung F's bridge to Unity ML-Agents (tools/rl/README.md).
 //
 // Compiled only when the project defines KAREN_MLAGENTS, because it needs the ML-Agents
 // package (com.unity.ml-agents 4.1.0, which brings the Inference Engine with it), and this
@@ -189,7 +189,7 @@ namespace Kehai.Karen
         public override void Heuristic(in ActionBuffers actionsOut)
         {
             ActionSegment<int> discrete = actionsOut.DiscreteActions;
-            discrete[0] = heuristic >= 0 ? heuristic : 0;   // the bandit's pick: rung F, the teacher
+            discrete[0] = heuristic >= 0 ? heuristic : 0;   // the bandit's pick: rung E, the teacher
         }
 
         // ---- the episode ------------------------------------------------------------------

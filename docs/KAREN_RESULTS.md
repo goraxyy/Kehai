@@ -1,5 +1,11 @@
 # Karen — ablation results
 
+> **Note (2026-10-16).** The ladder has changed since these runs. Rung F here was the blink
+> channel. Blinking is now the Director's blink dash, used on every rung from C, and the
+> trained-policy rung is F. Karen's touch now kills (it used to be a written warning), she is
+> slightly faster than the player, and she is a black capsule. So these tables describe the
+> old Karen. Rerun before comparing anything new with them.
+
 The ablation ladder from [`IDEAS.md`](IDEAS.md#4-ablation), run headless against three scripted players.
 Each rung adds one mechanism, so a difference between neighbouring rungs is that mechanism.
 

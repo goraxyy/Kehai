@@ -32,7 +32,7 @@ namespace Kehai.Karen
         public Vector2 Player;
         public float PlayerYaw;
         public byte PlayerMotion;           // MotionState
-        public bool PlayerHeld;             // frozen by a lecture
+        public bool PlayerHeld;             // held by the death screen
         public float Energy;
 
         public bool KarenPresent;
@@ -112,7 +112,7 @@ namespace Kehai.Karen
                 f.PlayerYaw = Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg;
                 f.PlayerMotion = (byte)me.Motion;
             }
-            f.PlayerHeld = Consequences.LectureRunning;
+            f.PlayerHeld = Consequences.PlayerHeld;
             f.Energy = burnout != null ? burnout.Energy01 : 1f;
 
             KarenBrain brain = KarenBrain.Instance;

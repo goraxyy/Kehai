@@ -118,9 +118,7 @@ namespace Kehai.Karen
                 // §8.5 social
                 new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
                 // §8.6 you
-                new StalkTactic(), new AmbushTactic(), new ChaseTactic(), new FollowTactic(), new FavourTactic(),
-                // IDEAS.md blink channel
-                new BlinkAdvanceTactic()
+                new StalkTactic(), new AmbushTactic(), new ChaseTactic(), new FollowTactic(), new FavourTactic()
             };
         }
 

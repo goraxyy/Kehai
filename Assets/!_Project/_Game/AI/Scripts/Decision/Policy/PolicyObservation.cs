@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    // What rung G's policy sees when it picks a tactic: Karen's own state, never the player's.
+    // What rung F's policy sees when it picks a tactic: Karen's own state, never the player's.
     // It lives under Decision/, so the source scan in KarenTests holds it to that.
     //
     // A fixed-length vector (this) and a small picture of her belief (BeliefRaster). Both are

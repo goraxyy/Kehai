@@ -121,7 +121,7 @@ public class ShiftManager : MonoBehaviour
     }
 
     // More shift: the doors stay open longer and customers keep coming. Used by Karen's
-    // overtime and by the lecture after being caught.
+    // overtime.
     public void AddOvertime(float seconds)
     {
         if (!IsShiftActive || seconds <= 0f) return;

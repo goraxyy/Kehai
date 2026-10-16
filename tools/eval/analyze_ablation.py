@@ -4,7 +4,7 @@
     python analyze_ablation.py path/to/ablation_20260925_231500.jsonl > results.md
 
 Rungs see the same seeds (paired design), so differences against rung C are computed per
-(seed, shift) pair, and rung G (a trained tactic chooser, tools/rl) against rung F, the one
+(seed, shift) pair, and rung F (a trained tactic chooser, tools/rl) against rung E, the one
 thing it changes. Standard library only.
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ import math
 import sys
 from collections import Counter, defaultdict
 
-RUNGS = "ABCDEFG"
+RUNGS = "ABCDEF"
 PROFILES = ("efficient", "skittish", "reckless")
 
 
@@ -257,15 +257,15 @@ def main(path):
           f"{pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
           f"{pm((r['customers_lost'] for r in rs), '{:.1f}')} | {sum(r.get('karen_fairness_violations', 0) for r in rs)} |")
 
-    # Paired differences against C, and G against F (the one thing G changes).
+    # Paired differences against C, and F against E (the one thing F changes).
     if "C" in by_rung:
         w("\n### Each rung against rung C, paired by seed and shift\n")
         w("Positive = more than C. Pairs share the same customers and spills; Karen is the only difference.\n")
         paired(w, by_rung, "C", [g for g in rungs if g != "C"])
-    if "F" in by_rung and "G" in by_rung:
-        w("\n### Rung G against rung F, paired by seed and shift\n")
-        w("G is F with the bandit's pick handed to the trained policy. Positive = more than F.\n")
-        paired(w, by_rung, "F", ["G"])
+    if "E" in by_rung and "F" in by_rung:
+        w("\n### Rung F against rung E, paired by seed and shift\n")
+        w("F is E with the bandit's pick handed to the trained policy. Positive = more than E.\n")
+        paired(w, by_rung, "E", ["F"])
 
     belief_section(rows, rungs, w)
 

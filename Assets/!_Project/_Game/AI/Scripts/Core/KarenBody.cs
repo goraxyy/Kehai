@@ -52,8 +52,8 @@ namespace Kehai.Karen
             var body = root.AddComponent<KarenBody>();
             body.config = config;
             body.Agent = root.GetComponent<NavMeshAgent>();
-            body.Agent.radius = 0.4f;
-            body.Agent.height = 2.3f;
+            body.Agent.radius = config.bodyRadius;
+            body.Agent.height = config.bodyHeight;
             body.Agent.acceleration = 14f;
             body.Agent.angularSpeed = 360f;
             body.Agent.stoppingDistance = 0.2f;
@@ -73,8 +73,8 @@ namespace Kehai.Karen
             var touch = root.AddComponent<CapsuleCollider>();
             touch.isTrigger = true;
             touch.radius = config.catchRadius;
-            touch.height = 2.2f;
-            touch.center = Vector3.up * 1.1f;
+            touch.height = Mathf.Max(config.bodyHeight, config.catchRadius * 2f);
+            touch.center = Vector3.up * config.bodyHeight * 0.5f;
             var rb = root.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             rb.useGravity = false;
@@ -97,52 +97,36 @@ namespace Kehai.Karen
             return body;
         }
 
-        // How she looks, and nothing else: the figure, the badge, the visor and the spot light
-        // of her gaze, under `root`. The game gives it a body (Build); the replay dresses a
-        // puppet in it.
+        // How she looks, and nothing else: a black capsule the size of a person (the player's own
+        // size, from KarenBootstrap), and the spot light of her gaze, under `root`. A silhouette
+        // with nothing to read in it but where she is and where she's looking. The game gives it
+        // a body (Build); the replay dresses a puppet in it. There is no separate eye: her mood
+        // shows in her light.
         public static (Renderer eye, Light gaze) BuildLook(Transform root, KarenConfig config)
         {
-            // A tall, narrow, charcoal figure: a store manager seen from the far end of an aisle.
-            var charcoal = new Color(0.16f, 0.16f, 0.18f);
-            GameObject torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            torso.name = "Torso";
-            torso.transform.SetParent(root, false);
-            torso.transform.localPosition = new Vector3(0f, 1.05f, 0f);
-            torso.transform.localScale = new Vector3(0.62f, 1.05f, 0.45f);
-            torso.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(charcoal, 0.55f);
-            Destroy(torso.GetComponent<Collider>());
+            float height = Mathf.Max(1f, config.bodyHeight);
+            float radius = Mathf.Clamp(config.bodyRadius, 0.15f, height * 0.5f);
 
-            GameObject headGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            headGo.name = "Head";
-            headGo.transform.SetParent(root, false);
-            headGo.transform.localPosition = new Vector3(0f, 2.18f, 0f);
-            headGo.transform.localScale = new Vector3(0.38f, 0.42f, 0.38f);
-            headGo.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(new Color(0.22f, 0.22f, 0.24f), 0.7f);
-            Destroy(headGo.GetComponent<Collider>());
+            GameObject capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            capsule.name = "Body";
+            capsule.transform.SetParent(root, false);
+            capsule.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
+            capsule.transform.localScale = new Vector3(radius * 2f, height * 0.5f, radius * 2f);
+            capsule.GetComponent<Renderer>().sharedMaterial = KarenProps.Lit(new Color(0.01f, 0.01f, 0.012f), 0.1f);
+            Destroy(capsule.GetComponent<Collider>());
 
-            // The badge: a lanyard card, the only friendly thing about her.
-            GameObject badge = KarenProps.Box("Badge", Vector3.zero, new Vector3(0.12f, 0.16f, 0.02f), new Color(0.95f, 0.95f, 0.9f), root, collider: false);
-            badge.transform.localPosition = new Vector3(0.12f, 1.45f, 0.24f);
-
-            // The eye: a visor that glows, and a spot light that shows exactly where she is
-            // looking. Being able to see her gaze is part of being able to beat her.
-            GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            eye.name = "Eye";
-            eye.transform.SetParent(headGo.transform, false);
-            eye.transform.localPosition = new Vector3(0f, 0.05f, 0.42f);
-            eye.transform.localScale = new Vector3(0.7f, 0.12f, 0.1f);
-            Destroy(eye.GetComponent<Collider>());
-
+            // Her gaze: a spot light that shows exactly where she is looking. Being able to see
+            // her gaze is part of being able to beat her.
             var gazeGo = new GameObject("Gaze");
             gazeGo.transform.SetParent(root, false);
-            gazeGo.transform.localPosition = new Vector3(0f, 2.2f, 0.2f);
+            gazeGo.transform.localPosition = new Vector3(0f, height - 0.15f, radius * 0.5f);
             Light gaze = gazeGo.AddComponent<Light>();
             gaze.type = LightType.Spot;
             gaze.range = config.sightRange * 0.7f;
             gaze.spotAngle = Mathf.Min(90f, config.sightFov * 0.6f);
             gaze.intensity = 6f;
             gaze.shadows = LightShadows.None;
-            return (eye.GetComponent<Renderer>(), gaze);
+            return (null, gaze);
         }
 
         // Her eye and her light, by mood.
@@ -271,9 +255,24 @@ namespace Kehai.Karen
                     transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(d), 240f * Time.deltaTime);
             }
 
+            KeepPersonalSpace();
             Head.localRotation = Quaternion.Euler(8f, headYaw, 0f);
             Footsteps();
             OpenDoorsInTheWay();
+        }
+
+        // Her touch kills (KarenBrain.OnTouched), so walking up to you is something she only
+        // does running — a chase, a lunge. Following, stalking, searching, she stops short of
+        // where she sees you, or saw you a moment ago, and watches; she moves again when you do.
+        void KeepPersonalSpace()
+        {
+            if (CurrentPace == Pace.Run || burstUntil > 0f || !Agent.isOnNavMesh || Agent.isStopped) return;
+            if (Sight == null || !(Sight.SeesNow || Sight.Time_SinceSeen() < 3f)) return;
+            Vector3 d = Sight.LastSeenPosition - transform.position;
+            d.y = 0f;
+            if (d.magnitude >= config.personalSpace) return;
+            Agent.isStopped = true;
+            TurnToward(Sight.LastSeenPosition);
         }
 
         // She doesn't walk through doors: she opens them, and you hear it. Locked ones are

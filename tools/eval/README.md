@@ -49,6 +49,10 @@ door is opened on reaching it (pressing E), a shopper standing in the way is ste
 customer being escorted doesn't physically block the guide. An action that stays wedged fails with
 a message rather than burning the shift.
 
+Since Karen's touch kills (2026-10-16), the body also bends its path round her when she's just
+ahead, the way a person who can see her would; it only steers, and choosing to run or hide is
+still the agent's.
+
 ## What comes back
 
 Per episode: completion, work done by kind, queue waits, customers lost, energy, Karen's
@@ -74,7 +78,7 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
       -ablation-careers 2 -ablation-shifts 4 -ablation-seconds 150 -eval-timeout-min 120
 ```
 
-runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–F and
+runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–E and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
 
 A career's shifts are played back to back: between them the bot walks to the time clock, and if
@@ -83,7 +87,7 @@ written (the rest of that career is skipped, with a warning in the log), and no 
 seed, shift) is written twice. `analyze_ablation.py` drops such repeated rows from runs made
 before 2026-10-15, when a failed clock-in logged a copy of the previous shift.
 
-Rung G (a trained tactic chooser) isn't in the default list, as it needs the ML-Agents package
-and a model: add it with `-ablation-rungs FG` (`tools/rl/README.md`). `-ablation-interleave`
+Rung F (a trained tactic chooser) isn't in the default list, as it needs the ML-Agents package
+and a model: add it with `-ablation-rungs EF` (`tools/rl/README.md`). `-ablation-interleave`
 plays the profiles in turn, career by career, rather than one profile's careers at a time; RL
 training uses it to keep the profiles mixed.

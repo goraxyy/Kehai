@@ -163,8 +163,8 @@ namespace Kehai.Karen
             if (ClosestAt >= 0f)
                 Findings.Add($"The closest she got was {ClosestDistance:0.0} m, at {Clock(ClosestAt)}" + (ClosestWhere == "somewhere" ? "." : $", near {ClosestWhere}."));
             if (Chases > 0 || Catches > 0)
-                Findings.Add($"She chased you {Chases} time{(Chases == 1 ? "" : "s")} and caught you {Catches} time{(Catches == 1 ? "" : "s")}" +
-                             (Lectured > 0f ? $" — {Clock(Lectured)} spent being lectured." : "."));
+                Findings.Add($"She chased you {Chases} time{(Chases == 1 ? "" : "s")}" +
+                             (Catches > 0 ? " and got you: the shift had to start again." : " and never got you."));
             if (Tricks.Count > 0)
                 Findings.Add($"She changed plans {Tricks.Values.Sum()} times; what she did most: " +
                              string.Join(", ", Tricks.OrderByDescending(p => p.Value).Take(4).Select(p => $"{p.Key} ×{p.Value}")) + ".");

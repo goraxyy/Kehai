@@ -56,7 +56,7 @@ namespace Kehai.Karen
 
         // Rule 4: no tactic above tier 1 while the employee is settling into the shift or
         // recovering from a chase. The Director's gate already keeps every rung inside this;
-        // the check is for rung G with its shield off, where a trained policy may try.
+        // the check is for rung F with its shield off, where a trained policy may try.
         public static bool CheckPacing(Tactic tactic, KarenDirector director)
         {
             if (tactic.Tier < 2) return true;

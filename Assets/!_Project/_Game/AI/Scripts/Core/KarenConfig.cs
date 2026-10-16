@@ -3,16 +3,16 @@ using UnityEngine;
 namespace Kehai.Karen
 {
     // The ablation ladder from IDEAS.md (Ablation). Each rung adds exactly one mechanism to the one
-    // below it, so any difference in the results table is attributable.
+    // below it, so any difference in the results table is attributable. The blink dash isn't a
+    // rung: it is part of her pacing (BlinkDash), on every rung that has the Director (C up).
     public enum KarenRung
     {
         A_RandomPatrol,      // wanders at random; chases what it sees
         B_ScriptedPatrol,    // fixed tour of the store, last-seen search, random sabotage
-        C_BeliefGrid,        // + belief grid, negative information, goals, tactics, pacing
+        C_BeliefGrid,        // + belief grid, negative information, goals, tactics, pacing, the blink dash
         D_Bandit,            // + learns which tactics land on this player, within a shift
         E_Ledger,            // + remembers the player across shifts (routes, hiding spots)
-        F_Blink,             // + the blink channel from the webcam
-        G_Policy             // F, with the bandit's tactic choice replaced by a trained policy (tools/rl)
+        F_Policy             // E, with the bandit's tactic choice replaced by a trained policy (tools/rl)
     }
 
     // What each rung switches on. Kept as flags rather than scattered `rung >= X` checks,
@@ -23,10 +23,9 @@ namespace Kehai.Karen
         public readonly bool Goals;        // utility goals, HTN tactics, the Director
         public readonly bool Bandit;       // tactic selection learns from panic deltas
         public readonly bool Persistent;   // bandit + player model survive between shifts
-        public readonly bool Blink;        // eyes-closed windows are exploited
         public readonly bool Policy;       // a trained policy picks the tactic instead of the bandit
 
-        // Rung G keeps the bandit's arms learning, exactly as in F: they still feed goal utility,
+        // Rung F keeps the bandit's arms learning, exactly as in E: they still feed goal utility,
         // they order the fallbacks, and their pick is what the policy imitates before RL starts.
         // Only the final choice of tactic moves to the policy.
         public RungFeatures(KarenRung rung)
@@ -35,12 +34,11 @@ namespace Kehai.Karen
             Goals = rung >= KarenRung.C_BeliefGrid;
             Bandit = rung >= KarenRung.D_Bandit;
             Persistent = rung >= KarenRung.E_Ledger;
-            Blink = rung >= KarenRung.F_Blink;
-            Policy = rung == KarenRung.G_Policy;
+            Policy = rung == KarenRung.F_Policy;
         }
 
         public override string ToString() =>
-            $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} blink={Blink} policy={Policy}";
+            $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} policy={Policy}";
     }
 
     // Every tunable in one place, with the Karen.md section it comes from. Plain data so an
@@ -49,7 +47,7 @@ namespace Kehai.Karen
     public class KarenConfig
     {
         [Header("Identity")]
-        public KarenRung rung = KarenRung.F_Blink;
+        public KarenRung rung = KarenRung.E_Ledger;
         [Tooltip("0 = pick from the clock. Any other value makes every decision reproducible (§9.8).")]
         public int seed = 0;
 
@@ -62,14 +60,22 @@ namespace Kehai.Karen
         public float planBudgetMs = 3f;
 
         [Header("Body")]
-        // Walking, she's a little slower than you walking; hurrying, she outpaces you unless you
-        // sprint; running, she is only just slower than a sprint. Never faster: KarenBootstrap caps every pace
-        // under the player's actual sprint speed, whatever the scene sets it to.
+        // On her rounds she walks a little slower than you; hurrying she outpaces your walk, and
+        // running she is slightly faster than your sprint, so a chase in the open is lost: break
+        // her line of sight. KarenBootstrap sets hurry and run from the player's actual speeds.
         public float sneakSpeed = 2f;
         public float walkSpeed = 3.4f;
-        public float hurrySpeed = 5f;
-        public float runSpeed = 6.1f;
-        public float catchRadius = 1.1f;
+        public float hurrySpeed = 4.2f;
+        public float runSpeed = 6.8f;
+        [Tooltip("Hurry and run as a multiple of the player's walk and sprint.")]
+        public float fasterThanPlayer = 1.05f;
+        [Tooltip("Unless she's running (a chase), she stops this far from you: her touch kills, and she doesn't walk into you by accident.")]
+        public float personalSpace = 2.2f;
+        [Tooltip("Her touch: contact within this of her centre (plus your own radius) gets you — her body's radius and a hand's breadth, so passing her in an aisle isn't contact.")]
+        public float catchRadius = 0.5f;
+        [Tooltip("Her body: a capsule this tall and wide — the player's own size, set at install by KarenBootstrap.")]
+        public float bodyHeight = 2f;
+        public float bodyRadius = 0.4f;
         public float sightRange = 18f;
         public float sightFov = 120f;
         [Tooltip("Where she stands when the game starts and when each shift begins: the floor nearest this point. " +
@@ -115,14 +121,31 @@ namespace Kehai.Karen
         public float ambushAbortPanic = 0.85f;
 
         [Header("Being caught (§8.6)")]
-        public float lectureSeconds = 30f;
+        [Tooltip("Seconds of the death screen before the shift starts again.")]
+        public float deathScreenSeconds = 3.5f;
         public float overtimePerCatch = 60f;
 
-        [Header("Blink channel (IDEAS.md)")]
-        public float blinkAdvanceSpeed = 11f;
-        public float blinkAdvanceMaxDistance = 3f;
+        [Header("Blink dash (IDEAS.md, the blink mechanic)")]
+        [Tooltip("Close in only when she's at least this far from you.")]
+        public float dashCloseInMinRange = 10f;
+        [Tooltip("A dash never ends nearer you than this.")]
+        public float dashKeepAway = 6f;
+        [Tooltip("How much of the gap one close-in covers, and its limits in metres.")]
+        public float dashStepFraction = 0.45f;
+        public float dashMinStep = 2.5f;
+        public float dashMaxStep = 9f;
+        public int dashCloseInsPerWave = 2;
+        [Tooltip("Where a vanish may reappear: this far from where she last saw you, out of your sight.")]
+        public float dashVanishMin = 8f;
+        public float dashVanishMax = 16f;
+        [Tooltip("Chance that a vanish reappears behind you rather than ahead.")]
+        public float dashBehindChance = 0.3f;
+        public float dashCooldown = 6f;
+        [Tooltip("How long she waits, silent, after a vanish; she steps out when you come this close.")]
+        public float lurkSeconds = 25f;
+        public float revealRange = 6f;
 
-        [Header("Trained policy (rung G, tools/rl)")]
+        [Header("Trained policy (rung F, tools/rl)")]
         [Tooltip("The policy may only pick what the Director allows: tier permission, cooldowns, tension budget. " +
                  "Off is for finding loopholes — it drops those gates, and FairnessGuard counts what slips through.")]
         public bool shield = true;

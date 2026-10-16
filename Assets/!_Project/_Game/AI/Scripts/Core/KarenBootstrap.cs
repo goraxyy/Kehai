@@ -9,10 +9,10 @@ namespace Kehai.Karen
     // Command line (for builds and the eval harness):
     //   -replay <file.krec>  watch a recorded shift instead (ReplayMode)
     //   -nokaren              run the store without her
-    //   -karen-rung <A..G>    choose the ablation rung
+    //   -karen-rung <A..F>    choose the ablation rung
     //   -karen-seed <n>       seed every decision (0 = clock)
-    //   -karen-shield on|off  rung G: keep the policy inside the Director's gates (default on)
-    //   -karen-policy <name>  rung G: the model under Resources/KarenPolicy/ to run
+    //   -karen-shield on|off  rung F: keep the policy inside the Director's gates (default on)
+    //   -karen-policy <name>  rung F: the model under Resources/KarenPolicy/ to run
     //   -kehai-no-records     write no shift records, replays or clip markers (RL training runs
     //                         thousands of shifts)
     public static class KarenBootstrap
@@ -68,7 +68,7 @@ namespace Kehai.Karen
             var brain = root.AddComponent<KarenBrain>();
             if (Override != null) brain.config = Override.Clone();
             ApplyCommandLine(brain.config);
-            KeepBelowSprint(brain.config);
+            MatchPlayer(brain.config);
             if (!NoRecords)
             {
                 root.AddComponent<ShiftRecorder>();
@@ -97,21 +97,28 @@ namespace Kehai.Karen
             }
         }
 
-        // However fast she gets, a sprinting employee can always pull away from her: every pace
-        // stays under the player's sprint speed as the scene actually has it.
-        static void KeepBelowSprint(KarenConfig config)
+        // She is the player's size, and slightly faster: hurrying she outpaces your walk and
+        // running your sprint (fasterThanPlayer), as the scene actually sets them. In the open
+        // a chase is lost — break her line of sight. On her rounds she still walks slower.
+        static void MatchPlayer(KarenConfig config)
         {
             PlayerMotor motor = Object.FindAnyObjectByType<PlayerMotor>();
-            if (motor != null) KeepBelowSprint(config, motor.sprintSpeed);
+            if (motor == null) return;
+            MatchPlayer(config, motor.walkSpeed, motor.sprintSpeed);
+            CharacterController body = motor.GetComponent<CharacterController>();
+            if (body != null)
+            {
+                config.bodyHeight = Mathf.Max(1.5f, body.height);
+                config.bodyRadius = Mathf.Clamp(body.radius, 0.25f, 0.6f);
+            }
         }
 
-        public static void KeepBelowSprint(KarenConfig config, float sprintSpeed)
+        public static void MatchPlayer(KarenConfig config, float walkSpeed, float sprintSpeed)
         {
-            float cap = sprintSpeed * 0.94f;
-            config.sneakSpeed = Mathf.Min(config.sneakSpeed, cap);
-            config.walkSpeed = Mathf.Min(config.walkSpeed, cap);
-            config.hurrySpeed = Mathf.Min(config.hurrySpeed, cap);
-            config.runSpeed = Mathf.Min(config.runSpeed, cap);
+            config.hurrySpeed = walkSpeed * config.fasterThanPlayer;
+            config.runSpeed = sprintSpeed * config.fasterThanPlayer;
+            config.walkSpeed = Mathf.Min(config.walkSpeed, walkSpeed * 0.9f);
+            config.sneakSpeed = Mathf.Min(config.sneakSpeed, walkSpeed * 0.6f);
         }
 
         static void ApplyCommandLine(KarenConfig config)
@@ -136,10 +143,10 @@ namespace Kehai.Karen
         // "C", "c", "C_BeliefGrid" and "2" all mean rung C.
         public static bool TryParseRung(string text, out KarenRung rung)
         {
-            rung = KarenRung.F_Blink;
+            rung = KarenRung.E_Ledger;
             if (string.IsNullOrEmpty(text)) return false;
             text = text.Trim();
-            int last = (int)KarenRung.G_Policy;
+            int last = (int)KarenRung.F_Policy;
             if (int.TryParse(text, out int index) && index >= 0 && index <= last) { rung = (KarenRung)index; return true; }
             char letter = char.ToUpperInvariant(text[0]);
             if (letter >= 'A' && letter <= 'A' + last) { rung = (KarenRung)(letter - 'A'); return true; }

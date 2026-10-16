@@ -154,7 +154,7 @@ namespace Kehai.Eval
                 ["holding"] = carry != null && carry.IsCarrying ? ItemName(carry.currentItem) : null,
                 ["inventory"] = carry != null ? carry.items.Select(i => i != null ? ItemName(i) : null).ToList() : new List<string>(),
                 ["active_slot"] = carry != null ? carry.activeSlot : 0,
-                ["frozen_by_lecture"] = Consequences.LectureRunning
+                ["held_by_karen"] = Consequences.PlayerHeld
             };
 
             // The HUD, exactly as the player sees it — lies included.

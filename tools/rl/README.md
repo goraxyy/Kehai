@@ -1,6 +1,6 @@
-# Rung G: training Karen's tactic choice with PPO
+# Rung F: training Karen's tactic choice with PPO
 
-Rung G is rung F with one change: when Karen's planner needs a tactic, a small neural network
+Rung F is rung E with one change: when Karen's planner needs a tactic, a small neural network
 trained with reinforcement learning picks it instead of the bandit. Everything else stays hand-built:
 
 - the belief grid
@@ -11,7 +11,7 @@ trained with reinforcement learning picks it instead of the bandit. Everything e
 - the fairness rules
 
 It sits on the ablation ladder ([`KAREN_RESULTS.md`](../../docs/KAREN_RESULTS.md)), so "does a
-learned policy beat the bandit?" is answered the same way as every other rung: paired against F
+learned policy beat the bandit?" is answered the same way as every other rung: paired against E
 on the same seeds.
 
 **Where it stands:** the pipeline works end to end, but there is no trained result yet. Against
@@ -68,8 +68,8 @@ is also zipped as `Builds/KehaiTrain/Windows.zip`.
 
 ## Record demonstrations
 
-Before PPO starts, the policy learns to copy rung F's bandit (`behavioral_cloning` in
-`karen_ppo.yaml`), so it starts at F's level instead of picking at random. Record about five
+Before PPO starts, the policy learns to copy rung E's bandit (`behavioral_cloning` in
+`karen_ppo.yaml`), so it starts at E's level instead of picking at random. Record about five
 minutes of the bandit's choices:
 
 ```bash
@@ -84,7 +84,7 @@ tools/rl/train.sh karen_g1 2 tools/rl/karen_ppo.yaml --resume
 ```
 
 - Each copy plays the ablation's shifts 4–7 against the three simulated players in turn, with
-  rung G and no shift records written. Every shift is one episode.
+  rung F and no shift records written. Every shift is one episode.
 - Each copy gets its own seeds and its own `kehai_eval/worker_<port>/` folder.
 - The copies run in batch mode, so they are silent and open no window.
 - **On the 8 GB Mac, close the Unity editor first.** Two copies are the most it has room for.
@@ -117,21 +117,21 @@ This runs a few hundred steps on a tiny network and should end with `results/smo
 
 1. Copy it to `Assets/!_Project/_Game/AI/Resources/KarenPolicy/karen.onnx`. That folder is
    gitignored, because models are personal.
-2. Run rung G against F on the same shifts:
+2. Run rung F against E on the same shifts:
    ```bash
-   Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai-ablation -ablation-rungs FG \
+   Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai-ablation -ablation-rungs EF \
          -ablation-careers 3 -ablation-shifts 4 -ablation-start 4
    ```
-   In a build or in play mode, use `-karen-rung G` instead. To run a model under another name in
+   In a build or in play mode, use `-karen-rung F` instead. To run a model under another name in
    that folder, add `-karen-policy <name>`.
 
-Where rung G's choice comes from:
+Where rung F's choice comes from:
 
 | situation | what picks the tactic |
 |---|---|
 | a trainer is connected | the policy being trained |
 | a model is in `KarenPolicy/` | that model, taking its best guess |
-| neither | the bandit, as on rung F |
+| neither | the bandit, as on rung E |
 | `KAREN_MLAGENTS` isn't defined | the bandit (the log says so once) |
 
 The thought log keeps working. A PLAN line reads, for example, `policy: the bandit would have
