@@ -124,12 +124,12 @@ namespace Kehai.Eval
             Vector3 to = karen.Body.Position - here;
             to.y = 0f;
             float distance = to.magnitude;
-            if (distance > 4f || distance < 0.01f) return move;
-            if (Vector3.Dot(to / distance, move) < 0.2f) return move;      // not in the way
+            if (distance > 6f || distance < 0.01f) return move;
+            if (Vector3.Dot(to / distance, move) < 0.1f) return move;      // not in the way
             Vector3 left = Vector3.Cross(Vector3.up, move);
             float away = Vector3.Dot(to, left) > 0f ? -1f : 1f;
-            float push = Mathf.Clamp01((4f - distance) / 3f);
-            return (move * (1f - push) + left * away * push * 1.2f).normalized;
+            float push = Mathf.Clamp01((6f - distance) / 4.5f);
+            return (move * (1f - push) + left * away * push * 1.5f).normalized;
         }
 
         public void Stop()

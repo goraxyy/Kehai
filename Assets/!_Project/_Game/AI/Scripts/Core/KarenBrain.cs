@@ -845,11 +845,13 @@ namespace Kehai.Karen
             AbortPlan();
             Body.Stop();
             Body.SetMood(KarenBody.Mood.Hunt);
-            chasing = false;
             Burnout?.SetChaseState(false);
 
-            Log.Write(Record("CAUGHT", $"CAUGHT   she got you at {Map.Describe(Body.Position)}", null, null,
+            string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
+            Log.Write(Record("CAUGHT", $"CAUGHT   she got you at {Map.Describe(Body.Position)} ({doing}, {Body.CurrentPace}, chasing {chasing})", null, null,
                                 "contact — the shift starts again"));
+            Debug.Log($"{GameNames.Antagonist} got the employee at {Map.Describe(Body.Position)} after {ShiftTime:0}s: {doing}, pace {Body.CurrentPace}, chasing {chasing}");
+            chasing = false;
             World.PlayTell(TellKind.RevealSting, Body.Position, 0f);
             KarenNarrator.Say(StoryKind.Chase, $"{GameNames.Antagonist} got you. The shift starts again.", Body.Position);
             StartCoroutine(Consequences.Death(this, config.deathScreenSeconds));
