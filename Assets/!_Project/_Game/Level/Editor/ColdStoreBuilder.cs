@@ -10,6 +10,7 @@ public static class ColdStoreBuilder
 {
     public const string RootName="Cold Chain - Retail and Storage";
     public static readonly string[] Models={"RetailChiller","StorageChiller","HideChiller","OutdoorWasteContainer","RecyclingBin"};
+    public const float CabinetDepth=1.4f;
     static Material shell,trim,steel,glass;
     static Transform root;
     public static Material Glass(string name,float alpha)
@@ -31,7 +32,7 @@ public static class ColdStoreBuilder
             {
                 if(name=="OutdoorWasteContainer"){OutdoorContainer(p);return;}
                 if(name=="RecyclingBin"){RecyclingBin(p);return;}
-                bool hide=name=="HideChiller",retail=name=="RetailChiller";float depth=hide?2.1f:1.2f;
+                bool hide=name=="HideChiller",retail=name=="RetailChiller";float depth=retail?1.2f:CabinetDepth;
                 B(p,"Left insulated wall",new Vector3(-.86f,1.3f,0),new Vector3(.08f,2.6f,depth),shell,true);
                 B(p,"Right insulated wall",new Vector3(.86f,1.3f,0),new Vector3(.08f,2.6f,depth),shell,true);
                 B(p,"Insulated back",new Vector3(0,1.3f,depth*.5f-.04f),new Vector3(1.64f,2.6f,.08f),shell,true);
@@ -68,7 +69,12 @@ public static class ColdStoreBuilder
                         PriceRail(go.transform,"Pricetag "+(i+1),new Vector3(0,y-.025f,-.515f),1.5f,.10f,shell);
                     }
                 }
-                if(marker.hidingSpace)go.AddComponent<ColdHideInterior>().insideMaterial=Glass("Chiller interior view",.23f);
+                if(marker.hidingSpace)
+                {
+                    var hiding=go.AddComponent<ColdHideInterior>();
+                    hiding.interior=new Bounds(new Vector3(0,1.2f,0),new Vector3(1.58f,2.2f,CabinetDepth-.16f));
+                    hiding.insideMaterial=Glass("Chiller interior view",.23f);
+                }
                 PrefabUtility.SaveAsPrefabAsset(go,path);
             }
             finally{PrefabUtility.UnloadPrefabContents(go);}
@@ -90,19 +96,19 @@ public static class ColdStoreBuilder
         foreach(float z in new[]{-171.3f,-168.9f})Cabinet(retail,"RetailChiller",new Vector3(25.72f,0,z),-90,products,ref next);
         next=0;
         // Fill usable wall runs exactly. Square corner closures stop cabinets interpenetrating.
-        WallRun(storage,56.275f,66.1f,-175.075f,0,products,ref next,new[]{1,4});
-        WallRun(storage,68.9f,83.725f,-175.075f,0,products,ref next,new[]{1,5});
-        WallRun(storage,56.275f,83.725f,-189.925f,180,products,ref next,new[]{1,5,8,12});
-        WallRun(storage,-188.725f,-183.9f,55.075f,-90,products,ref next,new int[0]);
-        WallRun(storage,-181.1f,-176.275f,55.075f,-90,products,ref next,new int[0]);
-        WallRun(storage,-188.725f,-176.275f,84.925f,90,products,ref next,new int[0]);
-        foreach(float x in new[]{55.675f,84.325f})foreach(float z in new[]{-175.675f,-189.325f})
-            Primitive(storage,"Insulated corner closure",new Vector3(x,1.3f,z),new Vector3(1.2f,2.6f,1.2f),shell,true);
+        WallRun(storage,56.475f,66.1f,-175.075f,0,products,ref next,new[]{1,4});
+        WallRun(storage,68.9f,83.525f,-175.075f,0,products,ref next,new[]{1,5});
+        WallRun(storage,56.475f,83.525f,-189.925f,180,products,ref next,new[]{1,5,8,12});
+        WallRun(storage,-188.525f,-183.9f,55.075f,-90,products,ref next,new int[0]);
+        WallRun(storage,-181.1f,-176.475f,55.075f,-90,products,ref next,new int[0]);
+        WallRun(storage,-188.525f,-176.475f,84.925f,90,products,ref next,new int[0]);
+        foreach(float x in new[]{55.775f,84.225f})foreach(float z in new[]{-175.775f,-189.225f})
+            Primitive(storage,"Insulated corner closure",new Vector3(x,1.3f,z),new Vector3(CabinetDepth,2.6f,CabinetDepth),shell,true);
         int islandNumber=0;
-        foreach(float centre in new[]{60.1f,66.1f,73.9f,79.9f})
+        foreach(float centre in new[]{62.2f,77.8f})
         {
             var island=new GameObject("Back-to-back island "+(++islandNumber)).transform;island.SetParent(storage,false);
-            foreach(float x in new[]{centre-.9f,centre+.9f})foreach(float z in new[]{-181.9f,-183.1f})
+            foreach(float x in new[]{centre-2.7f,centre-.9f,centre+.9f,centre+2.7f})foreach(float z in new[]{-182.5f+CabinetDepth*.5f,-182.5f-CabinetDepth*.5f})
                 Cabinet(island,"StorageChiller",new Vector3(x,0,z),z>-182.5f?180:0,products,ref next);
         }
         // The original hinge is at z=-183.5; its 2m leaf opens across -183.5 .. -181.5.
@@ -116,6 +122,13 @@ public static class ColdStoreBuilder
             var p=(GameObject)PrefabUtility.InstantiatePrefab(StoreFinishModels.Prefab("HVAC"),root);
             p.name="Cold-room evaporator";p.transform.position=new Vector3(x,4.5f,-186.7f);
             p.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild=true;
+            // A compact service riser supports the unit up to the roof, between the lamp rows.
+            var b=StaffRoomBuilder.BoundsOf(p);float height=8f-b.max.y;
+            if(height>0)
+            {
+                var riser=Primitive(root,"Evaporator service riser",new Vector3(x,b.max.y+height*.5f,-186.7f),new Vector3(1.8f,height,.5f),shell,true);
+                riser.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild=true;
+            }
         }
         Primitive(root,"Cold-room drain",new Vector3(68.5f,.025f,-182.7f),new Vector3(.25f,.02f,10),trim,false);
         for(int i=0;i<12;i++)Primitive(root,"Drain grille",new Vector3(68.5f,.037f,-187.2f+i*.8f),new Vector3(.26f,.006f,.025f),steel,false);
@@ -127,7 +140,7 @@ public static class ColdStoreBuilder
         int count=Mathf.FloorToInt((to-from)/1.8f);float width=(to-from)/count;
         for(int i=0;i<count;i++)
         {
-            bool hide=Array.IndexOf(empty,i)>=0;float depth=hide?2.1f:1.2f;
+            bool hide=Array.IndexOf(empty,i)>=0;float depth=CabinetDepth;
             float along=from+(i+.5f)*width;
             Vector3 at=Mathf.Abs(yaw)==90?new Vector3(wall+(yaw<0?depth*.5f:-depth*.5f),0,along):new Vector3(along,0,wall+(yaw==0?-depth*.5f:depth*.5f));
             var go=Cabinet(parent,hide?"HideChiller":"StorageChiller",at,yaw,products,ref next);
@@ -145,7 +158,7 @@ public static class ColdStoreBuilder
             marker.products=new string[3];for(int i=0;i<3;i++)marker.products[i]=own[next++%own.Count].Id;
         }
         go.name=(marker.hidingSpace?"Empty cabinet - hiding space":(marker.retail?"Retail ":"Storage ")+(marker.frozen?"freezer":"chiller"))+" "+parent.childCount.ToString("00");
-        float labelFront=marker.hidingSpace?-1.095f:-.645f;
+        float labelFront=-(marker.retail?1.2f:CabinetDepth)*.5f-.045f;
         Primitive(go.transform,"Temperature label plate",new Vector3(0,2.38f,labelFront),new Vector3(1.45f,.18f,.008f),shell,false);
         Label(go.transform,marker.hidingSpace?"EMPTY / OUT OF SERVICE":marker.frozen?"FROZEN  -18 C":"CHILLED  +4 C",new Vector3(0,2.38f,labelFront-.008f),0,1.3f,.14f,false);
         return go;

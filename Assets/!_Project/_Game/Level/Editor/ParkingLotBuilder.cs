@@ -32,6 +32,8 @@ public static class ParkingLotBuilder
         foreach(string name in Models)StaffRoomModels.BuildCustom(name,StoreFinishModels.Folder,p=>Model(p,name));
         var old=GameObject.Find(RootName);if(old!=null)Undo.DestroyObjectImmediate(old);
         root=new GameObject(RootName).transform;Undo.RegisterCreatedObjectUndo(root.gameObject,"Build measured parking lot");spaces=cars=0;
+        var oldForecourt=GameObject.Find(StoreFinishBuilder.RootName+"/Forecourt floor");
+        if(oldForecourt!=null)Undo.DestroyObjectImmediate(oldForecourt);
         Surface("Parking floor",0,-105.5f,98,52,.024f,asphalt);
         Surface("Public approach road floor",-7,-53.5f,112,10,.024f,asphalt);
         Surface("Entrance pedestrian apron",10,-110,80,4.5f,.12f,paving);
@@ -86,7 +88,7 @@ public static class ParkingLotBuilder
         foreach(var p in LightPositions())
         {
             var go=Place("ParkingLamp","Parking lighting",p,0);var lamp=new GameObject("Downlight");lamp.transform.SetParent(go.transform,false);lamp.transform.localPosition=new Vector3(0,5.8f,0);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
-            var l=lamp.AddComponent<Light>();l.type=LightType.Spot;l.spotAngle=125;l.range=20;l.intensity=20;l.color=new Color(1,.9f,.73f);
+            var l=lamp.AddComponent<Light>();l.type=LightType.Spot;l.spotAngle=125;l.range=20;l.intensity=55;l.color=new Color(1,.9f,.73f);
         }
         foreach(var p in new[]{new Vector3(20,0,-55.25f),new Vector3(35,0,-55.25f),new Vector3(54,0,-55.25f),new Vector3(76,0,-55.25f),new Vector3(37.25f,0,-75),new Vector3(37.25f,0,-85),new Vector3(37.25f,0,-94),new Vector3(-3,0,-70),new Vector3(-3,0,-88)})Place("ParkingTree","Parking tree",p,0);
         var surface=Kehai.Karen.KarenWorld.StoreSurface();if(surface!=null)

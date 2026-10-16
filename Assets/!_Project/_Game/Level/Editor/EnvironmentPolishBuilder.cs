@@ -36,11 +36,23 @@ public static class EnvironmentPolishBuilder
     {
         white=StaffRoomModels.Material("Door Frame White",new Color(.9f,.91f,.87f));
         wall=StaffRoomModels.Material("Room Walls",new Color(.83f,.84f,.79f));
-        sage=StaffRoomModels.Material("Sage Enamel",new Color(.36f,.51f,.43f));
+        sage=StaffRoomModels.Material("Door Neutral Grey",new Color(.68f,.69f,.67f));
         metal=StaffRoomModels.Material("Brushed Steel",new Color(.51f,.57f,.58f));
         var old=GameObject.Find(RootName);if(old!=null)Undo.DestroyObjectImmediate(old);
         root=new GameObject(RootName).transform;Undo.RegisterCreatedObjectUndo(root.gameObject,"Refine environment");
         ReplaceLegacyWalls();FinishDoors();FitPowerAndContainers();MoveMopToStock();RaiseSunkenProps();ParkingLights();
+    }
+
+    // Refit portals without moving authored furniture, tools or WC props.
+    public static void RefitDoorsAndUtilities()
+    {
+        white=StaffRoomModels.Material("Door Frame White",new Color(.9f,.91f,.87f));
+        sage=StaffRoomModels.Material("Door Neutral Grey",new Color(.68f,.69f,.67f));
+        metal=StaffRoomModels.Material("Brushed Steel",new Color(.51f,.57f,.58f));
+        var existing=GameObject.Find(RootName);root=existing!=null?existing.transform:new GameObject(RootName).transform;
+        for(int i=root.childCount-1;i>=0;i--)
+            if(root.GetChild(i).name.StartsWith("White frame - ")||root.GetChild(i).name=="White automatic portal")Undo.DestroyObjectImmediate(root.GetChild(i).gameObject);
+        FinishDoors();FitPowerAndContainers();
     }
 
     static void ReplaceLegacyWalls()
@@ -66,7 +78,11 @@ public static class EnvironmentPolishBuilder
                     {foreach(var r in child.GetComponentsInChildren<Renderer>())r.enabled=false;foreach(var c in child.GetComponentsInChildren<Collider>())c.enabled=false;child.gameObject.SetActive(false);}
                 var prior=door.transform.Find("Finished door leaf");if(prior!=null)Undo.DestroyObjectImmediate(prior.gameObject);
                 var leaf=Box(door.transform,"Finished door leaf",new Vector3(0,1.23f,1),new Vector3(.065f,2.4f,1.84f),sage,true);
-                foreach(float side in new[]{-1f,1f})Box(leaf.transform,"Horizontal lever",new Vector3(side*.09f/.065f,-.11f/2.4f,.7f/1.84f),new Vector3(.11f/.065f,.035f/2.4f,.25f/1.84f),metal,false);
+                foreach(float side in new[]{-1f,1f})
+                {
+                    Box(leaf.transform,"Handle plate",new Vector3(side*.045f/.065f,-.11f/2.4f,.7f/1.84f),new Vector3(.02f/.065f,.36f/2.4f,.14f/1.84f),metal,false);
+                    Box(leaf.transform,"Horizontal lever",new Vector3(side*.09f/.065f,-.11f/2.4f,.7f/1.84f),new Vector3(.065f/.065f,.035f/2.4f,.22f/1.84f),metal,false);
+                }
                 var use=door.GetComponent<FurnitureDoor>()??door.gameObject.AddComponent<FurnitureDoor>();
                 use.roomDoor=door;use.panel=leaf.GetComponent<BoxCollider>();use.label="door";door.aimedInteraction=true;
                 var outline=door.GetComponent<OutlineHighlight>();AssignOutline(outline);
@@ -107,15 +123,15 @@ public static class EnvironmentPolishBuilder
         foreach(var container in Object.FindObjectsByType<TrashContainer>())
         {
             var t=container.transform.parent;if(t==null||!t.name.EndsWith("collection container"))continue;
-            t.localScale=new Vector3(3,1,1);t.position=new Vector3(24.2f,0,-156.4f-(int)container.stream*7.1f);
-            if(t.Find("Label backing")==null)Box(t,"Label backing",new Vector3(0,.95f,-.773f),new Vector3(1.3f,.34f,.008f),StaffRoomModels.Material("Recycling Label Charcoal",new Color(.07f,.1f,.11f)),false);
+            t.localScale=new Vector3(2,1,1.5f);t.position=new Vector3(23.86f,0,-157f-(int)container.stream*6f);
+            var backing=t.Find("Label backing");if(backing!=null)Undo.DestroyObjectImmediate(backing.gameObject);
             foreach(var text in t.GetComponentsInChildren<TMP_Text>())
-            {WhiteLabel(text);text.transform.localPosition=new Vector3(0,.95f,-.782f);text.transform.localScale=new Vector3(1f/3,1,1);text.rectTransform.sizeDelta=new Vector2(3.75f,.35f);}
+            {WhiteLabel(text);text.transform.localPosition=new Vector3(0,.95f,-.782f);text.transform.localScale=new Vector3(.5f,1,1f/1.5f);text.rectTransform.sizeDelta=new Vector2(2.5f,.35f);}
         }
         foreach(var bin in Object.FindObjectsByType<Trashcan>())
         {
             if(bin.transform.Find("Stream colour")==null)continue;
-            if(bin.transform.Find("Label backing")==null)Box(bin.transform,"Label backing",new Vector3(0,.73f,-.336f),new Vector3(.4f,.14f,.008f),StaffRoomModels.Material("Recycling Label Charcoal",new Color(.07f,.1f,.11f)),false);
+            var backing=bin.transform.Find("Label backing");if(backing!=null)Undo.DestroyObjectImmediate(backing.gameObject);
             foreach(var text in bin.GetComponentsInChildren<TMP_Text>()){text.transform.localPosition=new Vector3(0,.73f,-.345f);WhiteLabel(text);}
         }
     }
@@ -157,16 +173,16 @@ public static class EnvironmentPolishBuilder
         {
             var go=(GameObject)PrefabUtility.InstantiatePrefab(StoreFinishModels.Prefab("ParkingLamp"),parking.transform);go.name="Parking lighting";go.transform.position=at;go.GetComponent<InteriorLightAnchor>().outdoors=true;
             var t=new GameObject("Downlight").transform;t.SetParent(go.transform,false);t.localPosition=new Vector3(0,5.8f,0);t.localRotation=Quaternion.Euler(90,0,0);
-            var light=t.gameObject.AddComponent<Light>();light.type=LightType.Spot;light.spotAngle=125;light.range=20;light.intensity=20;light.color=new Color(1,.9f,.73f);
+            var light=t.gameObject.AddComponent<Light>();light.type=LightType.Spot;light.spotAngle=125;light.range=20;light.intensity=55;light.color=new Color(1,.9f,.73f);
         }
     }
 
     public static void Midnight()
     {
         RenderSettings.skybox=null;RenderSettings.ambientMode=AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor=new Color(.035f,.05f,.085f);RenderSettings.ambientEquatorColor=new Color(.018f,.026f,.045f);RenderSettings.ambientGroundColor=new Color(.009f,.012f,.02f);RenderSettings.reflectionIntensity=.12f;
+        RenderSettings.ambientSkyColor=new Color(.004f,.006f,.012f);RenderSettings.ambientEquatorColor=new Color(.002f,.003f,.006f);RenderSettings.ambientGroundColor=new Color(.001f,.0015f,.003f);RenderSettings.reflectionIntensity=.035f;
         foreach(var light in Object.FindObjectsByType<Light>())if(light.type==LightType.Directional)
-        {Undo.RecordObject(light,"Midnight moonlight");light.color=new Color(.38f,.52f,.78f);light.intensity=.08f;light.transform.rotation=Quaternion.Euler(25,-35,0);}
+        {Undo.RecordObject(light,"Midnight moonlight");light.color=new Color(.38f,.52f,.78f);light.intensity=.012f;light.transform.rotation=Quaternion.Euler(25,-35,0);}
         foreach(var camera in Object.FindObjectsByType<Camera>()){camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.006f,.01f,.022f);}
     }
 
