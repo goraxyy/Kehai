@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Collections.Generic;
 using Kehai.Karen;
 using UnityEngine;
 
@@ -17,7 +17,8 @@ public class AutoDoubleDoor : MonoBehaviour
     private Vector3 leftClosed, rightClosed;
     private Vector3 leftOpen, rightOpen;
     private bool isOpen = false;
-    private int playersInside = 0;
+    readonly HashSet<Collider> occupants = new HashSet<Collider>();
+    float closeAt = float.PositiveInfinity;
 
     public bool IsOpen => isOpen;
     public Transform LeftPanel => leftDoor;     // the sliding panels, for the replay recorder
@@ -25,6 +26,13 @@ public class AutoDoubleDoor : MonoBehaviour
 
     void Start()
     {
+        // A sensor must cover both approaches, including the space between the panels.
+        if (TryGetComponent(out BoxCollider sensor))
+        {
+            sensor.isTrigger = true;
+            sensor.center = new Vector3(0f, 1.25f, 0f);
+            sensor.size = new Vector3(4f, 2.5f, 5f);
+        }
         // Auto-find doors by name — no Inspector dragging needed
         leftDoor = transform.Find("LeftDoor");
         rightDoor = transform.Find("RightDoor");
@@ -45,6 +53,10 @@ public class AutoDoubleDoor : MonoBehaviour
     void Update()
     {
         if (leftDoor == null || rightDoor == null) return;
+        int before = occupants.Count;
+        occupants.RemoveWhere(c => c == null || !c.enabled || !c.gameObject.activeInHierarchy);
+        if (before > 0 && occupants.Count == 0) closeAt = Time.time + closeDelay;
+        if (occupants.Count == 0 && Time.time >= closeAt) isOpen = false;
 
         Vector3 leftTarget = isOpen ? leftOpen : leftClosed;
         Vector3 rightTarget = isOpen ? rightOpen : rightClosed;
@@ -55,7 +67,8 @@ public class AutoDoubleDoor : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        playersInside++;
+        if (!IsCharacter(other) || !occupants.Add(other)) return;
+        closeAt = float.PositiveInfinity;
 
         // Only on the closed -> open transition: a second body walking in behind the
         // first shouldn't set the chime off again while the doors are already open.
@@ -64,7 +77,7 @@ public class AutoDoubleDoor : MonoBehaviour
             isOpen = true;
             OneShotAudio.PlayAt(openChime, transform.position, chimeVolume);
 
-            bool employee = other is CharacterController;
+            bool employee = other.GetComponentInParent<CharacterController>() != null;
             NoiseBus.Emit(transform.position, 0.55f, NoiseKind.AutoDoor, employee ? NoiseAuthor.Player : NoiseAuthor.Customer);
 
             // The door sensor tells the store's management who came through (§3.5).
@@ -74,16 +87,20 @@ public class AutoDoubleDoor : MonoBehaviour
 
     void OnTriggerExit(Collider other)
     {
-        playersInside = Mathf.Max(0, playersInside - 1);
-        if (playersInside == 0)
-            StartCoroutine(CloseAfterDelay());
+        if (occupants.Remove(other) && occupants.Count == 0) closeAt = Time.time + closeDelay;
     }
 
-    IEnumerator CloseAfterDelay()
+    void OnTriggerStay(Collider other) => OnTriggerEnter(other);
+
+    static bool IsCharacter(Collider other)
     {
-        yield return new WaitForSeconds(closeDelay);
-        if (playersInside == 0) isOpen = false;
+        if (other == null || other.isTrigger || other.GetComponentInParent<Item>() != null) return false;
+        return other.GetComponentInParent<CharacterController>() != null
+            || other.GetComponentInParent<CustomerNPC>() != null
+            || other.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null;
     }
+
+    void OnDisable() { occupants.Clear(); isOpen = false; closeAt = float.PositiveInfinity; }
 
     // The phantom chime (Karen.md §8.3): the doors cycle with nobody there.
     public void PhantomCycle()
@@ -91,6 +108,6 @@ public class AutoDoubleDoor : MonoBehaviour
         if (isOpen) return;
         isOpen = true;
         OneShotAudio.PlayAt(openChime, transform.position, chimeVolume);
-        StartCoroutine(CloseAfterDelay());
+        closeAt = Time.time + closeDelay;
     }
 }

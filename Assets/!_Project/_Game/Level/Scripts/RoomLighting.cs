@@ -64,6 +64,7 @@ public static class RoomLighting
 
     public static int BitFor(string area)
     {
+        if(area=="Cold storage")return Stockroom;
         foreach (var (name, bit) in Rooms) if (name == area) return bit;
         return Outside;                                 // the street, the alleys, the yard
     }
@@ -145,17 +146,17 @@ public static class RoomLighting
             Bit = new int[n];
             Area = new string[n];
             int spare = 0;
-            var taken = new HashSet<string>();
+            var taken = new HashSet<int>();
             for (int r = 0; r < n; r++)
             {
                 Area[r] = AreaOf(map.Rooms[r]);
                 int bit = BitFor(Area[r]);
                 // The first room of a part keeps its layer; another takes a spare one, while any are left.
-                if (bit != Outside && !taken.Add(Area[r]))
+                if (bit != Outside && !taken.Add(bit))
                 {
                     uint defined=RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue();
                     while(spare<Spare.Length && (defined & (uint)Spare[spare])==0)spare++;
-                    if(spare<Spare.Length)bit=Spare[spare++];
+                    if(spare<Spare.Length){bit=Spare[spare++];taken.Add(bit);}
                 }
                 Bit[r] = bit;
                 if (!ofArea.TryGetValue(Area[r], out List<int> list)) ofArea[Area[r]] = list = new List<int>();
@@ -293,7 +294,7 @@ public static class RoomLighting
         {
             if (r == floor || r == roof || Moves(r)) continue;
             var anchor=r.GetComponentInParent<InteriorLightAnchor>();
-            r.renderingLayerMask = (uint)(anchor!=null ? BitAt(anchor.Position) : MaskFor(r.bounds));
+            r.renderingLayerMask = (uint)(anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
             still++;
         }
 
@@ -346,8 +347,9 @@ public static class RoomLighting
         }
     }
 
-    // The floor (or the roof's underside) inside each room, as its own quad on the room's layer,
-    // with the same material and texture placement; the big mesh is left to outside light.
+    // Partition the surface, rather than laying overlapping room rectangles on it. The old
+    // bounding boxes overlapped at room boundaries and repeated Apply calls stacked copies.
+    // Floors with their own finish replace this surface entirely in their exact footprints.
     static void Patch(Renderer whole, bool up)
     {
         if (whole == null) return;
@@ -360,35 +362,105 @@ public static class RoomLighting
             Debug.LogWarning($"Room lighting: can't read {whole.name}'s mesh, so it's lit from every room.");
             return;
         }
-        whole.renderingLayerMask = (uint)Outside;
-
         Transform root = GameObject.Find(PatchesName)?.transform;
         if (root == null) root = new GameObject(PatchesName).transform;
-
-        foreach (var (name, bit, rect) in RoomRects(whole.bounds))
+        string prefix = up ? "Floor_" : "Ceiling_";
+        for (int i = root.childCount - 1; i >= 0; i--)
         {
-            var mesh = new Mesh { name = (up ? "Floor_" : "Ceiling_") + name };
-            float h = y + (up ? 0.003f : -0.003f);
-            var corners = new[]
+            var old = root.GetChild(i);
+            if (!old.name.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
+            old.gameObject.SetActive(false); // Destroy is deferred in Play; hide it now.
+            var mf = old.GetComponent<MeshFilter>();
+            if (mf != null && mf.sharedMesh != null) RemoveGenerated(mf.sharedMesh);
+            RemoveGenerated(old.gameObject);
+        }
+        var finishes = new List<Bounds>();
+        if (up)
+            foreach (var r in Object.FindObjectsByType<MeshRenderer>())
             {
-                new Vector3(rect.xMin, h, rect.yMin), new Vector3(rect.xMax, h, rect.yMin),
-                new Vector3(rect.xMax, h, rect.yMax), new Vector3(rect.xMin, h, rect.yMax),
-            };
-            var uvs = new Vector2[4];
-            for (int i = 0; i < 4; i++) uvs[i] = new Vector2(Vector3.Dot(corners[i] - o, du), Vector3.Dot(corners[i] - o, dv));
-            mesh.vertices = corners;
-            mesh.uv = uvs;
-            mesh.triangles = up ? new[] { 0, 2, 1, 0, 3, 2 } : new[] { 0, 1, 2, 0, 2, 3 };
+                if (!r.enabled || r == whole || !r.name.EndsWith("floor", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (r.GetComponent<InteriorLightAnchor>() == null || r.bounds.size.y > .25f) continue;
+                if (Mathf.Abs(r.bounds.min.y - y) < .25f) finishes.Add(r.bounds);
+            }
+        Bounds bounds = whole.bounds;
+        var xs = SurfaceCuts(bounds.min.x, bounds.max.x, finishes, true);
+        var zs = SurfaceCuts(bounds.min.z, bounds.max.z, finishes, false);
+        var surfaces = new Dictionary<int, SurfaceMesh>();
+        for (int z = 0; z < zs.Count - 1; z++)
+        {
+            int runBit = -1; float runStart = xs[0];
+            for (int x = 0; x < xs.Count; x++)
+            {
+                int bit = -1;
+                if (x < xs.Count - 1)
+                {
+                    var p = new Vector3((xs[x]+xs[x+1])*.5f, y, (zs[z]+zs[z+1])*.5f);
+                    bool covered = false;
+                    foreach (var finish in finishes)
+                        if (p.x > finish.min.x && p.x < finish.max.x && p.z > finish.min.z && p.z < finish.max.z) { covered=true; break; }
+                    if (!covered) bit = BitAt(p);
+                    if (!up && bit == Outside) bit = -1;
+                    if (!up && p.x<25f && p.z>-175f && p.z<-150f) bit=-1; // open service yard
+                }
+                if (bit == runBit) continue;
+                if (runBit != -1)
+                {
+                    if (!surfaces.TryGetValue(runBit,out var surface)) surfaces[runBit]=surface=new SurfaceMesh();
+                    surface.Quad(runStart,xs[x],zs[z],zs[z+1],up?y:y-.01f,o,du,dv,up);
+                }
+                runBit=bit;runStart=xs[x];
+            }
+        }
+        foreach (var entry in surfaces)
+        {
+            var data=entry.Value;
+            var mesh=new Mesh {name=prefix+entry.Key,indexFormat=IndexFormat.UInt32};
+            mesh.SetVertices(data.vertices);mesh.SetUVs(0,data.uv);mesh.SetTriangles(data.triangles,0);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-
             var go = new GameObject(mesh.name);
             go.transform.SetParent(root, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterials = whole.sharedMaterials;
-            r.renderingLayerMask = (uint)bit;
+            r.renderingLayerMask = (uint)entry.Key;
             r.shadowCastingMode = ShadowCastingMode.Off;
+        }
+        // Outside is included in the floor partition. Keep the original collider, but never
+        // draw the underlying plane through a finish a few millimetres above it.
+        whole.enabled = !up;
+        whole.renderingLayerMask = (uint)Outside;
+    }
+
+    static void RemoveGenerated(Object value)
+    {
+        if (Application.isPlaying) Object.Destroy(value); else Object.DestroyImmediate(value);
+    }
+
+    static List<float> SurfaceCuts(float min,float max,List<Bounds> finishes,bool x)
+    {
+        var cuts=new SortedSet<float> {min,max};
+        for(float p=min+.5f;p<max;p+=.5f)cuts.Add(p);
+        foreach(var b in finishes)
+        {
+            float lo=x?b.min.x:b.min.z,hi=x?b.max.x:b.max.z;
+            if(lo>min && lo<max)cuts.Add(lo);
+            if(hi>min && hi<max)cuts.Add(hi);
+        }
+        return new List<float>(cuts);
+    }
+
+    sealed class SurfaceMesh
+    {
+        public readonly List<Vector3> vertices=new List<Vector3>();
+        public readonly List<Vector2> uv=new List<Vector2>();
+        public readonly List<int> triangles=new List<int>();
+        public void Quad(float x0,float x1,float z0,float z1,float y,Vector3 o,Vector3 du,Vector3 dv,bool up)
+        {
+            int start=vertices.Count;
+            foreach(var p in new[]{new Vector3(x0,y,z0),new Vector3(x1,y,z0),new Vector3(x1,y,z1),new Vector3(x0,y,z1)})
+            {vertices.Add(p);uv.Add(new Vector2(Vector3.Dot(p-o,du),Vector3.Dot(p-o,dv)));}
+            foreach(int i in up?new[]{0,2,1,0,3,2}:new[]{0,1,2,0,2,3})triangles.Add(start+i);
         }
     }
 

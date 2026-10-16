@@ -11,6 +11,7 @@ public class Trashcan : HighlightInteractable
 
     [Header("Capacity")]
     public int capacity = 5;
+    public WasteStream stream;
     [SerializeField] int usageCount;
 
     [Header("Bagging")]
@@ -20,6 +21,11 @@ public class Trashcan : HighlightInteractable
     [Header("Fill Feedback")]
     [Tooltip("How much the bin visually swells as it fills, as a fraction of its size.")]
     public float fullBulge = 0.12f;
+
+    [Header("Customer access")]
+    public bool customersAllowed = true;
+    [Tooltip("An explicit clear standing position, for bins against a wall.")]
+    public Transform customerStandPoint;
 
     public bool IsFull => usageCount >= capacity;
     public int UsageCount => usageCount;
@@ -57,6 +63,7 @@ public class Trashcan : HighlightInteractable
         }
 
         GameObject bag = Instantiate(trashBagPrefab, transform.position + Vector3.up * 0.5f, Quaternion.identity);
+        var rubbish=bag.GetComponent<TrashBag>();if(rubbish!=null)rubbish.SetStream(stream);
         Item bagItem = bag.GetComponent<Item>();
         if (bagItem == null) { Destroy(bag); return; }
 
@@ -93,8 +100,8 @@ public class Trashcan : HighlightInteractable
 
     public override string GetPrompt()
     {
-        if (usageCount >= 1) return $"Bag the trash ({usageCount}/{capacity})";
-        return "Trash is empty";
+        if (usageCount >= 1) return $"Collect {WasteStreams.Label(stream)} bag ({usageCount}/{capacity})";
+        return WasteStreams.Label(stream)+" bin is empty";
     }
 }
 

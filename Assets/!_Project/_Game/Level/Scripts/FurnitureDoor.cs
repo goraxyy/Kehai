@@ -12,6 +12,7 @@ public sealed class FurnitureDoor : HighlightInteractable
     public BoxCollider panel;
     public HingeDoor roomDoor;
     public bool IsOpen => roomDoor != null ? roomDoor.IsOpen : wantsOpen;
+    public bool IsFullyOpen => roomDoor != null ? roomDoor.IsOpen : Mathf.Abs(angle - openAngle) < 2f;
 
     Quaternion closed;
     float angle;
@@ -40,6 +41,7 @@ public sealed class FurnitureDoor : HighlightInteractable
         else wantsOpen = !wantsOpen;
     }
     public override string GetPrompt() => roomDoor != null && roomDoor.Locked ? "Locked" : (IsOpen ? "Close " : "Open ") + label;
+    public void SetOpen(bool open) { if(roomDoor==null)wantsOpen=open; }
 
     void Update()
     {

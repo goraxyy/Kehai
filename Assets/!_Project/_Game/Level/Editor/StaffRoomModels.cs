@@ -187,14 +187,15 @@ public static class StaffRoomModels
         for(int i=0;i<3;i++) Box(p,"Coat hook",new Vector3(-.55f+i*.55f,1.8f,1.22f),new Vector3(.045f,.12f,.12f),dark);
     }
 
-    static Transform Door(Transform p,string label,Vector3 at,float width,float height,float bottom,Material material,float angle)
+    public static Transform Door(Transform p,string label,Vector3 at,float width,float height,float bottom,Material material,float angle)
     {
         var hinge = new GameObject("Hinge - " + label).transform;
         hinge.SetParent(p,false); hinge.localPosition=at;
         var panel = Box(hinge,"Door leaf",new Vector3(width*.5f,height*.5f+bottom,0),new Vector3(width,height,.06f),material,true);
         var handle = new Vector3(width-.14f,1.12f,-.075f);
-        Box(hinge,"Handle",handle,new Vector3(.035f,.22f,.065f),dark);
-        Box(hinge,"Inside handle",new Vector3(handle.x,handle.y,.075f),new Vector3(.035f,.22f,.065f),dark);
+        handle.x-=.08f;
+        Box(hinge,"Handle",handle,new Vector3(.22f,.035f,.065f),dark);
+        Box(hinge,"Inside handle",new Vector3(handle.x,handle.y,.075f),new Vector3(.22f,.035f,.065f),dark);
         var interact=hinge.gameObject.AddComponent<FurnitureDoor>();
         interact.label=label; interact.openAngle=angle; interact.assembly=p; interact.panel=panel.GetComponent<BoxCollider>();
         hinge.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild=true;
@@ -293,12 +294,12 @@ public static class StaffRoomModels
 
     static void Seat(Transform p,float width)
     {
-        Box(p,"Base",new Vector3(0,.24f,0),new Vector3(width,.35f,1f),dark,true);
-        Box(p,"Back cushion",new Vector3(0,.72f,.35f),new Vector3(width,.65f,.3f),fabric,true,.04f);
+        Box(p,"Base",new Vector3(0,.24f,0),new Vector3(width-.08f,.35f,.94f),dark,true);
+        Box(p,"Back cushion",new Vector3(0,.72f,.34f),new Vector3(width-.44f,.65f,.28f),fabric,true,.04f);
         foreach(float x in new[]{-width*.5f+.1f,width*.5f-.1f}) Box(p,"Arm",new Vector3(x,.56f,0),new Vector3(.2f,.52f,1f),sage,true,.035f);
         int count=width>2f?3:1;
         float cushion=(width-.45f)/count;
-        for(int i=0;i<count;i++)Box(p,"Seat cushion",new Vector3(-width*.5f+.225f+cushion*(i+.5f),.48f,-.12f),new Vector3(cushion-.025f,.18f,.72f),fabric,true,.035f);
+        for(int i=0;i<count;i++)Box(p,"Seat cushion",new Vector3(-width*.5f+.225f+cushion*(i+.5f),.48f,-.15f),new Vector3(cushion-.025f,.18f,.64f),fabric,true,.035f);
         foreach(float x in new[]{-width*.5f+.2f,width*.5f-.2f})foreach(float z in new[]{-.35f,.35f})Box(p,"Foot",new Vector3(x,.065f,z),new Vector3(.08f,.13f,.08f),wood,true);
     }
 
@@ -421,8 +422,8 @@ public static class StaffRoomModels
 
     static void RoomDoor(Transform p)
     {
-        foreach(float x in new[]{-.79f,.79f})Box(p,"Jamb",new Vector3(x,1.3f,0),new Vector3(.08f,2.6f,.18f),dark,true);
-        Box(p,"Header",new Vector3(0,2.56f,0),new Vector3(1.66f,.08f,.18f),dark,true);
+        foreach(float x in new[]{-.79f,.79f})Box(p,"Jamb",new Vector3(x,1.3f,0),new Vector3(.08f,2.6f,.18f),ivory,true);
+        Box(p,"Header",new Vector3(0,2.56f,0),new Vector3(1.66f,.08f,.18f),ivory,true);
         var hinge=Door(p,"staff door",new Vector3(-.75f,0,0),1.5f,2.46f,.035f,sage,95f);
         var door=hinge.gameObject.AddComponent<HingeDoor>();
         door.aimedInteraction=true;door.fixedSwingDirection=true;door.openAngle=95f;
@@ -553,6 +554,11 @@ public static class StaffRoomModels
             string path=folder+"/Meshes/"+name+(group==root.transform?" Body":" Door")+".asset";
             Mesh saved=AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if(saved==null){AssetDatabase.CreateAsset(merged,path);saved=merged;}else{EditorUtility.CopySerialized(merged,saved);Object.DestroyImmediate(merged);EditorUtility.SetDirty(saved);}
+            // CopySerialized updates the asset but can leave the GPU drawing its previous geometry.
+            // Touch the mesh buffers so rebuilt handles, cushions and decks update immediately.
+            saved.vertices=saved.vertices;saved.normals=saved.normals;
+            for(int i=0;i<saved.subMeshCount;i++)saved.SetTriangles(saved.GetTriangles(i),i,false);
+            saved.UploadMeshData(false);
             foreach(var sub in submeshes)Object.DestroyImmediate(sub);
             foreach(var f in filters){Object.DestroyImmediate(f.GetComponent<MeshRenderer>());Object.DestroyImmediate(f);}
             group.gameObject.AddComponent<MeshFilter>().sharedMesh=saved;
