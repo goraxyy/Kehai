@@ -69,10 +69,19 @@ def test_tracker_matches_blink_tracker():
     # Shut at 1.0; on the way down 1 -> 0.4 (still above 0.3, still shut) -> 0.16 (open).
     assert tracked.closed.tolist() == [False, False, True, True, True, True, False, False]
     assert tracked.blinks == [(2, 6, pytest.approx(0.2 + 0.3))]
-    # It learnt 10% of the way from 0.3 s to this blink's 0.4 s.
+    # It learns the blink as the reading saw it: shut at 0.2 and back under the close threshold
+    # at 0.6 (the dip at 0.3 came back up), so 0.4 s, though the hysteresis only let go at 0.8.
+    # The 0.3 s guess counts as one blink, so halfway to 0.4 s; the 0.6 s it detected would
+    # have made it 0.45.
     t2 = np.arange(16) / 10
-    again = ev.track(np.array([0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0.0]), t2)
-    assert again.blinks[1][2] == pytest.approx(1.0 + 0.31)
+    again = ev.track(np.array([0, 0, 1, 0.4, 1, 1, 0.45, 0.2, 0, 0, 1, 1, 0, 0, 0, 0.0]), t2)
+    assert again.closed[2:8].all() and not again.closed[8]
+    assert again.blinks == [(2, 8, pytest.approx(0.5)), (10, 13, pytest.approx(1.0 + 0.35))]
+    # Twelve blinks the reading shows for 0.1 s each: the average with the guess until there
+    # are ten, then 10% of the way each blink.
+    t3 = np.arange(48) / 10
+    expected = [p - t3[on] for on, _, p in ev.track(np.tile([1, 0, 0, 0.0], 12), t3).blinks]
+    assert expected[:11] == pytest.approx([(0.3 + 0.1 * k) / (k + 1) for k in range(10)] + [0.12 - 0.002])
 
 
 def test_tracker_uses_the_calibration():

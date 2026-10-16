@@ -88,25 +88,34 @@ class Track:
 
 def track(reading, t, open_level=0.0, closed_level=1.0) -> Track:
     """BlinkTracker.Update/Step, one camera frame at a time: normalise by the calibration,
-    smooth on the way down only, hysteresis, and learn the blink length for PredictedReopenIn."""
+    smooth on the way down only, hysteresis, and learn the blink length for PredictedReopenIn
+    from the reading's own reopening (back under the close threshold), not the detected one."""
     n = len(reading)
     closed = np.zeros(n, bool)
     blinks = []
     span = closed_level - open_level
     c01, shut, started, on, predicted = 0.0, False, 0.0, 0, 0.0
-    expected = EXPECTED_BLINK_SECONDS
+    opened, reading_opened = 0.0, False
+    expected, learnt = EXPECTED_BLINK_SECONDS, 0
     for i in range(n):
         v = min(1.0, max(0.0, (float(reading[i]) - open_level) / span)) if span != 0 else 0.0
         c01 = v if v > c01 else c01 + (v - c01) * FALL_LERP
         if not shut and c01 >= CLOSE_THRESHOLD:
-            shut, started, on = True, t[i], i
+            shut, started, on, reading_opened = True, t[i], i, False
             predicted = started + expected          # PredictedReopenIn, as an absolute time
-        elif shut and c01 <= OPEN_THRESHOLD:
-            shut = False
-            length = t[i] - started
-            if 0.08 < length < 0.8:
-                expected += (length - expected) * 0.1
-            blinks.append((on, i, predicted))
+        elif shut:
+            if v >= CLOSE_THRESHOLD:
+                reading_opened = False
+            elif not reading_opened:
+                reading_opened, opened = True, t[i]
+            if c01 <= OPEN_THRESHOLD:
+                shut = False
+                detected = t[i] - started
+                length = opened - started if reading_opened else detected
+                if 0.08 < detected < 0.8:           # the guess as one blink, then a moving average
+                    learnt += 1
+                    expected += (length - expected) * max(0.1, 1 / (learnt + 1))
+                blinks.append((on, i, predicted))
         closed[i] = shut
     if shut:
         blinks.append((on, n, predicted))
