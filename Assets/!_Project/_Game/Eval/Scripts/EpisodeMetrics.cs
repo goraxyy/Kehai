@@ -37,6 +37,7 @@ namespace Kehai.Eval
         // Karen's side, copied from her stats at the end.
         public float FirstDetection = -1f;
         public int Detections, Catches, Chases, Overtimes;
+        public int CloseIns, Vanishes, Reveals;   // the blink dash (BlinkDash): catches are kills now
         public float TacticEntropy;
         public float MeanPanic, PanicSetpointRmse;
         public int TacticsUsed;
@@ -176,6 +177,9 @@ namespace Kehai.Eval
                 Detections = s.Detections;
                 Catches = s.Catches;
                 Chases = s.Chases;
+                CloseIns = brain.Dash.CloseIns;
+                Vanishes = brain.Dash.Vanishes;
+                Reveals = brain.Dash.Reveals;
                 Overtimes = s.Overtimes;
                 TacticEntropy = s.TacticEntropy;
                 TacticsUsed = s.TacticCounts.Where(p => TacticLibrary.Get(p.Key)?.Tier > 0).Sum(p => p.Value);
@@ -209,6 +213,7 @@ namespace Kehai.Eval
                 ["spurious_clock_outs"] = SpuriousClockOuts,
                 ["karen_first_detection_s"] = FirstDetection, ["karen_detections"] = Detections, ["karen_catches"] = Catches,
                 ["karen_chases"] = Chases, ["karen_overtimes"] = Overtimes, ["karen_tactic_entropy_bits"] = TacticEntropy,
+                ["karen_dash_close_ins"] = CloseIns, ["karen_dash_vanishes"] = Vanishes, ["karen_dash_reveals"] = Reveals,
                 ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
                 ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
                 ["karen_fairness_violations"] = FairnessViolations,
