@@ -11,6 +11,21 @@ public static class EnvironmentFitBuilder
 {
     const string RootName="Environment - Fit corrections";
 
+    [MenuItem("Kehai/Store Finish/Apply Compact Cold Room and Environment Fit")]
+    public static void Rebuild()
+    {
+        if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Apply in edit mode.");
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if(GameObject.Find("Layout_15x15")==null)throw new InvalidOperationException("Open the supermarket scene first.");
+        System.IO.Directory.CreateDirectory("Library/Kehai/SceneBackups");
+        EditorSceneManager.SaveScene(scene,"Library/Kehai/SceneBackups/Full-fit-"+DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+".unity",true);
+        StaffRoomModels.BuildSelected("Locker","RoomDoor","ChangingCabin","Fridge");PublicInteriorModels.BuildLibrary();
+        ColdStoreBuilder.Build();Apply();RetailShelfFinish.Apply();ModelIslandLayout.Organize();
+        StoreLayout.ApplyToScene();StorageBoxesPreview.Refresh(true);ShelfDrawer.Ensure();
+        StaffRoomBuilder.BakeNavigation();StaffRoomBuilder.RefreshLighting();EnvironmentPolishBuilder.Midnight();
+        AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(scene);
+    }
+
     [MenuItem("Kehai/Store Finish/Apply Door, Locker and Exterior Fit")]
     public static void Apply()
     {
@@ -39,7 +54,7 @@ public static class EnvironmentFitBuilder
         var keep=GameObject.Find("Layout_15x15/Backstreet/ElectricBox_01");
         if(extra!=null&&keep!=null)
         {
-            foreach(var panel in Object.FindObjectsByType<Kehai.Karen.BreakerPanel>(FindObjectsInactive.Include,FindObjectsSortMode.None))
+            foreach(var panel in Object.FindObjectsByType<Kehai.Karen.BreakerPanel>(FindObjectsInactive.Include))
                 if(panel.box==extra.GetComponent<ElectricBox>())
                 {Undo.RecordObject(panel,"Retain working breaker reference");panel.box=keep.GetComponent<ElectricBox>();}
             // Retire the prototype with its references recoverable through Undo.
@@ -47,9 +62,11 @@ public static class EnvironmentFitBuilder
         }
         foreach(string path in new[]{
             "Store - Finished/Outdoor maintenance cabinet", "WC - Furnished/WC extract east",
-            "Store - Finished/Forecourt floor", "Store - Finished/East exterior recycling",
+            "Store - Finished/East exterior recycling",
             "Store - Finished/Rear exterior recycling", "Store - Finished/Service-yard recycling"})
         {var go=GameObject.Find(path);if(go!=null)Undo.DestroyObjectImmediate(go);}
+        if(GameObject.Find(ParkingLotBuilder.RootName)!=null)
+        {var forecourt=GameObject.Find(StoreFinishBuilder.RootName+"/Forecourt floor");if(forecourt!=null)Undo.DestroyObjectImmediate(forecourt);}
         var store=GameObject.Find(StoreFinishBuilder.RootName);
         if(store!=null)for(int i=store.transform.childCount-1;i>=0;i--)
         {

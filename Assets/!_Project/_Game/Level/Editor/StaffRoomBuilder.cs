@@ -44,7 +44,7 @@ public static class StaffRoomBuilder
         AssetDatabase.SaveAssets();
         Undo.CollapseUndoOperations(undo);
         Selection.activeGameObject=root.gameObject;
-        Debug.Log("Staff room built: 15 x 13 1/3 m, ten 1.2 x 1.1 x 2.4 m lockers, two changing cabins, kitchen and lounge. Save the scene with Cmd+S.");
+        Debug.Log("Staff room built: 15 x 13 1/3 m, ten 1.2 x 1.4 x 2.4 m hiding lockers, two changing cabins, kitchen and lounge. Save the scene with Cmd+S.");
     }
 
     public static void RefreshLighting()
@@ -167,6 +167,7 @@ public static class StaffRoomBuilder
         Place("WallScreen","Staff screen",21.6f,SouthFace+.08f,180,1.65f);
         var board=Place("Whiteboard","Shift whiteboard",EastFace,-146.3f,90,1.25f);
         board.transform.localScale=new Vector3(1.8f,1,1);
+        board.transform.position+=Vector3.right*(EastFace-BoundsOf(board).max.x);
         Place("Noticeboard","Staff notices",EastFace-.04f,-137.7f,90,1.05f);
         Place("WallClock","Staff clock",EastFace-.03f,-139.3f,90,2.1f);
         Place("FirstAid","First aid",16f,SouthFace+.09f,180,1.3f);
