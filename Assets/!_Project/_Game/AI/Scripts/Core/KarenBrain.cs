@@ -838,6 +838,7 @@ namespace Kehai.Karen
 
         void Kill()
         {
+            string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
             Ledger.Data.caughtCount++;
@@ -847,7 +848,6 @@ namespace Kehai.Karen
             Body.SetMood(KarenBody.Mood.Hunt);
             Burnout?.SetChaseState(false);
 
-            string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             Log.Write(Record("CAUGHT", $"CAUGHT   she got you at {Map.Describe(Body.Position)} ({doing}, {Body.CurrentPace}, chasing {chasing})", null, null,
                                 "contact — the shift starts again"));
             Debug.Log($"{GameNames.Antagonist} got the employee at {Map.Describe(Body.Position)} after {ShiftTime:0}s: {doing}, pace {Body.CurrentPace}, chasing {chasing}");

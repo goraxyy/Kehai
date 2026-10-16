@@ -263,11 +263,11 @@ namespace Kehai.Karen
 
         // Her touch kills (KarenBrain.OnTouched), so walking up to you is something she only
         // does running — a chase, a lunge. Following, stalking, searching, she stops short of
-        // where she sees you and watches; she moves again when you do.
+        // where she sees you, or saw you a moment ago, and watches; she moves again when you do.
         void KeepPersonalSpace()
         {
             if (CurrentPace == Pace.Run || burstUntil > 0f || !Agent.isOnNavMesh || Agent.isStopped) return;
-            if (Sight == null || !Sight.SeesNow) return;
+            if (Sight == null || !(Sight.SeesNow || Sight.Time_SinceSeen() < 3f)) return;
             Vector3 d = Sight.LastSeenPosition - transform.position;
             d.y = 0f;
             if (d.magnitude >= config.personalSpace) return;
