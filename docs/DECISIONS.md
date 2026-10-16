@@ -205,8 +205,9 @@ its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](INTERIOR_
 
 ## 10. Still open
 
-- **Karen's learning** doesn't beat planning alone against scripted players. It needs players who
-  react to her tricks, or people ([KAREN_RESULTS.md](KAREN_RESULTS.md)).
+- **Karen's learning** doesn't beat planning alone against scripted players, even now that they
+  react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
+  the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](KAREN_RESULTS.md)).
 - **Karen can stand on a stuck player** without catching them.
 - **Hitches:** the GPU drawer's first growth (130–210 ms, once); the maze's NavMesh rebuild
   (about 20 ms per border crossed).

@@ -1207,7 +1207,8 @@ the wall colliders, so the map is the store as it actually is.
 - **Tell accounting.** The fairness guard checks each effect against its own plan's latest tell, so
   an unrelated PA chime can't count for (or against) it; a PA line is a tell in itself (the chime
   always plays 1.3 s before the words), and tells are timed on the clock, not by counting frames.
-  Across the final ablation (216 shifts, `KAREN_RESULTS.md`) the guard recorded none.
+  Across the 216-shift ablation, and the 300 shifts of its 2026-10-16 rerun with reacting players
+  (`KAREN_RESULTS.md`), the guard recorded none.
 - **A catch ends the shift** (since 2026-10-16; it used to be a written warning and a lecture).
   In play the store loads again with the same shift; in the eval harness the episode ends,
   counted as neither clocked out nor timed out.

@@ -145,14 +145,16 @@ that one thing. (The blink dash isn't a rung: it's part of the Director, on ever
 `-karen-rung A`…`F` picks a version on the command line. F needs the ML-Agents package and a
 trained model; it is built, but not yet trained or measured.
 
-**What we found** (216 simulated shifts, [KAREN_RESULTS.md](KAREN_RESULTS.md)): the belief map
-finds players about twice as fast as patrols (51 s against about 100 s), and the fairness rules
-were never broken. **Learning (D–E) didn't beat C**: the bots don't react to her tricks, so
-there's little for her to learn from. (That run's rung F was the old blink rung; it's gone.)
+**What we found** (240 simulated shifts with players that react to her, 2026-10-16,
+[KAREN_RESULTS.md](KAREN_RESULTS.md)):
+- **The belief map** finds players about three times as fast as patrols (31 s against 85–101 s).
+- **The fairness rules** were never broken.
+- **Learning (D–E) still doesn't beat C.** It makes her a little calmer (mean panic −0.03 to −0.04)
+  without tracking the Director's setpoint any better.
+- **A first sign of tailoring.** At E her tactic mix differs by player about twice as much as at
+  C, most of all against the held-out cautious player.
 
-**Next.** The bots now react to her warnings and dashes, each profile in its own way, with a
-held-out fourth (`tools/eval/README.md`). Next is the full ladder rerun with them, then real
-players — before rung F is trained on anything worth learning.
+**Next.** Real players, and a trained rung F — before claiming learning helps.
 
 ---
 
