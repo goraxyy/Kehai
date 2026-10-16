@@ -109,7 +109,7 @@ public static class ShelfPrefabBuilder
         var targets = new List<Transform>();
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
         {
-            if (!t.Cast<Transform>().Any(c => c.name.ToLower().Contains("polka"))) continue;
+            if (!t.Cast<Transform>().Any(ShelfGrid.IsDeck)) continue;
             if (PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject) == null) continue;
             targets.Add(t);
         }
@@ -180,7 +180,7 @@ public static class ShelfPrefabBuilder
         int target = isShort ? ShortPlatforms : TallPlatforms;
 
         List<Transform> thin = root.transform.Cast<Transform>()
-            .Where(t => t.name.ToLower().Contains("polka") && t.localScale.y < ThinPlatformMax)
+            .Where(t => ShelfGrid.IsDeck(t) && t.localScale.y < ThinPlatformMax)
             .ToList();
         if (thin.Count == 0) return 0;
 
@@ -218,7 +218,7 @@ public static class ShelfPrefabBuilder
         foreach (Transform child in root.transform.Cast<Transform>().ToList())
         {
             if (child.name == "Wall") continue;
-            if (child.name.ToLower().Contains("polka") && child.localScale.y >= ThinPlatformMax) continue;
+            if (ShelfGrid.IsDeck(child) && child.localScale.y >= ThinPlatformMax) continue;
 
             float y = child.localPosition.y;
             float nearest = 0f, bestDistance = 0.12f;
@@ -283,7 +283,7 @@ public static class ShelfPrefabBuilder
     {
         // Only the model's own platforms, not the structural bases.
         foreach (Transform child in root.transform)
-            if (child.name.ToLower().Contains("polka") && child.localScale.y < ThinPlatformMax)
+            if (ShelfGrid.IsDeck(child) && child.localScale.y < ThinPlatformMax)
                 yield return child;
     }
 
@@ -330,7 +330,7 @@ public static class ShelfPrefabBuilder
 
             var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             bool hasPlatform = go.transform.Cast<Transform>()
-                .Any(t => t.name.ToLower().Contains("polka") && t.localScale.y < ThinPlatformMax);
+                .Any(t => ShelfGrid.IsDeck(t) && t.localScale.y < ThinPlatformMax);
             if (hasPlatform) yield return path;
         }
     }

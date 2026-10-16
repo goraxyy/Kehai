@@ -25,6 +25,9 @@ public class OutlineHighlight : MonoBehaviour
              "frame rather than the products standing on it.")]
     public bool includeItems = false;
 
+    [Tooltip("Optional exact meshes to outline, e.g. a refrigerator frame without its glass.")]
+    public MeshFilter[] targetMeshes;
+
     // The Item on this object, if it is one. Stock belonging to something else is what
     // the filter below is for; an item outlining its own mesh is not.
     Item ownItem;
@@ -61,12 +64,14 @@ public class OutlineHighlight : MonoBehaviour
     void BuildPerMesh()
     {
         // Snapshot first — we add children while iterating otherwise.
-        MeshFilter[] sourceFilters = GetComponentsInChildren<MeshFilter>(true);
+        MeshFilter[] sourceFilters = targetMeshes != null && targetMeshes.Length > 0
+            ? targetMeshes : GetComponentsInChildren<MeshFilter>(true);
 
         foreach (MeshFilter filter in sourceFilters)
         {
-            if (filter.sharedMesh == null) continue;
+            if (filter == null || !filter.gameObject.activeInHierarchy || filter.sharedMesh == null) continue;
             if (filter.GetComponent<MeshRenderer>() == null) continue;
+            if (!filter.GetComponent<MeshRenderer>().enabled) continue;
 
             // Products on a shelf are their own objects — highlight the fixture, not the
             // stock. An item highlighting itself is a different case, so only skip meshes
@@ -93,6 +98,7 @@ public class OutlineHighlight : MonoBehaviour
 
         foreach (Renderer renderer in renderers)
         {
+            if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
             if (!includeItems && BelongsToAnotherItem(renderer.transform)) continue;
             if (renderer.GetComponent<MeshFilter>() == null) continue;
 

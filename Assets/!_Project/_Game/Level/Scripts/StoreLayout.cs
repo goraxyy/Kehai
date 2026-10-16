@@ -187,11 +187,33 @@ public static class StoreLayout
         // can be given one (Planogram.GiveEveryProductAFacing). In position order, so the plan
         // comes out the same whatever order Unity finds the bays in.
         var plans = new List<BayPlan>();
-        foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include))
+        foreach (ShelfUnit unit in Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Exclude))
             plans.Add(PlanBay(unit, ZoneAt(unit.transform.position)));
         plans.Sort((a, b) => ComparePositions(a.Unit.transform.position, b.Unit.transform.position));
-        PlanAisles(plans);
-        foreach (ItemType section in ProductCatalog.StockSections) FillGaps(plans, section);
+        var ambientPlans=plans.FindAll(p=>p.Unit.GetComponent<ColdFixture>()==null);
+        PlanAisles(ambientPlans);
+        foreach (ItemType section in ProductCatalog.StockSections) FillGaps(ambientPlans, section);
+        // Temperature is a fixture constraint, applied after aisle merchandising and gap filling.
+        bool hasChillers=plans.Exists(p=>p.Unit.GetComponent<ColdFixture>()!=null);
+        if(hasChillers)foreach(var plan in plans)
+        {
+            var fixture=plan.Unit.GetComponent<ColdFixture>();
+            if(fixture!=null&&fixture.retail&&fixture.products.Length>0)
+            {
+                for(int i=0;i<plan.Ids.Length;i++)plan.Ids[i]=fixture.products[i%fixture.products.Length];
+                var product=ProductCatalog.Get(fixture.products[0]);if(product!=null)plan.Zone=ZoneOf(product.Category);
+                continue;
+            }
+            var ambient=new List<ProductDef>();
+            foreach(var p in ProductCatalog.InSection(plan.Zone.Section))if(p.Storage==StorageKind.Ambient)ambient.Add(p);
+            if(ambient.Count==0)
+            {
+                plan.Zone=ZoneOf(plan.Zone.Section==ItemType.Frozen?ItemType.Snacks:ItemType.SoftDrinks);
+                foreach(var p in ProductCatalog.InSection(plan.Zone.Section))if(p.Storage==StorageKind.Ambient)ambient.Add(p);
+            }
+            for(int i=0;i<plan.Ids.Length;i++)
+            {var p=ProductCatalog.Get(plan.Ids[i]);if(p!=null&&p.Storage==StorageKind.Cold&&ambient.Count>0)plan.Ids[i]=ambient[i%ambient.Count].Id;}
+        }
 
         foreach (BayPlan plan in plans)
         {

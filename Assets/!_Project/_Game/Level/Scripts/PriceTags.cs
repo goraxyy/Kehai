@@ -11,7 +11,7 @@ public static class PriceTags
     public const string Folder = "PriceTags";
 
     // The strip lengths the shelves have, and the suffix of each one's material.
-    public static readonly (float length, string suffix)[] Lengths = { (4f, "x4"), (1f, "x1"), (0.5f, "x05") };
+    public static readonly (float length, string suffix)[] Lengths = { (4f, "x4"), (2f, "x2"), (1.5f, "x15"), (1f, "x1"), (0.5f, "x05") };
 
     static readonly Dictionary<string, Material> cache = new Dictionary<string, Material>();
 

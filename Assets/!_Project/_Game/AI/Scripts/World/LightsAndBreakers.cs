@@ -152,8 +152,9 @@ namespace Kehai.Karen
         {
             // Mount the switches on the face of the box that looks back into the building.
             Bounds bounds = new Bounds(box.transform.position + Vector3.up, Vector3.one);
+            bool found=false;
             foreach (Renderer r in box.GetComponentsInChildren<Renderer>())
-                bounds.Encapsulate(r.bounds);
+            {if(!r.enabled)continue;if(!found){bounds=r.bounds;found=true;}else bounds.Encapsulate(r.bounds);}
 
             // Face whichever side of the box you can actually stand on.
             Vector3 centre = new Vector3(bounds.center.x, 0f, bounds.center.z);
@@ -171,9 +172,11 @@ namespace Kehai.Karen
             }
             facing.y = 0f;
             facing.Normalize();
+            if(box.controlFace!=null)facing=box.controlFace.forward;
             Vector3 across = Vector3.Cross(Vector3.up, facing).normalized;
             float depth = Mathf.Abs(Vector3.Dot(bounds.extents, new Vector3(Mathf.Abs(facing.x), 0f, Mathf.Abs(facing.z))));
             Vector3 face = centre + facing * (depth + 0.05f);
+            if(box.controlFace!=null){face=box.controlFace.position;face.y=0;}
 
             for (int i = 0; i < 3; i++)
             {

@@ -193,13 +193,13 @@ public static class StaffRoomBuilder
             }
     }
 
-    public static void Lighting(float south,float north)
+    public static void Lighting(float south,float north,float west=10f,float east=25f)
     {
         var lamps=Object.FindAnyObjectByType<CeilingLamps>();
         foreach(var light in Object.FindObjectsByType<Light>())
         {
             Vector3 p=light.transform.position;
-            if(light.type!=LightType.Spot||p.x<=10||p.x>=25||p.z<=south||p.z>=north)continue;
+            if(light.type!=LightType.Spot||p.x<=west||p.x>=east||p.z<=south||p.z>=north)continue;
             Undo.RecordObject(light.transform,"Lower staff light");Undo.RecordObject(light,"Tune staff light");
             light.transform.position=new Vector3(p.x,3.5f,p.z);light.intensity=8;light.range=10;light.spotAngle=110;light.innerSpotAngle=75;
             if(lamps==null)continue;

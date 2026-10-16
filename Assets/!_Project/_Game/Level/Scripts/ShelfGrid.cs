@@ -35,6 +35,8 @@ public static class ShelfGrid
     // Same rule as ShelfPrefabBuilder: a board is a thin "polka" child of the bay; thicker
     // ones are structural bases.
     const float ThinBoardMax = 0.1f;
+    // "Shelf deck" is the authoring name; old imported models still say "polka".
+    public static bool IsDeck(Transform child) => child.name.ToLowerInvariant().Contains("polka") || child.name.StartsWith("Shelf deck",System.StringComparison.OrdinalIgnoreCase);
 
     public readonly struct Board
     {
@@ -121,7 +123,7 @@ public static class ShelfGrid
         var boards = new List<Board>();
         foreach (Transform child in bay)
         {
-            if (!child.name.ToLowerInvariant().Contains("polka")) continue;
+            if (!child.gameObject.activeInHierarchy || !IsDeck(child)) continue;
             Vector3 s = child.localScale;
             if (s.y >= ThinBoardMax) continue;
             // Boards are axis-aligned in the bay, but a quarter turn swaps their sides.

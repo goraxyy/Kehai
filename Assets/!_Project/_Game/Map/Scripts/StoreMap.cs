@@ -546,7 +546,7 @@ namespace Kehai.Store
             if (p.x < 10.5f) return "West alley";
             if (p.x > 85.5f) return "East alley";
             if (p.z < -189.5f) return "South yard";
-            if (p.z < -175.5f) return "Stockroom";
+            if (p.z < -175.5f) return p.x>=55f ? "Cold storage" : "Stockroom";
             if (p.x < 25f) return p.z < -150.5f ? "Backstreet" : "Staff room";
             if (p.z >= -120.5f) return "Lobby";
             return "Sales floor";
@@ -1378,6 +1378,7 @@ namespace Kehai.Store
                 case "South yard": return '_';
                 case "Lobby": return 'l';
                 case "Stockroom": return 's';
+                case "Cold storage": return 'c';
                 case "Staff room": return 'r';
                 case "Backstreet": return 'b';
                 default: return ':';

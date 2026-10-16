@@ -56,6 +56,15 @@ detections/catches/tactics, the Panic Index, and a **failure taxonomy** — star
 thrashing, interference blindness, clock blindness, resource mismanagement, spurious
 completion — computed from the action trace.
 
+**Belief accuracy** (`BeliefAccuracy.cs`): five times a second of sim time the harness looks up
+the player's true cell on Karen's map and scores her belief on it — the log-probability of the
+true cell (nats, floored at 1e-6), whether it is among her 1/5/10 likeliest cells, and metres from
+her likeliest cell to it — split by whether her sight has the player that frame. Rungs A–B keep
+no belief and are scored on a *last-seen* baseline (a Gaussian round her last sighting, or the
+clock-in, widening at 1 m/s); that baseline is recorded on every rung as `last_seen_*`, so C–F
+can be compared with it within the same shift. Only the harness reads the player for this;
+Karen's code still can't.
+
 ## The ablation
 
 `Kehai → Eval → Run Quick/Full Ablation`, or headless:
@@ -67,6 +76,12 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
 
 runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–F and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
+
+A career's shifts are played back to back: between them the bot walks to the time clock, and if
+that walk fails it is put at the clock to punch in. A shift that still never starts is not
+written (the rest of that career is skipped, with a warning in the log), and no (rung, player,
+seed, shift) is written twice. `analyze_ablation.py` drops such repeated rows from runs made
+before 2026-10-15, when a failed clock-in logged a copy of the previous shift.
 
 Rung G (a trained tactic chooser) isn't in the default list, as it needs the ML-Agents package
 and a model: add it with `-ablation-rungs FG` (`tools/rl/README.md`). `-ablation-interleave`

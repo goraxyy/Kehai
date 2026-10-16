@@ -5,6 +5,13 @@ using UnityEngine;
 // counted as dealt with once it has been dropped into the container out back.
 public class TrashBag : MonoBehaviour
 {
+    public WasteStream stream;
+    public void SetStream(WasteStream value)
+    {
+        stream=value;
+        var block=new MaterialPropertyBlock();block.SetColor("_BaseColor",WasteStreams.ColorOf(value));
+        foreach(var r in GetComponentsInChildren<Renderer>())r.SetPropertyBlock(block);
+    }
     // Bags still waiting to be taken out — the trash task isn't done while any exist.
     public static int ActiveCount { get; private set; }
 
@@ -15,7 +22,7 @@ public class TrashBag : MonoBehaviour
     Item item;
     float nextRustle;
 
-    void Awake() => item = GetComponent<Item>();
+    void Awake() { item = GetComponent<Item>(); SetStream(stream); }
 
     // A carried bag rustles as you walk — a moving noise she can follow by ear alone.
     void Update()

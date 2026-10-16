@@ -7,6 +7,8 @@ using UnityEngine;
 public class ElectricBox : HighlightInteractable
 {
     public AudioClip switchSound;
+    [Tooltip("Optional authored front of the enclosure for the breaker controls.")]
+    public Transform controlFace;
 
     [Tooltip("What the prompt says when there is nothing to fix.")]
     public string idlePrompt = "Breakers are on";
