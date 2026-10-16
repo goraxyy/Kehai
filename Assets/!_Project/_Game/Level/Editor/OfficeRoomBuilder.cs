@@ -60,10 +60,10 @@ public static class OfficeRoomBuilder
         Solid("West lining",new Vector3(10.0875f,4,(South+North)*.5f),new Vector3(.125f,8,North-South-.15f),wall);
         Solid("Office WC partition",new Vector3(17.5f,4,North),new Vector3(15f,8,.15f),wall);
         // Replacement 20m wall run. Door clear openings are 1.5m inside their frames.
-        EastWall(-135f,-130.85f);EastWall(-129.15f,-117.55f);EastWall(-115.85f,-115f);
+        EastWall(-135f,-130.83f);EastWall(-129.17f,-117.53f);EastWall(-115.87f,-115f);
         foreach(float z in new[]{-130f,-116.7f})
         {
-            Solid("Door header",new Vector3(25,5.3f,z),new Vector3(.15f,5.4f,1.7f),wall);
+            Solid("Door header",new Vector3(25,5.3f,z),new Vector3(.15f,5.4f,1.66f),wall);
             var door=Place("RoomDoor",z<-120?"Office entrance":"WC entrance",25,z,90);
             door.GetComponentInChildren<FurnitureDoor>().label=z<-120?"office door":"WC door";
         }

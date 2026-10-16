@@ -20,6 +20,7 @@ public static class ServiceYardBuilder
             if(t.name.StartsWith("GarbageCan")||t.GetComponentInChildren<TrashContainer>(true)!=null)
             {Undo.RecordObject(t.gameObject,"Replace service yard props");t.gameObject.SetActive(false);}
             if(!t.name.StartsWith("ElectricBox"))continue;
+            if(t.name=="ElectricBox_02"){t.gameObject.SetActive(false);continue;}
             // Keep power-gameplay components and references, replace only their old art.
             var old=t.Find("New power enclosure");if(old!=null)Undo.DestroyObjectImmediate(old.gameObject);
             foreach(var r in t.GetComponentsInChildren<Renderer>()){Undo.RecordObject(r,"Remodel electrical enclosure");r.enabled=false;}
@@ -35,8 +36,7 @@ public static class ServiceYardBuilder
         {var p=light.transform.position;if(p.x>10&&p.x<25&&p.z>-175&&p.z<-150&&p.y>4){Undo.RecordObject(light.gameObject,"Remove indoor yard lights");light.gameObject.SetActive(false);}}
         foreach(var r in Object.FindObjectsByType<MeshRenderer>())
         {var p=r.bounds.center;if(p.x>10&&p.x<25&&p.z>-175&&p.z<-150&&p.y>4&&r.transform.root.name=="CeilingLamps")r.gameObject.SetActive(false);}
-        for(int i=0;i<3;i++)Container(root,(WasteStream)i,new Vector3(24.2f,0,-156.4f-i*7.1f),90);
-        Place(root,"UtilityCabinet","Outdoor maintenance cabinet",new Vector3(10.46f,0,-153.7f),-90);
+        for(int i=0;i<3;i++)Container(root,(WasteStream)i,new Vector3(23.86f,0,-157f-i*6f),90);
         Place(root,"ServiceCage","Returns roll-cage bay",new Vector3(10.71f,0,-157f),-90);
         for(int i=0;i<3;i++)Place(root,"PalletStack","Sorted empty pallets",new Vector3(10.71f,0,-160.4f-i*1.3f),-90);
         Place(root,"CardboardBales","Baled cardboard awaiting collection",new Vector3(10.56f,0,-167f),-90);
@@ -52,10 +52,7 @@ public static class ServiceYardBuilder
         // Drain and painted working boundaries, with a continuous central cart lane.
         var drain=ColdStoreBuilder.Primitive(root,"Yard drain",new Vector3(17.5f,.026f,-162.5f),new Vector3(.18f,.018f,22),metal,false);drain.AddComponent<InteriorLightAnchor>().outdoors=true;
         foreach(float x in new[]{13.4f,21.9f})ColdStoreBuilder.Primitive(root,"Keep-clear lane marking",new Vector3(x,.027f,-162.5f),new Vector3(.08f,.008f,22),StaffRoomModels.Material("Safety Ochre",new Color(.75f,.55f,.12f)),false);
-        foreach(float z in new[]{-123f,-145f,-179f})
-        {Place(root,"TallPlant","West exterior planter",new Vector3(9.4f,0,z),90);Place(root,"TallPlant","East exterior planter",new Vector3(85.6f,0,z),-90);}
-        foreach(float x in new[]{29f,53f,78f})Place(root,"LobbyPlanter","Rear exterior planter",new Vector3(x,0,-190.6f),0);
-        Station(root,"Service-yard recycling",new Vector3(21,0,-150.38f),0,false,bag);
+        // Side and rear access stay clear. Bins and planting belong at the front and indoors.
     }
     static GameObject Place(Transform p,string model,string name,Vector3 at,float yaw)
     {
@@ -66,17 +63,16 @@ public static class ServiceYardBuilder
     static void Container(Transform p,WasteStream stream,Vector3 at,float yaw)
     {
         var go=Place(p,"OutdoorWasteContainer",stream+" collection container",at,yaw);
-        // Triple the capacity through length; the opening remains at usable throwing height.
-        go.transform.localScale=new Vector3(3,1,1);
+        // Spread the larger capacity across width and depth, with a reachable loading rim.
+        go.transform.localScale=new Vector3(2,1,1.5f);
         var trigger=new GameObject("Deposit "+stream);trigger.transform.SetParent(go.transform,false);
         var volume=trigger.AddComponent<BoxCollider>();volume.isTrigger=true;volume.center=new Vector3(0,.85f,0);volume.size=new Vector3(1.9f,1.5f,1.1f);
         trigger.AddComponent<TrashContainer>().stream=stream;
         var mat=StaffRoomModels.Material(stream+" recycling",WasteStreams.ColorOf(stream));
         ColdStoreBuilder.Primitive(go.transform,"Stream panel",new Vector3(0,.95f,-.75f),new Vector3(1.4f,.5f,.035f),mat,false);
-        ColdStoreBuilder.Primitive(go.transform,"Label backing",new Vector3(0,.95f,-.773f),new Vector3(1.3f,.34f,.008f),StaffRoomModels.Material("Recycling Label Charcoal",new Color(.07f,.1f,.11f)),false);
         ColdStoreBuilder.Label(go.transform,stream.ToString().ToUpperInvariant(),new Vector3(0,.95f,-.782f),0,1.25f,.22f,false);
         var label=go.GetComponentInChildren<TMPro.TMP_Text>();label.color=Color.white;label.fontStyle=TMPro.FontStyles.Bold;
-        label.transform.localScale=new Vector3(1f/3,1,1);label.rectTransform.sizeDelta=new Vector2(3.75f,.35f);
+        label.transform.localScale=new Vector3(.5f,1,1f/1.5f);label.rectTransform.sizeDelta=new Vector2(2.5f,.35f);
     }
     public static void Station(Transform p,string name,Vector3 at,float yaw,bool customers,GameObject bag)
     {
@@ -92,7 +88,6 @@ public static class ServiceYardBuilder
             foreach(string guid in AssetDatabase.FindAssets("CustomerOutline t:Material")){outline.outlineMaterial=AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));break;}
             var obstacle=go.AddComponent<UnityEngine.AI.NavMeshObstacle>();obstacle.shape=UnityEngine.AI.NavMeshObstacleShape.Box;obstacle.center=new Vector3(0,.5f,0);obstacle.size=new Vector3(.5f,1,.6f);obstacle.carving=true;
             ColdStoreBuilder.Primitive(go.transform,"Stream colour",new Vector3(0,.73f,-.322f),new Vector3(.42f,.24f,.02f),StaffRoomModels.Material(stream+" recycling",WasteStreams.ColorOf(stream)),false);
-            ColdStoreBuilder.Primitive(go.transform,"Label backing",new Vector3(0,.73f,-.336f),new Vector3(.4f,.14f,.008f),StaffRoomModels.Material("Recycling Label Charcoal",new Color(.07f,.1f,.11f)),false);
             ColdStoreBuilder.Label(go.transform,stream.ToString().ToUpperInvariant(),new Vector3(0,.73f,-.345f),0,.38f,.065f,false);
             var label=go.GetComponentInChildren<TMPro.TMP_Text>();label.color=Color.white;label.fontStyle=TMPro.FontStyles.Bold;
         }
