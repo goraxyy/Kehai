@@ -120,6 +120,24 @@ namespace Kehai.Eval
             MoveWorld = Vector3.zero;
         }
 
+        // Puts the body down at `at`, on the NavMesh, feet on the floor. For the harness
+        // between shifts only: never a move an agent can make.
+        public bool Warp(Vector3 at)
+        {
+            if (!NavMesh.SamplePosition(at, out NavMeshHit to, 3f, NavMesh.AllAreas)) return false;
+            var body = GetComponent<CharacterController>();
+            float lift = body != null ? (body.height * 0.5f - body.center.y) * transform.lossyScale.y + body.skinWidth : 1f;
+            Stop();
+            bool enabledBefore = body != null && body.enabled;
+            if (body != null) body.enabled = false;
+            transform.position = to.position + Vector3.up * lift;
+            if (body != null) body.enabled = enabledBefore;
+            Physics.SyncTransforms();
+            lastPosition = progressFrom = transform.position;
+            stuckFor = 0f;
+            return true;
+        }
+
         public bool Arrived => !moving && !PathFailed;
 
         public float DistanceTo(Vector3 p)
