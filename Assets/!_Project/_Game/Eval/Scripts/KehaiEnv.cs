@@ -226,6 +226,14 @@ namespace Kehai.Eval
             var blink = FindAnyObjectByType<Kehai.Blink.BlinkTracker>();
             Kehai.Blink.BlinkClock.Simulated = Config.syntheticBlinks;
             if (blink != null && Config.syntheticBlinks) blink.UseSynthetic(Config.seed);
+
+            // Her warnings reach the observation the way they reach a player's ears (EnvWorld.OnTold).
+            KarenBrain karen = KarenBrain.Instance;
+            if (karen != null)
+            {
+                karen.Told -= World.OnTold;
+                karen.Told += World.OnTold;
+            }
         }
 
         // Walk to the time clock and punch in — the first thing every shift. If the walk fails

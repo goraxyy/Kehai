@@ -1061,8 +1061,13 @@ The claim "adaptive AI" is worth nothing without a way to check it. Three things
 alongside:
 
 **1. Simulated players.** Three scripted bot profiles — *Efficient* (optimal routes, low panic),
-*Skittish* (over-reacts, hides constantly), *Reckless* (sprints everywhere, ignores noise). Run
-200 headless shifts each. The Ledger should converge to visibly different tactic distributions
+*Skittish* (over-reacts, hides constantly), *Reckless* (sprints everywhere, ignores noise) — and a
+fourth, *Cautious*, held out: never used to tune her, only to test whether what she learns
+carries over. Since 2026-10-16 they react to her. They sense what a person would (her tells, the
+PA, blackouts, her blink dash), get frightened each in their own way (`Eval/Scripts/BotFear.cs`),
+and show it through the body: looking round, sprinting, freezing, abandoning jobs, detouring,
+dropping things, hiding. All of them back away when she's close, as her touch kills. Those are the signals the Panic Index reads (`tools/eval/README.md`).
+Run 200 headless shifts each. The Ledger should converge to visibly different tactic distributions
 per profile. If it doesn't, the bandit isn't learning anything and the reward signal is broken.
 This is the cheapest possible proof that adaptation is real.
 

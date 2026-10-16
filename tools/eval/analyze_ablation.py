@@ -15,7 +15,8 @@ import sys
 from collections import Counter, defaultdict
 
 RUNGS = "ABCDEF"
-PROFILES = ("efficient", "skittish", "reckless")
+# "cautious" is held out: never used to tune Karen or train her policy, only to test her on.
+PROFILES = ("efficient", "skittish", "reckless", "cautious")
 
 
 def load(path):
@@ -89,7 +90,7 @@ def accs(rows, who, view, metric):
     return [v for v in (acc(r, who, view, metric) for r in rows) if v is not None]
 
 
-def paired(rows, base, key):
+def paired_belief(rows, base, key):
     """Per-row differences against base[key(row)] (or the row itself when base is None), where both have a value."""
     def diff(who_a, who_b, view, metric):
         out = []
@@ -151,7 +152,7 @@ def belief_section(rows, rungs, w):
         for g in rungs:
             if g == "C":
                 continue
-            diff = paired(by_rung[g], base, key)
+            diff = paired_belief(by_rung[g], base, key)
             pairs = sum(1 for r in by_rung[g] if key(r) in base)
             cols = [pm_or_dash(diff("belief", "belief", view, m), f) for view, _ in VIEWS for m, f in metrics]
             w(f"| {g} | {pairs} | " + " | ".join(cols) + " |")
@@ -165,7 +166,7 @@ def belief_section(rows, rungs, w):
         w("| rung | shifts | Δ log p out of view | Δ top-5 out of view | Δ error out of view (m) | Δ log p in view | Δ top-5 in view | Δ error in view (m) |")
         w("|---|---|---|---|---|---|---|---|")
         for g in grid_rungs:
-            diff = paired(by_rung[g], None, key)
+            diff = paired_belief(by_rung[g], None, key)
             cols = [pm_or_dash(diff("belief", "last_seen", view, m), f) for view, _ in VIEWS for m, f in metrics]
             w(f"| {g} | {len(by_rung[g])} | " + " | ".join(cols) + " |")
         w("")
@@ -282,6 +283,24 @@ def main(path):
               f"{pm(r['karen_catches'] for r in rs)} | {pm(r['mean_panic'] for r in rs)} | {pm(r['panic_setpoint_rmse'] for r in rs)} | "
               f"{pm(jobs, '{:.1f}')} |")
 
+    if any("karen_reward_mean_abs" in r for r in rows):
+        w("\n### The reward signal, and how frightened the players were\n")
+        w("Reward signal: mean |Δ panic| in the 20 s after each tactic she was rewarded for — what the "
+          "bandit and the policy have to learn from. Fear is the simulated player's own (`BotFear`); "
+          "static players don't react to her tricks.\n")
+        w("| rung | profile | players | shifts | reward signal | mean fear | startles / shift | back-offs / shift | hides / shift | kills / shift |")
+        w("|---|---|---|---|---|---|---|---|---|---|")
+        for g in rungs:
+            for p in PROFILES:
+                rs = [r for r in by_rung[g] if r["agent"] == p and "karen_reward_mean_abs" in r]
+                if not rs:
+                    continue
+                kind = "reacting" if all(r.get("bot_reactive", True) for r in rs) else "static" if not any(r.get("bot_reactive", True) for r in rs) else "mixed"
+                w(f"| {g} | {p} | {kind} | {len(rs)} | {pm((r['karen_reward_mean_abs'] for r in rs), '{:.3f}')} | "
+                  f"{pm(r.get('bot_mean_fear', 0) for r in rs)} | {pm((r.get('bot_startles', 0) for r in rs), '{:.1f}')} | "
+                  f"{pm((r.get('bot_back_offs', 0) for r in rs), '{:.1f}')} | {pm((r.get('bot_hides', 0) for r in rs), '{:.1f}')} | "
+                  f"{pm(r['karen_catches'] for r in rs)} |")
+
     w("\n### Across a career (does she get better at this player?)\n")
     w("Mean detections per shift, by the shift's place in the career. Rung E keeps its Ledger between "
       "shifts; C and D start every shift from the prior.\n")
@@ -296,7 +315,7 @@ def main(path):
 
     w("\n### What she reached for, per profile\n")
     w("Most-used tactics (tier 1+) over all careers; the last column is the Jensen–Shannon divergence "
-      "between this profile's tactic mix and the other two profiles' (0 = identical, 1 = disjoint). "
+      "between this profile's tactic mix and the other profiles' (0 = identical, 1 = disjoint). "
       "Computed from each shift's top four tactics, so it understates the long tail.\n")
     w("| rung | profile | top tactics | JS vs other profiles |")
     w("|---|---|---|---|")
