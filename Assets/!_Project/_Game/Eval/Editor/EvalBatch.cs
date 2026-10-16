@@ -22,6 +22,16 @@ public static class EvalBatch
     static EvalBatch()
     {
         if (!Application.isBatchMode) return;
+
+        // Packages may change the define symbols as the editor settles (the Inference Engine's
+        // analytics define flips on reloads), which recompiles and reloads every script in the
+        // middle of a run and empties every MonoBehaviour's unserialised state. A batch eval
+        // never wants that: once playing, reloads wait until it's over.
+        EditorApplication.playModeStateChanged += state =>
+        {
+            if (state == PlayModeStateChange.EnteredPlayMode) EditorApplication.LockReloadAssemblies();
+        };
+
         string[] args = System.Environment.GetCommandLineArgs();
         int i = System.Array.IndexOf(args, "-eval-timeout-min");
         double limit = i >= 0 && i + 1 < args.Length && double.TryParse(args[i + 1], out double m) ? m * 60.0 : 0.0;

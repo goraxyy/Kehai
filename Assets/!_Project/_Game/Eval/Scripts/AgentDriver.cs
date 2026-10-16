@@ -114,6 +114,24 @@ namespace Kehai.Eval
             return true;
         }
 
+        // Her touch kills, so — like a person who can see her — the employee's body bends its
+        // path round Karen when she's just ahead, instead of walking into her and finding out.
+        // It only steers; whether to run or hide is still the player's (or the bot's) call.
+        static Vector3 AroundKaren(Vector3 here, Vector3 move)
+        {
+            Kehai.Karen.KarenBrain karen = Kehai.Karen.KarenBrain.Instance;
+            if (karen == null || karen.Body == null || move.sqrMagnitude < 1e-4f) return move;
+            Vector3 to = karen.Body.Position - here;
+            to.y = 0f;
+            float distance = to.magnitude;
+            if (distance > 4f || distance < 0.01f) return move;
+            if (Vector3.Dot(to / distance, move) < 0.2f) return move;      // not in the way
+            Vector3 left = Vector3.Cross(Vector3.up, move);
+            float away = Vector3.Dot(to, left) > 0f ? -1f : 1f;
+            float push = Mathf.Clamp01((4f - distance) / 3f);
+            return (move * (1f - push) + left * away * push * 1.2f).normalized;
+        }
+
         public void Stop()
         {
             moving = false;
@@ -177,6 +195,7 @@ namespace Kehai.Eval
 
                     // Someone standing in the aisle: step round them.
                     if (Time.time < sidestepUntil) MoveWorld = (sidestep * 0.85f + MoveWorld * 0.35f).normalized;
+                    MoveWorld = AroundKaren(here, MoveWorld);
 
                     // A closed door in the way: open it, as a person presses E on reaching it,
                     // then re-plan once it has swung (the open panel is carved out of the NavMesh).

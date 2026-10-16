@@ -49,6 +49,10 @@ door is opened on reaching it (pressing E), a shopper standing in the way is ste
 customer being escorted doesn't physically block the guide. An action that stays wedged fails with
 a message rather than burning the shift.
 
+Since Karen's touch kills (2026-10-16), the body also bends its path round her when she's just
+ahead, the way a person who can see her would; it only steers, and choosing to run or hide is
+still the agent's.
+
 ## What comes back
 
 Per episode: completion, work done by kind, queue waits, customers lost, energy, Karen's
