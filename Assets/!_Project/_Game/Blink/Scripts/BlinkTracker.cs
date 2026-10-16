@@ -86,7 +86,9 @@ namespace Kehai.Blink
         IBlinkSource source;
         IBlinkSource keyboard;
         UdpBlinkSource webcam;
-        double blinkStartedAt;
+        double blinkStartedAt, readingOpenedAt;
+        bool readingOpened;
+        int blinksLearnt;
         readonly float[] closedForMarks = { 0.5f, 1f, 2f };
         int nextMark;
         Eyelids lids;
@@ -190,7 +192,7 @@ namespace Kehai.Blink
                 // register the instant it's seen.
                 Closed01 = normalised > Closed01 ? normalised : Mathf.Lerp(Closed01, normalised, 0.6f);
                 Confidence = s.Confidence;
-                Step(s);
+                Step(s, normalised);
             }
 
             AdvanceCalibration();
@@ -201,13 +203,14 @@ namespace Kehai.Blink
             PushToKaren();
         }
 
-        void Step(BlinkSample s)
+        void Step(BlinkSample s, float normalised)
         {
             // Hysteresis: shut above one threshold, open again below a lower one.
             if (!EyesClosed && Closed01 >= closeThreshold)
             {
                 EyesClosed = true;
                 blinkStartedAt = s.Captured;
+                readingOpened = false;
                 nextMark = 0;
                 Blinks++;
                 recentBlinks.Enqueue(Time.unscaledTime);
@@ -215,14 +218,33 @@ namespace Kehai.Blink
                 // Closing your eyes because the calibration asked you to isn't a chance for Karen.
                 if (!IsCalibrating && !GamePause.Paused) KarenBrain.Instance?.OnBlinkStarted();
             }
-            else if (EyesClosed && Closed01 <= openThreshold)
+            else if (EyesClosed)
             {
-                EyesClosed = false;
-                float length = (float)(s.Captured - blinkStartedAt);
-                LastBlinkSeconds = length;
-                // Learn this player's blink length, for predicting the next reopening.
-                if (length > 0.08f && length < 0.8f) ExpectedBlinkSeconds = Mathf.Lerp(ExpectedBlinkSeconds, length, 0.1f);
-                OnBlinkEnd?.Invoke(length);
+                // When the eyes really opened: the last time the reading itself fell back under
+                // the level that started the blink. The hysteresis only confirms it a frame or two
+                // later (the smoothing on the way up, then the lower threshold), while the start
+                // is seen on its own frame.
+                if (normalised >= closeThreshold) readingOpened = false;
+                else if (!readingOpened) { readingOpened = true; readingOpenedAt = s.Captured; }
+
+                if (Closed01 <= openThreshold)
+                {
+                    EyesClosed = false;
+                    float detected = (float)(s.Captured - blinkStartedAt);
+                    float length = readingOpened ? (float)(readingOpenedAt - blinkStartedAt) : detected;
+                    LastBlinkSeconds = length;
+                    // Learn this player's blink length, for predicting the next reopening. Learning
+                    // the detected length made PredictedReopenIn late by those frames; which blinks
+                    // are learnt from is still judged on it. The 0.3 s guess counts as one blink:
+                    // the average of the blinks so far until there are ten, then a moving average,
+                    // so a guess longer than this player's blinks is gone in a few, not a minute.
+                    if (detected > 0.08f && detected < 0.8f)
+                    {
+                        blinksLearnt++;
+                        ExpectedBlinkSeconds = Mathf.Lerp(ExpectedBlinkSeconds, length, Mathf.Max(0.1f, 1f / (blinksLearnt + 1)));
+                    }
+                    OnBlinkEnd?.Invoke(length);
+                }
             }
 
             if (EyesClosed && nextMark < closedForMarks.Length)
