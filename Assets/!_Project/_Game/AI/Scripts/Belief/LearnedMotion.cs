@@ -162,6 +162,9 @@ namespace Kehai.Karen
 
         // ---- building it --------------------------------------------------------------------
 
+        // The kernel for the features as they are now (the trace's kernel probe).
+        public void EnsureBuilt(StoreMap map) => Rebuild(map);
+
         void Rebuild(StoreMap map)
         {
             if (builtFor == map && builtMap == features.MapVersion && builtSlow == features.SlowVersion && builtFast == features.FastVersion) return;

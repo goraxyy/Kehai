@@ -95,6 +95,7 @@ namespace Kehai.Store
         public int[] EdgeStart;       // CSR adjacency: neighbours of c are EdgeTo[EdgeStart[c]..EdgeStart[c+1])
         public int[] EdgeTo;
         public float[] EdgeLength;
+        public byte[] EdgeDirection;  // which of the eight grid directions each edge goes in (LinkCells' order: +x, -x, +z, -z, diagonals)
 
         Vector3 origin;
         int cols, rows;
@@ -277,6 +278,7 @@ namespace Kehai.Store
             var start = new int[CellCount + 1];
             var to = new List<int>(CellCount * 6);
             var length = new List<float>(CellCount * 6);
+            var direction = new List<byte>(CellCount * 6);
 
             // Recover each cell's grid coordinates once.
             var cellCol = new int[CellCount];
@@ -318,6 +320,7 @@ namespace Kehai.Store
                         {
                             to.Add(other);
                             length.Add(Vector3.Distance(CellPosition[cell], CellPosition[other]));
+                            direction.Add((byte)k);
                             linked = true;
                         }
                     }
@@ -330,6 +333,7 @@ namespace Kehai.Store
             EdgeStart = start;
             EdgeTo = to.ToArray();
             EdgeLength = length.ToArray();
+            EdgeDirection = direction.ToArray();
         }
 
         // Can a person walk straight from one cell centre to the next? Decided by physics
@@ -433,6 +437,7 @@ namespace Kehai.Store
             var start = new int[positions.Count + 1];
             var to = new List<int>(EdgeTo.Length);
             var length = new List<float>(EdgeTo.Length);
+            var direction = new List<byte>(EdgeTo.Length);
             for (int c = 0; c < CellCount; c++)
             {
                 int nc = remap[c];
@@ -444,6 +449,7 @@ namespace Kehai.Store
                     if (n < 0) continue;
                     to.Add(n);
                     length.Add(EdgeLength[e]);
+                    direction.Add(EdgeDirection[e]);
                 }
             }
             start[positions.Count] = to.Count;
@@ -457,6 +463,7 @@ namespace Kehai.Store
             EdgeStart = start;
             EdgeTo = to.ToArray();
             EdgeLength = length.ToArray();
+            EdgeDirection = direction.ToArray();
         }
 
         public int PrunedCells { get; private set; }

@@ -44,6 +44,8 @@ class FeatureState:
         n = m.n
         self.edge_from = m.edge_from
         self.degree = np.diff(m.edge_start).astype(np.int32)
+        if len(np.unique(self.edge_from * 8 + m.edge_slot)) != m.edges:
+            raise ValueError("two edges of one cell share a direction slot (a trace from before StoreMap.EdgeDirection?)")
         self.desire = np.full(n, np.inf, np.float32)
         self.habit = np.zeros(n, np.float32)
         self.light = np.ones(n, np.float32)
@@ -51,6 +53,11 @@ class FeatureState:
         self.karen = np.full(n, FAR, np.float32)
         self.trail = np.zeros(n, np.float32)
         self.chasing, self.since, self.speed = 0, F(0), F(3.1)
+        self._x = self._y = self._u = None
+
+    def touched(self):
+        """Call after changing fields by hand (the trace setters do it themselves)."""
+        self._x = self._y = self._u = None
 
     # -- from a trace --
     def set_slow(self, s: Shift, row: int):
@@ -60,6 +67,7 @@ class FeatureState:
         self.light = (q.astype(np.float32) / F(255)).astype(np.float32)
         self.jobs, self.done = int(s.sl_jobs[row]), int(s.sl_done[row])
         self.frac, self.overtime, self.power = F(s.sl_frac[row]), int(s.sl_overtime[row]), int(s.sl_power[row])
+        self.touched()
 
     def set_fast(self, s: Shift, row: int):
         self.karen = metres(s.dist_rows[s.fa_dist_row[row]][: self.m.n])
@@ -67,6 +75,15 @@ class FeatureState:
         a, k = s.fa_trail_start[row], s.fa_trail_count[row]
         self.trail[s.trail_cells[a:a + k]] = s.trail_values[a:a + k]
         self.chasing, self.since, self.speed = int(s.fa_chasing[row]), F(s.fa_since[row]), F(s.fa_speed[row])
+        self.touched()
+
+    # -- cached: rebuilt only after a refresh --
+    def features(self):
+        """(cell features, edge features, MLP input), rebuilt after each refresh."""
+        if self._x is None:
+            self._x, self._y = self.cells(), self.edges()
+            self._u = self.mlp_input(self._x, self._y)
+        return self._x, self._y, self._u
 
     # -- the features --
     def cells(self) -> np.ndarray:
@@ -121,6 +138,44 @@ class FeatureState:
         u[c, CELL + SLOTS + slot] = y[:, 2]
         u[c, CELL + 2 * SLOTS + slot] = 1
         return u
+
+
+def check_kernel_probes(s: Shift, models: dict) -> dict[str, float]:
+    """What each learned shadow's C# kernel made of the probed cells, against PyTorch's kernel
+    for the same features. Returns the worst |Δ| of rates and shares per model."""
+    import torch
+    from trace import OP_FAST, OP_MAP, OP_SLOW
+    worst: dict[str, float] = {}
+    if not s.kernel_probes:
+        return worst
+    probes = sorted(s.kernel_probes, key=lambda p: p[0])
+    fs, k, built = None, 0, {}
+    for i, (code, row) in enumerate(s.ops):
+        while k < len(probes) and probes[k][0] <= i:
+            _, sid, cell, rates, shares = probes[k]
+            k += 1
+            if sid not in models:
+                continue
+            if sid not in built:
+                with torch.no_grad():
+                    built[sid] = models[sid].build(fs)
+            K = built[sid]
+            hc = models[sid].headings
+            r = K["rate"].detach().numpy().reshape(-1)[cell * hc:(cell + 1) * hc]
+            a, b = fs.m.edge_start[cell], fs.m.edge_start[cell + 1]
+            sh = K["share"].detach().numpy().reshape(fs.m.edges, -1)[a:b]
+            err = max(float(np.max(np.abs(r - rates)) / max(1.0, float(np.max(np.abs(rates))))),
+                      float(np.max(np.abs(sh - shares))) if b > a else 0.0)
+            worst[sid] = max(worst.get(sid, 0.0), err)
+        if code in (OP_MAP, OP_SLOW, OP_FAST):
+            built = {}
+            if code == OP_MAP:
+                fs = FeatureState(s.maps[row])
+            elif code == OP_SLOW:
+                fs.set_slow(s, row)
+            else:
+                fs.set_fast(s, row)
+    return worst
 
 
 def check_probes(s: Shift, tol: float = 1e-5) -> tuple[int, float]:

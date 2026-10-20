@@ -133,6 +133,7 @@ class HandKernel(nn.Module):
         return dict(mt=mt, share=share, g=g)
 
     def apply(self, k, b: torch.Tensor, dt: float, speed: float) -> torch.Tensor:
+        """b: [n] or [n, batch]."""
         mt, g = k["mt"], k["g"]
         if self.avoid:
             mobility = torch.clamp(speed * g["speed_scale"] * dt / CELL_SIZE, 0, 0.8) * g["moving"]
@@ -140,9 +141,15 @@ class HandKernel(nn.Module):
             mobility = float(np.clip(np.float32(np.float32(speed) * np.float32(dt)) / np.float32(CELL_SIZE), 0, 0.8)
                              * np.float32(g["moving"].item()))
         leaving = b * mobility
-        stay = torch.where(mt.has_edges, b - leaving, b)
-        moved = (leaving[mt.edge_from] * k["share"])
+        stay = torch.where(_col(mt.has_edges, b), b - leaving, b)
+        moved = leaving[mt.edge_from] * _col(k["share"], b)
         return stay.index_add(0, mt.edge_to, moved)
+
+
+def _col(t: torch.Tensor, like: torch.Tensor) -> torch.Tensor:
+    """`t` with trailing singleton dims so it broadcasts against a batched `like`."""
+    extra = like.dim() - t.dim()
+    return t.view(*t.shape, *([1] * extra)) if extra > 0 else t
 
 
 def _logit(p: float) -> float:
@@ -225,15 +232,16 @@ class LearnedKernel(nn.Module):
 
     def build(self, fs: FeatureState, xyz=None):
         mt = map_tensors(fs.m)
-        x_np, y_np = (fs.cells(), fs.edges()) if xyz is None else xyz[:2]
-        x = torch.as_tensor(x_np)
-        y = torch.as_tensor(y_np)
+        x_np, y_np, u_np = fs.features() if xyz is None else xyz
+        dt = self.rate_w.dtype
+        x = torch.as_tensor(x_np, dtype=dt)
+        y = torch.as_tensor(y_np, dtype=dt)
         c = mt.edge_from
         log_rate = x @ self.rate_w + self.rate_b
         score = y @ self.edge_w + self.dir_b[mt.slot]
         o = None
         if self.outputs:
-            u = torch.as_tensor(fs.mlp_input(x_np, y_np) if xyz is None or xyz[2] is None else xyz[2])
+            u = torch.as_tensor(u_np if u_np is not None else fs.mlp_input(x_np, y_np), dtype=dt)
             h = torch.relu(u @ self.w1 + self.b1)
             h = torch.relu(h @ self.w2 + self.b2)
             o = h @ self.w3 + self.b3
@@ -257,18 +265,19 @@ class LearnedKernel(nn.Module):
         return dict(mt=mt, rate=total, share=share, stop=stop_share)
 
     def apply(self, k, b: torch.Tensor, dt: float, speed: float) -> torch.Tensor:
+        """b: [n] or [n, batch]; for m4 [n, 9] or [n, 9, batch]."""
         mt = k["mt"]
-        stay = torch.exp(-k["rate"] * dt)
+        stay = _col(torch.exp(-k["rate"] * dt), b)
         leave = b * (1 - stay)
         to = b * stay
         if self.id != "m4":
-            return to.index_add(0, mt.edge_to, leave[mt.edge_from] * k["share"])
+            return to.index_add(0, mt.edge_to, leave[mt.edge_from] * _col(k["share"], b))
         n = mt.n
         to = to.clone()
-        to[:, 0] = to[:, 0] + (leave * k["stop"]).sum(1)
-        moved = (leave[mt.edge_from] * k["share"]).sum(1)                 # [E]
-        flat = to.reshape(-1).index_add(0, mt.edge_to * HEADINGS + 1 + mt.slot, moved)
-        return flat.view(n, HEADINGS)
+        to[:, 0] = to[:, 0] + (leave * _col(k["stop"], b)).sum(1)
+        moved = (leave[mt.edge_from] * _col(k["share"], b)).sum(1)        # [E] or [E, batch]
+        flat = to.reshape(n * HEADINGS, *b.shape[2:]).index_add(0, mt.edge_to * HEADINGS + 1 + mt.slot, moved)
+        return flat.view(b.shape)
 
 
 def make(model_id: str, gains: dict | None = None) -> nn.Module:

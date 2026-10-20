@@ -23,7 +23,7 @@ namespace Kehai.Eval
     // tools/belief/trace.py reads it; the record layouts below and there must match.
     public sealed class BeliefTrace : IBeliefTap
     {
-        public const int Version = 1;
+        public const int Version = 2;
         const int ProbeCells = 16, ProbeEvery = 5;
 
         enum Record : byte { Map = 1, Shift = 2, Evidence = 3, Bias = 4, Predict = 5, Fast = 6, Slow = 7, Reset = 8, Sample = 9, Probe = 10, End = 11 }
@@ -278,6 +278,27 @@ namespace Kehai.Eval
                     foreach (float v in probeEdge) w.Write(v);
                 }
             }
+
+            // And what each learned shadow's kernel makes of those cells, for the same features.
+            int learned = 0;
+            if (shadows != null) foreach (BeliefGrid g in shadows.Grids) if (g.Motion is LearnedMotion) learned++;
+            w.Write((byte)learned);
+            if (shadows == null) return;
+            for (int i = 0; i < shadows.Grids.Count; i++)
+            {
+                if (!(shadows.Grids[i].Motion is LearnedMotion lm)) continue;
+                lm.EnsureBuilt(f.Map);
+                Text(shadows.Ids[i]);
+                int hc = lm.Headings;
+                w.Write((byte)hc);
+                for (int k = 0; k < ProbeCells; k++)
+                {
+                    int c = (int)(((long)k * n / ProbeCells + slowCount * 7L) % n);
+                    for (int h = 0; h < hc; h++) w.Write(lm.Rates[c * hc + h]);
+                    for (int e = f.Map.EdgeStart[c]; e < f.Map.EdgeStart[c + 1]; e++)
+                        for (int h = 0; h < hc; h++) w.Write(lm.EdgeShares[e * hc + h]);
+                }
+            }
         }
 
         // ---- the filter --------------------------------------------------------------------
@@ -291,7 +312,7 @@ namespace Kehai.Eval
             w.Write(l.Floor);
             w.Write(l.Count);
             for (int i = 0; i < l.Count; i++) w.Write((ushort)l.Cells[i]);
-            for (int i = 0; i < l.Count; i++) w.Write(l.Values[i]);
+            for (int i = 0; i < l.Count; i++) w.Write((float)l.Values[i]);
         }
 
         public void OnBias(BeliefGrid grid, int region, float amount)

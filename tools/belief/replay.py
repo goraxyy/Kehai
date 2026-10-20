@@ -24,7 +24,7 @@ import numpy as np
 import torch
 
 import kernels
-from features import FeatureState, check_probes
+from features import FeatureState, check_kernel_probes, check_probes
 from trace import (OP_BIAS, OP_EVIDENCE, OP_FAST, OP_MAP, OP_PREDICT, OP_RESET, OP_SAMPLE, OP_SLOW, Shift,
                    load_shift, read_trace)
 
@@ -44,11 +44,15 @@ def load(path: str | Path) -> Shift:
 
 
 def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: float = 20.0,
-           on_window=None, keep_dists: bool = False, view_weight: float = 0.25) -> Result:
+           on_window=None, keep_dists: bool = False, view_weight: float = 0.25, csharp_sums: bool = False) -> Result:
     """Run the filter over the shift. With `grad`, the loss −log(p + 1e-6) of the true cell
     (weight 1 out of view, `view_weight` in view) is collected over `window` seconds of sim
     time and handed to `on_window(loss, weight)`, which steps the optimiser; the state is then
-    carried on, detached (truncated backprop through time)."""
+    carried on, detached (truncated backprop through time).
+
+    `csharp_sums` normalises as BeliefGrid does — a float32 running sum over the cells (in
+    double with headings) — so the parity gate can hold the replay to C# within ~1e-5 rather
+    than within C#'s own round-off (~1e-4 of the total)."""
     hc = model.headings
     state = prior = hp = None
     fs: FeatureState | None = None
@@ -74,6 +78,13 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
 
     def normalise(st):
         nonlocal collapses
+        if csharp_sums:
+            flat = st.detach().numpy().ravel()
+            total = np.float32(flat.astype(np.float64).sum()) if hc > 1 else np.cumsum(flat, dtype=np.float32)[-1]
+            if not np.isfinite(total) or total < np.float32(1e-12):
+                collapses += 1
+                return expand(prior.clone())
+            return st * float(np.float32(1) / total)
         total = st.sum()
         if not bool(torch.isfinite(total)) or float(total) < 1e-12:
             collapses += 1
@@ -94,15 +105,15 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 fs.set_fast(s, row)
                 dirty = True
             elif code == OP_RESET:
-                b = torch.as_tensor(s.re_b[row][:n].copy())
-                prior = torch.as_tensor(s.re_prior[row][:n].copy())
+                b = torch.as_tensor(s.re_b[row][:n].copy(), dtype=torch.get_default_dtype())
+                prior = torch.as_tensor(s.re_prior[row][:n].copy(), dtype=torch.get_default_dtype())
                 if hc > 1:
                     hp = heading_prior()
                 state = expand(b)
             elif code == OP_EVIDENCE:
                 a, k = s.ev_start[row], s.ev_count[row]
                 mult = torch.full((n,), float(s.ev_floor[row]))
-                mult[torch.as_tensor(s.ev_cells[a:a + k].astype(np.int64))] = torch.as_tensor(s.ev_values[a:a + k])
+                mult[torch.as_tensor(s.ev_cells[a:a + k].astype(np.int64))] = torch.as_tensor(s.ev_values[a:a + k], dtype=mult.dtype)
                 state = normalise(state * (mult if hc == 1 else mult[:, None]))
             elif code == OP_BIAS:
                 if not bias:
@@ -114,7 +125,7 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 state = state * (np.float32(1) - np.float32(amount))
                 share = np.float32(amount) / np.float32(len(cells))
                 add = torch.zeros_like(state)
-                add[cells] = share if hc == 1 else share * hp
+                add[cells] = float(share) if hc == 1 else float(share) * hp
                 state = normalise(state + add)
             elif code == OP_PREDICT:
                 if dirty:
@@ -161,7 +172,7 @@ def parity(s: Shift, tol: float, weights: dict | None = None) -> tuple[bool, lis
     seen = s.sa_truth >= 0
     m0 = kernels.make("m0")
 
-    r = replay(s, m0, bias=True)
+    r = replay(s, m0, bias=True, csharp_sums=True)
     err = np.abs(r.logp[seen] - s.sa_own[seen])
     worst = float(err.max()) if err.size else 0.0
     ok &= worst <= tol
@@ -170,7 +181,7 @@ def parity(s: Shift, tol: float, weights: dict | None = None) -> tuple[bool, lis
 
     if "m0" in s.shadows:
         k = s.shadows.index("m0")
-        r = replay(s, m0, bias=False)
+        r = replay(s, m0, bias=False, csharp_sums=True)
         err = np.abs(r.logp[seen] - s.sa_shadow[seen, k])
         worst = float(err.max()) if err.size else 0.0
         ok &= worst <= tol
@@ -182,6 +193,17 @@ def parity(s: Shift, tol: float, weights: dict | None = None) -> tuple[bool, lis
     ok &= worst <= 1e-5
     lines.append(f"  features: {probes} probed cells, max |Δ| {worst:.2e}")
 
+    # The learned shadows' kernels at the probes, then the filter end to end.
+    if weights is not None and s.kernel_probes:
+        models = {}
+        for sid in s.shadows:
+            if sid in ("m2", "m3", "m4") and sid in weights:
+                models[sid] = kernels.make(sid)
+                models[sid].load_pack(weights[sid])
+        for sid, err in check_kernel_probes(s, models).items():
+            ok &= err <= 1e-5
+            lines.append(f"  {sid} kernel at the probes (C# vs PyTorch): max |Δ| {err:.2e}")
+
     # The learned shadows, if their weights are at hand: features, kernel and filter end to end.
     for k, sid in enumerate(s.shadows):
         if sid in ("m0",) or weights is None or sid not in weights:
@@ -191,7 +213,7 @@ def parity(s: Shift, tol: float, weights: dict | None = None) -> tuple[bool, lis
             model = kernels.HandKernel(avoid=True, gains=weights["m1"])
         else:
             model.load_pack(weights[sid])
-        r = replay(s, model, bias=False)
+        r = replay(s, model, bias=False, csharp_sums=True)
         err = np.abs(r.logp[seen] - s.sa_shadow[seen, k])
         worst = float(err.max()) if err.size else 0.0
         ok &= worst <= tol

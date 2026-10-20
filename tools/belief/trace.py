@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 MAGIC = b"KBTR"
-VERSION = 1
+VERSION = 2
 
 MAP, SHIFT, EVIDENCE, BIAS, PREDICT, FAST, SLOW, RESET, SAMPLE, PROBE, END = range(1, 12)
 
@@ -110,6 +110,7 @@ class Shift:
     # which map each op belongs to
     op_map: np.ndarray
     probes: list = field(default_factory=list)   # (op index, cell, cell features, edge features)
+    kernel_probes: list = field(default_factory=list)   # (op index, shadow id, cell, rates[h], shares[edge, h])
     end_collapses: int = 0
 
     @property
@@ -163,8 +164,8 @@ def read_trace(path: str | Path) -> Shift:
         raise ValueError(f"{path}: not a belief trace")
     r.i = 4
     version = r.i32()
-    if version != VERSION:
-        raise ValueError(f"{path}: trace version {version}, reader knows {VERSION}")
+    if version not in (1, VERSION):
+        raise ValueError(f"{path}: trace version {version}, reader knows 1–{VERSION}")
 
     meta = {}
     maps: list[MapData] = []
@@ -180,6 +181,7 @@ def read_trace(path: str | Path) -> Shift:
     dist_rows, light_rows, desire_rows, habit_rows, re_b, re_prior, sa_shadow = [], [], [], [], [], [], []
     ev_at = tr_at = 0
     probes = []
+    kernel_probes = []
     end_collapses = 0
 
     def op(code: int, row: int):
@@ -262,12 +264,22 @@ def read_trace(path: str | Path) -> Shift:
             t["sa_collapses"].append(r.i32())
             op(OP_SAMPLE, len(t["sa_t"]) - 1)
         elif rec == PROBE:
+            cells = []
             for _ in range(r.i32()):
                 cell = r.i32()
                 cf = r.arr(np.float32, 24)
                 ne = r.u8()
                 ef = r.arr(np.float32, ne * 9).reshape(ne, 9)
                 probes.append((len(ops), cell, cf, ef))
+                cells.append((cell, ne))
+            if version >= 2:
+                for _ in range(r.u8()):
+                    sid = r.text()
+                    hc = r.u8()
+                    for cell, ne in cells:
+                        rates = r.arr(np.float32, hc)
+                        shares = r.arr(np.float32, ne * hc).reshape(ne, hc)
+                        kernel_probes.append((len(ops), sid, cell, rates, shares))
         elif rec == END:
             r.f32()
             end_collapses = r.i32()
@@ -310,7 +322,7 @@ def read_trace(path: str | Path) -> Shift:
         sa_own=a("sa_own", np.float32), sa_last_seen=a("sa_last_seen", np.float32),
         sa_shadow=(np.stack(sa_shadow).astype(np.float32) if sa_shadow and nshadow else np.zeros((len(t["sa_t"]), 0), np.float32)),
         sa_collapses=a("sa_collapses", np.int32),
-        probes=probes, end_collapses=end_collapses)
+        probes=probes, kernel_probes=kernel_probes, end_collapses=end_collapses)
 
 
 def _stack(rows, dtype):
@@ -356,7 +368,7 @@ def load_shift(path: str | Path) -> Shift:
         maps.append(MapData(version=int(z[f"map{i}_version"]), **{f: z[f"map{i}_{f}"] for f in _MAP_FIELDS}))
     kw = {k: z[k] for k in z.files if not k.startswith("map") and not k.startswith("meta_")}
     shadows = str(z["meta_shadows"])
-    return Shift(maps=maps, shadows=[x for x in shadows.split(",") if x], probes=[],
+    return Shift(maps=maps, shadows=[x for x in shadows.split(",") if x], probes=[], kernel_probes=[],
                  path=str(z["meta_path"]), shift=int(z["meta_shift"]), seed=int(z["meta_seed"]),
                  rung=str(z["meta_rung"]), agent=str(z["meta_agent"]), motion=str(z["meta_motion"]),
                  duration=float(z["meta_duration"]), end_collapses=int(z["meta_end_collapses"]), **kw)
@@ -370,7 +382,39 @@ def describe(s: Shift) -> str:
             f"{codes[OP_FAST]}/{codes[OP_SLOW]} fast/slow refreshes, {codes[OP_RESET]} resets")
 
 
+def pack(src: str | Path, dst: str | Path, delete: bool = False) -> int:
+    """Every trace in `src` → a compact .npz in `dst` (then the trace can go)."""
+    dst = Path(dst)
+    dst.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for f in sorted(Path(src).glob("*.kbt.gz")):
+        out = dst / (f.name[: -len(".kbt.gz")] + ".npz")
+        if not out.exists():
+            s = read_trace(f)
+            if s.end_collapses < 0 or len(s.sa_t) == 0:
+                print(f"skipped {f.name}: no samples")
+                continue
+            save_shift(s, out)
+            print(f"{out.name}: {describe(s)}")
+        count += 1
+        if delete:
+            f.unlink()
+    return count
+
+
 if __name__ == "__main__":
-    import sys
-    for p in sys.argv[1:]:
-        print(describe(read_trace(p)))
+    import argparse
+    ap = argparse.ArgumentParser(description="Belief traces: describe them, or pack them into .npz")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    d = sub.add_parser("describe")
+    d.add_argument("paths", nargs="+")
+    k = sub.add_parser("pack")
+    k.add_argument("src")
+    k.add_argument("dst")
+    k.add_argument("--delete", action="store_true", help="delete each trace once packed")
+    a = ap.parse_args()
+    if a.cmd == "describe":
+        for p in a.paths:
+            print(describe(read_trace(p)))
+    else:
+        print(f"{pack(a.src, a.dst, a.delete)} shifts packed into {a.dst}")

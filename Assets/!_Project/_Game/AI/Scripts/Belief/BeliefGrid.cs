@@ -266,15 +266,19 @@ namespace Kehai.Karen
         // nudges (0.3 → ×1/16). A linear blend here left even certain sightings diffuse.
         float LikelihoodFloor(float confidence) => Mathf.Pow(Floor, Mathf.Clamp01(confidence));
 
-        // Every cell is multiplied exactly once: by its listed value, or by the floor.
+        // Every cell is multiplied exactly once: by its listed value, or by the floor. Listed
+        // values are kept in double and the product rounded once, which is what the old inline
+        // `b[c] *= floor + Mathf.Exp(…)` did under Mono (it keeps float intermediates in double)
+        // and under IL2CPP alike (a float product is exact in double).
         void MultiplyIn(Likelihood l)
         {
             for (int i = 0; i < l.Count; i++)
             {
                 int c = l.Cells[i];
                 stamp[c] = true;
-                if (Headings == 1) b[c] *= l.Values[i];
-                else for (int h = 0, s = c * Headings; h < Headings; h++, s++) state[s] *= l.Values[i];
+                double v = l.Values[i];
+                if (Headings == 1) b[c] = (float)(b[c] * v);
+                else for (int h = 0, s = c * Headings; h < Headings; h++, s++) state[s] = (float)(state[s] * v);
             }
             if (l.Floor != 1f)
             {
@@ -313,8 +317,16 @@ namespace Kehai.Karen
 
         bool Normalise()
         {
+            // A float running sum, as it always was. With headings the state is nine times
+            // longer and a float sum drifts by up to 1e-3 of the total, so that one is kept in double.
             float sum = 0f;
-            for (int s = 0; s < state.Length; s++) sum += state[s];
+            if (Headings == 1) for (int s = 0; s < state.Length; s++) sum += state[s];
+            else
+            {
+                double total = 0.0;
+                for (int s = 0; s < state.Length; s++) total += state[s];
+                sum = (float)total;
+            }
 
             if (sum < 1e-12f || float.IsNaN(sum))
             {
@@ -449,7 +461,7 @@ namespace Kehai.Karen
         public bool Strong;
         public int Count;
         public int[] Cells = new int[256];
-        public float[] Values = new float[256];
+        public double[] Values = new double[256];
 
         public void Begin(float floor, SenseChannel channel)
         {
@@ -459,7 +471,7 @@ namespace Kehai.Karen
             Count = 0;
         }
 
-        public void Add(int cell, float value)
+        public void Add(int cell, double value)
         {
             if (Count == Cells.Length)
             {

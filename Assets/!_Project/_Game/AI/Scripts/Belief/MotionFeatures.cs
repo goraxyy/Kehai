@@ -94,10 +94,7 @@ namespace Kehai.Karen
             ClockDistance = FieldFrom(map, LandmarkKind.TimeClock);
             ExitDistance = FieldFrom(map, LandmarkKind.AutoDoor);
 
-            EdgeSlot = new byte[map.EdgeTo.Length];
-            for (int c = 0; c < n; c++)
-                for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
-                    EdgeSlot[e] = SlotOf(map.CellPosition[map.EdgeTo[e]] - map.CellPosition[c]);
+            EdgeSlot = EdgeSlots(map);
 
             walked.Clear();
             TrailCells.Clear();
@@ -136,6 +133,19 @@ namespace Kehai.Karen
             float[] d = map.DistancesFrom(sources);
             for (int c = 0; c < field.Length; c++) field[c] = float.IsInfinity(d[c]) ? Far : d[c];
             return field;
+        }
+
+        // Each edge's direction, as the map linked it. Not from the cells' positions: they sit
+        // where the NavMesh put them, a little off the grid, and two edges of one cell could then
+        // read as the same direction.
+        static byte[] EdgeSlots(StoreMap map)
+        {
+            if (map.EdgeDirection != null && map.EdgeDirection.Length == map.EdgeTo.Length) return (byte[])map.EdgeDirection.Clone();
+            var slots = new byte[map.EdgeTo.Length];
+            for (int c = 0; c < map.CellCount; c++)
+                for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
+                    slots[e] = SlotOf(map.CellPosition[map.EdgeTo[e]] - map.CellPosition[c]);
+            return slots;
         }
 
         // The eight directions in StoreMap.LinkCells' order: +x, -x, +z, -z, then the diagonals.
@@ -318,10 +328,7 @@ namespace Kehai.Karen
                 KarenDistance[c] = Metres(Centimetres(12f + 10f * Synthetic(c, 7)));
                 Trail[c] = c % 4 == 0 ? 0.5f + 0.5f * Synthetic(c, 8) : 0f;
             }
-            EdgeSlot = new byte[map.EdgeTo.Length];
-            for (int c = 0; c < n; c++)
-                for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
-                    EdgeSlot[e] = SlotOf(map.CellPosition[map.EdgeTo[e]] - map.CellPosition[c]);
+            EdgeSlot = EdgeSlots(map);
             JobsLeft = 4; AllDone = false; ShiftFraction = 0.6f; Overtime = false; Power = true;
             KarenCell = 0; Chasing = true; SinceFix = 12.5f; Speed = 3.1f;
             MapVersion++; SlowVersion++; FastVersion++;
