@@ -293,6 +293,19 @@ b'(c) = Σ  T(c | c') · b(c')
   `TrashContainer` out back if a bag is active. **You are predictable because you are employed.**
 - **Ledger priors.** Your historical route habits bias `T` (§7.6).
 
+**Swappable, and learned (2026-10).** `T` sits behind one interface (`IMotionModel`): a model
+only says, for each state, how much stays and how much goes along each walkable edge, so the
+evidence half never changes. The shipped step above is `m0` (`HandMotion`, bit for bit what
+it was). `m1` is the same step with its gains fitted to data and the `Danger` layer filled
+from her walking distance and recent trail (people keep away from her). `m2`–`m4` are learned
+(`LearnedMotion`): a leave rate per cell and a softmax over its edges, log-linear (m2), with a
+small MLP per cell (m3), and with a heading in the state (m4: cell × still-or-8-directions,
+the heading inferred from successive sightings). All read only what Karen may know
+(`MotionFeatures`). They were trained through a replay of this very filter on recorded
+traces (`tools/belief`), and compared on identical evidence by shadow filters that run beside
+her grid without the Director's hint (`KAREN_RESULTS.md`). `KarenConfig.beliefMotion` stays
+`hand`; the others are for the eval and for playtest shadows until the results say otherwise.
+
 ### 4.3 Correct — evidence, including the absence of it
 
 ```
@@ -1116,7 +1129,7 @@ code departs from the plan above. Results of the ablation ladder are in
 |---|---|
 | §2 three minds | `AI/Scripts/Core/KarenBody.cs`, `KarenDirector.cs` (+ `PanicIndex`), `KarenLedger.cs`, tied together by `KarenBrain.cs` |
 | §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
-| §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
+| §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here); the predict step behind `IMotionModel` (`MotionModel.cs`: the hand step; `LearnedMotion.cs` + generated `MotionWeights.g.cs`: m2–m4; `MotionFeatures.cs`), with `tools/belief` and `Eval/Scripts/BeliefShadows.cs`, `BeliefTrace.cs` for training and comparing them |
 | §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](STORE.md#karens-map) |
 | §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard) |
 | §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
@@ -1223,6 +1236,15 @@ the wall colliders, so the map is the store as it actually is.
   `FairnessGuard.CheckPacing` (rule 4, checked on every rung) counts what gets through.
 - **The endless maze** is built in a scene of its own and parked; Karen isn't in it yet
   (`DECISIONS.md`).
+- **The `Danger` layer** (§4.2's "away from where she has been") was never filled until the
+  motion models: only `m1` fills it, from her walking distance and her last 30 s; the shipped
+  step (`m0`) still reads it empty, so it behaves exactly as before. The learned models read the
+  same inputs as features.
+- **Belief motion models** (§4.2) can be swapped (`-belief-motion`), and shadow filters can run
+  beside her grid on the same evidence (`-belief-shadows`, eval and playtests only). Playtest
+  builds run one shadow and add both belief scores to each shift record. A learned model's
+  kernel costs more than the hand step's; `m3/8`-style slicing spreads its MLP over believe
+  ticks (cost in `KAREN_RESULTS.md`).
 - **Not built:** a second Karen body (§14), and the Sentis in-engine
   blink model is written but only compiles once the `com.unity.ai.inference` package is added and
   `KAREN_SENTIS` is defined.

@@ -60,6 +60,7 @@ namespace Kehai.Playtest
         {
             if (Instance != null || !PlaytestConfig.Active) return;
             ReplayRecorder.RecordInterludes = true;
+            ShiftRecorder.ScoreBelief = true;   // her belief and a shadow's, scored against the tester (tools/belief)
             var go = new GameObject("Playtest");
             DontDestroyOnLoad(go);
             go.AddComponent<PlaytestSession>();
@@ -87,6 +88,7 @@ namespace Kehai.Playtest
             Application.wantsToQuit += OnWantsToQuit;
             Application.focusChanged += OnFocus;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            ShiftRecorder.Finishing += OnShiftRecorded;
         }
 
         void OnDisable()
@@ -95,6 +97,21 @@ namespace Kehai.Playtest
             Application.wantsToQuit -= OnWantsToQuit;
             Application.focusChanged -= OnFocus;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            ShiftRecorder.Finishing -= OnShiftRecorded;
+        }
+
+        // How well she knew where the tester was, out of view, and how a shadow filter with
+        // another motion model did on the same evidence (ShiftRecorder.ScoreBelief, tools/belief).
+        // The full scores are in the shift record; the session log gets the headline.
+        void OnShiftRecorded(ShiftRecording r)
+        {
+            if (r == null || r.Belief == null) return;
+            var fields = new Dictionary<string, object> { ["shift"] = r.ShiftNumber };
+            foreach (KeyValuePair<string, object> pair in r.Belief)
+                if (pair.Key == "belief_motion" || pair.Key == "belief_shadows" || pair.Key.EndsWith("_samples") && !pair.Key.Contains("_lost_")
+                    || pair.Key.EndsWith("_out_of_view_logp") || pair.Key.EndsWith("_out_of_view_top5") || pair.Key.EndsWith("_out_of_view_err_m"))
+                    fields[pair.Key] = pair.Value;
+            Note("belief", fields);
         }
 
         void Start()

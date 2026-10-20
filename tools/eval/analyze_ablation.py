@@ -2,15 +2,21 @@
 """Summarise an ablation run (AblationRunner's ablation_<time>.jsonl) as markdown.
 
     python analyze_ablation.py path/to/ablation_20260925_231500.jsonl > results.md
+    python analyze_ablation.py joined.jsonl --best m3 > results.md     (with belief shadows)
 
 Rungs see the same seeds (paired design), so differences against rung C are computed per
 (seed, shift) pair, and rung F (a trained tactic chooser, tools/rl) against rung E, the one
-thing it changes. Standard library only.
+thing it changes. Runs with belief shadow filters (-belief-shadows, tools/belief) add a section
+comparing the motion models on the same evidence; `--best` names the learned model chosen on
+validation (MotionWeights.Best), the primary comparison. Rows where her own grid ran another
+motion model (-belief-motion, the closed-loop run) are kept apart and paired with rung C on m0.
+Standard library only.
 """
 from __future__ import annotations
 
 import json
 import math
+import random
 import sys
 from collections import Counter, defaultdict
 
@@ -30,7 +36,7 @@ def load(path):
 def first_of_each_shift(rows):
     kept, seen = [], set()
     for r in rows:
-        key = (r["rung"], r["agent"], r["seed"], r["shift"])
+        key = (r["rung"], r["agent"], r["seed"], r["shift"], motion_of(r))
         if key in seen:
             continue
         seen.add(key)
@@ -39,6 +45,13 @@ def first_of_each_shift(rows):
         print(f"analyze_ablation: dropped {len(rows) - len(kept)} repeated (rung, player, seed, shift) rows: "
               "shifts that never started", file=sys.stderr)
     return kept
+
+
+# The motion model her own grid ran (tools/belief); "m0" is the shipped step, and runs from
+# before it existed.
+def motion_of(row):
+    m = row.get("belief_motion") or "m0"
+    return "m0" if m == "hand" else m
 
 
 # Runs recorded while she was called Aiko (2026-09-29 to 2026-10-10) name her numbers
@@ -186,6 +199,185 @@ def belief_section(rows, rungs, w):
                          (("logp", "{:.2f}"), ("top5", "{:.1f}"), ("err_m", "{:.1f}"))) + " |")
 
 
+# ---- motion models on the same evidence (tools/belief) -----------------------------------
+
+LOST = (("0_5", "0–5 s"), ("5_15", "5–15 s"), ("15_45", "15–45 s"), ("45_up", "45 s +"))
+MODEL_NAMES = {"last_seen": "last-seen", "belief": "her grid (m0 + hint)"}
+
+
+def shadow_ids(rows):
+    ids = []
+    for r in rows:
+        for i in (r.get("belief_shadows") or "").split(","):
+            if i and i not in ids:
+                ids.append(i)
+    return ids
+
+
+def who(model):
+    """The jsonl prefix of a model: a shadow, her own grid, or the last-seen baseline."""
+    return model if model in ("belief", "last_seen") else "shadow_" + model.replace("/", "s")
+
+
+def shift_diffs(rows, a, b, view="out_of_view", metric="logp"):
+    """(career, Δ) per shift, a minus b on the same samples."""
+    out = []
+    for r in rows:
+        x, y = acc(r, who(a), view, metric), acc(r, who(b), view, metric)
+        if x is not None and y is not None:
+            out.append(((r["agent"], r["seed"]), x - y))
+    return out
+
+
+def career_bootstrap(diffs, resamples=10000, seed=0):
+    """Mean of per-shift differences, and its 95% interval from resampling careers."""
+    by_career = defaultdict(list)
+    for career, d in diffs:
+        by_career[career].append(d)
+    careers = list(by_career)
+    if not careers:
+        return float("nan"), float("nan"), float("nan"), 0
+    rng = random.Random(seed)
+    means = []
+    for _ in range(resamples):
+        pick = [rng.choice(careers) for _ in careers]
+        xs = [d for c in pick for d in by_career[c]]
+        means.append(sum(xs) / len(xs))
+    means.sort()
+    point = mean(d for _, d in diffs)
+    return point, means[int(0.025 * resamples)], means[int(0.975 * resamples) - 1], len(careers)
+
+
+def ci(diffs, fmt="{:+.3f}"):
+    point, lo, hi, n = career_bootstrap(diffs)
+    if not diffs:
+        return "—"
+    return f"{fmt.format(point)} [{fmt.format(lo)}, {fmt.format(hi)}]"
+
+
+def motion_section(rows, closed, w, best=None):
+    rows = [r for r in rows if r.get("belief_shadows")]
+    ids = shadow_ids(rows)
+    if not rows or not ids:
+        return
+    learned = [i for i in ids if i.split("/")[0] in ("m2", "m3", "m4")]
+    models = ids + ["last_seen"]
+    careers = len({(r["agent"], r["seed"]) for r in rows})
+    w("\n### Motion models on the same evidence\n")
+    w(f"{len(rows)} shifts, {careers} careers. In each shift Karen acted on her own grid (m0, with the Director's hint); "
+      f"shadow filters {', '.join(ids)} ran beside it on exactly the same evidence, without the hint, and every one was scored "
+      "on the same 5 Hz samples. Mean ± standard error over shifts; Δ columns are per-shift differences on the same samples "
+      "with a 95% interval from resampling careers (one player profile's shifts on one seed).\n")
+
+    w("#### Out of view\n")
+    w("| model | shifts | log p | top-1 (%) | top-5 (%) | top-10 (%) | error (m) | in view: log p |")
+    w("|---|---|---|---|---|---|---|---|")
+    for m in models + ["belief"]:
+        vals = accs(rows, who(m), "out_of_view", "logp")
+        if not vals:
+            continue
+        w(f"| {MODEL_NAMES.get(m, m)} | {len(vals)} | " +
+          " | ".join(pm_or_dash(accs(rows, who(m), "out_of_view", k), f) for k, f in
+                     (("logp", "{:.3f}"), ("top1", "{:.1f}"), ("top5", "{:.1f}"), ("top10", "{:.1f}"), ("err_m", "{:.1f}"))) +
+          f" | {pm_or_dash(accs(rows, who(m), 'in_view', 'logp'), '{:.3f}')} |")
+    w("")
+
+    if best or learned:
+        primary = best if best in ids else None
+        w("#### The primary comparison\n")
+        if primary and "m1" in ids:
+            point, lo, hi, n = career_bootstrap(shift_diffs(rows, primary, "m1"))
+            verdict = "**wins**: the interval is above 0" if lo > 0 else "does **not** win: the interval reaches 0 or below"
+            w(f"Best learned model on validation: **{primary}**. Out-of-view log p, {primary} minus m1: "
+              f"**{point:+.3f}** nats, 95% interval [{lo:+.3f}, {hi:+.3f}] over {n} careers. It {verdict}.\n")
+        else:
+            w("(No `--best` given, or no m1 shadow: every learned model against m1 is in the next table.)\n")
+
+    w("#### Each model against m0, m1 and last-seen (out of view, same samples)\n")
+    w("| model | Δ log p vs m0 | Δ log p vs m1 | Δ log p vs last-seen | Δ top-5 vs m1 (pts) | Δ error vs m1 (m) |")
+    w("|---|---|---|---|---|---|")
+    for m in ids:
+        cols = [ci(shift_diffs(rows, m, b)) if m != b else "—" for b in ("m0", "m1", "last_seen") if b in models]
+        while len(cols) < 3:
+            cols.append("—")
+        cols.append(ci(shift_diffs(rows, m, "m1", metric="top5"), "{:+.1f}") if "m1" in ids and m != "m1" else "—")
+        cols.append(ci(shift_diffs(rows, m, "m1", metric="err_m"), "{:+.2f}") if "m1" in ids and m != "m1" else "—")
+        w(f"| {m} | " + " | ".join(cols) + " |")
+    w("")
+
+    w("#### By player, out of view log p (cautious is held out: never trained on or used for choosing)\n")
+    present = [p for p in PROFILES if any(r["agent"] == p for r in rows)]
+    w("| model | " + " | ".join(p + (" (held out)" if p == "cautious" else "") for p in present) + " |")
+    w("|---|" + "---|" * len(present))
+    for m in models:
+        w(f"| {MODEL_NAMES.get(m, m)} | " + " | ".join(pm_or_dash(accs([r for r in rows if r["agent"] == p], who(m), "out_of_view", "logp"), "{:.3f}") for p in present) + " |")
+    if "m1" in ids and learned:
+        for m in learned:
+            w(f"| Δ {m} − m1 | " + " | ".join(ci(shift_diffs([r for r in rows if r["agent"] == p], m, "m1")) for p in present) + " |")
+    w("")
+
+    late = [r for r in rows if r["shift"] == max(r2["shift"] for r2 in rows)]
+    if late and max(r["shift"] for r in rows) >= 7:
+        w(f"#### Shift {late[0]['shift']} alone (after the maze changes), out of view\n")
+        w("| model | shifts | log p | top-5 (%) | error (m) | Δ log p vs m1 |")
+        w("|---|---|---|---|---|---|")
+        for m in models:
+            w(f"| {MODEL_NAMES.get(m, m)} | {len(accs(late, who(m), 'out_of_view', 'logp'))} | " +
+              " | ".join(pm_or_dash(accs(late, who(m), "out_of_view", k), f) for k, f in (("logp", "{:.3f}"), ("top5", "{:.1f}"), ("err_m", "{:.1f}"))) +
+              f" | {ci(shift_diffs(late, m, 'm1')) if 'm1' in ids and m not in ('m1',) else '—'} |")
+        w("")
+
+    w("#### By time since she lost sight, out of view log p\n")
+    w("Where the evidence is fresh the motion model matters little; where it is stale it is nearly all there is.\n")
+    w("| model | " + " | ".join(label for _, label in LOST) + " |")
+    w("|---|" + "---|" * len(LOST))
+    total = sum(r.get(f"belief_lost_{k}_samples", 0) for r in rows for k, _ in LOST)
+    w("| share of out-of-view samples | " + " | ".join(pct(sum(r.get(f"belief_lost_{k}_samples", 0) for r in rows), total) for k, _ in LOST) + " |")
+    for m in models:
+        w(f"| {MODEL_NAMES.get(m, m)} | " + " | ".join(pm_or_dash(accs(rows, who(m), f"lost_{k}", "logp"), "{:.3f}") for k, _ in LOST) + " |")
+    if "m1" in ids:
+        for m in learned:
+            w(f"| Δ {m} − m1 | " + " | ".join(ci(shift_diffs(rows, m, "m1", view=f"lost_{k}")) for k, _ in LOST) + " |")
+    w("")
+
+    w("#### Cost: milliseconds per believe tick (editor, batch mode)\n")
+    w("Predict (the motion model, including rebuilding its kernel) and correct (multiplying in the evidence), per believe "
+      "tick, averaged over each shift. At 60 fps and 10 believe ticks a second, a tick's cost is spread over 6 frames on "
+      "average, but lands in one. Karen's whole budget is 0.7 ms a frame.\n")
+    w("| model | predict (ms/tick) | correct (ms/tick) | per frame at 60 fps (ms, average) |")
+    w("|---|---|---|---|")
+    for m in ids:
+        pr = [r[f"{who(m)}_ms_predict"] for r in rows if r.get(f"{who(m)}_ms_predict") is not None]
+        co = [r[f"{who(m)}_ms_evidence"] for r in rows if r.get(f"{who(m)}_ms_evidence") is not None]
+        if pr:
+            w(f"| {m} | {pm(pr, '{:.2f}')} | {pm(co, '{:.3f}')} | {mean(pr + []) / 6 + (mean(co) / 6 if co else 0):.2f} |")
+    own = [r["belief_ms_per_tick"] for r in rows if r.get("belief_ms_per_tick") is not None]
+    if own:
+        w(f"| her own grid (m0) | {pm(own, '{:.2f}')} | — | {mean(own) / 6:.2f} |")
+    w("")
+
+    if closed:
+        base = {(r["agent"], r["seed"], r["shift"]): r for r in rows if r["rung"] == "C"}
+        w("#### Closed loop: Karen acting on a learned model, against rung C on m0\n")
+        w("Same rung, seeds and shifts; the only difference is the motion model her own grid predicts with (with the "
+          "Director's hint, as in the game). Positive = more than on m0. Her belief accuracy here is her own grid's.\n")
+        w("| model | pairs | Δ detections | Δ first detection (s) | Δ catches | Δ mean panic | Δ own log p out of view | Δ own error out of view (m) | fairness violations |")
+        w("|---|---|---|---|---|---|---|---|---|")
+        for m in sorted({motion_of(r) for r in closed}):
+            rs = [r for r in closed if motion_of(r) == m and r["rung"] == "C"]
+            pairs = [(r, base[(r["agent"], r["seed"], r["shift"])]) for r in rs if (r["agent"], r["seed"], r["shift"]) in base]
+            def d(f):
+                return [f(a) - f(b) for a, b in pairs if f(a) is not None and f(b) is not None]
+            first = [a["karen_first_detection_s"] - b["karen_first_detection_s"] for a, b in pairs
+                     if a["karen_first_detection_s"] >= 0 and b["karen_first_detection_s"] >= 0]
+            w(f"| {m} | {len(pairs)} | {pm_or_dash(d(lambda r: r['karen_detections']), '{:+.1f}')} | {pm_or_dash(first, '{:+.1f}')} | "
+              f"{pm_or_dash(d(lambda r: r['karen_catches']), '{:+.2f}')} | {pm_or_dash(d(lambda r: r['mean_panic']), '{:+.3f}')} | "
+              f"{pm_or_dash(d(lambda r: acc(r, 'belief', 'out_of_view', 'logp')), '{:+.3f}')} | "
+              f"{pm_or_dash(d(lambda r: acc(r, 'belief', 'out_of_view', 'err_m')), '{:+.1f}')} | "
+              f"{sum(a.get('karen_fairness_violations', 0) for a, _ in pairs)} |")
+        w("")
+
+
 def tactics(row):
     counts = Counter()
     for part in (row.get("karen_top_tactics") or "").split():
@@ -231,8 +423,12 @@ def paired(w, by_rung, base_rung, rungs):
               f"{pm(d['rmse'], '{:+.3f}')} | {pm(d['jobs'], '{:+.1f}')} | {pm(d['out'], '{:+.2f}')} |")
 
 
-def main(path):
+def main(path, best=None):
     rows = load(path)
+    # Rows where her own grid ran another motion model (the closed-loop run) only appear in
+    # the motion section, paired with rung C on m0.
+    closed = [r for r in rows if motion_of(r) != "m0"]
+    rows = [r for r in rows if motion_of(r) == "m0"]
     by_rung = defaultdict(list)
     for r in rows:
         by_rung[r["rung"]].append(r)
@@ -269,6 +465,7 @@ def main(path):
         paired(w, by_rung, "E", ["F"])
 
     belief_section(rows, rungs, w)
+    motion_section(rows, closed, w, best)
 
     w("\n### By rung and player profile\n")
     w("| rung | profile | clocked out | detections / shift | catches / shift | mean panic | setpoint RMSE | jobs done / shift |")
@@ -340,6 +537,12 @@ def main(path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    args = sys.argv[1:]
+    best = None
+    if "--best" in args:
+        i = args.index("--best")
+        best = args[i + 1]
+        del args[i:i + 2]
+    if len(args) != 1:
         sys.exit(__doc__)
-    main(sys.argv[1])
+    main(args[0], best)

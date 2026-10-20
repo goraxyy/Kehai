@@ -291,14 +291,16 @@ namespace Kehai.Karen
         }
 
         // The choice among a cell's edges for heading h, scaled by the share that moves at all.
+        readonly float[] expScratch = new float[MotionFeatures.Slots];
+
         void SoftmaxEdges(int start, int end, int h, float moving)
         {
             int hc = Headings;
             float max = float.NegativeInfinity;
             for (int e = start; e < end; e++) max = Mathf.Max(max, Score(e, h));
             float sum = 0f;
-            for (int e = start; e < end; e++) sum += Mathf.Exp(Score(e, h) - max);
-            for (int e = start; e < end; e++) edgeShare[e * hc + h] = moving * Mathf.Exp(Score(e, h) - max) / sum;
+            for (int e = start; e < end; e++) { float x = Mathf.Exp(Score(e, h) - max); expScratch[e - start] = x; sum += x; }
+            for (int e = start; e < end; e++) edgeShare[e * hc + h] = moving * expScratch[e - start] / sum;
         }
 
         float Score(int e, int h)
@@ -307,28 +309,35 @@ namespace Kehai.Karen
             return kind == Kind.Heading ? z[k] + w[mom + h * MotionFeatures.Slots + k] : z[k];
         }
 
+        // Row by row: each non-zero input adds its row of weights. Many inputs are zero (the
+        // area is one-hot, missing directions, a ReLU that didn't fire), and a row is contiguous.
         void Mlp(int c)
         {
             features.MlpInput(c, u);
-            for (int j = 0; j < Hidden; j++)
-            {
-                float acc = w[b1 + j];
-                for (int i = 0; i < MotionFeatures.MlpInputs; i++) acc += u[i] * w[w1 + i * Hidden + j];
-                h1[j] = acc > 0f ? acc : 0f;
-            }
-            for (int j = 0; j < Hidden; j++)
-            {
-                float acc = w[b2 + j];
-                for (int i = 0; i < Hidden; i++) acc += h1[i] * w[w2 + i * Hidden + j];
-                h2[j] = acc > 0f ? acc : 0f;
-            }
+            Layer(u, MotionFeatures.MlpInputs, w1, b1, Hidden, h1, true);
+            Layer(h1, Hidden, w2, b2, Hidden, h2, true);
             int oc = c * outputs;
-            for (int j = 0; j < outputs; j++)
+            for (int j = 0; j < outputs; j++) mlpOut[oc + j] = w[b3 + j];
+            for (int i = 0; i < Hidden; i++)
             {
-                float acc = w[b3 + j];
-                for (int i = 0; i < Hidden; i++) acc += h2[i] * w[w3 + i * outputs + j];
-                mlpOut[oc + j] = acc;
+                float x = h2[i];
+                if (x == 0f) continue;
+                int row = w3 + i * outputs;
+                for (int j = 0; j < outputs; j++) mlpOut[oc + j] += x * w[row + j];
             }
+        }
+
+        void Layer(float[] input, int inputs, int weights, int bias, int width, float[] output, bool relu)
+        {
+            for (int j = 0; j < width; j++) output[j] = w[bias + j];
+            for (int i = 0; i < inputs; i++)
+            {
+                float x = input[i];
+                if (x == 0f) continue;
+                int row = weights + i * width;
+                for (int j = 0; j < width; j++) output[j] += x * w[row + j];
+            }
+            if (relu) for (int j = 0; j < width; j++) if (output[j] < 0f) output[j] = 0f;
         }
 
         // For the parity test: the kernel as built.

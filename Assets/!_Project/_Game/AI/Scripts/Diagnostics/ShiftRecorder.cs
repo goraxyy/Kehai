@@ -43,6 +43,22 @@ namespace Kehai.Karen
 
         public static string Folder => Path.Combine(Application.persistentDataPath, "shift_records");
 
+        // Playtest builds (PlaytestSession) score her belief against where the tester really was,
+        // with one shadow filter beside it (Eval/BeliefShadows: the best learned motion model, or
+        // the shipped step without the Director's hint before any is trained). Both scores go into
+        // the shift record, and so into the uploaded session.
+        public static bool ScoreBelief;
+        Kehai.Eval.BeliefAccuracy belief;
+
+        public static string PlaytestShadow
+        {
+            get
+            {
+                string id = MotionWeights.Trained ? MotionWeights.Best : "m0";
+                return id == "m3" || id == "m4" ? id + "/8" : id;   // sliced, to keep the tester's frame rate
+            }
+        }
+
         // The shift's files, without their extensions: named when the shift starts, so the replay
         // recorder can write <stem>.krec as it goes.
         public string Stem { get; private set; }
@@ -131,6 +147,7 @@ namespace Kehai.Karen
             Stem = Path.Combine(Folder, $"shift_{Current.ShiftNumber:00}_{System.DateTime.Now:yyyyMMdd_HHmmss}");
             nextFrame = 0f;
             helped.Clear(); served.Clear(); waitWarned.Clear(); lastMark.Clear();
+            BeginBeliefScore(brain);
             Add("store", "The shift started.", Vector3.zero, false, "the store");
         }
 
@@ -147,6 +164,13 @@ namespace Kehai.Karen
             if (r == null) return;
             r.Length = Time.time - shiftStartedAt;
             r.ClockedOut = clockedOut;
+            if (belief != null)
+            {
+                belief.End();
+                r.Belief = new Dictionary<string, object>();
+                belief.AddTo(r.Belief);
+                belief = null;
+            }
             Finishing?.Invoke(r);
             Last = r;
             LastAnalysis = ShiftAnalysis.Of(r);
@@ -209,12 +233,28 @@ namespace Kehai.Karen
                 WatchCustomers(Live);
             }
 
+            if (belief != null) belief.Tick(Time.deltaTime, PlayerAt);
+
             if (Current == null || ShiftTime < nextFrame) return;
             nextFrame = ShiftTime + FrameInterval;
             var f = new ShiftFrame();
             ShiftRecording.Capture(f, ShiftTime, burnout, IdOf, BayOf);
             Current.Frames.Add(f);
             while (recent.Count > 0 && Time.time - recent[0].WallTime > 30f) recent.RemoveAt(0);
+        }
+
+        void BeginBeliefScore(KarenBrain brain)
+        {
+            belief = null;
+            if (!ScoreBelief || brain == null || !brain.config.Features.Belief) return;
+            Kehai.Eval.BeliefShadows shadows = Kehai.Eval.BeliefShadows.Current;
+            if (shadows == null || !shadows.Follows(brain))
+            {
+                shadows?.Detach();
+                Kehai.Eval.BeliefShadows.Attach(brain, new[] { PlaytestShadow });
+            }
+            belief = new Kehai.Eval.BeliefAccuracy();
+            belief.Begin();
         }
 
         int IdOf(CustomerNPC c)
