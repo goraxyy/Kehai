@@ -1,0 +1,7 @@
+# Data, traces, trained weights and caches never go in the repo (code and .md only).
+out/
+data/
+*.npz
+*.kbt.gz
+__pycache__/
+.pytest_cache/

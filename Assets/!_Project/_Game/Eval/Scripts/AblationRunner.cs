@@ -29,6 +29,11 @@ namespace Kehai.Eval
         // The old players, who don't react to her tricks (SimulatedPlayer): a control, to
         // compare a run with reacting players against.
         public bool staticBots = false;
+        // The motion model her own belief predicts with, shadow filters beside it on the same
+        // evidence, and a folder for belief traces (tools/belief). See BeliefShadows, BeliefTrace.
+        public string beliefMotion = "hand";
+        public string beliefShadows = "";
+        public string beliefTrace = "";
     }
 
     // The ablation ladder (IDEAS.md, Ablation), run end to end with simulated players.
@@ -88,7 +93,10 @@ namespace Kehai.Eval
                         startShift = Plan.startShift,
                         agent = profile.ToString().ToLowerInvariant(),
                         syntheticBlinks = true,
-                        verbose = Plan.verbose
+                        verbose = Plan.verbose,
+                        beliefMotion = Plan.beliefMotion,
+                        beliefShadows = Plan.beliefShadows,
+                        beliefTrace = Plan.beliefTrace
                     };
                     yield return env.ResetEpisode(config);
 
@@ -278,6 +286,7 @@ namespace Kehai.Eval
     //
     //   Kehai -batchmode -nographics -kehai-env 5555
     //   Kehai -batchmode -nographics -kehai-ablation -ablation-careers 2 -ablation-shifts 4
+    //   … -belief-motion m3 -belief-shadows m0,m1,m2 -belief-trace <dir>   (tools/belief)
     public static class EvalCommandLine
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -308,7 +317,10 @@ namespace Kehai.Eval
                         outDirectory = Str(args, "-ablation-out", null),
                         verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0,
                         interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0,
-                        staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0
+                        staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0,
+                        beliefMotion = Str(args, "-belief-motion", "hand"),
+                        beliefShadows = Str(args, "-belief-shadows", ""),
+                        beliefTrace = Str(args, "-belief-trace", "")
                     };
                     string rungs = Str(args, "-ablation-rungs", null);
                     if (rungs != null)

@@ -152,6 +152,11 @@ namespace Kehai.Karen
         [Tooltip("Model under Resources/KarenPolicy/ (no extension). Empty or missing = the trainer if one is connected, else the bandit's choice.")]
         public string policyModel = "";
 
+        [Header("Belief motion model (Karen.md §4.2, tools/belief)")]
+        [Tooltip("How she thinks a person moves between two looks: hand (the shipped step, = m0), m1 (hand, tuned, keeps away from her), " +
+                 "m2 (log-linear), m3 (MLP), m4 (MLP with heading). Stays hand until the results say otherwise.")]
+        public string beliefMotion = MotionModels.Shipped;
+
         [Header("Debug")]
         public bool logToConsole = false;
         public bool writeJsonl = true;

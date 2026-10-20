@@ -9,32 +9,42 @@ namespace Kehai.Karen
     // Never a "last known position": a probability distribution over every walkable cell
     // of the store map, Σ b(c) = 1, updated like a Bayes filter.
     //
-    //   Predict — mass leaks along the floor the way a person can walk: faster if she
-    //             thinks you can still sprint, towards unfinished work ("you are
-    //             predictable because you are employed"), towards your habits.
+    //   Predict — mass leaks along the floor the way a person can walk. How it moves is the
+    //             motion model's business (MotionModel.cs): the shipped one is a hand-written
+    //             step, faster if she thinks you can still sprint, towards unfinished work
+    //             ("you are predictable because you are employed"), towards your habits.
     //   Correct — each observation multiplies in a likelihood. A sighting is a tight bump,
     //             a noise a bump smeared along the floor, a footprint a bump pushed along
     //             its heading, testimony a wide fading one — and a sweep that finds nothing
     //             *removes* mass from everything it looked at.
+    //
+    // A motion model may keep a heading per cell (still, or one of eight directions). Then the
+    // state is cell × heading, evidence multiplies every heading of a cell alike, and
+    // everything that reads the grid sees the sum over headings.
     //
     // If everything is ruled out, belief resets to the prior: she has lost the scent, and
     // the player can feel it happen.
     public sealed class BeliefGrid
     {
         readonly StoreMap map;
-        readonly float[] b;
+        readonly float[] b;            // over cells: the state itself, or its marginal with headings
+        readonly float[] state;        // cells × headings; the same array as b when there are none
         readonly float[] scratch;
         readonly float[] prior;
         readonly float[] regionMass;
         float[] distanceScratch;
         readonly bool[] stamp;
         readonly List<int> nearby = new List<int>();
+        readonly Likelihood like = new Likelihood();
 
         // Per-cell layers that shape prediction. Owned by the brain, refreshed on change.
         public float[] DesireDistance;   // metres to the nearest unfinished task (∞ = none)
         public float[] HabitPrior;       // 0..1 from the Ledger: where this player tends to be
         public float[] Danger;           // 0..1: where the player has reason to avoid
 
+        public StoreMap Map => map;
+        public IMotionModel Motion { get; }
+        public int Headings { get; }
         public int CellCount => b.Length;
         public float this[int cell] => b[cell];
         public float[] RegionMass => regionMass;
@@ -49,23 +59,26 @@ namespace Kehai.Karen
         public float Staleness => Time.time - LastStrongObservation;
         public int Collapses { get; private set; }
 
+        // What the eval harness reads about the cost of prediction (Karen.md §12.4).
+        public int PredictTicks { get; private set; }
+        public double PredictMilliseconds { get; private set; }
+
+        // Everything that changes the grid, as it happens: the trace logger and the shadow
+        // filters listen here (Eval/BeliefTrace, Eval/BeliefShadows).
+        public readonly List<IBeliefTap> Taps = new List<IBeliefTap>();
+
         // Tunables (KarenConfig overrides these).
         public float Floor = 1e-4f;                      // likelihood floor outside a bump
-        public float MovingProbability = 0.65f;          // share of time a person is walking
-        public float DesireGain = 0.9f;
-        public float HabitGain = 1.2f;
-        public float DangerAvoidance = 0.6f;
+        public float HabitGain = 1.2f;                   // how much habit weighs in the prior
 
-        // Share of belief per second handed back to the prior. The diffusion model is a
-        // guess about how people move; this is its humility — without it one confident
-        // mistake would make her deaf to everything that contradicts it.
-        public float Uncertainty = 0.015f;
-
-        public BeliefGrid(StoreMap map)
+        public BeliefGrid(StoreMap map, IMotionModel motion = null)
         {
             this.map = map;
+            Motion = motion ?? new HandMotion();
+            Headings = Mathf.Max(1, Motion.Headings);
             b = new float[map.CellCount];
-            scratch = new float[map.CellCount];
+            state = Headings == 1 ? b : new float[map.CellCount * Headings];
+            scratch = new float[state.Length];
             prior = new float[map.CellCount];
             stamp = new bool[map.CellCount];
             regionMass = new float[map.Regions.Count];
@@ -96,11 +109,15 @@ namespace Kehai.Karen
             for (int c = 0; c < prior.Length; c++) prior[c] /= sum;
         }
 
+        public float[] Prior => prior;
+
         public void ResetToPrior()
         {
             RebuildPrior();
             System.Array.Copy(prior, b, b.Length);
+            Expand();
             Refresh();
+            for (int i = 0; i < Taps.Count; i++) Taps[i].OnReset(this);
         }
 
         // Certainty at a point — for a fresh shift with the player at the time clock, which
@@ -108,56 +125,51 @@ namespace Kehai.Karen
         public void ResetTo(Vector3 position, float sigma)
         {
             System.Array.Copy(prior, b, b.Length);
-            Multiply(position, sigma, 1f);
+            Expand();
+            BuildBump(position, sigma, 1f);
+            MultiplyIn(like);
             Normalise();
+            for (int i = 0; i < Taps.Count; i++) Taps[i].OnReset(this);
+        }
+
+        // Take another grid's belief as this one's, over the same map — how a shadow filter
+        // starts a shift with Karen (Eval/BeliefShadows). Headings start from the model's prior.
+        public void CopyFrom(BeliefGrid other)
+        {
+            System.Array.Copy(other.prior, prior, prior.Length);
+            for (int c = 0; c < b.Length; c++) b[c] = other.b[c];
+            Expand();
+            Refresh();
         }
 
         // ---- predict --------------------------------------------------------------
 
-        // One step of diffusion. `speed` is how fast Karen believes you move on average —
-        // lower once she thinks you're out of energy, which is burnout narrowing the search.
+        // One step of the motion model, then the leak back to the prior. `speed` is how fast
+        // Karen believes you move on average — lower once she thinks you're out of energy,
+        // which is burnout narrowing the search.
         public void Predict(float dt, float speed)
         {
-            float mobility = Mathf.Clamp(speed * dt / StoreMap.CellSize, 0f, 0.8f) * MovingProbability;
-            System.Array.Clear(scratch, 0, scratch.Length);
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
+            Motion.Transition(this, state, scratch, dt, speed);
 
-            for (int c = 0; c < b.Length; c++)
+            // The leak is the model's humility: a share of belief per second handed back to the
+            // prior, so one confident mistake can't make her deaf to what contradicts it.
+            float u = Mathf.Clamp01(Motion.Leak * dt);
+            if (Headings == 1)
             {
-                float mass = b[c];
-                if (mass <= 0f) continue;
-
-                int start = map.EdgeStart[c], end = map.EdgeStart[c + 1];
-                if (start == end) { scratch[c] += mass; continue; }
-
-                float leaving = mass * mobility;
-                scratch[c] += mass - leaving;
-
-                // Weight each neighbour by whether it takes you closer to unfinished work,
-                // toward places you habitually go, and away from where she has been.
-                float total = 0f;
-                float here = DesireDistance[c];
-                for (int e = start; e < end; e++)
-                    total += Weight(here, map.EdgeTo[e]);
-
-                for (int e = start; e < end; e++)
-                    scratch[map.EdgeTo[e]] += leaving * Weight(here, map.EdgeTo[e]) / total;
+                for (int c = 0; c < b.Length; c++) b[c] = (1f - u) * scratch[c] + u * prior[c];
             }
-
-            float u = Mathf.Clamp01(Uncertainty * dt);
-            for (int c = 0; c < b.Length; c++) b[c] = (1f - u) * scratch[c] + u * prior[c];
+            else
+            {
+                float[] hp = Motion.HeadingPrior;
+                for (int c = 0, i = 0; c < b.Length; c++)
+                    for (int h = 0; h < Headings; h++, i++) state[i] = (1f - u) * scratch[i] + u * prior[c] * hp[h];
+            }
             Refresh();
-        }
 
-        float Weight(float hereDesire, int n)
-        {
-            float w = 1f;
-            float there = DesireDistance[n];
-            // A step that closes the distance to work is favoured, one that opens it isn't.
-            if (!float.IsInfinity(hereDesire) && !float.IsInfinity(there))
-                w *= 1f + DesireGain * 0.5f * Mathf.Clamp((hereDesire - there) / StoreMap.CellSize, -1f, 1f);
-            w *= 1f + HabitGain * HabitPrior[n];
-            w *= 1f - DangerAvoidance * Mathf.Clamp01(Danger[n]);
-            return Mathf.Max(0.02f, w);
+            PredictTicks++;
+            PredictMilliseconds += (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            for (int i = 0; i < Taps.Count; i++) Taps[i].OnPredict(this, dt, speed);
         }
 
         // ---- correct ----------------------------------------------------------------
@@ -170,7 +182,7 @@ namespace Kehai.Karen
             switch (o.Channel)
             {
                 case SenseChannel.Hearing:
-                    MultiplyAlongFloor(o.Position, o.Sigma, o.Confidence);
+                    BuildAlongFloor(o.Position, o.Sigma, o.Confidence);
                     break;
 
                 case SenseChannel.Trace:
@@ -178,61 +190,74 @@ namespace Kehai.Karen
                     Vector3 centre = o.Position;
                     if (o.Heading.sqrMagnitude > 0.01f)
                         centre += o.Heading.normalized * Mathf.Min(6f, 1.5f + (Time.time - o.Timestamp) * 1.2f);
-                    MultiplyAlongFloor(centre, o.Sigma, o.Confidence);
+                    BuildAlongFloor(centre, o.Sigma, o.Confidence);
                     break;
 
                 default:
-                    Multiply(o.Position, o.Sigma, o.Confidence);
+                    BuildBump(o.Position, o.Sigma, o.Confidence);
                     break;
             }
 
+            like.Channel = o.Channel;
+            like.Strong = o.IsStrong;
             if (o.IsStrong) LastStrongObservation = Time.time;
-            return Normalise();
+            return Correct(like);
         }
 
         // "I looked and there was nothing here." Every swept cell keeps only the share of
         // its mass that could have gone unseen.
         public bool ApplySweep(List<int> cells, List<float> detectProbability)
         {
-            for (int i = 0; i < cells.Count; i++)
-                b[cells[i]] *= 1f - Mathf.Clamp01(detectProbability[i]);
-            return Normalise();
+            like.Begin(1f, SenseChannel.Absence);
+            for (int i = 0; i < cells.Count; i++) like.Add(cells[i], 1f - Mathf.Clamp01(detectProbability[i]));
+            return Correct(like);
+        }
+
+        // Multiplies a likelihood that was built elsewhere — the same evidence fed to a shadow
+        // filter, or replayed. Returns true if belief had to reset.
+        public bool Correct(Likelihood l)
+        {
+            if (l.Strong && l != like) LastStrongObservation = Time.time;
+            MultiplyIn(l);
+            bool collapsed = Normalise();
+            for (int i = 0; i < Taps.Count; i++) Taps[i].OnEvidence(this, l, collapsed);
+            return collapsed;
         }
 
         // Straight-line Gaussian: sightings, testimony, infrastructure. `confidence` blends
         // between "barely moves belief" and "belief collapses onto this point".
-        void Multiply(Vector3 position, float sigma, float confidence)
+        void BuildBump(Vector3 position, float sigma, float confidence)
         {
             map.CellsWithin(position, sigma * 3f, nearby);
-            MarkNearby();
             float floor = LikelihoodFloor(confidence);
             float inv = 1f / (2f * sigma * sigma);
 
-            for (int c = 0; c < b.Length; c++)
+            like.Begin(floor, SenseChannel.Sight);
+            for (int i = 0; i < nearby.Count; i++)
             {
-                if (!stamp[c]) { b[c] *= floor; continue; }
+                int c = nearby[i];
                 Vector3 d = map.CellPosition[c] - position;
                 d.y = 0f;
-                b[c] *= floor + Mathf.Exp(-d.sqrMagnitude * inv);
+                like.Add(c, floor + Mathf.Exp(-d.sqrMagnitude * inv));
             }
-            ClearStamp();
         }
 
         // The same bump, measured in walking distance: a noise around a corner belongs to
         // the aisle it came from, not the one on the other side of the shelf.
-        void MultiplyAlongFloor(Vector3 position, float sigma, float confidence)
+        void BuildAlongFloor(Vector3 position, float sigma, float confidence)
         {
             int source = map.CellAt(position);
-            if (source < 0) { Multiply(position, sigma, confidence); return; }
+            if (source < 0) { BuildBump(position, sigma, confidence); return; }
 
             distanceScratch = map.Distances(source, sigma * 3f, distanceScratch);
             float floor = LikelihoodFloor(confidence);
             float inv = 1f / (2f * sigma * sigma);
 
+            like.Begin(floor, SenseChannel.Hearing);
             for (int c = 0; c < b.Length; c++)
             {
                 float d = distanceScratch[c];
-                b[c] *= float.IsInfinity(d) ? floor : floor + Mathf.Exp(-d * d * inv);
+                if (!float.IsInfinity(d)) like.Add(c, floor + Mathf.Exp(-d * d * inv));
             }
         }
 
@@ -241,20 +266,29 @@ namespace Kehai.Karen
         // nudges (0.3 → ×1/16). A linear blend here left even certain sightings diffuse.
         float LikelihoodFloor(float confidence) => Mathf.Pow(Floor, Mathf.Clamp01(confidence));
 
-        void MarkNearby()
+        // Every cell is multiplied exactly once: by its listed value, or by the floor.
+        void MultiplyIn(Likelihood l)
         {
-            for (int i = 0; i < nearby.Count; i++) stamp[nearby[i]] = true;
-        }
-
-        void ClearStamp()
-        {
-            for (int i = 0; i < nearby.Count; i++) stamp[nearby[i]] = false;
+            for (int i = 0; i < l.Count; i++)
+            {
+                int c = l.Cells[i];
+                stamp[c] = true;
+                if (Headings == 1) b[c] *= l.Values[i];
+                else for (int h = 0, s = c * Headings; h < Headings; h++, s++) state[s] *= l.Values[i];
+            }
+            if (l.Floor != 1f)
+            {
+                for (int s = 0; s < state.Length; s++)
+                    if (!stamp[s / Headings]) state[s] *= l.Floor;
+            }
+            for (int i = 0; i < l.Count; i++) stamp[l.Cells[i]] = false;
         }
 
         // ---- the Director's bounded hint ---------------------------------------------
 
         // Moves up to `amount` of the total mass onto a region. The Director alone calls
-        // this, and caps it (Karen.md §9.2); the grid just does the arithmetic.
+        // this, and caps it (Karen.md §9.2); the grid just does the arithmetic. Shadow
+        // filters don't get it: it is the truth leaking in, and they measure the filter alone.
         public void Bias(int region, float amount)
         {
             if (region < 0 || amount <= 0f) return;
@@ -262,10 +296,17 @@ namespace Kehai.Karen
             if (r.Cells.Count == 0) return;
 
             amount = Mathf.Clamp01(amount);
-            for (int c = 0; c < b.Length; c++) b[c] *= 1f - amount;
+            for (int s = 0; s < state.Length; s++) state[s] *= 1f - amount;
             float share = amount / r.Cells.Count;
-            foreach (int c in r.Cells) b[c] += share;
+            if (Headings == 1) foreach (int c in r.Cells) b[c] += share;
+            else
+            {
+                float[] hp = Motion.HeadingPrior;
+                foreach (int c in r.Cells)
+                    for (int h = 0; h < Headings; h++) state[c * Headings + h] += share * hp[h];
+            }
             Normalise();
+            for (int i = 0; i < Taps.Count; i++) Taps[i].OnBias(this, region, amount);
         }
 
         // ---- bookkeeping --------------------------------------------------------------
@@ -273,25 +314,45 @@ namespace Kehai.Karen
         bool Normalise()
         {
             float sum = 0f;
-            for (int c = 0; c < b.Length; c++) sum += b[c];
+            for (int s = 0; s < state.Length; s++) sum += state[s];
 
             if (sum < 1e-12f || float.IsNaN(sum))
             {
                 // Everything ruled out — the scent is lost.
                 Collapses++;
                 System.Array.Copy(prior, b, b.Length);
+                Expand();
                 Refresh();
                 return true;
             }
 
             float inv = 1f / sum;
-            for (int c = 0; c < b.Length; c++) b[c] *= inv;
+            for (int s = 0; s < state.Length; s++) state[s] *= inv;
             Refresh();
             return false;
         }
 
+        // From a belief over cells to the state: each cell's mass split by the heading prior.
+        void Expand()
+        {
+            if (Headings == 1) return;
+            float[] hp = Motion.HeadingPrior;
+            for (int c = 0, s = 0; c < b.Length; c++)
+                for (int h = 0; h < Headings; h++, s++) state[s] = b[c] * hp[h];
+        }
+
         void Refresh()
         {
+            if (Headings > 1)
+            {
+                for (int c = 0, s = 0; c < b.Length; c++)
+                {
+                    float m = 0f;
+                    for (int h = 0; h < Headings; h++, s++) m += state[s];
+                    b[c] = m;
+                }
+            }
+
             System.Array.Clear(regionMass, 0, regionMass.Length);
             float peak = -1f;
             for (int c = 0; c < b.Length; c++)
@@ -309,6 +370,18 @@ namespace Kehai.Karen
             }
             Confidence = best;
             Entropy = entropy;
+        }
+
+        // The full state (cells × headings), for the trace logger and the tests.
+        public float[] State => state;
+
+        // Sum of belief per heading, over the whole store: how sure she is of which way you're going.
+        public float HeadingMass(int heading)
+        {
+            if (Headings == 1) return heading == 0 ? 1f : 0f;
+            float m = 0f;
+            for (int s = heading; s < state.Length; s += Headings) m += state[s];
+            return m;
         }
 
         public float MassIn(ICollection<int> regions)
@@ -364,5 +437,48 @@ namespace Kehai.Karen
             System.Array.Copy(regionMass, copy, copy.Length);
             return copy;
         }
+    }
+
+    // One piece of evidence as the grid multiplies it in: a value for each listed cell, and
+    // the floor for every other. Kept as numbers rather than as the Observation so the same
+    // evidence can be fed to several filters and written to a trace exactly as computed.
+    public sealed class Likelihood
+    {
+        public float Floor = 1f;
+        public SenseChannel Channel;
+        public bool Strong;
+        public int Count;
+        public int[] Cells = new int[256];
+        public float[] Values = new float[256];
+
+        public void Begin(float floor, SenseChannel channel)
+        {
+            Floor = floor;
+            Channel = channel;
+            Strong = false;
+            Count = 0;
+        }
+
+        public void Add(int cell, float value)
+        {
+            if (Count == Cells.Length)
+            {
+                System.Array.Resize(ref Cells, Count * 2);
+                System.Array.Resize(ref Values, Count * 2);
+            }
+            Cells[Count] = cell;
+            Values[Count] = value;
+            Count++;
+        }
+    }
+
+    // Listens to a belief grid (Eval/BeliefShadows, Eval/BeliefTrace). Called after the grid
+    // has changed, so the grid's own state is already the new one.
+    public interface IBeliefTap
+    {
+        void OnEvidence(BeliefGrid grid, Likelihood likelihood, bool collapsed);
+        void OnBias(BeliefGrid grid, int region, float amount);
+        void OnPredict(BeliefGrid grid, float dt, float speed);
+        void OnReset(BeliefGrid grid);
     }
 }

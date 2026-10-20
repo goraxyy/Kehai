@@ -22,6 +22,11 @@ namespace Kehai.Eval
     // last fix on the player (the punch at the time clock, then her sight), widening at a
     // walking pace. The same baseline is scored on every rung, so C–F can also be read
     // against it within the same shift.
+    //
+    // Out of view is also split by how long it has been since her last fix (0–5, 5–15, 15–45
+    // and 45+ s): where evidence is fresh the motion model matters little, and where it is
+    // stale it is nearly all there is. Shadow filters (BeliefShadows) are scored on the same
+    // samples, so differences between them are paired sample by sample.
     public static class BeliefScore
     {
         public const float ProbabilityFloor = 1e-6f;
@@ -103,6 +108,28 @@ namespace Kehai.Eval
     public sealed class BeliefAccuracy
     {
         public const float SampleHz = 5f;
+        public static readonly float[] LostEdges = { 5f, 15f, 45f };
+        public static readonly string[] LostNames = { "0_5", "5_15", "15_45", "45_up" };
+
+        public static int LostBucket(float secondsSinceFix)
+        {
+            int k = 0;
+            while (k < LostEdges.Length && secondsSinceFix >= LostEdges[k]) k++;
+            return k;
+        }
+
+        // One source's tallies: in view, out of view, and out of view by time since the fix.
+        public sealed class Scores
+        {
+            public readonly Tally InView = new Tally(), OutOfView = new Tally();
+            public readonly Tally[] Lost = { new Tally(), new Tally(), new Tally(), new Tally() };
+
+            public void Add(in BeliefScore.Result r, bool inView, float sinceFix)
+            {
+                (inView ? InView : OutOfView).Add(r);
+                if (!inView) Lost[LostBucket(sinceFix)].Add(r);
+            }
+        }
 
         public sealed class Tally
         {
@@ -130,23 +157,90 @@ namespace Kehai.Eval
         }
 
         public string Source = "";   // "grid" (rungs C–F) or "last_seen" (A and B)
+        public string Motion = "";   // her own grid's motion model
         public int Cells;
         public int OffMap;           // samples where the player wasn't on Karen's map
-        public readonly Tally InView = new Tally(), OutOfView = new Tally();
-        public readonly Tally LastSeenInView = new Tally(), LastSeenOutOfView = new Tally();
+        public readonly Scores Own = new Scores(), LastSeen = new Scores();
+        public Tally InView => Own.InView;
+        public Tally OutOfView => Own.OutOfView;
+        public Tally LastSeenInView => LastSeen.InView;
+        public Tally LastSeenOutOfView => LastSeen.OutOfView;
+
+        // Shadow filters, by motion model id, when the run has them.
+        public readonly List<string> ShadowIds = new List<string>();
+        public readonly List<Scores> Shadow = new List<Scores>();
+        double[] shadowPredictMsAtBegin, shadowEvidenceMsAtBegin;
+        int shadowTicksAtBegin;
+        public float[] ShadowPredictMs = new float[0], ShadowEvidenceMs = new float[0];
+        public int[] ShadowCollapses = new int[0];
+        public float OwnPredictMs = float.NaN;
+        BeliefGrid ownGridAtBegin;
+        double ownMsAtBegin;
+        int ownTicksAtBegin;
 
         float began, timer;
         bool running;
         float[] grid, baseline;
+        float[] shadowLogP = new float[0];
+        Vector3 lastPlayer;
+        float lastPlayerAt = -1f;
 
         public void Begin()
         {
             began = Time.time;
             timer = 0f;
             running = true;
+            lastPlayerAt = -1f;
+
+            KarenBrain brain = KarenBrain.Instance;
+            BeliefShadows shadows = BeliefShadows.Current;
+            ShadowIds.Clear();
+            Shadow.Clear();
+            if (brain != null && shadows != null && shadows.Follows(brain))
+            {
+                foreach (string id in shadows.Ids) { ShadowIds.Add(id); Shadow.Add(new Scores()); }
+                shadowPredictMsAtBegin = shadows.PredictMilliseconds.ToArray();
+                shadowEvidenceMsAtBegin = shadows.EvidenceMilliseconds.ToArray();
+                shadowTicksAtBegin = shadows.Ticks;
+            }
+            shadowLogP = new float[ShadowIds.Count];
+            if (brain != null && brain.Belief != null)
+            {
+                Motion = brain.Belief.Motion.Id;
+                ownGridAtBegin = brain.Belief;
+                ownMsAtBegin = brain.Belief.PredictMilliseconds;
+                ownTicksAtBegin = brain.Belief.PredictTicks;
+            }
         }
 
-        public void End() => running = false;
+        public void End()
+        {
+            if (!running) return;
+            running = false;
+            KarenBrain brain = KarenBrain.Instance;
+            if (brain != null && brain.Belief != null && brain.Belief.PredictTicks > 0)
+            {
+                bool same = brain.Belief == ownGridAtBegin;
+                double ms = brain.Belief.PredictMilliseconds - (same ? ownMsAtBegin : 0.0);
+                int ticks = brain.Belief.PredictTicks - (same ? ownTicksAtBegin : 0);
+                OwnPredictMs = ticks > 0 ? (float)(ms / ticks) : float.NaN;
+            }
+            BeliefShadows shadows = BeliefShadows.Current;
+            int n = ShadowIds.Count;
+            ShadowPredictMs = new float[n];
+            ShadowEvidenceMs = new float[n];
+            ShadowCollapses = new int[n];
+            if (shadows != null && n > 0 && shadows.Ids.Count == n)
+            {
+                int ticks = Mathf.Max(1, shadows.Ticks - shadowTicksAtBegin);
+                for (int i = 0; i < n; i++)
+                {
+                    ShadowPredictMs[i] = (float)((shadows.PredictMilliseconds[i] - shadowPredictMsAtBegin[i]) / ticks);
+                    ShadowEvidenceMs[i] = (float)((shadows.EvidenceMilliseconds[i] - shadowEvidenceMsAtBegin[i]) / ticks);
+                    ShadowCollapses[i] = i < shadows.Grids.Count ? shadows.Grids[i].Collapses : 0;
+                }
+            }
+        }
 
         public void Tick(float dt, Vector3 player)
         {
@@ -180,6 +274,7 @@ namespace Kehai.Eval
 
             // Her last fix: a sighting this shift, else the punch at the time clock.
             Landmark? clock = map.FindLandmark(LandmarkKind.TimeClock);
+            float sinceFix = sight.LastSeenTime >= began ? Time.time - sight.LastSeenTime : Time.time - began;
             if (sight.LastSeenTime >= began)
                 BeliefScore.FillLastSeen(baseline, map.CellPosition, sight.LastSeenPosition, Time.time - sight.LastSeenTime);
             else if (clock.HasValue)
@@ -187,7 +282,7 @@ namespace Kehai.Eval
             else
                 BeliefScore.FillUniform(baseline);
             BeliefScore.Result lastSeen = BeliefScore.Score(baseline, map.CellPosition, truth);
-            (inView ? LastSeenInView : LastSeenOutOfView).Add(lastSeen);
+            LastSeen.Add(lastSeen, inView, sinceFix);
 
             BeliefScore.Result own = lastSeen;
             Source = "last_seen";
@@ -198,20 +293,71 @@ namespace Kehai.Eval
                 own = BeliefScore.Score(grid, map.CellPosition, truth);
                 Source = "grid";
             }
-            (inView ? InView : OutOfView).Add(own);
+            Own.Add(own, inView, sinceFix);
+
+            // The shadows, on the same sample.
+            BeliefShadows shadows = BeliefShadows.Current;
+            if (ShadowIds.Count > 0 && shadows != null && shadows.Follows(brain))
+            {
+                for (int i = 0; i < ShadowIds.Count && i < shadows.Grids.Count; i++)
+                {
+                    BeliefGrid g = shadows.Grids[i];
+                    if (g.CellCount != n) continue;
+                    for (int c = 0; c < n; c++) grid[c] = g[c];
+                    BeliefScore.Result r = BeliefScore.Score(grid, map.CellPosition, truth);
+                    Shadow[i].Add(r, inView, sinceFix);
+                    shadowLogP[i] = r.LogP;
+                }
+            }
+
+            // The trace gets the truth and every grid's score of it: the replay's target.
+            Vector2 velocity = Vector2.zero;
+            if (lastPlayerAt >= 0f && Time.time > lastPlayerAt)
+                velocity = new Vector2(player.x - lastPlayer.x, player.z - lastPlayer.z) / (Time.time - lastPlayerAt);
+            lastPlayer = player;
+            lastPlayerAt = Time.time;
+            BeliefTrace.Current?.Sample(truth, inView, sinceFix, velocity, own.LogP, shadowLogP, lastSeen.LogP);
         }
 
         public void AddTo(Dictionary<string, object> d)
         {
             d["belief_source"] = Source;
+            d["belief_motion"] = Motion;
             d["belief_cells"] = Cells;
             d["belief_off_map_samples"] = OffMap;
             d["belief_in_view_samples"] = InView.Samples;
             d["belief_out_of_view_samples"] = OutOfView.Samples;
+            d["belief_ms_per_tick"] = OwnPredictMs;
             Put(d, "belief_in_view", InView);
             Put(d, "belief_out_of_view", OutOfView);
             Put(d, "last_seen_in_view", LastSeenInView);
             Put(d, "last_seen_out_of_view", LastSeenOutOfView);
+            PutLost(d, "belief", Own);
+            PutLost(d, "last_seen", LastSeen);
+
+            d["belief_shadows"] = string.Join(",", ShadowIds);
+            for (int i = 0; i < ShadowIds.Count; i++)
+            {
+                string key = "shadow_" + ShadowIds[i];
+                Put(d, key + "_in_view", Shadow[i].InView);
+                Put(d, key + "_out_of_view", Shadow[i].OutOfView);
+                PutLost(d, key, Shadow[i]);
+                if (i < ShadowPredictMs.Length)
+                {
+                    d[key + "_ms_predict"] = ShadowPredictMs[i];
+                    d[key + "_ms_evidence"] = ShadowEvidenceMs[i];
+                    d[key + "_collapses"] = ShadowCollapses[i];
+                }
+            }
+        }
+
+        static void PutLost(Dictionary<string, object> d, string prefix, Scores s)
+        {
+            for (int k = 0; k < LostNames.Length; k++)
+            {
+                Put(d, $"{prefix}_lost_{LostNames[k]}", s.Lost[k]);
+                d[$"{prefix}_lost_{LostNames[k]}_samples"] = s.Lost[k].Samples;
+            }
         }
 
         static void Put(Dictionary<string, object> d, string prefix, Tally t)
