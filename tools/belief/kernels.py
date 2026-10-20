@@ -166,10 +166,14 @@ KINDS = {"m2": "loglinear", "m3": "mlp", "m4": "heading"}
 
 
 class LearnedKernel(nn.Module):
-    def __init__(self, kind: str):
+    def __init__(self, kind: str, slices: int = 1):
         super().__init__()
         assert kind in KINDS, kind
-        self.id = kind
+        self.id = kind if slices == 1 else f"{kind}/{slices}"
+        self.kind = kind
+        # With slices > 1 the MLP's outputs are refreshed for one slice of the cells per tick
+        # (LearnedMotion.Slices); replay() keeps the cache. Training uses 1.
+        self.slices = slices if kind != "m2" else 1
         self.headings = HEADINGS if kind == "m4" else 1
         # The head every learned model has. Starts as the shipped step's average speed.
         self.rate_w = nn.Parameter(torch.zeros(CELL))
@@ -205,7 +209,7 @@ class LearnedKernel(nn.Module):
         p = [self.rate_w, self.rate_b.view(1), self.edge_w, self.dir_b, self.log_leak.view(1)]
         if self.outputs:
             p += [self.w1, self.b1, self.w2, self.b2, self.w3, self.b3]
-        if self.id == "m4":
+        if self.kind == "m4":
             p += [self.rho, self.mom, self.sigma, self.stop_w, self.stop_b.view(1), self.hp_logits]
         return p
 
@@ -228,26 +232,35 @@ class LearnedKernel(nn.Module):
 
     @property
     def heading_prior(self):
-        return torch.softmax(self.hp_logits, 0) if self.id == "m4" else None
+        return torch.softmax(self.hp_logits, 0) if self.kind == "m4" else None
 
-    def build(self, fs: FeatureState, xyz=None):
-        mt = map_tensors(fs.m)
-        x_np, y_np, u_np = fs.features() if xyz is None else xyz
+    def mlp(self, u: torch.Tensor) -> torch.Tensor:
+        h = torch.relu(u @ self.w1 + self.b1)
+        h = torch.relu(h @ self.w2 + self.b2)
+        return h @ self.w3 + self.b3
+
+    def inputs(self, fs: FeatureState):
+        x_np, y_np, u_np = fs.features()
         dt = self.rate_w.dtype
-        x = torch.as_tensor(x_np, dtype=dt)
-        y = torch.as_tensor(y_np, dtype=dt)
+        return (torch.as_tensor(x_np, dtype=dt), torch.as_tensor(y_np, dtype=dt), torch.as_tensor(u_np, dtype=dt))
+
+    def build(self, fs: FeatureState, o: torch.Tensor | None = None):
+        """The kernel for the features now; `o` is the MLP's output per cell if it is cached
+        (a sliced model), else it is computed for every cell."""
+        x, y, u = self.inputs(fs)
+        if self.outputs and o is None:
+            o = self.mlp(u)
+        return self.assemble(fs, x, y, o)
+
+    def assemble(self, fs: FeatureState, x, y, o):
+        mt = map_tensors(fs.m)
         c = mt.edge_from
         log_rate = x @ self.rate_w + self.rate_b
         score = y @ self.edge_w + self.dir_b[mt.slot]
-        o = None
         if self.outputs:
-            u = torch.as_tensor(u_np if u_np is not None else fs.mlp_input(x_np, y_np), dtype=dt)
-            h = torch.relu(u @ self.w1 + self.b1)
-            h = torch.relu(h @ self.w2 + self.b2)
-            o = h @ self.w3 + self.b3
             log_rate = log_rate + o[:, 0]
             score = score + o[c, 1 + mt.slot]
-        if self.id != "m4":
+        if self.kind != "m4":
             rate = torch.where(mt.has_edges, torch.exp(log_rate), torch.zeros(()))
             share = segment_softmax(score, c, mt.n)
             return dict(mt=mt, rate=rate, share=share)
@@ -270,7 +283,7 @@ class LearnedKernel(nn.Module):
         stay = _col(torch.exp(-k["rate"] * dt), b)
         leave = b * (1 - stay)
         to = b * stay
-        if self.id != "m4":
+        if self.kind != "m4":
             return to.index_add(0, mt.edge_to, leave[mt.edge_from] * _col(k["share"], b))
         n = mt.n
         to = to.clone()
@@ -281,11 +294,13 @@ class LearnedKernel(nn.Module):
 
 
 def make(model_id: str, gains: dict | None = None) -> nn.Module:
+    """"m3/8" is m3 with its MLP refreshed in 8 slices (LearnedMotion.Slices)."""
     if model_id in ("m0", "hand"):
         return HandKernel(avoid=False)
     if model_id == "m1":
         return HandKernel(avoid=True, gains=gains)
-    return LearnedKernel(model_id)
+    kind, _, slices = model_id.partition("/")
+    return LearnedKernel(kind, int(slices) if slices else 1)
 
 
 def pack_size(model_id: str) -> int:

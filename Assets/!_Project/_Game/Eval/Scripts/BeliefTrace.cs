@@ -58,6 +58,7 @@ namespace Kehai.Eval
         {
             if (brain == null || string.IsNullOrEmpty(directory)) return null;
             System.IO.Directory.CreateDirectory(directory);
+            brain.MotionInputs.Wanted = true;   // the trace logs the motion features, whatever model runs
             var trace = new BeliefTrace(brain, shadows, directory);
             brain.ShiftBegan += trace.Open;
             brain.ShiftEnded += trace.Close;
@@ -280,13 +281,14 @@ namespace Kehai.Eval
             }
 
             // And what each learned shadow's kernel makes of those cells, for the same features.
+            // (Not for sliced models: building theirs now would move their slices on.)
             int learned = 0;
-            if (shadows != null) foreach (BeliefGrid g in shadows.Grids) if (g.Motion is LearnedMotion) learned++;
+            if (shadows != null) foreach (BeliefGrid g in shadows.Grids) if (g.Motion is LearnedMotion m && m.Slices == 1) learned++;
             w.Write((byte)learned);
             if (shadows == null) return;
             for (int i = 0; i < shadows.Grids.Count; i++)
             {
-                if (!(shadows.Grids[i].Motion is LearnedMotion lm)) continue;
+                if (!(shadows.Grids[i].Motion is LearnedMotion lm) || lm.Slices > 1) continue;
                 lm.EnsureBuilt(f.Map);
                 Text(shadows.Ids[i]);
                 int hc = lm.Headings;

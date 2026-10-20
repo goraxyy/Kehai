@@ -58,6 +58,10 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
     fs: FeatureState | None = None
     kernel = None
     dirty = True
+    slices = getattr(model, "slices", 1)
+    if grad and slices > 1:
+        raise ValueError("train sliced models unsliced: the slice cache would hold an old graph")
+    mlp_cache, mlp_pending, tick = None, True, 0
     n = 0
     logp = np.full(len(s.sa_t), np.nan, np.float32)
     dists = [] if keep_dists else None
@@ -98,6 +102,7 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 fs = FeatureState(s.maps[row])
                 n = fs.m.n
                 dirty = True
+                mlp_pending = True
             elif code == OP_SLOW:
                 fs.set_slow(s, row)
                 dirty = True
@@ -110,6 +115,7 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 if hc > 1:
                     hp = heading_prior()
                 state = expand(b)
+                mlp_pending = True
             elif code == OP_EVIDENCE:
                 a, k = s.ev_start[row], s.ev_count[row]
                 mult = torch.full((n,), float(s.ev_floor[row]))
@@ -128,7 +134,17 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 add[cells] = float(share) if hc == 1 else float(share) * hp
                 state = normalise(state + add)
             elif code == OP_PREDICT:
-                if dirty:
+                if slices > 1:
+                    # LearnedMotion.Prepare: everything after a reset or a new map, else a slice.
+                    x, y, u = model.inputs(fs)
+                    if mlp_pending or mlp_cache is None:
+                        mlp_cache, mlp_pending, tick = model.mlp(u), False, 0
+                    else:
+                        rows = torch.arange(tick % slices, n, slices)
+                        mlp_cache = mlp_cache.index_put((rows,), model.mlp(u[rows]))
+                        tick += 1
+                    kernel = model.assemble(fs, x, y, mlp_cache)
+                elif dirty:
                     kernel = model.build(fs)
                     dirty = False
                 dt, speed = float(s.pr_dt[row]), float(s.pr_speed[row])

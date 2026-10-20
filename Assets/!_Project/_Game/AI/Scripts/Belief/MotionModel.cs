@@ -34,18 +34,26 @@ namespace Kehai.Karen
         public const string Shipped = "hand";
         public static readonly string[] Ladder = { "m0", "m1", "m2", "m3", "m4" };
 
-        // "hand" and "m0" are the same model. Null for an id it doesn't know.
+        // "hand" and "m0" are the same model. "m3/8" is m3 with its MLP refreshed in 8 slices,
+        // one per believe tick, to spread the cost (LearnedMotion). Null for an id it doesn't know.
         public static IMotionModel Create(string id, MotionFeatures features)
         {
-            switch ((id ?? Shipped).Trim().ToLowerInvariant())
+            string s = Canonical(id);
+            int slices = 1;
+            int slash = s.IndexOf('/');
+            if (slash > 0)
             {
-                case "":
-                case "hand":
-                case "m0": return new HandMotion();
-                case "m1": return new HandMotion(MotionWeights.M1Gains, features);
-                case "m2": return new LearnedMotion(LearnedMotion.Kind.LogLinear, features);
-                case "m3": return new LearnedMotion(LearnedMotion.Kind.Mlp, features);
-                case "m4": return new LearnedMotion(LearnedMotion.Kind.Heading, features);
+                if (!int.TryParse(s.Substring(slash + 1), out slices) || slices < 1) return null;
+                s = s.Substring(0, slash);
+            }
+            if (s != "m0" && features != null) features.Wanted = true;
+            switch (s)
+            {
+                case "m0": return slash > 0 ? null : new HandMotion();
+                case "m1": return slash > 0 ? null : new HandMotion(MotionWeights.M1Gains, features);
+                case "m2": return new LearnedMotion(LearnedMotion.Kind.LogLinear, features, null, slices);
+                case "m3": return new LearnedMotion(LearnedMotion.Kind.Mlp, features, null, slices);
+                case "m4": return new LearnedMotion(LearnedMotion.Kind.Heading, features, null, slices);
                 default: return null;
             }
         }
@@ -53,8 +61,12 @@ namespace Kehai.Karen
         public static string Canonical(string id)
         {
             string s = (id ?? Shipped).Trim().ToLowerInvariant();
+            if (s.EndsWith("/1")) s = s.Substring(0, s.Length - 2);
             return s == "" || s == "hand" ? "m0" : s;
         }
+
+        // For the eval's jsonl keys: "m4/8" → "m4s8".
+        public static string Key(string id) => Canonical(id).Replace('/', 's');
     }
 
     // The hand-written step. With the shipped gains and no features (m0) it is the code that

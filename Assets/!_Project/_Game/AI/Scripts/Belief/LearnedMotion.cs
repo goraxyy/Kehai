@@ -53,22 +53,23 @@ namespace Kehai.Karen
         // The kernel: per state the rate of leaving, per (edge, heading) the share that goes
         // that way, per state the share that stops (m4).
         float[] rate, edgeShare, stopShare, stay;
-        int builtMap = -1, builtSlow = -1, builtFast = -1;
+        // The linear head (refreshed with the features) and the MLP's outputs (refreshed with
+        // the features, or a slice of the cells per tick).
+        float[] linRate, linStop, linEdge, mlpOut;
+        int builtMap = -1, builtSlow = -1, builtFast = -1, seenResets = -1, tick;
         StoreMap builtFor;
+        bool mlpPending = true;
         float stayDt = -1f;
         bool stayStale = true;
-        readonly float[] x = new float[MotionFeatures.CellCount];
-        readonly float[] y = new float[MotionFeatures.EdgeCount];
         readonly float[] u = new float[MotionFeatures.MlpInputs];
         readonly float[] h1 = new float[Hidden], h2 = new float[Hidden];
-        readonly float[] o = new float[10];
         readonly float[] z = new float[MotionFeatures.Slots];
-        readonly float[] edgeScratch = new float[MotionFeatures.EdgeCount];
 
-        public LearnedMotion(Kind kind, MotionFeatures features, float[] weights = null)
+        public LearnedMotion(Kind kind, MotionFeatures features, float[] weights = null, int slices = 1)
         {
             this.kind = kind;
             this.features = features;
+            Slices = Mathf.Max(1, slices);
             w = weights ?? MotionWeights.Pack(kind);
             if (w == null || w.Length != PackSize(kind))
                 throw new System.ArgumentException($"{kind}: expected {PackSize(kind)} weights, got {(w == null ? 0 : w.Length)} — regenerate MotionWeights.g.cs");
@@ -102,7 +103,13 @@ namespace Kehai.Karen
             leak = Mathf.Exp(w[logLeak]);
         }
 
-        public string Id => kind == Kind.LogLinear ? "m2" : kind == Kind.Mlp ? "m3" : "m4";
+        // With Slices > 1 the MLP's part of the kernel is refreshed a slice of the cells per
+        // believe tick (cell c when c mod Slices is the tick's), so each cell's is at most that
+        // many ticks old; the linear head still follows every refresh. Slices = 1 rebuilds the
+        // whole kernel at each refresh. tools/belief/kernels.py does the same, tick for tick.
+        public int Slices { get; }
+
+        public string Id => (kind == Kind.LogLinear ? "m2" : kind == Kind.Mlp ? "m3" : "m4") + (Slices > 1 ? "/" + Slices : "");
         public int Headings => kind == Kind.Heading ? HeadingCount : 1;
         public float Leak => leak;
         public float[] HeadingPrior => headingPrior;
@@ -125,7 +132,7 @@ namespace Kehai.Karen
         {
             StoreMap map = grid.Map;
             if (features == null || features.Map != map) { System.Array.Copy(from, to, from.Length); return; }
-            Rebuild(map);
+            Prepare(map, grid.Resets);
             int hc = Headings;
             if (stayStale || dt != stayDt)
             {
@@ -162,82 +169,129 @@ namespace Kehai.Karen
 
         // ---- building it --------------------------------------------------------------------
 
-        // The kernel for the features as they are now (the trace's kernel probe).
-        public void EnsureBuilt(StoreMap map) => Rebuild(map);
+        // The kernel for the features as they are now (the trace's kernel probe, the parity test).
+        public void EnsureBuilt(StoreMap map) => Prepare(map, seenResets);
 
-        void Rebuild(StoreMap map)
+        void Prepare(StoreMap map, int resets)
         {
-            if (builtFor == map && builtMap == features.MapVersion && builtSlow == features.SlowVersion && builtFast == features.FastVersion) return;
+            bool newMap = builtFor != map || builtMap != features.MapVersion || rate == null;
+            bool refreshed = builtSlow != features.SlowVersion || builtFast != features.FastVersion;
+            if (newMap) Allocate(map);
+            if (resets != seenResets) { seenResets = resets; mlpPending = true; }
+            if (!newMap && !refreshed && (Slices == 1 || kind == Kind.LogLinear) && !(mlpPending && Slices > 1)) return;
             builtFor = map;
             builtMap = features.MapVersion;
             builtSlow = features.SlowVersion;
             builtFast = features.FastVersion;
+            features.Tabulate();
             Rebuilds++;
-            BuildKernel(map, rate == null || rate.Length != map.CellCount * Headings);
+            stayStale = true;
+
+            if (newMap || refreshed)
+                for (int c = 0; c < map.CellCount; c++) LinearHead(map, c);
+
+            if (kind == Kind.LogLinear) { for (int c = 0; c < map.CellCount; c++) Assemble(map, c); return; }
+
+            if (Slices == 1 || mlpPending || newMap)
+            {
+                for (int c = 0; c < map.CellCount; c++) Mlp(c);
+                mlpPending = false;
+                tick = 0;
+                for (int c = 0; c < map.CellCount; c++) Assemble(map, c);
+                return;
+            }
+
+            int slice = tick % Slices;
+            tick++;
+            for (int c = slice; c < map.CellCount; c += Slices) Mlp(c);
+            if (newMap || refreshed) for (int c = 0; c < map.CellCount; c++) Assemble(map, c);
+            else for (int c = slice; c < map.CellCount; c += Slices) Assemble(map, c);
+        }
+
+        void Allocate(StoreMap map)
+        {
+            int hc = Headings, n = map.CellCount, edges = map.EdgeTo.Length;
+            rate = new float[n * hc];
+            stay = new float[rate.Length];
+            edgeShare = new float[edges * hc];
+            stopShare = hc > 1 ? new float[rate.Length] : null;
+            linRate = new float[n];
+            linStop = new float[n];
+            linEdge = new float[edges];
+            mlpOut = new float[n * Mathf.Max(1, outputs)];
+            mlpPending = true;
         }
 
         // Public for the parity test, which builds the kernel on a fixed state and compares.
         public void BuildKernel(StoreMap map, bool allocate = true)
         {
-            int hc = Headings;
-            if (allocate || rate == null)
-            {
-                rate = new float[map.CellCount * hc];
-                stay = new float[rate.Length];
-                edgeShare = new float[map.EdgeTo.Length * hc];
-                stopShare = hc > 1 ? new float[rate.Length] : null;
-            }
-            stayStale = true;
-
+            if (allocate || rate == null) Allocate(map);
+            features.Tabulate();
             for (int c = 0; c < map.CellCount; c++)
             {
-                int start = map.EdgeStart[c], end = map.EdgeStart[c + 1];
-                features.CellFeatures(c, x);
-                float logRate = w[rateB];
-                for (int i = 0; i < MotionFeatures.CellCount; i++) logRate += w[rateW + i] * x[i];
+                LinearHead(map, c);
+                if (kind != Kind.LogLinear) Mlp(c);
+                Assemble(map, c);
+            }
+            stayStale = true;
+        }
 
-                for (int k = 0; k < MotionFeatures.Slots; k++) z[k] = 0f;
-                for (int e = start; e < end; e++)
-                {
-                    features.EdgeFeatures(c, e, y);
-                    int k = features.EdgeSlot[e];
-                    float score = w[dirB + k];
-                    for (int i = 0; i < MotionFeatures.EdgeCount; i++) score += w[edgeW + i] * y[i];
-                    z[k] = score;
-                }
+        void LinearHead(StoreMap map, int c)
+        {
+            float[] X = features.X, Y = features.Y;
+            int xc = c * MotionFeatures.CellCount;
+            float r = w[rateB];
+            for (int i = 0; i < MotionFeatures.CellCount; i++) r += w[rateW + i] * X[xc + i];
+            linRate[c] = r;
+            if (kind == Kind.Heading)
+            {
+                float st = w[stopB];
+                for (int i = 0; i < MotionFeatures.CellCount; i++) st += w[stopW + i] * X[xc + i];
+                linStop[c] = st;
+            }
+            for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
+            {
+                float score = w[dirB + features.EdgeSlot[e]];
+                for (int i = 0; i < MotionFeatures.EdgeCount; i++) score += w[edgeW + i] * Y[e * MotionFeatures.EdgeCount + i];
+                linEdge[e] = score;
+            }
+        }
 
-                float logStop = 0f;
-                if (kind != Kind.LogLinear)
-                {
-                    Mlp(c);
-                    logRate += o[0];
-                    for (int e = start; e < end; e++) z[features.EdgeSlot[e]] += o[1 + features.EdgeSlot[e]];
-                }
+        // Rates and shares of cell c, from the linear head and the MLP's last outputs.
+        void Assemble(StoreMap map, int c)
+        {
+            int start = map.EdgeStart[c], end = map.EdgeStart[c + 1];
+            int oc = c * outputs;
+            float logRate = linRate[c] + (outputs > 0 ? mlpOut[oc] : 0f);
+            for (int k = 0; k < MotionFeatures.Slots; k++) z[k] = 0f;
+            for (int e = start; e < end; e++)
+            {
+                int k = features.EdgeSlot[e];
+                z[k] = linEdge[e] + (outputs > 0 ? mlpOut[oc + 1 + k] : 0f);
+            }
 
-                if (kind != Kind.Heading)
-                {
-                    rate[c] = start == end ? 0f : Mathf.Exp(logRate);
-                    SoftmaxEdges(map, start, end, 0, 1);
-                    continue;
-                }
+            if (kind != Kind.Heading)
+            {
+                rate[c] = start == end ? 0f : Mathf.Exp(logRate);
+                SoftmaxEdges(start, end, 0, 1f);
+                return;
+            }
 
-                logStop = w[stopB] + o[9];
-                for (int i = 0; i < MotionFeatures.CellCount; i++) logStop += w[stopW + i] * x[i];
-                for (int h = 0; h < HeadingCount; h++)
-                {
-                    int s = c * HeadingCount + h;
-                    float move = start == end ? 0f : Mathf.Exp(logRate + w[rho + h]);
-                    float stop = h == 0 ? 0f : Mathf.Exp(logStop + w[sigma + h]);
-                    float total = move + stop;
-                    rate[s] = total;
-                    stopShare[s] = total > 0f ? stop / total : 0f;
-                    SoftmaxEdges(map, start, end, h, total > 0f ? move / total : 0f);
-                }
+            float logStop = linStop[c] + mlpOut[oc + 9];
+            for (int h = 0; h < HeadingCount; h++)
+            {
+                int s = c * HeadingCount + h;
+                float move = start == end ? 0f : Mathf.Exp(logRate + w[rho + h]);
+                float stop = h == 0 ? 0f : Mathf.Exp(logStop + w[sigma + h]);
+                float total = move + stop;
+                rate[s] = total;
+                stopShare[s] = total > 0f ? stop / total : 0f;
+                SoftmaxEdges(start, end, h, total > 0f ? move / total : 0f);
             }
         }
 
         // The choice among a cell's edges for heading h, scaled by the share that moves at all.
-        void SoftmaxEdges(StoreMap map, int start, int end, int h, float moving)
+        void SoftmaxEdges(int start, int end, int h, float moving)
         {
             int hc = Headings;
             float max = float.NegativeInfinity;
@@ -255,7 +309,7 @@ namespace Kehai.Karen
 
         void Mlp(int c)
         {
-            features.MlpInput(c, u, edgeScratch);
+            features.MlpInput(c, u);
             for (int j = 0; j < Hidden; j++)
             {
                 float acc = w[b1 + j];
@@ -268,11 +322,12 @@ namespace Kehai.Karen
                 for (int i = 0; i < Hidden; i++) acc += h1[i] * w[w2 + i * Hidden + j];
                 h2[j] = acc > 0f ? acc : 0f;
             }
+            int oc = c * outputs;
             for (int j = 0; j < outputs; j++)
             {
                 float acc = w[b3 + j];
                 for (int i = 0; i < Hidden; i++) acc += h2[i] * w[w3 + i * outputs + j];
-                o[j] = acc;
+                mlpOut[oc + j] = acc;
             }
         }
 

@@ -358,6 +358,76 @@ construction.
 What this shows is in finding 5 above. The player who hides most (cautious) is the one she
 knows least about, and the one where the grid's prediction gains most over the last sighting.
 
+## A learned motion model for her belief
+
+The belief grid's predict step (how she thinks a person moves between two looks) was a guess
+with five hand-set gains. Here it is learned from player trajectories, trained through the
+filter itself, and tested on held-out seeds and a held-out player against the same step tuned
+on the same data. Method and code: [`tools/belief/README.md`](../tools/belief/README.md).
+
+### Written down before the test run (2026-10-19)
+
+Everything in this subsection was fixed, and committed, before any test shift was played.
+
+**The models** (`AI/Scripts/Belief/MotionModel.cs`, `LearnedMotion.cs`):
+
+| id | predict step | question |
+|---|---|---|
+| last-seen | a Gaussian round her last fix (exists) | the floor |
+| m0 | the shipped hand step, unchanged (bit for bit; `MotionModelTests`) | the shipped baseline |
+| m1 | the hand step's gains fitted to the training data, plus keeping away from her (her walking distance and her 30 s trail fill the `Danger` layer, never filled before) | the fair baseline: the same data, structure set by hand |
+| m2 | log-linear: a leave rate and per-edge scores linear in 24 cell and 9 edge features | does learning beat tuning? |
+| m3 | m2 plus a small MLP per cell (48 → 32 → 32 → 9) | does capacity help? |
+| m4 | m3 with a heading in the state (still or one of 8 directions: 9 × 4,700 states) | does remembering where you were going help? |
+
+**Data.** Karen acts on m0 throughout; the traces record her filter's every step (`BeliefTrace`).
+Rungs C, D and E, career shifts 4–7 (the maze changes before shift 7), 150 s shifts.
+
+| split | players | careers (seeds) | shifts | used for |
+|---|---|---|---|---|
+| train | efficient, skittish, reckless | 6 (3000–3500) | 216 | fitting m1–m4 |
+| validation | the same three | 2 (2000, 2100) | 72 | early stopping, and choosing the best learned model |
+| test | all four; **cautious is held out** (never trained on or used for choosing) | 3 (1000, 1100, 1200: the published ladder's seeds) | 144 | this result, run once |
+
+m1's gains are fitted the same way as m2–m4 (through the filter, on the training shifts) and
+stopped on validation, so all four see the same data under the same rule. (The plan had m1 tuned
+on validation; fitting it on training keeps validation for choosing alone.)
+
+**The comparison.** In each test shift Karen acts on m0, and shadow filters m0, m1, m2, m3 and m4
+run beside her grid on exactly the same evidence, *without* the Director's hint (which nudges her
+own grid toward the truth after 45 s without a fix). All are scored by `BeliefAccuracy` on the
+same 5 Hz samples, so a difference between two shadows in one shift is paired sample by sample.
+
+**Primary metric.** Out-of-view log p (nats; floored at 1e-6), **best learned model minus m1**:
+- per test shift, the difference of the two shadows' mean out-of-view log p on the same samples;
+- averaged over the test shifts with any out-of-view sample;
+- "best learned model" is the one of m2, m3, m4 with the best validation out-of-view log p
+  (replayed, without the hint), named in `MotionWeights.Best` before the test run;
+- a 95% bootstrap interval resampling **careers** (one player profile's 12 shifts on one seed,
+  rungs C–E together; 12 in the test set), 10,000 resamples, percentiles.
+
+**It wins if the interval's lower end is above 0.** If it isn't, that is the finding ("tuning the
+hand step is enough"), and it is reported as such.
+
+**Secondary** (no thresholds, all reported):
+- every model against m0, m1 and last-seen, on log p, top-1/5/10 and error;
+- by player (cautious marked held out), shift 7 alone (after the maze changes), and by time since
+  she lost sight (0–5, 5–15, 15–45, 45+ s);
+- a horizon curve: log p k = 1–30 s ahead from the true position with no evidence (the motion
+  model on its own), on test trajectories;
+- **closed loop** (B): rung C with Karen acting on the best model against rung C on m0, paired by
+  seed (48 pairs: 4 players × 3 careers × 4 shifts; the m0 arm is the test run's rung C). Δ
+  detections, Δ first detection, Δ catches, Δ mean panic, her own belief accuracy; fairness
+  violations must stay at 0. No win threshold: the Director rations chases, so catches may not move;
+- **cost** (C): milliseconds per believe tick for each model in the editor, against Karen's budget
+  of under 0.7 ms a frame (`Karen.md` §12.4).
+
+`beliefMotion` stays `hand` whatever the result; switching it on is a separate decision.
+
+### Results
+
+The test run has not been played yet.
+
 ## Earlier runs
 
 The tables from the earlier runs are in this file's history (before 2026-10-16). Those runs used

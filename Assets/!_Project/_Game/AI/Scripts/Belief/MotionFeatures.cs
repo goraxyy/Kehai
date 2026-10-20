@@ -33,6 +33,11 @@ namespace Kehai.Karen
         public event System.Action<MotionFeatures, Refresh> Refreshed;
 
         public StoreMap Map { get; private set; }
+
+        // Nothing is refreshed until something reads it: the shipped step (m0) doesn't, so the
+        // shipped game pays nothing for this. Set by MotionModels.Create, the shadows and the trace.
+        public bool Wanted;
+
         public int MapVersion { get; private set; }
         public int SlowVersion { get; private set; }
         public int FastVersion { get; private set; }
@@ -57,6 +62,10 @@ namespace Kehai.Karen
         public float[] Trail;          // 0..1: 1 where she is now, fading over 30 s
         public bool Chasing;
         public float SinceFix, Speed = 3.1f;
+
+        // The features themselves, cells × CellCount and edges × EdgeCount, rebuilt at each
+        // refresh and shared by every model that reads them.
+        public float[] X, Y;
 
         public readonly List<int> TrailCells = new List<int>();          // non-zero Trail, for the trace
         readonly List<(float t, int cell)> walked = new List<(float, int)>();
@@ -164,7 +173,7 @@ namespace Kehai.Karen
         // Every 2 s, after the brain has refreshed the desire field.
         public void RefreshSlow(BeliefGrid grid, int jobsLeft, bool allDone, float shiftFraction, bool overtime, bool power)
         {
-            if (Map == null || grid.CellCount != Desire.Length) return;
+            if (!Wanted || Map == null || grid.CellCount != Desire.Length) return;
             System.Array.Copy(grid.DesireDistance, Desire, Desire.Length);
             System.Array.Copy(grid.HabitPrior, Habit, Habit.Length);
             JobsLeft = jobsLeft;
@@ -193,7 +202,7 @@ namespace Kehai.Karen
         // 2 Hz: where she is, where she's been, and what she believes about you.
         public void RefreshFast(Vector3 karen, bool chasing, float sinceFix, float speed, float now)
         {
-            if (Map == null) return;
+            if (!Wanted || Map == null) return;
             int cell = Map.CellAt(karen);
             if (cell != KarenCell)
             {
@@ -244,6 +253,26 @@ namespace Kehai.Karen
 
         // ---- the features -------------------------------------------------------------------
 
+        // X and Y for the fields as they are now, built once per refresh for every model.
+        int tabledMap = -1, tabledSlow = -1, tabledFast = -1;
+
+        public void Tabulate()
+        {
+            if (tabledMap == MapVersion && tabledSlow == SlowVersion && tabledFast == FastVersion && X != null) return;
+            tabledMap = MapVersion;
+            tabledSlow = SlowVersion;
+            tabledFast = FastVersion;
+            StoreMap map = Map;
+            int n = map.CellCount, edges = map.EdgeTo.Length;
+            if (X == null || X.Length != n * CellCount) X = new float[n * CellCount];
+            if (Y == null || Y.Length != edges * EdgeCount) Y = new float[edges * EdgeCount];
+            for (int c = 0; c < n; c++)
+            {
+                CellFeatures(c, X, c * CellCount);
+                for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++) EdgeFeatures(c, e, Y, e * EdgeCount);
+            }
+        }
+
         // Features of cell c, into x[at..at+CellCount).
         public void CellFeatures(int c, float[] x, int at = 0)
         {
@@ -288,16 +317,15 @@ namespace Kehai.Karen
 
         // The MLP's input for cell c: its features, then per direction the change in distance to
         // work and from her (0 where there's no edge), then which directions exist.
-        public void MlpInput(int c, float[] u, float[] edgeScratch)
+        public void MlpInput(int c, float[] u)
         {
-            CellFeatures(c, u, 0);
+            System.Array.Copy(X, c * CellCount, u, 0, CellCount);
             for (int k = 0; k < 3 * Slots; k++) u[CellCount + k] = 0f;
             for (int e = Map.EdgeStart[c]; e < Map.EdgeStart[c + 1]; e++)
             {
                 int k = EdgeSlot[e];
-                EdgeFeatures(c, e, edgeScratch, 0);
-                u[CellCount + k] = edgeScratch[0];
-                u[CellCount + Slots + k] = edgeScratch[2];
+                u[CellCount + k] = Y[e * EdgeCount + 0];
+                u[CellCount + Slots + k] = Y[e * EdgeCount + 2];
                 u[CellCount + 2 * Slots + k] = 1f;
             }
         }
@@ -332,6 +360,7 @@ namespace Kehai.Karen
             JobsLeft = 4; AllDone = false; ShiftFraction = 0.6f; Overtime = false; Power = true;
             KarenCell = 0; Chasing = true; SinceFix = 12.5f; Speed = 3.1f;
             MapVersion++; SlowVersion++; FastVersion++;
+            Wanted = true;
         }
 
         // sin of a fixed mix of the two numbers, in float: the same in C# and numpy.

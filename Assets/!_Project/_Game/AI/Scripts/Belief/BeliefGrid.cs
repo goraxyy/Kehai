@@ -58,6 +58,7 @@ namespace Kehai.Karen
         public float LastStrongObservation { get; private set; } = -999f;
         public float Staleness => Time.time - LastStrongObservation;
         public int Collapses { get; private set; }
+        public int Resets { get; private set; }             // fresh starts: to the prior, to a point, or copied from another grid
 
         // What the eval harness reads about the cost of prediction (Karen.md §12.4).
         public int PredictTicks { get; private set; }
@@ -113,6 +114,7 @@ namespace Kehai.Karen
 
         public void ResetToPrior()
         {
+            Resets++;
             RebuildPrior();
             System.Array.Copy(prior, b, b.Length);
             Expand();
@@ -124,6 +126,7 @@ namespace Kehai.Karen
         // Karen knows because the time clock is hers.
         public void ResetTo(Vector3 position, float sigma)
         {
+            Resets++;
             System.Array.Copy(prior, b, b.Length);
             Expand();
             BuildBump(position, sigma, 1f);
@@ -136,6 +139,7 @@ namespace Kehai.Karen
         // starts a shift with Karen (Eval/BeliefShadows). Headings start from the model's prior.
         public void CopyFrom(BeliefGrid other)
         {
+            Resets++;
             System.Array.Copy(other.prior, prior, prior.Length);
             for (int c = 0; c < b.Length; c++) b[c] = other.b[c];
             Expand();
