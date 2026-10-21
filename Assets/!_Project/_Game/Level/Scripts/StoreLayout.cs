@@ -462,7 +462,7 @@ public static class StoreLayout
         if (writeScene && Application.isPlaying)
             foreach (string legacy in new[] { "Slots", ShelfGrid.LegacyRootName })
             {
-                Transform old = bay.Find(legacy);
+                Transform old = SceneObjectNames.Child(bay, legacy);
                 if (old != null && old.gameObject.activeSelf) old.gameObject.SetActive(false);
             }
         return slots;

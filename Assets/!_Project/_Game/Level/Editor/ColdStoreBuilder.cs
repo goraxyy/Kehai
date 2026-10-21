@@ -82,6 +82,7 @@ public static class ColdStoreBuilder
     }
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         BuildModels();
         var old=GameObject.Find(RootName);if(old!=null)Undo.DestroyObjectImmediate(old);
         var legacy=GameObject.Find("Layout_15x15/Fridges");if(legacy!=null)

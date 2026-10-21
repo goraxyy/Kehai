@@ -37,7 +37,7 @@ namespace Kehai.Karen
             all.Clear();
             builtFor = scene;
 
-            GameObject root = GameObject.Find("CeilingLights");
+            GameObject root = SceneObjectNames.Find("CeilingLights");
             if (root == null) return;
 
             root.GetComponentsInChildren(true, all);

@@ -10,6 +10,7 @@ public static class ServiceYardBuilder
     static Material concrete,metal;
     public static void Build(Transform root,GameObject bag)
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         concrete=StaffRoomModels.Material("Yard Concrete",new Color(.32f,.35f,.34f));
         metal=StaffRoomModels.Material("Yard Galvanized",new Color(.43f,.48f,.48f));
         OpenRoof();

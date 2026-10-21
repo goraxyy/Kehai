@@ -20,6 +20,7 @@ public static class PublicInteriorBuilder
     [MenuItem("Kehai/Public Interiors/2. Build WC and Update Model Island")]
     public static void BuildWC()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         Begin(WCRoot);
         float south=WCSouth+.075f,north=WCNorth-.075f;
         // The office builder owns the south partition and WC entrance at (25,-116.7).
@@ -63,6 +64,7 @@ public static class PublicInteriorBuilder
     [MenuItem("Kehai/Public Interiors/3. Build Lobby and Update Model Island")]
     public static void BuildLobby()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         Begin(LobbyRoot);
         const float west=25.075f,east=84.925f,south=-119.925f,north=-110.075f;
         Solid("Lobby floor",new Vector3(55,.012f,-115),new Vector3(east-west,.024f,north-south),floor,false,true);

@@ -27,6 +27,7 @@ public static class StoreLayoutBuilder
     [MenuItem("Kehai/Store/Apply Layout")]
     public static void ApplyLayout()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         int group = Undo.GetCurrentGroup();
         Undo.SetCurrentGroupName("Apply store layout");
 
@@ -59,6 +60,7 @@ public static class StoreLayoutBuilder
     // fonts, which the game picks up at load. Rerunning replaces the last ones.
     public static string HangSignsAndLamps()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         int signs = AisleSigns.Build(Asset("M_SignBoard", AisleSigns.BoardColour, 0.2f, false),
                                      Asset("M_SignBadge", AisleSigns.BadgeColour, 0.2f, false),
                                      Asset("M_SignWire", AisleSigns.WireColour, 0.3f, false),
@@ -84,6 +86,7 @@ public static class StoreLayoutBuilder
     // and puts in the drawer that shows the stock in the editor. Save the scene after.
     public static string MigrateToDataShelves()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         int baked = 0, prefabs = 0, counters = 0, stripped = 0;
         var units = Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include);
         var prefabPaths = new HashSet<string>();

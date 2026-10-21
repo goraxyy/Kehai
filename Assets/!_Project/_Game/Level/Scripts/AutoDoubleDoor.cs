@@ -34,8 +34,8 @@ public class AutoDoubleDoor : MonoBehaviour
             sensor.size = new Vector3(4f, 2.5f, 5f);
         }
         // Auto-find doors by name — no Inspector dragging needed
-        leftDoor = transform.Find("LeftDoor");
-        rightDoor = transform.Find("RightDoor");
+        leftDoor = SceneObjectNames.Child(transform, "LeftDoor");
+        rightDoor = SceneObjectNames.Child(transform, "RightDoor");
 
         if (leftDoor == null || rightDoor == null)
         {

@@ -14,6 +14,7 @@ public static class EnvironmentFitBuilder
     [MenuItem("Kehai/Store Finish/Apply Compact Cold Room and Environment Fit")]
     public static void Rebuild()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Apply in edit mode.");
         var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         if(GameObject.Find("Layout_15x15")==null)throw new InvalidOperationException("Open the supermarket scene first.");
@@ -29,6 +30,7 @@ public static class EnvironmentFitBuilder
     [MenuItem("Kehai/Store Finish/Apply Door, Locker and Exterior Fit")]
     public static void Apply()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Apply in edit mode.");
         var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         if(GameObject.Find("Layout_15x15")==null)throw new InvalidOperationException("Open the supermarket scene first.");

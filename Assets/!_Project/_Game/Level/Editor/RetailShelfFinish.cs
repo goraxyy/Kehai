@@ -14,6 +14,7 @@ public static class RetailShelfFinish
 
     public static void Apply()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         board=StaffRoomModels.Material("Shelf Enamel",new Color(.65f,.67f,.66f));
         frame=StaffRoomModels.Material("Retail Grey",new Color(.48f,.5f,.51f));
         slot=StaffRoomModels.Material("Shelf Slot Grey",new Color(.24f,.27f,.28f));

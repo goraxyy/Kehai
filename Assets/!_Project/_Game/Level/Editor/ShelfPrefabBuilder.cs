@@ -104,6 +104,7 @@ public static class ShelfPrefabBuilder
     [MenuItem("Kehai/Shelves/3. Swap Scene Shelves")]
     public static void SwapSceneShelves()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         const string ShowcaseRoot = "Models_Island";
 
         var targets = new List<Transform>();

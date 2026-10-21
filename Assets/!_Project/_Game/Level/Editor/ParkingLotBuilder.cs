@@ -18,6 +18,7 @@ public static class ParkingLotBuilder
     [MenuItem("Kehai/Store Finish/Build Parking Lot")]
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Build parking in edit mode.");
         if(GameObject.Find(StoreFinishBuilder.RootName)==null)throw new InvalidOperationException("Build the store finish first.");
         var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();

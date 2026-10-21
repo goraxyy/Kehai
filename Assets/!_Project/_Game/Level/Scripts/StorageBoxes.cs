@@ -260,7 +260,7 @@ public static class StorageBoxes
     public static List<Rack> Racks(Transform racks)
     {
         var list = new List<Transform>();
-        foreach (Transform t in racks) if (t.name.StartsWith(RackPrefix) && t.gameObject.activeInHierarchy) list.Add(t);
+        foreach (Transform t in racks) if ((SceneObjectNames.Original(t).StartsWith(RackPrefix) || t.name.StartsWith("Storage_Rack_")) && t.gameObject.activeInHierarchy) list.Add(t);
         list.Sort((a, b) =>
             Mathf.Abs(a.position.z - b.position.z) > 0.5f ? b.position.z.CompareTo(a.position.z) : a.position.x.CompareTo(b.position.x));
 
@@ -350,7 +350,7 @@ public static class StorageBoxes
         foreach (Transform t in room)
         {
             if (!t.gameObject.activeInHierarchy) continue;
-            foreach (string prefix in prefixes) if (t.name.StartsWith(prefix)) { units.Add(t); break; }
+            foreach (string prefix in prefixes) if (SceneObjectNames.Original(t).StartsWith(prefix)) { units.Add(t); break; }
         }
         units.Sort((a, b) =>
             Mathf.Abs(a.position.z - b.position.z) > 0.5f ? b.position.z.CompareTo(a.position.z) : a.position.x.CompareTo(b.position.x));
@@ -622,7 +622,7 @@ public static class StorageBoxes
 
     static Transform Find(Transform t, string name)
     {
-        if (t.name == name) return t;
+        if (SceneObjectNames.Original(t) == name) return t;
         foreach (Transform child in t)
         {
             Transform found = Find(child, name);

@@ -295,10 +295,10 @@ public static class RoomLighting
             if (r == floor || r == roof || Moves(r)) continue;
             var anchor=r.GetComponentInParent<InteriorLightAnchor>();
             bool roomSurface=anchor!=null&&!anchor.outdoors&&r.bounds.size.y<.25f&&
-                (r.name.EndsWith("floor",System.StringComparison.OrdinalIgnoreCase)||r.name.EndsWith("ceiling",System.StringComparison.OrdinalIgnoreCase));
+                (SceneObjectNames.EndsWith(r,"floor")||SceneObjectNames.EndsWith(r,"ceiling"));
             bool portal=r.GetComponentInParent<HingeDoor>()!=null||r.GetComponentInChildren<HingeDoor>()!=null||
                 r.GetComponentInParent<AutoDoubleDoor>()!=null||
-                (r.transform.parent!=null&&(r.transform.parent.name.StartsWith("White frame - ",System.StringComparison.Ordinal)||r.transform.parent.name=="White automatic portal"));
+                (r.transform.parent!=null&&(SceneObjectNames.Original(r.transform.parent).StartsWith("White frame - ",System.StringComparison.Ordinal)||SceneObjectNames.Original(r.transform.parent)=="White automatic portal"));
             r.renderingLayerMask = (uint)(portal ? PortalMask(r.bounds) : roomSurface ? SurfaceMask(r.bounds) :
                 anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
             still++;
@@ -344,7 +344,7 @@ public static class RoomLighting
     static Renderer Find(string name)
     {
         foreach (MeshRenderer r in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Exclude))
-            if (r.name == name && (r.bounds.size.x > 40f || r.bounds.size.z > 40f)) return r;
+            if (SceneObjectNames.Original(r) == name && (r.bounds.size.x > 40f || r.bounds.size.z > 40f)) return r;
         return null;
     }
 
@@ -352,7 +352,7 @@ public static class RoomLighting
     // pixels of one colour, so it costs no rendering.
     static void Reflections(Bounds building, float roofHeight)
     {
-        if (GameObject.Find(ProbesName) != null) return;
+        if (SceneObjectNames.Find(ProbesName) != null) return;
         var root = new GameObject(ProbesName).transform;
         var cube = new Cubemap(8, TextureFormat.RGBA32, false) { name = "Interior reflection" };
         var pixels = new Color[8 * 8];
@@ -388,13 +388,13 @@ public static class RoomLighting
             Debug.LogWarning($"Room lighting: can't read {whole.name}'s mesh, so it's lit from every room.");
             return;
         }
-        Transform root = GameObject.Find(PatchesName)?.transform;
+        Transform root = SceneObjectNames.Find(PatchesName)?.transform;
         if (root == null) root = new GameObject(PatchesName).transform;
         string prefix = up ? "Floor_" : "Ceiling_";
         for (int i = root.childCount - 1; i >= 0; i--)
         {
             var old = root.GetChild(i);
-            if (!old.name.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
+            if (!SceneObjectNames.Original(old).StartsWith(prefix, System.StringComparison.Ordinal)) continue;
             old.gameObject.SetActive(false); // Destroy is deferred in Play; hide it now.
             var mf = old.GetComponent<MeshFilter>();
             if (mf != null && mf.sharedMesh != null) RemoveGenerated(mf.sharedMesh);
@@ -404,7 +404,7 @@ public static class RoomLighting
         if (up)
             foreach (var r in Object.FindObjectsByType<MeshRenderer>())
             {
-                if (!r.enabled || r == whole || !r.name.EndsWith("floor", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (!r.enabled || r == whole || !SceneObjectNames.EndsWith(r, "floor")) continue;
                 if (r.GetComponent<InteriorLightAnchor>() == null || r.bounds.size.y > .25f) continue;
                 if (Mathf.Abs(r.bounds.min.y - y) < .25f) finishes.Add(r.bounds);
             }

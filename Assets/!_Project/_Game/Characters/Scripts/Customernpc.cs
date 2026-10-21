@@ -525,7 +525,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     {
         if(slot.owner!=null&&slot.owner.GetComponent<ColdFixture>()!=null)
         {var door=slot.owner.GetComponentInChildren<FurnitureDoor>();if(door!=null&&!door.IsFullyOpen)return false;}
-        Transform shelf = slot.owner != null ? slot.owner.transform : slot.frame.root;
+        Transform shelf = slot.owner != null ? slot.owner.transform : SceneObjectNames.OriginalRoot(slot.frame);
 
         Vector3 from = transform.position + Vector3.up * 0.8f;
         Vector3 to = slot.Position + Vector3.up * (slot.height * 0.5f);
@@ -537,7 +537,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         {
             if (hit.collider.isTrigger) continue;                          // triggers block nothing
             if (hit.collider.transform.IsChildOf(transform)) continue;     // ourselves
-            if (hit.collider.transform.IsChildOf(shelf)) continue;         // the shelf we're reaching into
+            if ((slot.owner != null ? hit.collider.transform.IsChildOf(shelf) : SceneObjectNames.WasChildOf(hit.collider.transform, shelf))) continue;         // the shelf we're reaching into
             return false;                                                  // a wall or another fixture
         }
 
