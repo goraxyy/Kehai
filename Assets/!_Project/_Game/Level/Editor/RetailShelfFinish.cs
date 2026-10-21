@@ -71,13 +71,14 @@ public static class RetailShelfFinish
             Bounds b=LocalBounds(bay,r.bounds);
             if(r.name=="Solid lower plinth")
             {
-                foreach(float sign in new[]{-1f,1f})Box(p,"Plinth kick strip",new Vector3(b.center.x,.06f,b.center.z+sign*(b.extents.z-.008f)),new Vector3(b.size.x*.94f,.12f,.012f),slot,bounds);
                 continue;
             }
             if(ShelfGrid.IsDeck(r.transform))
             {
                 if(b.center.y>.4f)continue;
-                Box(p,"Recessed plinth",new Vector3(b.center.x,bounds.min.y+.08f,b.center.z),new Vector3(b.size.x*.96f,.16f,b.size.z*.9f),frame,bounds);
+                // Full-footprint plinth meets the neighbouring pillar without a recessed gap.
+                float height=Mathf.Max(.02f,b.min.y);
+                StaffRoomModels.Box(p,"Flush lower plinth",new Vector3(b.center.x,height*.5f,b.center.z),new Vector3(b.size.x,height,b.size.z),frame,false,.003f);
                 continue;
             }
             bool alongX=b.size.x>b.size.z;float length=alongX?b.size.x:b.size.z;
@@ -87,13 +88,6 @@ public static class RetailShelfFinish
                 Box(p,"Upright",pos,new Vector3(.09f,b.size.y,.09f),frame,bounds);
             }
             Box(p,"Top cap",new Vector3(b.center.x,b.max.y-.025f,b.center.z),alongX?new Vector3(length,.05f,.1f):new Vector3(.1f,.05f,length),frame,bounds);
-            if(bay.name.IndexOf("pillar",System.StringComparison.OrdinalIgnoreCase)>=0)
-                foreach(float side in new[]{-1f,1f})
-                {
-                    var at=new Vector3(b.center.x,b.max.y-.18f,b.center.z);
-                    if(alongX)at.z+=side*(b.extents.z+.004f);else at.x+=side*(b.extents.x+.004f);
-                    Box(p,"Pillar header trim",at,alongX?new Vector3(length*.86f,.09f,.01f):new Vector3(.01f,.09f,length*.86f),slot,bounds);
-                }
             int columns=Mathf.Max(1,Mathf.FloorToInt(length/.35f));
             for(int i=0;i<columns;i++)for(int j=0;j<7;j++)foreach(float side in new[]{-1f,1f})
             {

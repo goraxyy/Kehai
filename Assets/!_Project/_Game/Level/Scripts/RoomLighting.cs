@@ -294,7 +294,13 @@ public static class RoomLighting
         {
             if (r == floor || r == roof || Moves(r)) continue;
             var anchor=r.GetComponentInParent<InteriorLightAnchor>();
-            r.renderingLayerMask = (uint)(anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
+            bool roomSurface=anchor!=null&&!anchor.outdoors&&r.bounds.size.y<.25f&&
+                (r.name.EndsWith("floor",System.StringComparison.OrdinalIgnoreCase)||r.name.EndsWith("ceiling",System.StringComparison.OrdinalIgnoreCase));
+            bool portal=r.GetComponentInParent<HingeDoor>()!=null||r.GetComponentInChildren<HingeDoor>()!=null||
+                r.GetComponentInParent<AutoDoubleDoor>()!=null||
+                (r.transform.parent!=null&&(r.transform.parent.name.StartsWith("White frame - ",System.StringComparison.Ordinal)||r.transform.parent.name=="White automatic portal"));
+            r.renderingLayerMask = (uint)(portal ? PortalMask(r.bounds) : roomSurface ? SurfaceMask(r.bounds) :
+                anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
             still++;
         }
 
@@ -303,6 +309,26 @@ public static class RoomLighting
         Patch(roof, up: false);
         if (floor != null) Reflections(floor.bounds, roof != null ? roof.bounds.min.y : 8f);
         Debug.Log($"Room lighting: {lights} lights and {still} still renderers kept to their rooms.");
+    }
+
+    // NavMesh cells in a doorway can belong to the corridor across the threshold. Include
+    // both physical sides so a door/frame never loses the light from its own room.
+    static int PortalMask(Bounds bounds)
+    {
+        Vector3 across=bounds.size.x>bounds.size.z?Vector3.forward:Vector3.right;
+        float half=Mathf.Min(bounds.extents.x,bounds.extents.z);
+        return MaskFor(bounds)|BitAt(bounds.center+across*(half+.6f))|BitAt(bounds.center-across*(half+.6f));
+    }
+
+    // Furniture can split one physical room into several navigation regions. A continuous
+    // floor/ceiling must receive every local region's lights, rather than only its pivot's.
+    static int SurfaceMask(Bounds bounds)
+    {
+        int mask=0;
+        int nx=Mathf.Max(1,Mathf.CeilToInt(bounds.size.x/2f)),nz=Mathf.Max(1,Mathf.CeilToInt(bounds.size.z/2f));
+        for(int x=0;x<nx;x++)for(int z=0;z<nz;z++)
+            mask|=BitAt(new Vector3(bounds.min.x+(x+.5f)*bounds.size.x/nx,bounds.center.y,bounds.min.z+(z+.5f)*bounds.size.z/nz));
+        return mask;
     }
 
     static bool Moves(Renderer r)

@@ -75,7 +75,7 @@ public static class StoreFinishBuilder
             {Undo.RecordObject(r,"Use one tiled floor surface");r.sharedMaterial=FloorMaterial(name.StartsWith("WC")?"WC Tiles":"Lobby Tiles",r.bounds.size.x,r.bounds.size.z,name.StartsWith("WC")?1.325f:2.5f,new Color(.48f,.52f,.49f));}
         }
         Floor("Sales floor",new Vector3(55,.012f,-147.5f),new Vector3(59.85f,.024f,54.85f),2.5f,new Color(.51f,.53f,.51f));
-        Floor("Forecourt floor",new Vector3(55,.012f,-107.3f),new Vector3(60,.024f,5.25f),1.25f,new Color(.52f,.5f,.45f));
+        if(GameObject.Find(ParkingLotBuilder.RootName)==null)Floor("Forecourt floor",new Vector3(55,.012f,-107.3f),new Vector3(60,.024f,5.25f),1.25f,new Color(.52f,.5f,.45f));
         Floor("Backstreet floor",new Vector3(17.5f,.012f,-162.5f),new Vector3(14.85f,.024f,24.85f),2.5f,new Color(.35f,.38f,.36f));
     }
     static void Floor(string name,Vector3 at,Vector3 size,float pitch,Color color)
@@ -123,6 +123,8 @@ public static class StoreFinishBuilder
             bool east=Mathf.Abs(b.center.x-85)<.2f&&b.size.x<.25f;
             if(!(north||south||west||east)||b.min.y>=4)continue;
             Vector3 c=b.center,s=b.size;bool alongX=north||south;
+            // The separate upper cladding starts at 4m: never cover it with a second skin.
+            float top=Mathf.Min(4f,b.max.y);c.y=(b.min.y+top)*.5f;s.y=top-b.min.y;
             if(alongX){c.z=north?-109.88f:-190.12f;s.z=.18f;}else{c.x=west?9.88f:85.12f;s.x=.18f;}
             Box("Cream wall panel",c,s,cream,true,true);
             if(b.min.y<.1f)
@@ -241,8 +243,6 @@ public static class StoreFinishBuilder
         if(wc!=null)foreach(Transform t in wc.transform)if(t.name.StartsWith("WC paper bin"))
         {Undo.RecordObject(t.gameObject,"Replace old WC bins");t.gameObject.SetActive(false);}
         ServiceYardBuilder.Station(root,"WC recycling",new Vector3(24.625f,0,-118.95f),90,false,bag);
-        ServiceYardBuilder.Station(root,"East exterior recycling",new Vector3(85.55f,0,-145),-90,false,bag);
-        ServiceYardBuilder.Station(root,"Rear exterior recycling",new Vector3(42,0,-190.55f),0,false,bag);
     }
     static void Bin(string name,float x,float z,float yaw,bool customers)
         =>ServiceYardBuilder.Station(root,name,new Vector3(x,0,z),yaw,customers,bag);

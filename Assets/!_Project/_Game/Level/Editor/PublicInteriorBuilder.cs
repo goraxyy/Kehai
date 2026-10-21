@@ -27,7 +27,7 @@ public static class PublicInteriorBuilder
         Solid("WC lowered ceiling",new Vector3((West+East)*.5f,3.7f,(south+north)*.5f),new Vector3(East-West,.1f,north-south),wall,true,true);
         Solid("West lining",new Vector3(10.0875f,1.825f,(south+north)*.5f),new Vector3(.125f,3.65f,north-south),wall);
         Solid("North lining",new Vector3((West+East)*.5f,1.825f,-110.0375f),new Vector3(East-West,3.65f,.075f),wall);
-        Solid("East north lining",new Vector3(24.9625f,1.825f,-112.5f),new Vector3(.075f,3.65f,5),wall);
+        Solid("East north lining",new Vector3(25f,1.825f,-112.5f),new Vector3(.15f,3.65f,5),wall);
         // Flush 2.65m modules, five along each wall. No separate family cabin.
         for(int row=0;row<2;row++)for(int i=0;i<5;i++)
         {
@@ -48,7 +48,6 @@ public static class PublicInteriorBuilder
             Place("SanitaryBin","WC paper bin",East-.175f,z-.6f,90);
         }
         Place("VentGrille","WC extract west",West+.025f,-116.6f,-90,2.95f);
-        Place("VentGrille","WC extract east",East-.025f,-116.6f,90,2.95f);
         Label(root,"WC / 01",new Vector3(East-.025f,2.95f,-116.7f),90,.26f,new Vector2(3,.5f));
         Label(root,"WASH YOUR HANDS",new Vector3(17.35f,2.25f,-116.723f),0,.15f,new Vector2(3,.3f));
         Label(root,"WASH YOUR HANDS",new Vector3(17.35f,2.25f,-116.610f),180,.15f,new Vector2(3,.3f));
