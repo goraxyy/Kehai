@@ -18,6 +18,7 @@ public static class OfficeRoomBuilder
     [MenuItem("Kehai/Office/2. Build Office and Update Model Island")]
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Build in edit mode.");
         if(GameObject.Find(StaffRoomBuilder.RootName)==null)throw new InvalidOperationException("Build the staff room first.");
         Scene scene=SceneManager.GetActiveScene();

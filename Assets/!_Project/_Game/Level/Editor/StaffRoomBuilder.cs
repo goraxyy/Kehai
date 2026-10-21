@@ -18,6 +18,7 @@ public static class StaffRoomBuilder
     [MenuItem("Kehai/Staff Room/2. Build Staff Room and Model Island")]
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Build in edit mode.");
         Scene scene=SceneManager.GetActiveScene();
         if(GameObject.Find("Layout_15x15/Walls")==null)throw new InvalidOperationException("Open SampleScene with Layout_15x15 first.");
@@ -49,6 +50,7 @@ public static class StaffRoomBuilder
 
     public static void RefreshLighting()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         foreach(string name in new[]{RoomLighting.PatchesName,RoomLighting.ProbesName})
         {var old=GameObject.Find(name);if(old!=null)Undo.DestroyObjectImmediate(old);}
         RoomLighting.Apply(Kehai.Store.StoreMap.Rebuild());
@@ -57,6 +59,7 @@ public static class StaffRoomBuilder
     [MenuItem("Kehai/Staff Room/4. Bake Updated Navigation")]
     public static void BakeNavigation()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var surface=Kehai.Karen.KarenWorld.StoreSurface();
         if(surface==null)throw new InvalidOperationException("No store navigation surface exists.");
         Undo.RecordObject(surface,"Bake furnished staff room");
@@ -197,6 +200,7 @@ public static class StaffRoomBuilder
 
     public static void Lighting(float south,float north,float west=10f,float east=25f)
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var lamps=Object.FindAnyObjectByType<CeilingLamps>();
         foreach(var light in Object.FindObjectsByType<Light>())
         {

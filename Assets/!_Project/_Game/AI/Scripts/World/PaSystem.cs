@@ -134,7 +134,7 @@ namespace Kehai.Karen
 
         void Awake()
         {
-            GameObject root = GameObject.Find("MallSpeakers");
+            GameObject root = SceneObjectNames.Find("MallSpeakers");
             if (root != null) foreach (Transform t in root.transform) speakers.Add(t);
             radio = FindAnyObjectByType<MusicBox>();
 

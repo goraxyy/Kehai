@@ -707,7 +707,7 @@ namespace Kehai.Eval
         {
             string id = a.target ?? string.Empty;
             BreakerSwitch target = FindObjectsByType<BreakerSwitch>()
-                .FirstOrDefault(b => b.name.EndsWith(((LightCircuit)int.Parse(id.Replace("breaker_", string.Empty))).ToString()));
+                .FirstOrDefault(b => SceneObjectNames.Original(b).EndsWith(((LightCircuit)int.Parse(id.Replace("breaker_", string.Empty))).ToString()));
             if (target == null) { r.Fail($"no breaker '{a.target}'"); yield break; }
             yield return Approach(target.transform.position, 1.5f, a, r);
             if (r.Finished) yield break;

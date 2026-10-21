@@ -111,7 +111,7 @@ namespace Kehai.Karen
         // own transform is inside the shelving and can be nearer the far side of a wall.
         public static Vector3 StandIn(ShelfUnit bay)
         {
-            Transform point = bay.transform.Find("ShelfPoint");
+            Transform point = SceneObjectNames.Child(bay.transform, "ShelfPoint");
             return OnFloor(point != null ? point.position : bay.transform.position + bay.transform.forward * -1.2f);
         }
 

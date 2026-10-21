@@ -18,6 +18,7 @@ public static class EnvironmentPolishBuilder
     [MenuItem("Kehai/Store Finish/Refine Fixtures, WC and Midnight Lighting")]
     public static void Apply()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Refine in edit mode.");
         var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         Directory.CreateDirectory("Library/Kehai/SceneBackups");
@@ -34,6 +35,7 @@ public static class EnvironmentPolishBuilder
 
     public static void ApplyDetails()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         white=StaffRoomModels.Material("Door Frame White",new Color(.9f,.91f,.87f));
         wall=StaffRoomModels.Material("Room Walls",new Color(.83f,.84f,.79f));
         sage=StaffRoomModels.Material("Door Neutral Grey",new Color(.68f,.69f,.67f));
@@ -46,6 +48,7 @@ public static class EnvironmentPolishBuilder
     // Refit portals without moving authored furniture, tools or WC props.
     public static void RefitDoorsAndUtilities()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         white=StaffRoomModels.Material("Door Frame White",new Color(.9f,.91f,.87f));
         sage=StaffRoomModels.Material("Door Neutral Grey",new Color(.68f,.69f,.67f));
         metal=StaffRoomModels.Material("Brushed Steel",new Color(.51f,.57f,.58f));
@@ -146,6 +149,7 @@ public static class EnvironmentPolishBuilder
 
     public static void MoveMopToStock()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var mop=GameObject.Find("Mop");var stock=GameObject.Find("Stock_def");if(mop==null||stock==null)return;
         Undo.RecordObject(mop.transform,"Place mop beside testing crate");
         mop.transform.SetPositionAndRotation(new Vector3(stock.transform.position.x-1.35f,1,stock.transform.position.z-.32f),Quaternion.identity);
@@ -188,6 +192,7 @@ public static class EnvironmentPolishBuilder
 
     public static void RefineWC()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var wc=GameObject.Find(PublicInteriorBuilder.WCRoot);if(wc==null)return;
         var remove=new List<GameObject>();
         foreach(Transform t in wc.transform)

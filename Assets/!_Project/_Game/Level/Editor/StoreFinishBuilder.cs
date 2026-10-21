@@ -20,6 +20,7 @@ public static class StoreFinishBuilder
     [MenuItem("Kehai/Store Finish/Build Sales Floor, Front and Backstreet")]
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Build in edit mode.");
         var layout=GameObject.Find("Layout_15x15");if(layout==null)throw new InvalidOperationException("Open SampleScene first.");
         var scene=layout.scene;Directory.CreateDirectory("Library/Kehai/SceneBackups");
