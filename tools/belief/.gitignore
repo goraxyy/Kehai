@@ -5,3 +5,4 @@ data/
 *.kbt.gz
 __pycache__/
 .pytest_cache/
+out*/
