@@ -44,6 +44,13 @@ def shift_files(folder: str | Path) -> list[Path]:
     return sorted(Path(folder).glob("*.npz"))
 
 
+def spread(files: list, limit: int) -> list:
+    """`limit` files spread evenly over the list (names sort by rung and player), or all."""
+    if not limit or limit >= len(files):
+        return files
+    return [files[int(i * len(files) / limit)] for i in range(limit)]
+
+
 def log(msg: str, file: Path | None = None):
     line = f"[{time.strftime('%H:%M:%S')}] {msg}"
     print(line, flush=True)
@@ -170,7 +177,7 @@ def make_optimiser(model, lr: float):
 
 
 def train(model_id: str, stage: int, train_dir: str, val_dir: str, epochs: int, lr: float, init: str | None,
-          max_hours: float, limit: int, val_limit: int, out: Path) -> dict:
+          max_hours: float, limit: int, val_limit: int, out: Path, start_every: float = 3.0) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     tag = f"{model_id}_stage{stage}"
     logfile = out / f"{tag}.log"
@@ -179,7 +186,7 @@ def train(model_id: str, stage: int, train_dir: str, val_dir: str, epochs: int, 
         model.load_state_dict(torch.load(init))
         log(f"{tag}: starting from {init}", logfile)
     opt = make_optimiser(model, lr)
-    files = shift_files(train_dir)[: limit or None]
+    files = spread(shift_files(train_dir), limit)
     val = shift_files(val_dir)
     started = time.time()
     best = validate(model, val, val_limit)
@@ -202,7 +209,7 @@ def train(model_id: str, stage: int, train_dir: str, val_dir: str, epochs: int, 
         for i, f in enumerate(files):
             s = load_shift(f)
             if stage == 1:
-                rollouts(s, model, grad=True, on_segment=step)
+                rollouts(s, model, start_every=start_every, grad=True, on_segment=step)
             else:
                 replay.replay(s, model, bias=False, grad=True, on_window=step)
             if (i + 1) % 20 == 0:
@@ -227,7 +234,7 @@ def train(model_id: str, stage: int, train_dir: str, val_dir: str, epochs: int, 
         if (time.time() - started) / 3600 > max_hours:
             log(f"{tag}: out of time ({max_hours} h)", logfile)
             break
-    result = dict(model=model_id, stage=stage, best=best, history=history, lr=lr, init=init,
+    result = dict(model=model_id, stage=stage, best=best, history=history, lr=lr, init=init, start_every=start_every,
                   train=str(train_dir), shifts=len(files), hours=(time.time() - started) / 3600)
     (out / f"{tag}.json").write_text(json.dumps(result, indent=2))
     return result
@@ -271,9 +278,10 @@ def main(argv=None):
     ap.add_argument("--lr", type=float, default=None)
     ap.add_argument("--init")
     ap.add_argument("--hours", type=float, default=8.0)
-    ap.add_argument("--limit", type=int, default=0, help="train on the first N shifts only")
+    ap.add_argument("--limit", type=int, default=0, help="train on N shifts spread over the set")
     ap.add_argument("--val-limit", type=int, default=0)
     ap.add_argument("--threads", type=int, default=4)
+    ap.add_argument("--start-every", type=float, default=3.0, help="stage 1: seconds between rollouts")
     ap.add_argument("--card", default="", help="JSON of extra model-card fields (data seeds, profiles…)")
     a = ap.parse_args(argv)
     torch.set_num_threads(a.threads)
@@ -287,7 +295,7 @@ def main(argv=None):
     init = a.init
     if stage == 2 and init is None and (out / f"{a.model}_stage1.pt").exists():
         init = str(out / f"{a.model}_stage1.pt")
-    train(a.model, stage, a.train, a.val, a.epochs, lr, init, a.hours, a.limit, a.val_limit, out)
+    train(a.model, stage, a.train, a.val, a.epochs, lr, init, a.hours, a.limit, a.val_limit, out, a.start_every)
     return 0
 
 

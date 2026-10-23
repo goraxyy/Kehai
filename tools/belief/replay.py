@@ -159,7 +159,7 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 if truth < 0 or truth >= n:
                     continue
                 p = marg[truth]
-                logp[row] = np.log(max(float(p), FLOOR))
+                logp[row] = np.log(max(float(p.detach()), FLOOR))
                 if grad:
                     t = float(s.sa_t[row])
                     if window_start is None:
@@ -255,6 +255,7 @@ def main(argv=None):
     p.add_argument("--tol", type=float, default=1e-3)
     p.add_argument("--weights", help="weights.npz from export_cs.py, to check the learned shadows too")
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--threads", type=int, default=4)
     a = ap.parse_args(argv)
 
     files = []
@@ -264,10 +265,15 @@ def main(argv=None):
     if a.limit:
         files = files[: a.limit]
     weights = load_weights(a.weights)
-    torch.set_num_threads(4)
+    torch.set_num_threads(a.threads)
     failed = 0
     for f in files:
-        s = load(f)
+        try:
+            s = load(f)
+        except (EOFError, OSError, ValueError) as e:   # a trace still being written, or cut short
+            print(f"UNREADABLE {f.name}: {e}")
+            failed += 1
+            continue
         ok, lines = parity(s, a.tol, weights)
         print(f"{'PASS' if ok else 'FAIL'} {f.name}: shift {s.shift} {s.rung} {s.agent} seed {s.seed}")
         for line in lines:
