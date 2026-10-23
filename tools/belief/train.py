@@ -204,7 +204,7 @@ def train(model_id: str, stage: int, train_dir: str, val_dir: str, epochs: int, 
             (loss / weight).backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             opt.step()
-            losses.append(float(loss) / weight)
+            losses.append(float(loss.detach()) / weight)
 
         for i, f in enumerate(files):
             s = load_shift(f)

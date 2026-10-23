@@ -90,7 +90,7 @@ def replay(s: Shift, model, bias: bool = False, grad: bool = False, window: floa
                 return expand(prior.clone())
             return st * float(np.float32(1) / total)
         total = st.sum()
-        if not bool(torch.isfinite(total)) or float(total) < 1e-12:
+        if not bool(torch.isfinite(total.detach())) or float(total.detach()) < 1e-12:
             collapses += 1
             return expand(prior.clone())
         return st / total
