@@ -121,6 +121,11 @@ for the tools.
 
 | file | what it is |
 |---|---|
+| [`HANDOVER.md`](docs/HANDOVER.md) | Start here: where everything is, the state of the work, what's next |
+| [`notmerged.md`](docs/notmerged.md) | How Karen adapts, with diagrams; what's left to build; all the tech |
+| [`SCENE_MAP.md`](docs/SCENE_MAP.md) | Where everything is in the Unity scene (generated) |
+| [`STORE_MAP.md`](docs/STORE_MAP.md) | Karen's map of the store: regions, links, chokepoints (generated) |
+| [`plans/`](docs/plans/) | Approved plans for Karen's learned motion model and the next round |
 | [`RELEASE_PLAN.md`](docs/RELEASE_PLAN.md) | Everything left until release, in order |
 | [`CONTROLS.md`](docs/CONTROLS.md) | Every key |
 | [`Karen.md`](docs/Karen.md) | Karen's full design, and where the code differs |
