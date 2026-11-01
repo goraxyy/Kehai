@@ -14,7 +14,8 @@ import revise
 import translate
 import weekly_report
 import write_short
-from km import edits, patterns, schemas
+from km import edits, moments, patterns, schemas
+from km.cli import BadInput
 from km.llm import client, ledger
 
 from helpers import FIXTURES, STEM, STUDY, draft, library, replay, shot, track
@@ -336,6 +337,46 @@ def test_pick_moments_gives_a_must_use_pattern_to_one_short(world, tmp_path, mon
     plan = json.loads((world / "plans" / WEEK / "picks.json").read_text())
     assert plan["answer"]["shorts"][0]["pattern"] == "dark-then-light"
     assert "pattern dark-then-light" in capsys.readouterr().out
-    from km.cli import BadInput
     with pytest.raises(BadInput, match="no active pattern 'nope'"):
         run(pick_moments, monkeypatch, "--week", WEEK, "--pattern", "nope", "--root", str(world))
+
+
+def markers_copy(folder, name, **changes):
+    """The fixture shift's markers file under another name, changed."""
+    doc = {**json.loads((FIXTURES / f"{STEM}.markers.json").read_text()), **changes}
+    path = folder / f"{name}.markers.json"
+    path.write_text(json.dumps(doc))
+    return path
+
+
+def test_a_negative_length_is_mended_from_the_moments_and_the_file_left_alone(tmp_path):
+    path = markers_copy(tmp_path, "stopped", length=-18.69)
+    before = path.read_text()
+    doc = moments.load(path)
+    assert doc["length"] == max(m["end"] for m in doc["moments"])
+    assert path.read_text() == before
+
+
+def test_one_bad_markers_file_is_named_and_left_out(tmp_path, capsys):
+    good = markers_copy(tmp_path, "good")
+    bad = markers_copy(tmp_path, "bad", shift=-1)
+    assert [d["shift"] for d in moments.load_all([bad, good])] == [3]
+    assert "bad.markers.json" in capsys.readouterr().err
+    with pytest.raises(BadInput):
+        moments.load(bad)
+
+
+def test_a_bad_markers_file_stops_neither_the_report_nor_the_picking(world, tmp_path, monkeypatch, capsys):
+    records = tmp_path / "records"
+    records.mkdir()
+    markers_copy(records, "bad", shift=-1)
+    monkeypatch.setenv("KEHAI_SHIFT_RECORDS", str(records))
+    assert run(weekly_report, monkeypatch, "--week", WEEK, "--root", str(world), "--dry-run") == 0
+    assert run(pick_moments, monkeypatch, "--week", WEEK, "--root", str(world)) == 0
+    assert "nothing to pick" in capsys.readouterr().out
+
+
+def test_a_bad_file_named_on_the_command_line_is_still_an_error(world, tmp_path, monkeypatch):
+    bad = markers_copy(tmp_path, "bad", shift=-1)
+    with pytest.raises(BadInput, match="bad.markers.json"):
+        run(pick_moments, monkeypatch, "--files", str(bad), "--root", str(world))

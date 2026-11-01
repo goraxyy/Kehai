@@ -119,6 +119,20 @@ def test_only_the_owners_updates_are_handled(world, monkeypatch):
     assert bot.updates() == [], "the offset moved past both"
 
 
+def test_produce_gets_past_a_bad_markers_file(world, tmp_path, monkeypatch, capsys):
+    import run_job
+    from helpers import FIXTURES, STEM
+    root, store, bot, approvals = world
+    doc = json.loads((FIXTURES / f"{STEM}.markers.json").read_text())
+    doc.update(shift=-1, started=dt.datetime.now().strftime("%Y-%m-%d %H:%M"))
+    records = tmp_path / "records"
+    records.mkdir()
+    (records / "bad.markers.json").write_text(json.dumps(doc))
+    monkeypatch.setenv("KEHAI_SHIFT_RECORDS", str(records))
+    run_job.produce(root, store, bot, approvals, None, False, True)
+    assert "skipped" in capsys.readouterr().out
+
+
 def test_a_bad_update_is_answered_and_the_rest_still_handled(world, monkeypatch):
     import run_job
     root, store, bot, approvals = world

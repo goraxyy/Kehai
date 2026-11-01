@@ -67,7 +67,11 @@ def produce(root, store, bot, approvals, week: str | None, pick_now: bool, dry_r
         stem = f.name.removesuffix(".markers.json")
         if store.get(f"shift.seen.{stem}"):
             continue
-        doc = moments.load(f)
+        try:
+            doc = moments.load(f)
+        except BadInput as e:
+            say(f"skipped: {e}")
+            continue
         best = doc["moments"][0] if doc["moments"] else None
         line = (f"🕐 New shift recorded: {esc(doc['started'])}, {doc['length'] / 60:.0f} min, {len(doc['moments'])} clip moments"
                 + (f"; the best: {esc(', '.join(best['tags'][:3]))} (score {best['score']:.0f})" if best else ""))
@@ -81,7 +85,7 @@ def produce(root, store, bot, approvals, week: str | None, pick_now: bool, dry_r
     s = settings()["production"]
     pick_now = pick_now or os.environ.get("KEHAI_PICK_NOW") == "1"
     if not plan.exists() and (pick_now or on_or_after(today, s["pick_day"]) or week):
-        docs = [moments.load(f) for f in moments.find_files(moments.records(), start, end)]
+        docs = moments.load_all(moments.find_files(moments.records(), start, end))
         count = sum(len(d["moments"]) for d in docs)
         if count < s["min_moments"]:
             if not dry_run and store.get(f"pick.thin.{label}") is None:

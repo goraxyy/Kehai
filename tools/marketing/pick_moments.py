@@ -100,10 +100,11 @@ def main() -> int:
     root = paths.root(a.root)
     start, end, week = moments.week_range(a.week)
     files = a.files or moments.find_files(moments.records(), start, end)
-    if not files:
+    # Files named on the command line must all load; a week's are whatever can be read.
+    docs = [moments.load(f) for f in a.files] if a.files else moments.load_all(files)
+    if not docs:
         print(f"pick_moments: no shifts with clip moments in {week} ({moments.records()}); nothing to pick.")
         return 0
-    docs = [moments.load(f) for f in files]
     by_ref = moments.by_ref(docs)
     kept = moments.kept(docs)
     available = len(by_ref)
