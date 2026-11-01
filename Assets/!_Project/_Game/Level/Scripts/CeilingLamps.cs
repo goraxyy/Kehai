@@ -30,7 +30,7 @@ public class CeilingLamps : MonoBehaviour
     // The baked lamps if the scene has them, otherwise new ones.
     public static CeilingLamps Ensure()
     {
-        var existing = GameObject.Find(RootName);
+        var existing = SceneObjectNames.Find(RootName);
         if (existing != null && existing.TryGetComponent(out CeilingLamps baked) && baked.lamps.Count > 0)
         {
             baked.Refresh(true);
@@ -42,7 +42,7 @@ public class CeilingLamps : MonoBehaviour
 
     public static CeilingLamps Build(Material box, Material wire, Material on, Material off)
     {
-        var old = GameObject.Find(RootName);
+        var old = SceneObjectNames.Find(RootName);
         if (old != null)
         {
             old.name += " (replaced)";

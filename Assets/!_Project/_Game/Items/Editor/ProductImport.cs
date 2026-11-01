@@ -325,6 +325,7 @@ public static class ProductImport
 
     public static string BuildShowcase()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var island = GameObject.Find("Models_Island");
         if (island == null) return "No Models_Island in the open scene.";
 

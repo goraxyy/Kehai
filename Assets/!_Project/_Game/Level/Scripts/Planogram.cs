@@ -243,7 +243,7 @@ public static class Planogram
     }
 
     // The bays at the ends of runs. The maze's end pieces are the "E" pillars.
-    public static bool IsEndCap(Transform bay) => bay != null && bay.name.Contains("pillar_E");
+    public static bool IsEndCap(Transform bay) => bay != null && (SceneObjectNames.Original(bay).Contains("pillar_E") || bay.name.StartsWith("Shelf_Pillar_Endcap_",System.StringComparison.Ordinal));
 
     // The layouts are written for a bay with three boards a side, and the shop's bays aren't
     // all like that: the sweets are on one-sided bays, so their back faces never show, and

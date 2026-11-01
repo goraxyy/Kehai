@@ -23,7 +23,9 @@ public static class StaffRoomModels
     static Material ivory, sage, dark, wood, metal, fabric, green, leaf, soil, red, white, glass;
 
     [MenuItem("Kehai/Staff Room/1. Build Model Library")]
-    public static void BuildLibrary()
+    public static void BuildLibrary() => BuildSelected(Names);
+
+    public static void BuildSelected(params string[] modelNames)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Build in edit mode.");
         Directory.CreateDirectory(Folder + "/Meshes");
@@ -31,7 +33,7 @@ public static class StaffRoomModels
         Directory.CreateDirectory(Folder + "/Prefabs");
         AssetDatabase.Refresh();
         Palette();
-        foreach (string name in Names)
+        foreach (string name in modelNames)
         {
             GameObject root = new GameObject(name);
             try
@@ -49,7 +51,7 @@ public static class StaffRoomModels
             }
         }
         AssetDatabase.SaveAssets();
-        Debug.Log("Built " + Names.Length + " staff-room models at real-world scale.");
+        Debug.Log("Built " + modelNames.Length + " staff-room models at real-world scale.");
     }
 
     public static GameObject Prefab(string name) => AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/Prefabs/" + name + ".prefab");
@@ -156,15 +158,17 @@ public static class StaffRoomModels
 
     static void Locker(Transform p)
     {
-        // Hollow case: 1.2 x 1.1 x 2.4; no enclosing collider across the opening.
-        Box(p,"Back",new Vector3(0,1.2f,.525f),new Vector3(1.2f,2.4f,.05f),sage,true);
-        foreach(float x in new[]{-.57f,.57f}) Box(p,"Side",new Vector3(x,1.2f,0),new Vector3(.06f,2.4f,1.1f),sage,true);
-        foreach(float y in new[]{.06f,2.37f}) Box(p,"Cap",new Vector3(0,y,0),new Vector3(1.08f,.06f,1.1f),sage,true);
-        Box(p,"Upper shelf",new Vector3(0,1.98f,.02f),new Vector3(1.08f,.045f,.98f),ivory,true);
-        Box(p,"Shoe shelf",new Vector3(0,.3f,.02f),new Vector3(1.08f,.045f,.98f),ivory,true);
-        Rod(p,"Coat rail",new Vector3(-.5f,1.82f,.15f),new Vector3(.5f,1.82f,.15f),.018f,metal);
-        Box(p,"Hook",new Vector3(0,1.75f,.42f),new Vector3(.04f,.14f,.13f),metal);
-        var hinge = Door(p,"locker",new Vector3(-.54f,0,-.52f),1.08f,2.25f,.09f,sage,105f);
+        // A 1.08m clear opening fits the 1m-wide player. Keep the standing chamber empty.
+        Box(p,"Back",new Vector3(0,1.2f,.675f),new Vector3(1.2f,2.4f,.05f),sage,true);
+        foreach(float x in new[]{-.57f,.57f}) Box(p,"Side",new Vector3(x,1.2f,0),new Vector3(.06f,2.4f,1.4f),sage,true);
+        foreach(float y in new[]{.025f,2.37f}) Box(p,"Cap",new Vector3(0,y,0),new Vector3(1.08f,.05f,1.4f),sage,true);
+        Box(p,"Upper shelf",new Vector3(0,2.26f,.02f),new Vector3(1.08f,.045f,1.28f),ivory,true);
+        Rod(p,"Coat rail",new Vector3(-.5f,2.17f,.5f),new Vector3(.5f,2.17f,.5f),.018f,metal);
+        Box(p,"Hook",new Vector3(0,2.16f,.6f),new Vector3(.04f,.14f,.13f),metal);
+        var hinge = Door(p,"locker",new Vector3(-.54f,0,-.71f),1.08f,2.27f,.065f,sage,105f);
+        var hiding=p.gameObject.AddComponent<ColdHideInterior>();
+        hiding.interior=new Bounds(new Vector3(0,1.15f,0),new Vector3(1.08f,2.15f,1.28f));
+        hiding.insideMaterial=ColdStoreBuilder.Glass("Locker interior view",.23f);
         Box(hinge,"Name plate",new Vector3(.54f,1.89f,-.041f),new Vector3(.28f,.13f,.012f),ivory);
         for(int i=0;i<4;i++)
         {
@@ -192,10 +196,11 @@ public static class StaffRoomModels
         var hinge = new GameObject("Hinge - " + label).transform;
         hinge.SetParent(p,false); hinge.localPosition=at;
         var panel = Box(hinge,"Door leaf",new Vector3(width*.5f,height*.5f+bottom,0),new Vector3(width,height,.06f),material,true);
-        var handle = new Vector3(width-.14f,1.12f,-.075f);
-        handle.x-=.08f;
+        var handle = new Vector3(width-.22f,1.12f,-.09f);
+        foreach(float side in new[]{-1f,1f})
+            Box(hinge,"Handle plate",new Vector3(handle.x,handle.y,side*.044f),new Vector3(.14f,.36f,.02f),metal);
         Box(hinge,"Handle",handle,new Vector3(.22f,.035f,.065f),dark);
-        Box(hinge,"Inside handle",new Vector3(handle.x,handle.y,.075f),new Vector3(.22f,.035f,.065f),dark);
+        Box(hinge,"Inside handle",new Vector3(handle.x,handle.y,.09f),new Vector3(.22f,.035f,.065f),dark);
         var interact=hinge.gameObject.AddComponent<FurnitureDoor>();
         interact.label=label; interact.openAngle=angle; interact.assembly=p; interact.panel=panel.GetComponent<BoxCollider>();
         hinge.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild=true;
@@ -424,12 +429,12 @@ public static class StaffRoomModels
     {
         foreach(float x in new[]{-.79f,.79f})Box(p,"Jamb",new Vector3(x,1.3f,0),new Vector3(.08f,2.6f,.18f),ivory,true);
         Box(p,"Header",new Vector3(0,2.56f,0),new Vector3(1.66f,.08f,.18f),ivory,true);
-        var hinge=Door(p,"staff door",new Vector3(-.75f,0,0),1.5f,2.46f,.035f,sage,95f);
+        var hinge=Door(p,"staff door",new Vector3(-.75f,0,0),1.5f,2.46f,.035f,Material("Door Neutral Grey",new Color(.68f,.69f,.67f)),95f);
         var door=hinge.gameObject.AddComponent<HingeDoor>();
         door.aimedInteraction=true;door.fixedSwingDirection=true;door.openAngle=95f;
         hinge.GetComponent<FurnitureDoor>().roomDoor=door;
-        Box(hinge,"Kick plate",new Vector3(.75f,.2f,-.039f),new Vector3(1.42f,.27f,.014f),metal);
-        Box(hinge,"Push plate",new Vector3(1.32f,1.25f,-.04f),new Vector3(.13f,.36f,.02f),metal);
+        foreach(float side in new[]{-1f,1f})
+            Box(hinge,"Kick plate",new Vector3(.75f,.2f,side*.039f),new Vector3(1.42f,.27f,.014f),metal);
     }
 
     static void Pendant(Transform p)

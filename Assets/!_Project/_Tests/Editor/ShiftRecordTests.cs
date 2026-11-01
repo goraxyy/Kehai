@@ -114,6 +114,17 @@ public class ShiftRecordTests
         Assert.IsFalse(html.Contains("__DATA__") || html.Contains("__TITLE__") || html.Contains("__ANTAGONIST__"));
     }
 
+    // Stopping Play mid-shift used to save a negative length, which the marketing jobs refused.
+    [Test]
+    public void Length_IsNeverShorterThanTheFramesRecorded()
+    {
+        ShiftRecording r = Sample();   // its last frame is at 12 s
+        Assert.AreEqual(15f, r.LengthAt(15f), 0.001f);
+        Assert.AreEqual(12f, r.LengthAt(3f), 0.001f);
+        Assert.AreEqual(12f, r.LengthAt(-18.69f), 0.001f);
+        Assert.AreEqual(0f, new ShiftRecording().LengthAt(-5f), 0.001f);
+    }
+
     // "Karen", never KAREN or K.A.R.E.N. — in the game's text and in the docs.
     [Test]
     public void KarensName_IsNeverAbbreviated()

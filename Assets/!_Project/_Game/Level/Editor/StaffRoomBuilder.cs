@@ -18,6 +18,7 @@ public static class StaffRoomBuilder
     [MenuItem("Kehai/Staff Room/2. Build Staff Room and Model Island")]
     public static void Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Build in edit mode.");
         Scene scene=SceneManager.GetActiveScene();
         if(GameObject.Find("Layout_15x15/Walls")==null)throw new InvalidOperationException("Open SampleScene with Layout_15x15 first.");
@@ -44,11 +45,12 @@ public static class StaffRoomBuilder
         AssetDatabase.SaveAssets();
         Undo.CollapseUndoOperations(undo);
         Selection.activeGameObject=root.gameObject;
-        Debug.Log("Staff room built: 15 x 13 1/3 m, ten 1.2 x 1.1 x 2.4 m lockers, two changing cabins, kitchen and lounge. Save the scene with Cmd+S.");
+        Debug.Log("Staff room built: 15 x 13 1/3 m, ten 1.2 x 1.4 x 2.4 m hiding lockers, two changing cabins, kitchen and lounge. Save the scene with Cmd+S.");
     }
 
     public static void RefreshLighting()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         foreach(string name in new[]{RoomLighting.PatchesName,RoomLighting.ProbesName})
         {var old=GameObject.Find(name);if(old!=null)Undo.DestroyObjectImmediate(old);}
         RoomLighting.Apply(Kehai.Store.StoreMap.Rebuild());
@@ -57,6 +59,7 @@ public static class StaffRoomBuilder
     [MenuItem("Kehai/Staff Room/4. Bake Updated Navigation")]
     public static void BakeNavigation()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var surface=Kehai.Karen.KarenWorld.StoreSurface();
         if(surface==null)throw new InvalidOperationException("No store navigation surface exists.");
         Undo.RecordObject(surface,"Bake furnished staff room");
@@ -100,14 +103,14 @@ public static class StaffRoomBuilder
         foreach(var segment in new[]{new Vector2(North-.075f,-141.5f),new Vector2(-143.5f,SouthFace)})
         {
             float length=Mathf.Abs(segment.y-segment.x);
-            Solid("East lining",new Vector3(24.95f,4,(segment.x+segment.y)*.5f),new Vector3(.05f,8,length),wall);
+            Solid("East lining",new Vector3(25f,4,(segment.x+segment.y)*.5f),new Vector3(.15f,8,length),wall);
         }
-        Solid("East doorway top",new Vector3(24.95f,5.25f,-142.5f),new Vector3(.05f,5.5f,2f),wall);
+        Solid("East doorway top",new Vector3(25f,5.3f,-142.5f),new Vector3(.15f,5.4f,2f),wall);
         Partition("Office partition",North,22.65f,24.35f);
         Partition("Backstreet partition",-150,16.65f,18.35f);
         // Existing east opening is 2m; new door has 1.5m clear between the jambs.
-        foreach(float z in new[]{-143.415f,-141.585f})Solid("Entrance infill",new Vector3(24.95f,1.25f,z),new Vector3(.15f,2.5f,.17f),wall);
-        Place("RoomDoor","Staff entrance",24.95f,-142.5f,90);
+        foreach(float z in new[]{-143.415f,-141.585f})Solid("Entrance infill",new Vector3(25f,1.3f,z),new Vector3(.15f,2.6f,.17f),wall);
+        Place("RoomDoor","Staff entrance",25f,-142.5f,90);
         Place("RoomDoor","Office connection",23.5f,North,0);
         Place("RoomDoor","Backstreet connection",17.5f,-150,180);
         // Durable lower-wall band, above the furniture and below notices.
@@ -126,11 +129,11 @@ public static class StaffRoomBuilder
     {
         for(int i=0;i<10;i++)
         {
-            var locker=Place("Locker","Locker "+(i+1).ToString("00"),WestFace+.6f+1.2f*i,North-.075f-.55f,0);
+            var locker=Place("Locker","Locker "+(i+1).ToString("00"),WestFace+.6f+1.2f*i,North-.075f-.7f,0);
             var door=locker.GetComponentInChildren<FurnitureDoor>();door.label="locker "+(i+1).ToString("00");
             Text(door.transform,(i+1).ToString("00"),new Vector3(.54f,1.89f,-.055f),0,.07f,new Vector2(.24f,.1f));
         }
-        // Open locker tips end at z=-138.97; cabins start at -140.7: 1.7m remains.
+        // Deeper lockers keep their backs flush; open leaves leave over 1.4m before the cabins.
         Place("ChangingCabin","Changing cabin 01",WestFace+1.35f,-142f,-90);
         Place("ChangingCabin","Changing cabin 02",WestFace+1.35f,-144.6f,-90);
         for(int i=0;i<2;i++)Text(root,"CHANGE 0"+(i+1),new Vector3(12.86f,2.43f,-142f-i*2.6f),-90,.13f,new Vector2(1.5f,.22f));
@@ -165,7 +168,9 @@ public static class StaffRoomBuilder
         Place("LoungeChair","Lounge chair",19.65f,-147.1f,110);
         Place("SmallPlant","Lounge table plant",22f,-147.5f,0,.43f);
         Place("WallScreen","Staff screen",21.6f,SouthFace+.08f,180,1.65f);
-        Place("Whiteboard","Shift whiteboard",EastFace-.04f,-148.2f,90,1.25f);
+        var board=Place("Whiteboard","Shift whiteboard",EastFace,-146.3f,90,1.25f);
+        board.transform.localScale=new Vector3(1.8f,1,1);
+        board.transform.position+=Vector3.right*(EastFace-BoundsOf(board).max.x);
         Place("Noticeboard","Staff notices",EastFace-.04f,-137.7f,90,1.05f);
         Place("WallClock","Staff clock",EastFace-.03f,-139.3f,90,2.1f);
         Place("FirstAid","First aid",16f,SouthFace+.09f,180,1.3f);
@@ -195,6 +200,7 @@ public static class StaffRoomBuilder
 
     public static void Lighting(float south,float north,float west=10f,float east=25f)
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var lamps=Object.FindAnyObjectByType<CeilingLamps>();
         foreach(var light in Object.FindObjectsByType<Light>())
         {

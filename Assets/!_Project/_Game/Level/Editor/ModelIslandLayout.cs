@@ -15,6 +15,7 @@ public static class ModelIslandLayout
     [MenuItem("Kehai/Staff Room/3. Organize Model Island")]
     public static void Organize()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Organize in edit mode.");
         var island=GameObject.Find("Models_Island");if(island==null)throw new InvalidOperationException("Models_Island is missing.");
         if(StaffRoomModels.Prefab("Locker")==null)StaffRoomModels.BuildLibrary();

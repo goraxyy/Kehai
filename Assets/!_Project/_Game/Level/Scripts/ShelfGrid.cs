@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// How a bay's boards are cut up into slots. Every board (a "polka") is tiled with 0.5 m
+// How a bay's boards are cut up into slots. Every shelf deck is tiled with 0.5 m
 // squares, so a two-sided 4 m board has 16 (8 along, one row facing each aisle), a one-sided
 // one 8, a 1 m pillar board 4 and a 1 x 0.5 m "b" pillar board 2. Each square is then filled
 // with slots according to what it sells:
@@ -32,11 +32,11 @@ public static class ShelfGrid
     // before stock was data. Kehai/Store/Migrate to Data Shelves clears it out.
     public const string LegacyRootName = "GridSlots";
 
-    // Same rule as ShelfPrefabBuilder: a board is a thin "polka" child of the bay; thicker
+    // Same rule as ShelfPrefabBuilder: a deck is a thin child of the bay; thicker
     // ones are structural bases.
     const float ThinBoardMax = 0.1f;
-    // "Shelf deck" is the authoring name; old imported models still say "polka".
-    public static bool IsDeck(Transform child) => child.name.ToLowerInvariant().Contains("polka") || child.name.StartsWith("Shelf deck",System.StringComparison.OrdinalIgnoreCase);
+    // Deck identification accepts stable imported identities and the organized display name.
+    public static bool IsDeck(Transform child) => SceneObjectNames.Original(child).ToLowerInvariant().Contains("polka") || SceneObjectNames.Original(child).StartsWith("Shelf deck",System.StringComparison.OrdinalIgnoreCase) || child.name.StartsWith("Shelf_Deck_",System.StringComparison.Ordinal);
 
     public readonly struct Board
     {
@@ -202,7 +202,7 @@ public static class ShelfGrid
         var strips = new List<Strip>();
         foreach (MeshRenderer r in bay.GetComponentsInChildren<MeshRenderer>(true))
         {
-            if (!r.name.StartsWith(StripPrefix)) continue;
+            if (!SceneObjectNames.Original(r).StartsWith(StripPrefix) && !r.name.StartsWith("Shelf_Price_Rail_",System.StringComparison.Ordinal)) continue;
             Bounds local = LocalBounds(bay, r.bounds);
             foreach (Board board in boards)
             {

@@ -903,7 +903,7 @@ namespace Kehai.Store
                 AddDoorway(door, false);
             }
 
-            GameObject checkouts = GameObject.Find("Cashierdesks");
+            GameObject checkouts = SceneObjectNames.Find("Cashierdesks");
             if (checkouts != null)
             {
                 int i = 1;
@@ -911,7 +911,7 @@ namespace Kehai.Store
                     AddLandmark(LandmarkKind.Checkout, "Checkout " + i++, desk.position, desk);
             }
 
-            GameObject spawn = GameObject.Find("CustomerSpawner");
+            GameObject spawn = SceneObjectNames.Find("CustomerSpawner");
             if (spawn != null) AddLandmark(LandmarkKind.CustomerSpawn, "Customer spawn", spawn.transform.position, spawn);
 
             foreach (CoffeeMachine m in Object.FindObjectsByType<CoffeeMachine>())

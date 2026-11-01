@@ -294,7 +294,13 @@ public static class RoomLighting
         {
             if (r == floor || r == roof || Moves(r)) continue;
             var anchor=r.GetComponentInParent<InteriorLightAnchor>();
-            r.renderingLayerMask = (uint)(anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
+            bool roomSurface=anchor!=null&&!anchor.outdoors&&r.bounds.size.y<.25f&&
+                (SceneObjectNames.EndsWith(r,"floor")||SceneObjectNames.EndsWith(r,"ceiling"));
+            bool portal=r.GetComponentInParent<HingeDoor>()!=null||r.GetComponentInChildren<HingeDoor>()!=null||
+                r.GetComponentInParent<AutoDoubleDoor>()!=null||
+                (r.transform.parent!=null&&(SceneObjectNames.Original(r.transform.parent).StartsWith("White frame - ",System.StringComparison.Ordinal)||SceneObjectNames.Original(r.transform.parent)=="White automatic portal"));
+            r.renderingLayerMask = (uint)(portal ? PortalMask(r.bounds) : roomSurface ? SurfaceMask(r.bounds) :
+                anchor!=null ? (anchor.outdoors ? Outside : BitAt(anchor.Position)) : MaskFor(r.bounds));
             still++;
         }
 
@@ -303,6 +309,26 @@ public static class RoomLighting
         Patch(roof, up: false);
         if (floor != null) Reflections(floor.bounds, roof != null ? roof.bounds.min.y : 8f);
         Debug.Log($"Room lighting: {lights} lights and {still} still renderers kept to their rooms.");
+    }
+
+    // NavMesh cells in a doorway can belong to the corridor across the threshold. Include
+    // both physical sides so a door/frame never loses the light from its own room.
+    static int PortalMask(Bounds bounds)
+    {
+        Vector3 across=bounds.size.x>bounds.size.z?Vector3.forward:Vector3.right;
+        float half=Mathf.Min(bounds.extents.x,bounds.extents.z);
+        return MaskFor(bounds)|BitAt(bounds.center+across*(half+.6f))|BitAt(bounds.center-across*(half+.6f));
+    }
+
+    // Furniture can split one physical room into several navigation regions. A continuous
+    // floor/ceiling must receive every local region's lights, rather than only its pivot's.
+    static int SurfaceMask(Bounds bounds)
+    {
+        int mask=0;
+        int nx=Mathf.Max(1,Mathf.CeilToInt(bounds.size.x/2f)),nz=Mathf.Max(1,Mathf.CeilToInt(bounds.size.z/2f));
+        for(int x=0;x<nx;x++)for(int z=0;z<nz;z++)
+            mask|=BitAt(new Vector3(bounds.min.x+(x+.5f)*bounds.size.x/nx,bounds.center.y,bounds.min.z+(z+.5f)*bounds.size.z/nz));
+        return mask;
     }
 
     static bool Moves(Renderer r)
@@ -318,7 +344,7 @@ public static class RoomLighting
     static Renderer Find(string name)
     {
         foreach (MeshRenderer r in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Exclude))
-            if (r.name == name && (r.bounds.size.x > 40f || r.bounds.size.z > 40f)) return r;
+            if (SceneObjectNames.Original(r) == name && (r.bounds.size.x > 40f || r.bounds.size.z > 40f)) return r;
         return null;
     }
 
@@ -326,7 +352,7 @@ public static class RoomLighting
     // pixels of one colour, so it costs no rendering.
     static void Reflections(Bounds building, float roofHeight)
     {
-        if (GameObject.Find(ProbesName) != null) return;
+        if (SceneObjectNames.Find(ProbesName) != null) return;
         var root = new GameObject(ProbesName).transform;
         var cube = new Cubemap(8, TextureFormat.RGBA32, false) { name = "Interior reflection" };
         var pixels = new Color[8 * 8];
@@ -362,13 +388,13 @@ public static class RoomLighting
             Debug.LogWarning($"Room lighting: can't read {whole.name}'s mesh, so it's lit from every room.");
             return;
         }
-        Transform root = GameObject.Find(PatchesName)?.transform;
+        Transform root = SceneObjectNames.Find(PatchesName)?.transform;
         if (root == null) root = new GameObject(PatchesName).transform;
         string prefix = up ? "Floor_" : "Ceiling_";
         for (int i = root.childCount - 1; i >= 0; i--)
         {
             var old = root.GetChild(i);
-            if (!old.name.StartsWith(prefix, System.StringComparison.Ordinal)) continue;
+            if (!SceneObjectNames.Original(old).StartsWith(prefix, System.StringComparison.Ordinal)) continue;
             old.gameObject.SetActive(false); // Destroy is deferred in Play; hide it now.
             var mf = old.GetComponent<MeshFilter>();
             if (mf != null && mf.sharedMesh != null) RemoveGenerated(mf.sharedMesh);
@@ -378,7 +404,7 @@ public static class RoomLighting
         if (up)
             foreach (var r in Object.FindObjectsByType<MeshRenderer>())
             {
-                if (!r.enabled || r == whole || !r.name.EndsWith("floor", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (!r.enabled || r == whole || !SceneObjectNames.EndsWith(r, "floor")) continue;
                 if (r.GetComponent<InteriorLightAnchor>() == null || r.bounds.size.y > .25f) continue;
                 if (Mathf.Abs(r.bounds.min.y - y) < .25f) finishes.Add(r.bounds);
             }

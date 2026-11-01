@@ -51,7 +51,7 @@ public static class AisleSigns
 
     public static int Build(Material board, Material badge, Material wire, TMP_FontAsset font, bool japanese)
     {
-        var old = GameObject.Find(RootName);
+        var old = SceneObjectNames.Find(RootName);
         if (old != null)
         {
             old.name += " (replaced)";

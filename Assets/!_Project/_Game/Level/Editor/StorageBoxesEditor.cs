@@ -107,6 +107,7 @@ public static class StorageBoxesShowcase
 
     public static string Build()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         var island = GameObject.Find("Models_Island");
         if (island == null) return "No Models_Island in the open scene.";
         bool clean = !island.scene.isDirty;

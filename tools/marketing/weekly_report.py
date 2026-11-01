@@ -39,7 +39,7 @@ def made_between(paths_: list[Path], start: dt.datetime, end: dt.datetime) -> li
 def numbers(root: Path, week: str, start: dt.date, end: dt.date) -> dict:
     s = dt.datetime.combine(start, dt.time())
     e = dt.datetime.combine(end, dt.time())
-    docs = [moments.load(f) for f in moments.find_files(moments.records(), start, end)]
+    docs = moments.load_all(moments.find_files(moments.records(), start, end))
     spend_rows = [r for r in ledger.rows(root) if s <= dt.datetime.fromisoformat(r["time"]) < e]
     by_step: dict[str, float] = {}
     for r in spend_rows:

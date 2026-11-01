@@ -22,6 +22,7 @@ public static class ShelfPaint
 
     public static string Paint()
     {
+        using var hierarchy = SceneHierarchyOrganizer.BuilderScope();
         Material grey = GreyMaterial();
         bool clean = !EditorSceneManager.GetActiveScene().isDirty;
 
