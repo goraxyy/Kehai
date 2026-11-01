@@ -15,8 +15,9 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from . import env, patterns, production
+from . import patterns, production
 from .cli import write_json
+from .llm.client import ready as claude_ready
 from .settings import settings
 from .telegram import DOWNLOAD_MB, TelegramError, buttons, clip, esc
 
@@ -75,8 +76,7 @@ def receive(root: Path, store, bot, msg: dict) -> str:
                                                  "mb": round(size / 1e6, 1)}})
     store.add_ref(rid, note)
     store.queue("reference", rid)
-    waits = "" if (env.get("ANTHROPIC_API_KEY") or env.get("KEHAI_LLM_REPLAY")) else \
-        "\nIt waits for the Claude key: studying needs it."
+    waits = "" if claude_ready() else "\nIt waits for Claude: studying needs it."
     about = [f"{media['duration']} s"] if media.get("duration") else []
     about += ["with your note"] if note else []
     bot.text(f"📥 Got it{' (' + ', '.join(about) + ')' if about else ''}. I'm studying it; its pattern comes here "

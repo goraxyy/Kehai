@@ -8,18 +8,18 @@ shelves are full, the spills are mopped and the rubbish is out.
 
 - **Jobs:** restock (carry the stock crate to a shelf), mop (hold E with the mop), bag the bins and
   take the bag to the skip out back, serve at the till, walk lost customers to the shelf they
-  asked for. The store is a 150 × 150 m maze: 189 shelf units, 13 sections, 80 products.
+  asked for. The sales floor is a 60 × 45 m maze: 189 shelf bays, 13 sections, 80 products.
 - **Burnout:** your energy drains over the shift and when you sprint; coffee restores it. At zero
   you can only walk.
-- **The building:** mains power with breakers, 240 ceiling lights, a store radio, automatic
+- **The building:** mains power with breakers, ceiling lights, a store radio, automatic
   doors, a flashlight, and procedural sound for everything {{karen}} does.
-- **Being caught** isn't death: a written warning, thirty seconds of lecture, lost shift time.
-  The real threat is the clock. **Overtime** is her signature move: she refuses your clock-out,
-  adds minutes, and thanks you over the PA for your flexibility.
+- **Being caught:** her touch kills. The screen goes black and the shift starts again from the
+  beginning; what she has learnt about you stays.
 
 ## {{karen}}
 
-The store's management AI. She hunts you with only what she can see and hear.
+The store's management AI, and a black capsule for now. She hunts you with what she can see and
+hear.
 
 - **Senses:** graded sight (distance, angle, light, movement); a noise bus where every action has a
   loudness (sprinting and dropping things are loud); customers who tell her they saw you; building
@@ -27,12 +27,14 @@ The store's management AI. She hunts you with only what she can see and hear.
 - **Belief:** a probability map of where you might be. It sharpens when she sees or hears you,
   spreads out over time, and clears where she looks and doesn't find you. Her **guess** is the
   centre of that map.
-- **Decisions:** utility-scored goals and a planner over 35 tactics. **Learning:** a bandit picks
+- **Decisions:** utility-scored goals and a planner over 34 tactics. **Learning:** a bandit picks
   the tricks that work on you; a persistent ledger remembers where you dwell and hide and the routes
-  you take, across shifts. It fades if you change your habits.
-- **Fairness, enforced by tests:** her body never reads your true position; every trick has a
-  warning at least 0.8 s ahead (a flicker, a chime, a PA crackle, a ballast whine); she can never
-  outrun a sprint.
+  you take, across shifts. It fades if you change your habits. In tests against simulated players
+  learning made her slightly calmer, not better.
+- **Fairness, checked in bot tests on shifts 4 to 7:** her body never reads your true position,
+  though after 45 s without a sighting her Director nudges her belief toward your region; her tricks
+  have a warning at least 0.8 s ahead (a flicker, a chime, a PA crackle, a ballast whine). In a
+  chase she is 5% faster than you: breaking her line of sight is how you get away.
 - **Her gaze** is painted on the floor, cut short by shelves: blue on her rounds, orange when she's
   noticed something, red while she hunts or sees you.
 - **Her tactics:** blackout (breakers trip after a flicker and a whine; you fetch the flashlight and
@@ -41,7 +43,7 @@ The store's management AI. She hunts you with only what she can see and hear.
   sweep (a shelf you filled is emptied; the loose stock is a noisy carpet) · spill (the mop bucket
   kicked over at a chokepoint; walking through leaves a wet trail she can follow) · bin tamper ·
   task falsification (your task list lies, with a flicker and a tick as the tell) · tool theft (the
-  mop hidden where you go last) · overtime · the PA (announces your position "for customer
+  mop hidden where you go last) · overtime (late, untested, don't lead with it) · the PA (announces your position "for customer
   convenience", a cleanup decoy, fake footsteps, a countdown of your shift, your tasks read back
   slightly wrong) · phantom chime (the doors open for nobody) · silence (her footsteps stop) ·
   crate wall · door lock · shelf relocation (the maze changes; you can hear it) · funnel (every way
@@ -55,7 +57,9 @@ The store's management AI. She hunts you with only what she can see and hear.
 ## The blink channel
 
 Opt-in webcam blink tracking (Apple Vision or MediaPipe), all on the computer, nothing recorded.
-{{karen}} can move inside the ~300 ms of your blink. B blinks from the keyboard.
+{{karen}} can move inside the ~300 ms of your blink: closing in (suddenly much nearer) or vanishing
+(gone, then waiting silently somewhere you didn't expect). Her eye flickers first, and a dash only
+happens while she can see you, never during a chase. B blinks from the keyboard.
 
 ## Clip markers (what the game noticed in a shift)
 

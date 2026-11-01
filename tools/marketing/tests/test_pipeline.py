@@ -99,6 +99,22 @@ def test_videos_have_known_statuses(world):
         store.update("v", status="lost")
 
 
+def test_a_dry_run_report_asks_claude_nothing_and_sends_nothing(world, monkeypatch):
+    import run_job
+    root, store, bot, _ = world
+    seen = []
+    monkeypatch.setattr(run_job.production, "script", lambda r, name, *a, dry_run=False, **k: seen.append((name, dry_run))
+                        or production.Result(0, ""))
+    assert run_job.report(root, bot, dry_run=True) == 0
+    assert seen == [("weekly_report.py", True)]
+    assert not (root / "state" / "telegram_outbox.jsonl").exists()
+
+
+def test_trial_mode_covers_every_job_that_spends_or_posts():
+    text = (paths.HERE / "n8n" / "job.sh").read_text(encoding="utf-8")
+    assert "produce|publish|long|report)" in text
+
+
 # ---- Telegram, in outbox mode ----------------------------------------------------------------
 
 def test_without_a_token_the_bot_writes_an_outbox(world):

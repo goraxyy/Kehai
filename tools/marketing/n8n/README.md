@@ -42,7 +42,7 @@ to keep into `workflows/*.json` (or ask Claude to). Scheduled successful runs ar
 history (the minute-by-minute Telegram check would add 1,440 a day); failures and "Run now" runs are.
 
 Settings, no secrets: `~/TokenLimit/n8n/env`. `KEHAI_SCHEDULER` is the choice above;
-**`KEHAI_DRY_RUN=1`** (the default) makes produce, publish and long dry runs, read on every run:
+**`KEHAI_DRY_RUN=1`** (the default) makes produce, publish, long and report dry runs, read on every run:
 change it to 0 once the keys are in `tools/marketing/.env`.
 
 ## Trying it without keys

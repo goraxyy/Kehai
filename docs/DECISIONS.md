@@ -141,9 +141,10 @@ shoppers, Karen and tasks in it; aisle signs; a floating origin for very long wa
   building's sensors, and places she looked and found nothing. Her guess of where you are is a
   probability map. **A test fails if her code reads the player's real position.**
 - **Every trick has a warning** at least 0.8 s before it.
-- **She can't outrun a sprint:** every pace is capped at 94% of your sprint speed.
-- **A written warning always comes with a release window**, so she can't catch you again
-  straight away.
+- **She's slightly faster than you in a chase** (changed 2026-10-16): her hurry and run are 1.05 ×
+  your walk and sprint, so breaking her line of sight is how you get away.
+- **Her touch kills** (changed 2026-10-16), and the shift starts again, so she can't catch you
+  again straight away.
 
 **Why:** the game is about being sensed, not seen through walls. It also makes the AI tests
 honest: an agent that beats her beats a fair opponent.

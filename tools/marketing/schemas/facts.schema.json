@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "What the marketing may claim about the game",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "facts"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "facts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "say", "evidence", "avoid"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "status": { "enum": ["true", "qualified", "do_not_claim"] },
+          "say": { "type": "string", "minLength": 1 },
+          "why": { "type": "string", "minLength": 1 },
+          "evidence": {
+            "description": "Text that must still be in these repository files. When it goes, the fact needs checking.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "contains"],
+              "properties": {
+                "file": { "type": "string", "minLength": 1 },
+                "contains": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          "avoid": {
+            "description": "Phrases no public text may use, matched without regard to case.",
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

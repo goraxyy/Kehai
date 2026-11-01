@@ -7,7 +7,7 @@ Pick the moments that make the best 15–40 second vertical shorts, and say how 
 
 **Choosing**
 - One clear idea per short, readable without sound in two seconds: a catch, a near miss, a trick
-  and its warning, her undoing your work, overtime, a possessed customer, a blackout. Prefer
+  and its warning, her undoing your work, a possessed customer, a blackout. Prefer
   moments whose events tell a story with a turn (calm → tell → trick → consequence).
 - Spread the week across different hooks and tactics; don't pick three chases.
 - Score is a guide, not the rule. A low-scoring moment with one perfect beat beats a busy one.

@@ -20,6 +20,7 @@ KINDS = {
     "brand": "brand.schema.json",
     "manifest": "asset-manifest.schema.json",
     "pipeline": "pipeline.schema.json",
+    "facts": "facts.schema.json",
 }
 
 
