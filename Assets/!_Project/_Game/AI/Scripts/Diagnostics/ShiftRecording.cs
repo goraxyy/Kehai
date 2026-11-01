@@ -96,6 +96,11 @@ namespace Kehai.Karen
             return Frames[lo];
         }
 
+        // How long the shift ran, given the clock when it ended. Stopping Play mid-shift finishes
+        // it while the scene is being torn down, when the sum can come out negative or short.
+        // The last frame was sampled while the clock was right, so the shift ran at least that long.
+        public float LengthAt(float clock) => Mathf.Max(clock, Frames.Count > 0 ? Frames[Frames.Count - 1].T : 0f);
+
         // ---- capture --------------------------------------------------------------------
 
         public static void Capture(ShiftFrame f, float t, BurnoutSystem burnout, System.Func<CustomerNPC, int> idOf, System.Func<CustomerNPC, int> bayOf)

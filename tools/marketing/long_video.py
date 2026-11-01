@@ -31,7 +31,7 @@ MAX_MOMENTS = 80
 
 def month_docs(month: str) -> list[dict]:
     start, end = moments.month_range(month)
-    return [moments.load(f) for f in moments.find_files(moments.records(), start, end)]
+    return moments.load_all(moments.find_files(moments.records(), start, end))
 
 
 def changes(month: str) -> dict:

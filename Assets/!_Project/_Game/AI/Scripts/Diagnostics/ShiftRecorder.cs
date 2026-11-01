@@ -145,7 +145,7 @@ namespace Kehai.Karen
             ShiftRecording r = Current;
             Current = null;
             if (r == null) return;
-            r.Length = Time.time - shiftStartedAt;
+            r.Length = r.LengthAt(Time.time - shiftStartedAt);
             r.ClockedOut = clockedOut;
             Finishing?.Invoke(r);
             Last = r;

@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 from . import schemas
@@ -52,15 +53,38 @@ def started(doc: dict) -> dt.date:
     return dt.datetime.strptime(doc["started"], "%Y-%m-%d %H:%M").date()
 
 
+def mend_length(doc) -> None:
+    """A shift stopped mid-way used to save a negative length. Its moments are sound, and the end
+    of the last one is as far as anything here reads."""
+    try:
+        if doc["length"] < 0:
+            doc["length"] = max((m["end"] for m in doc["moments"]), default=0.0)
+    except (KeyError, TypeError):
+        pass                        # not a markers file at all: the schema says what's wrong with it
+
+
 def load(path: Path) -> dict:
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         raise BadInput(f"can't read {path}: {e}") from e
+    mend_length(doc)
     problems = schemas.errors("markers", doc)
     if problems:
         raise BadInput(f"{path} isn't a valid markers file: {problems[0]}")
     return doc
+
+
+def load_all(files: list[Path]) -> list[dict]:
+    """The files that can be read. A bad one is named and left out: one old or damaged recording
+    mustn't stop a whole job."""
+    docs = []
+    for f in files:
+        try:
+            docs.append(load(f))
+        except BadInput as e:
+            print(f"skipped: {e}", file=sys.stderr)
+    return docs
 
 
 def find_files(folder: Path, start: dt.date, end: dt.date) -> list[Path]:
@@ -69,7 +93,7 @@ def find_files(folder: Path, start: dt.date, end: dt.date) -> list[Path]:
     for p in sorted(folder.glob("*.markers.json")):
         try:
             when = started(json.loads(p.read_text(encoding="utf-8")))
-        except (OSError, ValueError, KeyError):
+        except (OSError, ValueError, KeyError, TypeError):
             continue
         if start <= when < end:
             out.append(p)
