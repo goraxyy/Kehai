@@ -2,8 +2,8 @@
 
 `{{game}}`, `{{game_jp}}`, `{{game_ru}}`, `{{karen}}`, `{{karen_jp}}`, `{{karen_ru}}`, `{{studio}}`,
 `{{tagline_en}}` and `{{tagline_ru}}` are replaced, so a rename touches brand.json alone. The system prompt is two
-cached blocks: style.md + reference.md + the brand facts (the same for every step, so one cache
-entry serves a whole run), then the step's own prompt.
+cached blocks: style.md + reference.md + the brand facts + the fact sheet (the same for every step,
+so one cache entry serves a whole run), then the step's own prompt.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import json
 import re
 from functools import lru_cache
 
-from .. import paths
+from .. import facts, paths
 
 PROMPTS = paths.HERE / "prompts"
 SHARED = ("style", "reference")
@@ -63,8 +63,19 @@ def brand_facts() -> str:
     return "\n".join(lines)
 
 
+def fact_sheet() -> str:
+    labels = {"true": "True", "qualified": "With care", "do_not_claim": "Don't claim"}
+    lines = ["# Fact sheet (from facts.json)", "",
+             "The last word on what the game does. Nothing you write may contradict it.", ""]
+    for fact in facts.load():
+        lines.append(f"- {labels[fact['status']]}: {fill(fact['say'])}" + (f" {fill(fact['why'])}" if fact.get("why") else ""))
+    banned = [phrase for fact in facts.load() for phrase in fact["avoid"]]
+    lines += ["", "Never write: " + "; ".join(f'"{p}"' for p in banned) + "."]
+    return "\n".join(lines)
+
+
 def system(step_prompt: str) -> list[dict]:
-    shared = "\n\n".join([text(n) for n in SHARED] + [brand_facts()])
+    shared = "\n\n".join([text(n) for n in SHARED] + [brand_facts(), fact_sheet()])
     return [
         {"type": "text", "text": shared, "cache_control": {"type": "ephemeral"}},
         {"type": "text", "text": text(step_prompt), "cache_control": {"type": "ephemeral"}},

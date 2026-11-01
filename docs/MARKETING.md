@@ -7,26 +7,29 @@ to-do list is in [RELEASE_PLAN.md](RELEASE_PLAN.md) (Setup and Milestone 5).
 
 ## Pitch
 
-**One line.** A night shift in a convenience store, where the manager is an AI that learns how
-you work and uses it against you.
+**One line.** A night shift in a convenience store, where the manager is an AI that keeps a record
+of how you work, and hunts you.
 
 **For a chat (20 seconds).** You stock shelves, mop spills and help customers in a maze of a
-store. Karen, the store's AI, hunts you using only what she can see and hear. She remembers
-where you hide, and she moves when you blink. She rarely kills you: she gives you overtime.
+store. Karen, the store's AI, hunts you using what she can see and hear. She remembers where you
+hide, and she moves when you blink. She's perfectly polite, and one touch ends the shift.
 
 **For a slide.**
 - **What:** first-person horror in a store at night. Do your jobs; don't get caught.
-- **Why it's different:** an AI opponent that really learns your habits, plays fair (every
-  trick has a warning), and can act while your eyes are shut (optional webcam).
+- **Why it's different:** an AI opponent that remembers your habits, warns you before her tricks,
+  and can act while your eyes are shut (optional webcam).
 - **Status:** playable on Mac and Windows; playtests next; then a Steam page.
 
 **Karen's line:** *"Employee wellbeing is a tracked metric. I am optimising it."*
 
 **Hooks, strongest first** (open every video with one):
 1. **She moves when you blink.**
-2. **My manager learned where I hide.**
-3. **She doesn't kill you. She gives you overtime.**
-4. **She plays fair:** every trick has a warning.
+2. **My manager keeps a record of where I hide.**
+3. **Perfectly polite. One touch ends the shift.**
+4. **Catch the warning:** her tricks come with a tell.
+
+What we may claim is in [`facts.json`](../tools/marketing/facts.json). It's checked against the
+repository, and the agents read it, so change it there first.
 
 **Who it's for:** players of short indie horror and store sims (*The Convenience Store*,
 *Supermarket Simulator*, *The Exit 8*, *Alien: Isolation*); stealth fans; developers and AI
@@ -42,8 +45,9 @@ Atmospheric, Indie.
 | type | length | where | how often |
 |---|---|---|---|
 | **Fun moments** | short, 15–40 s | YouTube Shorts, TikTok, Instagram Reels | 2 a week |
-| **Educational** | long, 8–15 min | YouTube | 1 a month, taking turns with updates |
-| **Updates** | long explainer, plus a short "what's new" | YouTube; the short everywhere shorts go | when a feature lands |
+| **AI short** | short, 15–40 s | everywhere shorts go | 1 a month |
+| **Game video** | long, 8–15 min | YouTube | 1 a month |
+| **AI video** | long, 8–15 min, in the owner's voice | YouTube | 1 a month |
 | **Reddit** | a post | the subreddits below | with each update and good moment |
 
 ### 1. Fun moments (short)
@@ -54,7 +58,7 @@ these from your shifts (below).
 ### 2. Educational (long)
 How games work, shown through how Kehai was made. Topics:
 - **How games stay fast:** GPU occlusion culling, 18.9 → 4.5 ms ([DECISIONS.md](DECISIONS.md#2-rendering))
-- **16,500 items without 33,000 objects:** shelves as data; a 92 MB scene down to 6 MB
+- **Thousands of shelf items without thousands of objects:** shelves as data; a 92 MB scene down to 6 MB
 - **How to make an endless maze:** seeds, chunks, spanning trees, braiding
 - **How Karen guesses where you are:** a belief map from sight, sound and witnesses
 - **How webcam blink detection works**, and why the ~300 ms of a blink is enough
@@ -81,7 +85,9 @@ Steam page. Social sites bring people; the email list and Discord keep them.
 ## The automation
 
 Most shorts are made for you; you approve each one in Telegram. Code and commands:
-[`tools/marketing/README.md`](../tools/marketing/README.md).
+[`tools/marketing/README.md`](../tools/marketing/README.md). This is being rebuilt so agents also
+find the ideas and the footage, and post on their own: see
+[`plans/marketing-agents.md`](plans/marketing-agents.md). Below is how it works today.
 
 1. **You play.** Each shift records its best moments (`F7` marks one yourself).
 2. **Saturday:** Claude picks the week's 2 shorts from those moments.
@@ -99,8 +105,8 @@ Most shorts are made for you; you approve each one in Telegram. Code and command
    `/patterns` lists them.
 8. **Sundays:** a weekly report.
 
-**Costs:** Claude about $10 a month, capped at $15; a reference study about $0.20. Azure,
-Buffer (3 channels), R2 and Drive stay on free tiers. **It runs** on the Mac (launchd), with
+**Costs:** Claude runs on the Claude plan, with no bill of its own. Azure, Buffer (3 channels), R2
+and Drive stay on free tiers. **It runs** on the Mac (launchd), with
 nothing open in between; it stays in dry-run mode until the keys are in.
 
 ---
@@ -110,8 +116,9 @@ nothing open in between; it stays in dry-run mode until the keys are in.
 Keys go in `tools/marketing/.env` (never committed; copy `.env.example`). Open it with
 `open -e tools/marketing/.env` and paste each value after its `=`.
 
-1. **Claude API** (`ANTHROPIC_API_KEY`): [platform.claude.com](https://platform.claude.com) →
-   Billing (buy credits) → Workspaces (make `tokenlimit-marketing`, Limits → $15) → API keys.
+1. **Claude:** sign in to Claude Code once with `claude auth login`. To use the API instead, set
+   `KEHAI_LLM_BACKEND=api` and `ANTHROPIC_API_KEY`: [platform.claude.com](https://platform.claude.com)
+   → Billing (buy credits) → Workspaces (make `tokenlimit-marketing`, Limits → $15) → API keys.
 2. **Azure Speech** (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`): a free Azure account, then
    [create a Speech resource](https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices)
    on the **Free F0** tier, region East US → Keys and Endpoint.
@@ -129,11 +136,11 @@ Keys go in `tools/marketing/.env` (never committed; copy `.env.example`). Open i
 
 ## Still to decide
 
-- [ ] The handle and the website domain
-- [ ] X or Bluesky for Buffer's third channel (the free plan has 3)
+- [x] The handle: `kehaigame`
+- [ ] The website domain
+- [x] Buffer's 3 free channels: YouTube, Instagram and TikTok, once TikTok is tested
 - [ ] The voices: pick from samples once Azure is in (`uv run voice_samples.py`)
-- [ ] Russian: English goes to Buffer; post the Russian versions by hand, or open Russian
-      accounts later
+- [x] Russian: English only for now
 - [ ] Posting days and times (the automation posts on Tuesdays and Fridays)
 - [ ] How long to keep local video files once they're archived
 

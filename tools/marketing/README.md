@@ -86,6 +86,14 @@ library.
 
 - **Claude Opus 5.5** for every step; the effort (low to high) is set per step in `km/llm/steps.py`.
   `KEHAI_LLM_MODEL` overrides the model.
+- **Who answers:** `KEHAI_LLM_BACKEND=cli` (the default) runs each step on the owner's Claude plan
+  through `claude -p`, with Claude Code's own tools, settings and memory left out. `api` uses the
+  Claude API and `ANTHROPIC_API_KEY`, and is the backup if the plan stops being enough. Past the
+  plan's limit a step waits (exit 4).
+- **The fact sheet** (`facts.json`) is the last word on what the game does. Every step reads it; a
+  public answer using one of its banned phrases goes back for repair. Each fact names text in the
+  repository that backs it, and a test fails when that text goes, so a change in the game shows up
+  as a stale fact. Update the fact and the prompts together.
 - **Structured outputs:** each answer is JSON in a schema from `schemas/llm/`, kept inside what the
   API accepts (every field required, no ranges, no unions). The code then checks what the schema
   can't (ranges, timing, files, lengths, names) and sends a broken answer back once with the
@@ -93,7 +101,8 @@ library.
 - **Prompts** live in `prompts/`: `style.md` and `reference.md` (the voice, the rules, the game,
   the editor) open every request and are cached; each step adds its own. Names come from
   `brand.json` through `{{placeholders}}`.
-- **Cost:** every call's tokens and dollars go to `logs/llm_costs.csv`. Before a call, this
+- **Cost:** every call's tokens and dollars go to `logs/llm_costs.csv` (on the plan the dollars are
+  0, and the note says what the call would have cost on the API). On the API, before a call, this
   month's spend plus a high estimate is checked against `KEHAI_LLM_MONTHLY_USD` ($15): past it,
   nothing is sent and the owner is told (`state/alerts.jsonl`, sent to Telegram in Phase 7). The
   Console's workspace limit is the hard stop behind it. The owner hears at 80% too.
@@ -121,5 +130,5 @@ shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/PLAYTEST.md
 ## Exit codes (every script)
 
 0 done or a dry run · 1 something failed (try again later) · 2 bad input, or an answer still
-broken after the repair · 3 a key or tool isn't set up · 4 over the monthly spend or voice quota ·
+broken after the repair · 3 a key or tool isn't set up · 4 over the monthly spend, the Claude plan's limit or the voice quota ·
 5 Claude declined · 75 another heavy job holds the lock (`state/heavy.lock`).

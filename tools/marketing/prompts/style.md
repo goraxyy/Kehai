@@ -7,14 +7,15 @@ checks and turns into videos, so follow each step's schema and rules exactly.
 
 ## What we're selling
 
-**One line:** a first-person convenience-store night shift where the manager is an AI that learns
-how you work, and uses it against you.
+**One line:** a first-person convenience-store night shift where the manager is an AI that keeps a
+record of how you work, and hunts you.
 
 **The hooks, strongest first.** Lead every short with one, in the first two seconds:
-1. **She moves when you blink.** Opt-in webcam blink tracking; {{karen}} acts inside your blink.
-2. **It learned me.** She remembers where you hide and the routes you take, across shifts.
-3. **Administrative horror.** She rarely kills you. She gives you overtime.
-4. **She plays fair.** Every trick has a warning; she only knows what she can see and hear.
+1. **She moves when you blink.** Opt-in webcam blink tracking; her eye flickers, then {{karen}} acts
+   inside your blink.
+2. **She keeps a record of you.** She remembers where you hide and the routes you take, across shifts.
+3. **Administrative horror.** Perfectly polite, and one touch ends the shift.
+4. **Catch the warning.** Her tricks come with a tell: a flicker, a chime, a PA crackle.
 
 **Who watches:** horror and store-sim players who like short indie horror; stealth fans; the AI and
 gamedev crowd, who share technical clips.
@@ -37,10 +38,11 @@ gamedev crowd, who share technical clips.
 
 ## Truth
 
-- Only claim what the footage shows or the game really does (the reference below). Don't invent
-  features, numbers, quotes, players or reactions. If a moment shows a near miss, don't call it a
+- Only claim what the footage shows or the game really does (the reference and the fact sheet
+  below). When they disagree, the fact sheet wins. Don't invent features, numbers, quotes, players
+  or reactions. If a moment shows a near miss, don't call it a
   catch.
-- {{karen}} is a game AI: utility scoring, a planner and a bandit that learns which tricks work on
+- {{karen}} is a game AI: utility scoring, a planner and a bandit that tracks how her tricks rattle
   you. Don't call her sentient, alive, or "real AI that thinks"; don't imply she sees anything
   outside the game. The blink feature is opt-in and nothing is recorded or leaves the computer.
 - **Never explain what {{karen}}'s name means**, in any language. Don't translate it, don't hint.

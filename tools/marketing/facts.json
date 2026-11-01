@@ -1,0 +1,123 @@
+{
+  "$schema": "./schemas/facts.schema.json",
+  "version": 1,
+  "facts": [
+    {
+      "id": "touch_kills",
+      "status": "true",
+      "say": "Her touch kills: the screen goes black and the shift starts again from the beginning. What she has learnt about you stays.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenBrain.cs", "contains": "The shift starts again." }],
+      "avoid": ["she rarely kills", "she doesn't kill you", "she does not kill you", "being caught isn't death", "written warning"]
+    },
+    {
+      "id": "faster_in_a_chase",
+      "status": "true",
+      "say": "In a chase she is 5% faster than you, so in the open a chase is lost; breaking her line of sight is how you get away. On her rounds she walks slower than you.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenConfig.cs", "contains": "public float fasterThanPlayer = 1.05f" }],
+      "avoid": ["outrun a sprint"]
+    },
+    {
+      "id": "blink_dash",
+      "status": "true",
+      "say": "With the opt-in webcam on, she can move inside your blink: she closes the distance, or vanishes and waits somewhere else. Her eye flickers first, and a dash only happens while she can see you, never during a chase.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/BlinkDash.cs", "contains": "you blink, and she is suddenly much" }],
+      "avoid": []
+    },
+    {
+      "id": "blink_privacy",
+      "status": "true",
+      "say": "The webcam is opt-in, stays on the computer and is never recorded.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/Blink/Scripts/BlinkTracker.cs", "contains": "Opt-in, local-only, never recorded" }],
+      "avoid": []
+    },
+    {
+      "id": "senses_and_the_nudge",
+      "status": "qualified",
+      "say": "She works from sight, sound, traces, what customers tell her and the building's sensors, kept as a probability map of where you might be. One exception: after 45 s without a sighting, her Director nudges that map toward your real region.",
+      "why": "So never say her senses are all she has, or that she can't know where you are.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenDirector.cs", "contains": "int trueRegion = c.Map.RegionAt(player.Position);" }],
+      "avoid": ["only what she can see and hear", "only knows what she", "only what she senses"]
+    },
+    {
+      "id": "she_remembers",
+      "status": "true",
+      "say": "She keeps a record per player across shifts: where you dwell and hide, your routes, and how her tactics went.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenLedger.cs", "contains": "public int lastConcealShift;" }],
+      "avoid": []
+    },
+    {
+      "id": "what_learning_does",
+      "status": "qualified",
+      "say": "In tests against simulated players, learning made her slightly calmer, not better, with a first small sign of tailoring to each player. No real players have tested it.",
+      "why": "So say she remembers; never say remembering makes her smarter, harder or better at catching you.",
+      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "Learning (D, E) makes her slightly calmer, not better." }],
+      "avoid": ["uses it against you", "learns to beat you", "learns how to beat", "gets smarter", "gets better the more"]
+    },
+    {
+      "id": "belief_finds_you_faster",
+      "status": "true",
+      "say": "Against simulated players, her belief map and planner find the player in about a third of the time of simple patrols (31 s against 85 to 101 s).",
+      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "first detection 31 ± 6 s" }],
+      "avoid": []
+    },
+    {
+      "id": "warnings",
+      "status": "qualified",
+      "say": "Her tricks come with a warning at least 0.8 s ahead: a flicker, a chime, a PA crackle, a ballast whine.",
+      "why": "That was checked in bot tests on shifts 4 to 7 only, and overtime has no warning. So never say every trick has one.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenConfig.cs", "contains": "public float minTellLead = 0.8f" }],
+      "avoid": ["every trick has a warning"]
+    },
+    {
+      "id": "overtime",
+      "status": "do_not_claim",
+      "say": "Overtime is a late tactic that has never run in a test and has no warning. Don't lead with it or call it her signature.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactics/TacticsFacility.cs", "contains": "new Effect(\"arm the overtime\"" }],
+      "avoid": ["gives you overtime", "signature move"]
+    },
+    {
+      "id": "tactics",
+      "status": "true",
+      "say": "She has 34 tactics. Six late ones (ambush, camera bolt-on, funnel, understudy, task falsification, overtime) have never run in a test.",
+      "evidence": [{ "file": "docs/HANDOVER.md", "contains": "over 34 tactics" }],
+      "avoid": ["35 tactics"]
+    },
+    {
+      "id": "the_store",
+      "status": "true",
+      "say": "The sales floor is a 60 × 45 m maze of 189 shelf bays, with 80 products in 13 sections.",
+      "evidence": [{ "file": "docs/STORE.md", "contains": "60 × 45 m maze of 189 shelf bays" }],
+      "avoid": ["150 × 150"]
+    },
+    {
+      "id": "stock_count",
+      "status": "qualified",
+      "say": "The shelves hold thousands of items, kept as data rather than scene objects.",
+      "why": "The docs say 16,500 and the scene counts about 19,600, so don't give an exact number yet.",
+      "evidence": [{ "file": "docs/STORE.md", "contains": "**16,500 slots**" }],
+      "avoid": ["16,500"]
+    },
+    {
+      "id": "who_has_played",
+      "status": "true",
+      "say": "So far only the developer and simulated players have played it. Don't claim players, reviews, reactions or sales.",
+      "evidence": [{ "file": "docs/RELEASE_PLAN.md", "contains": "nobody but bots has played it yet" }],
+      "avoid": ["players love", "players are saying"]
+    },
+    {
+      "id": "reinforcement_learning",
+      "status": "do_not_claim",
+      "say": "A reinforcement-learning policy is built but has never been trained. Don't say she's trained that way.",
+      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "no policy has been trained yet" }],
+      "avoid": ["trained neural network", "reinforcement learning agent"]
+    },
+    {
+      "id": "how_she_looks",
+      "status": "qualified",
+      "say": "She's a black capsule for now, and the art is placeholder until the redesign.",
+      "why": "So never describe her as a person, a face or a figure, and don't promise final looks.",
+      "evidence": [{ "file": "docs/HANDOVER.md", "contains": "a black capsule body" }],
+      "avoid": []
+    }
+  ]
+}

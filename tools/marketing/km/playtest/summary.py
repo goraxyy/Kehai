@@ -1,7 +1,7 @@
 """Claude reads one session (the playtest_summary step): what confused the tester, whether Karen was
 too harsh or too soft, what to change, and each bug note rewritten as a neutral public issue.
 
-Runs only with ANTHROPIC_API_KEY set (or KEHAI_LLM_REPLAY, for tests); otherwise the session goes
+Runs only once Claude is set up (or with KEHAI_LLM_REPLAY, for tests); otherwise the session goes
 out without a summary and its bug notes get a plain template. One call per session, priced and
 logged like every other step, inside the monthly cap.
 """
@@ -11,7 +11,6 @@ import json
 import re
 from pathlib import Path
 
-from .. import env
 from ..llm import client, prompts
 from ..llm.steps import step
 from . import session
@@ -21,7 +20,7 @@ VERDICTS = ("too harsh", "about right", "too soft", "unclear")
 
 
 def ready() -> bool:
-    return bool(env.get("ANTHROPIC_API_KEY") or env.get("KEHAI_LLM_REPLAY"))
+    return client.ready()
 
 
 def system() -> list[dict]:

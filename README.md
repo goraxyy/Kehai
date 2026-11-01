@@ -4,8 +4,8 @@
 
 A first-person night shift in a convenience store, made in **Unity 6**. Stock shelves, mop
 spills, empty the bins, serve at the till and walk lost customers to what they're looking for.
-Meanwhile **Karen**, the store's AI, hunts you with only what she can see and hear. She remembers
-where you hide, and she moves when you blink. She rarely kills you: she gives you overtime.
+Meanwhile **Karen**, the store's AI, hunts you with what she can see and hear. She remembers
+where you hide, and she moves when you blink. Her touch kills.
 
 > *"Employee wellbeing is a tracked metric. I am optimising it."*
 

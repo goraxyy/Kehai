@@ -122,8 +122,6 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 **Known gaps:**
 - Karen can stand on a stuck player without catching them.
 - The Director nudges her belief toward the player's true region after 45 s without a sighting (`KarenDirector.MaybeBias`). Published out-of-view belief numbers include this hint.
-- The README still says "she gives you overtime", but a touch now kills.
-- `DECISIONS.md` still says she can't outrun a sprint, but she's now 5% faster than the player.
 
 ## 6. How to work on it
 

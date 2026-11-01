@@ -4,7 +4,9 @@
   again here along with the step's own rules; a failing answer gets one repair round.
 - The system prompt is the style guide and the game reference (shared by every step, cached),
   then the step's instructions (cached too: a run repeats a step).
-- Every call is priced and logged to logs/llm_costs.csv; the monthly cap is checked first.
+- Every call is priced and logged to logs/llm_costs.csv; on the API the monthly cap is checked first.
+- KEHAI_LLM_BACKEND picks who answers: `cli` (the default) is the owner's Claude plan through
+  `claude -p`, `api` is the Claude API with ANTHROPIC_API_KEY.
 - A refusal (`stop_reason: "refusal"`) stops the step and tells the owner; server-side fallback
   (`fallbacks: "default"`) gets the first chance to rescue it.
 - Dry run: the request is written to logs/llm_requests/ with its estimated cost; nothing is sent.
@@ -12,24 +14,33 @@
   <step>.2.json… in order), for tests and for running the pipeline without a key.
 - Pictures (a reference video's frames) go before the text, each after a line saying what it is;
   a dry run logs their paths, not their bytes.
+- What viewers read (facts.PUBLIC_STEPS) can't use the fact sheet's banned phrases: an answer that
+  does counts as broken.
 """
 from __future__ import annotations
 
 import base64
 import datetime as dt
+import glob
 import json
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable
 
 from jsonschema import Draft202012Validator
 
-from .. import alerts, env, paths
+from .. import alerts, env, facts, paths
 from . import ledger, pricing
 from .steps import Step
 
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# Where the desktop app keeps its own copy of Claude Code, one folder per version.
+APP_COPIES = "Library/Application Support/Claude/claude-code/*/*/claude.app/Contents/MacOS/claude"
 
 
 def schema(name: str) -> dict:
@@ -175,6 +186,100 @@ class SdkTransport:
                      fallback=any(it.get("type") == "fallback_message" for it in iterations))
 
 
+def claude_binary() -> str | None:
+    """Claude Code: KEHAI_CLAUDE_BIN, `claude` on the PATH, or the desktop app's newest copy."""
+    named = env.get("KEHAI_CLAUDE_BIN")
+    if named:
+        return named
+    found = shutil.which("claude")
+    if found:
+        return found
+    copies = glob.glob(str(Path.home() / APP_COPIES))
+    return max(copies, key=os.path.getmtime) if copies else None
+
+
+class CliTransport:
+    """The owner's Claude plan, through Claude Code run as one command (`claude -p`): no API bill, and
+    the plan's limits instead of the monthly cap. Its tools, settings, MCP servers, memory and
+    instructions stay out and it runs in an empty folder, so it answers the same request the API
+    would. ANTHROPIC_API_KEY never reaches it: a key would bill the API instead of the plan."""
+
+    name = "cli"
+    TIMEOUT = 30 * 60
+
+    def __init__(self) -> None:
+        self.binary = claude_binary()
+        if not self.binary:
+            raise env.Missing("Claude Code isn't installed, so the Claude steps can't run: install it, or set "
+                              "KEHAI_LLM_BACKEND=api in tools/marketing/.env")
+
+    def _environment(self, request: Request) -> dict[str, str]:
+        env.load()
+        clean = {k: v for k, v in os.environ.items()
+                 if k != "CLAUDECODE" and not k.startswith(("ANTHROPIC_", "CLAUDE_CODE_", "CLAUDE_AGENT_"))}
+        clean.update(CLAUDE_CODE_DISABLE_AUTO_MEMORY="1", CLAUDE_CODE_DISABLE_CLAUDE_MDS="1",
+                     CLAUDE_CODE_MAX_OUTPUT_TOKENS=str(request.max_tokens or request.step.max_tokens))
+        if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+            clean["CLAUDE_CODE_OAUTH_TOKEN"] = os.environ["CLAUDE_CODE_OAUTH_TOKEN"]
+        return clean
+
+    def send(self, request: Request) -> Reply:
+        model = request.step.resolved_model()
+        content = request.content()
+        blocks = [{"type": "text", "text": content}] if isinstance(content, str) else content
+        message = {"type": "user", "message": {"role": "user", "content": blocks}}
+        with tempfile.TemporaryDirectory(prefix="kehai-llm-") as folder:
+            system = Path(folder) / "system.md"
+            system.write_text("\n\n".join(b["text"] for b in request.system), encoding="utf-8")
+            command = [self.binary, "-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json",
+                       "--model", model, "--effort", request.step.effort, "--json-schema", json.dumps(request.schema),
+                       "--system-prompt-file", str(system), "--tools", "", "--setting-sources", "",
+                       "--strict-mcp-config", "--no-session-persistence", "--disable-slash-commands"]
+            try:
+                done = subprocess.run(command, input=json.dumps(message) + "\n", capture_output=True, text=True,
+                                      cwd=folder, env=self._environment(request), timeout=self.TIMEOUT)
+            except OSError as e:
+                raise env.Missing(f"can't start Claude Code at {self.binary} ({e}): set KEHAI_CLAUDE_BIN, or "
+                                  "KEHAI_LLM_BACKEND=api") from e
+            except subprocess.TimeoutExpired as e:
+                raise ApiError(f"claude -p had no answer after {self.TIMEOUT} s") from e
+        return self._reply(done, model)
+
+    def _reply(self, done: subprocess.CompletedProcess, model: str) -> Reply:
+        result = None
+        for line in reversed(done.stdout.splitlines()):
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(message, dict) and message.get("type") == "result":
+                result = message
+                break
+        if result is None:
+            raise ApiError(f"claude -p gave no result (exit {done.returncode}): {done.stderr.strip()[:300]}")
+        text = str(result.get("result") or "")
+        if result.get("is_error"):
+            lower = text.lower()
+            status = result.get("api_error_status")
+            if result.get("subtype") == "error_max_structured_output_retries":
+                return Reply(text=text, stop="end_turn", model=model, request_id=result.get("session_id", ""),
+                             usage=self._usage(result))
+            if status in (401, 403) or "authenticate" in lower or "logged in" in lower or "/login" in lower:
+                raise env.Missing(f"Claude Code isn't signed in ({text}): run `claude auth login` once, or set "
+                                  "KEHAI_LLM_BACKEND=api")
+            if status == 429 or "limit" in lower:
+                raise ledger.OverBudget(f"the Claude plan's limit is used up ({text}); the step waits for it to reset")
+            raise ApiError(f"claude -p failed: {text or result.get('subtype')}")
+        answer = result.get("structured_output")
+        return Reply(text=text if answer is None else json.dumps(answer, ensure_ascii=False),
+                     stop=str(result.get("stop_reason") or "end_turn"), model=model,
+                     request_id=result.get("session_id", ""), usage=self._usage(result))
+
+    @staticmethod
+    def _usage(result: dict) -> dict:
+        return {k: v for k, v in (result.get("usage") or {}).items() if isinstance(v, int)}
+
+
 class ReplayTransport:
     """Answers from files: the JSON the model would have returned, or {"_replay": {...}} to act out
     a refusal or a cut-off answer ({"_replay": {"stop_reason": "refusal"}})."""
@@ -208,9 +313,25 @@ class ReplayTransport:
                      usage={"input_tokens": tokens, "output_tokens": len(text) // 3}, stop_details=details)
 
 
+def backend() -> str:
+    name = env.get("KEHAI_LLM_BACKEND", "cli")
+    if name not in ("cli", "api"):
+        raise env.Missing(f"KEHAI_LLM_BACKEND is {name!r}: use cli (the Claude plan) or api (an API key)")
+    return name
+
+
+def ready() -> bool:
+    """Whether the Claude steps could run. Being signed in only shows once one tries."""
+    if env.get("KEHAI_LLM_REPLAY"):
+        return True
+    return bool(env.get("ANTHROPIC_API_KEY")) if backend() == "api" else claude_binary() is not None
+
+
 def default_transport():
     folder = env.get("KEHAI_LLM_REPLAY")
-    return ReplayTransport(Path(folder).expanduser()) if folder else SdkTransport()
+    if folder:
+        return ReplayTransport(Path(folder).expanduser())
+    return SdkTransport() if backend() == "api" else CliTransport()
 
 
 def _stamp() -> str:
@@ -234,7 +355,10 @@ def call(request: Request, root: Path, transport=None, dry_run: bool = False) ->
     if transport.name == "api":
         ledger.check(root, estimate, request.step.name)
     reply = transport.send(request)
-    usd = 0.0 if transport.name == "replay" else reply.cost()
+    priced = 0.0 if transport.name == "replay" else reply.cost()
+    usd = priced if transport.name == "api" else 0.0
+    note = {"replay": "replay", "cli": f"plan, about ${priced:.4f} at API prices"}.get(
+        transport.name, "fallback" if reply.fallback else "")
     u = reply.usage
     ledger.record(root, {
         "time": dt.datetime.now().isoformat(timespec="seconds"), "step": request.step.name, "ref": request.ref,
@@ -243,7 +367,7 @@ def call(request: Request, root: Path, transport=None, dry_run: bool = False) ->
         "cache_write_tokens": u.get("cache_creation_input_tokens", 0) or 0,
         "cache_read_tokens": u.get("cache_read_input_tokens", 0) or 0,
         "usd": f"{usd:.6f}", "stop_reason": reply.stop,
-        "note": "replay" if transport.name == "replay" else ("fallback" if reply.fallback else ""),
+        "note": note,
     })
     if transport.name == "api":
         ledger.after_call(root)
@@ -291,6 +415,8 @@ def ask(request: Request, root: Path, checks: Callable[[dict], list[str]] | None
                             for e in validator.iter_errors(data)]
                 if not problems and checks:
                     problems = checks(data)
+                if not problems and request.step.name in facts.PUBLIC_STEPS:
+                    problems = [f"the fact sheet bans {p!r}: say it differently" for p in facts.banned_in(reply.text)]
             except json.JSONDecodeError as e:
                 problems = [f"not JSON: {e}"]
         if not problems:
