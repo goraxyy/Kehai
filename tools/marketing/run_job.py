@@ -187,8 +187,11 @@ def telegram(root, store, bot, approvals) -> None:
         say(f"{sent} alert(s) sent")
 
 
-def report(root, bot) -> int:
-    r = production.script(root, "weekly_report.py")
+def report(root, bot, dry_run: bool = False) -> int:
+    r = production.script(root, "weekly_report.py", dry_run=dry_run)
+    if dry_run:
+        say(f"report: dry run (exit {r.code})")
+        return 0 if r.ok else r.code
     week = now().strftime("%G-W%V")
     md = root / "reports" / f"{week}.md"
     if r.ok and md.exists():
@@ -234,7 +237,8 @@ def main() -> int:
     group = p.add_mutually_exclusive_group()
     group.add_argument("--apply", action="store_true", help="delete what retention says, whatever pipeline.json says")
     group.add_argument("--report-only", action="store_true")
-    sub.add_parser("report", parents=[common])
+    p = sub.add_parser("report", parents=[common])
+    p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("long", parents=[common])
     p.add_argument("--month")
     p.add_argument("--force", action="store_true", help="start even if today isn't long.day")
@@ -283,7 +287,7 @@ def main() -> int:
             if sent:
                 say(f"{sent} alert(s) sent")
         elif a.cmd == "report":
-            code = report(root, bot)
+            code = report(root, bot, a.dry_run)
         elif a.cmd == "status":
             say(approvals.status())
         elif a.cmd == "telegram-setup":

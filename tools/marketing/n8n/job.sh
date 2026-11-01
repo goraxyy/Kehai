@@ -18,7 +18,7 @@ if [ -z "${KEHAI_DRY_RUN:-}" ] && [ -f "$settings" ]; then
 fi
 args=("$@")
 if [ "${KEHAI_DRY_RUN:-0}" = "1" ]; then
-  case "$1" in produce|publish|long) args+=(--dry-run) ;; esac
+  case "$1" in produce|publish|long|report) args+=(--dry-run) ;; esac
 fi
 if [ -z "${KEHAI_LOG_DIR:-}" ]; then
   exec uv run --quiet run_job.py "${args[@]}"
