@@ -124,3 +124,20 @@ Rung F (a trained tactic chooser) isn't in the default list, as it needs the ML-
 and a model: add it with `-ablation-rungs EF` (`tools/rl/README.md`). `-ablation-interleave`
 plays the profiles in turn, career by career, rather than one profile's careers at a time; RL
 training uses it to keep the profiles mixed.
+
+### Her belief's motion model, shadow filters and traces
+
+Three flags for the learned motion model work (`tools/belief/README.md`):
+
+| flag | what |
+|---|---|
+| `-belief-motion <id>` | how her own grid predicts movement: `hand` (the shipped step, the default), `m1`, `m2`, `m3`, `m4` (Belief/MotionModel.cs). Also works in a build, without the ablation. |
+| `-belief-shadows m0,m1,m2,m3,m4` | filters run beside hers on exactly the same evidence, without the Director's hint, and scored on the same samples (`BeliefShadows`). `m3/8` refreshes m3's MLP in 8 slices, one a believe tick. |
+| `-belief-trace <dir>` | one gzipped trace of her filter per shift (`BeliefTrace`), what `tools/belief` replays and trains on. About 1.4 MB a shift. |
+
+With shadows, the jsonl gains `shadow_<id>_{in_view,out_of_view}_{logp,top1,top5,top10,err_m}`,
+the same split by time since she lost sight (`*_lost_{0_5,5_15,15_45,45_up}_*`, also for her own
+grid and last-seen), and each shadow's cost (`shadow_<id>_ms_predict`, `_ms_evidence` per believe
+tick). `analyze_ablation.py <joined.jsonl> --best <id>` adds the section "Motion models on the same
+evidence"; rows from a `-belief-motion` run are kept apart and paired with rung C on m0 (the
+closed loop).

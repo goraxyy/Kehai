@@ -24,6 +24,9 @@ namespace Kehai.Eval
         public bool syntheticBlinks = true;  // rung F without a face: a recorded-style blink trace
         public string ledgerPath = "";       // empty = kehai_eval/eval_ledger.json, never the player's own
         public bool verbose;                 // log every action and its result
+        public string beliefMotion = "hand"; // the motion model her own belief predicts with (Belief/MotionModel.cs)
+        public string beliefShadows = "";    // e.g. "m0,m1,m2": filters run beside hers on the same evidence (BeliefShadows)
+        public string beliefTrace = "";      // a folder: write a belief trace per shift there (BeliefTrace)
 
         public static EnvConfig From(Dictionary<string, object> o)
         {
@@ -42,6 +45,9 @@ namespace Kehai.Eval
             c.syntheticBlinks = o.GetBool("synthetic_blinks", c.syntheticBlinks);
             c.ledgerPath = o.GetString("ledger_path", c.ledgerPath);
             c.verbose = o.GetBool("verbose", c.verbose);
+            c.beliefMotion = o.GetString("belief_motion", c.beliefMotion);
+            c.beliefShadows = o.GetString("belief_shadows", c.beliefShadows);
+            c.beliefTrace = o.GetString("belief_trace", c.beliefTrace);
             return c;
         }
     }
@@ -157,6 +163,7 @@ namespace Kehai.Eval
             var karen = new KarenConfig
             {
                 seed = Config.seed,
+                beliefMotion = string.IsNullOrEmpty(Config.beliefMotion) ? MotionModels.Shipped : Config.beliefMotion,
                 writeJsonl = false,
                 planBudgetMs = 0f,      // no wall-clock cut-off: decisions depend on the seed alone
                 ledgerPath = string.IsNullOrEmpty(Config.ledgerPath)
@@ -234,6 +241,14 @@ namespace Kehai.Eval
                 karen.Told -= World.OnTold;
                 karen.Told += World.OnTold;
             }
+
+            // Belief filters beside hers, and the trace of what they all did (tools/belief).
+            BeliefShadows.Current?.Detach();
+            BeliefTrace.Current?.Detach();
+            if (karen != null && !string.IsNullOrEmpty(Config.beliefShadows))
+                BeliefShadows.Attach(karen, Config.beliefShadows.Split(','));
+            if (karen != null && !string.IsNullOrEmpty(Config.beliefTrace))
+                BeliefTrace.Attach(karen, BeliefShadows.Current, Config.beliefTrace);
         }
 
         // Walk to the time clock and punch in — the first thing every shift. If the walk fails

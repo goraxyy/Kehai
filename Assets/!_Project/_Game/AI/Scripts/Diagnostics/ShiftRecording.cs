@@ -75,6 +75,7 @@ namespace Kehai.Karen
         public string StartedAt = "";   // wall-clock date and time
         public float Length;
         public bool ClockedOut;
+        public Dictionary<string, object> Belief;   // playtests: her belief's scores and a shadow's (ShiftRecorder.ScoreBelief)
         public readonly List<ShiftFrame> Frames = new List<ShiftFrame>();
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
@@ -235,6 +236,7 @@ namespace Kehai.Karen
               .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false");
             if (plan != null) sb.Append(",\"plan\":").Append(plan.ToJson());
             if (analysis != null) sb.Append(",\"analysis\":").Append(analysis.ToJson());
+            if (Belief != null) sb.Append(",\"belief\":").Append(MiniJson.Serialize(Belief));
 
             sb.Append(",\"wants\":{");
             bool first = true;

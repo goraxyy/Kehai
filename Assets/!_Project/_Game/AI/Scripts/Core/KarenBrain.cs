@@ -44,6 +44,13 @@ namespace Kehai.Karen
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
         public BlinkDash Dash { get; } = new BlinkDash();   // her move while you blink (Decision/BlinkDash.cs)
+        public MotionFeatures MotionInputs { get; } = new MotionFeatures();   // what the belief's motion model reads
+
+        // For whatever watches her belief from outside (Eval/BeliefShadows, Eval/BeliefTrace):
+        // a new grid after the map changed, and the start and end of each shift.
+        public event System.Action BeliefRebuilt;
+        public event System.Action ShiftBegan;
+        public event System.Action ShiftEnded;
 
         public TaskManager Tasks { get; private set; }
         public ShiftManager Shift { get; private set; }
@@ -57,7 +64,7 @@ namespace Kehai.Karen
         public bool FinalShiftException { get; set; }
 
         float shiftStartedAt;
-        float believeTimer, appraiseTimer, decideTimer, directorTimer, desireTimer;
+        float believeTimer, appraiseTimer, decideTimer, directorTimer, desireTimer, motionTimer;
         bool decideNow;
         float planStartedAt;
         bool chasing;
@@ -156,7 +163,14 @@ namespace Kehai.Karen
         void RebuildBelief()
         {
             Sensorium?.Dispose();
-            Belief = new BeliefGrid(Map);
+            MotionInputs.Bind(Map);
+            IMotionModel motion = MotionModels.Create(config.beliefMotion, MotionInputs);
+            if (motion == null)
+            {
+                Debug.LogWarning($"{GameNames.Antagonist}: no motion model \"{config.beliefMotion}\" — using the shipped one");
+                motion = new HandMotion();
+            }
+            Belief = new BeliefGrid(Map, motion);
             Sensorium = new Sensorium(Map, Energy);
             ApplyRungToSenses();
             if (Ctx != null)
@@ -164,6 +178,7 @@ namespace Kehai.Karen
                 Ctx.Map = Map;
                 Ctx.Belief = Belief;
             }
+            BeliefRebuilt?.Invoke();
         }
 
         void ApplyRungToSenses()
@@ -258,8 +273,10 @@ namespace Kehai.Karen
             shiftStartedAt = Time.time;
             decideNow = true;
             violationsSeen = FairnessGuard.Violations;
+            motionTimer = MotionFeatures.FastPeriod;   // her place and mood are read on the first believe tick
 
             Note("SYSTEM", $"shift {number} begins — employee {Ledger.PlayerName}, shift {number} of the career");
+            ShiftBegan?.Invoke();
         }
 
         // Where she starts the game and every shift: the floor nearest her config's spot, or the
@@ -290,6 +307,7 @@ namespace Kehai.Karen
             Review.Compose();
             World.ClearShift();
             Body.Stop();
+            ShiftEnded?.Invoke();
         }
 
         // ---- the loop ---------------------------------------------------------------------
@@ -407,7 +425,10 @@ namespace Kehai.Karen
             if (Sensorium.SweptCells.Count > 0 && Belief.ApplySweep(Sensorium.SweptCells, Sensorium.SweptProbability))
                 Note("SENSE", "NEGATIVE sweep ruled out everything — back to the prior");
 
+            // The Director's hint goes to her own grid only; shadow filters never get it.
             Director.MaybeBias(Ctx, dt);
+            motionTimer += dt;
+            if (motionTimer >= MotionFeatures.FastPeriod) { motionTimer = 0f; RefreshMotionFast(); }
             Belief.Predict(dt, Energy.SpeedEstimate);
 
             int here = Map.RegionAt(Body.Position);
@@ -467,11 +488,31 @@ namespace Kehai.Karen
             if (targets.Count == 0)
             {
                 for (int i = 0; i < Belief.DesireDistance.Length; i++) Belief.DesireDistance[i] = float.PositiveInfinity;
-                return;
             }
-            float[] field = Map.DistancesFrom(targets);
-            System.Array.Copy(field, Belief.DesireDistance, field.Length);
+            else
+            {
+                float[] field = Map.DistancesFrom(targets);
+                System.Array.Copy(field, Belief.DesireDistance, field.Length);
+            }
+            RefreshMotionSlow();
         }
+
+        // The motion model's inputs (MotionFeatures): every 2 s with the desire field, and 2 Hz.
+        void RefreshMotionSlow()
+        {
+            int jobsLeft = 0;
+            bool allDone = false;
+            if (Tasks != null && Tasks.HasTasks)
+            {
+                foreach (TaskManager.ShiftTask t in Tasks.Tasks) if (!t.IsComplete) jobsLeft++;
+                allDone = jobsLeft == 0;
+            }
+            float length = Shift != null ? Mathf.Max(1f, Shift.shiftDurationSeconds) : 300f;
+            MotionInputs.RefreshSlow(Belief, jobsLeft, allDone, ShiftTime / length, OvertimeArmed, PowerSystem.PowerOn);
+        }
+
+        void RefreshMotionFast() =>
+            MotionInputs.RefreshFast(Body.Position, chasing, Belief.Staleness, Energy.SpeedEstimate, Time.time);
 
         // The same list the fairness guard checks — every open job and the time clock. It
         // names objects in the store, not the employee, so Karen may use it: she wrote it.

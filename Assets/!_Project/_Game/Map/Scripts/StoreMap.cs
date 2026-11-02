@@ -95,6 +95,7 @@ namespace Kehai.Store
         public int[] EdgeStart;       // CSR adjacency: neighbours of c are EdgeTo[EdgeStart[c]..EdgeStart[c+1])
         public int[] EdgeTo;
         public float[] EdgeLength;
+        public byte[] EdgeDirection;  // which of the eight grid directions each edge goes in (LinkCells' order: +x, -x, +z, -z, diagonals)
 
         Vector3 origin;
         int cols, rows;
@@ -167,6 +168,56 @@ namespace Kehai.Store
             return map;
         }
 
+        // A map with no scene behind it: a grid of `columns` × `rows` cells where `open` says
+        // which are floor, joined by the same rule as LinkCells (no walls), one region per row,
+        // all of it sales floor. For tests and for the motion model's parity check against
+        // tools/belief, which builds the same map from the same rule.
+        public static StoreMap Synthetic(int columns, int rows, bool[] open)
+        {
+            var map = new StoreMap { origin = Vector3.zero, cols = columns, rows = rows };
+            map.gridToCell = new int[columns * rows];
+            var positions = new List<Vector3>();
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < columns; c++)
+                {
+                    int g = r * columns + c;
+                    map.gridToCell[g] = open == null || open[g] ? positions.Count : -1;
+                    if (map.gridToCell[g] >= 0) positions.Add(map.GridCentre(c, r, 0f));
+                }
+            map.CellCount = positions.Count;
+            map.CellPosition = positions.ToArray();
+            map.Bounds = new Bounds(new Vector3(columns * CellSize * 0.5f, 0f, rows * CellSize * 0.5f), new Vector3(columns * CellSize, 0f, rows * CellSize));
+            map.synthetic = true;
+            map.LinkCells();
+
+            map.CellRoom = new int[map.CellCount];
+            map.Rooms.Add("Sales floor");
+            map.cellIsDoor = new bool[map.CellCount];
+            map.CellRegion = new int[map.CellCount];
+            var byRow = new Dictionary<int, Region>();
+            for (int cell = 0; cell < map.CellCount; cell++)
+            {
+                int row = Mathf.FloorToInt(map.CellPosition[cell].z / CellSize);
+                if (!byRow.TryGetValue(row, out Region region))
+                {
+                    region = new Region { Id = map.Regions.Count, Key = "row_" + row, Name = "Row " + row, Room = "Sales floor", Area = "Sales floor", Section = string.Empty };
+                    map.Regions.Add(region);
+                    byRow[row] = region;
+                }
+                map.CellRegion[cell] = region.Id;
+                region.Cells.Add(cell);
+            }
+            foreach (Region region in map.Regions)
+            {
+                Vector3 sum = Vector3.zero;
+                foreach (int cell in region.Cells) sum += map.CellPosition[cell];
+                region.Centroid = sum / region.Cells.Count;
+            }
+            return map;
+        }
+
+        bool synthetic;
+
         void SampleCells()
         {
             NavMeshTriangulation tri = NavMesh.CalculateTriangulation();
@@ -227,6 +278,7 @@ namespace Kehai.Store
             var start = new int[CellCount + 1];
             var to = new List<int>(CellCount * 6);
             var length = new List<float>(CellCount * 6);
+            var direction = new List<byte>(CellCount * 6);
 
             // Recover each cell's grid coordinates once.
             var cellCol = new int[CellCount];
@@ -264,10 +316,11 @@ namespace Kehai.Store
                     if (nc >= 0 && nc < cols && nr >= 0 && nr < rows)
                     {
                         int other = gridToCell[nr * cols + nc];
-                        if (other >= 0 && Walkable(CellPosition[cell], CellPosition[other]))
+                        if (other >= 0 && (synthetic || Walkable(CellPosition[cell], CellPosition[other])))
                         {
                             to.Add(other);
                             length.Add(Vector3.Distance(CellPosition[cell], CellPosition[other]));
+                            direction.Add((byte)k);
                             linked = true;
                         }
                     }
@@ -280,6 +333,7 @@ namespace Kehai.Store
             EdgeStart = start;
             EdgeTo = to.ToArray();
             EdgeLength = length.ToArray();
+            EdgeDirection = direction.ToArray();
         }
 
         // Can a person walk straight from one cell centre to the next? Decided by physics
@@ -383,6 +437,7 @@ namespace Kehai.Store
             var start = new int[positions.Count + 1];
             var to = new List<int>(EdgeTo.Length);
             var length = new List<float>(EdgeTo.Length);
+            var direction = new List<byte>(EdgeTo.Length);
             for (int c = 0; c < CellCount; c++)
             {
                 int nc = remap[c];
@@ -394,6 +449,7 @@ namespace Kehai.Store
                     if (n < 0) continue;
                     to.Add(n);
                     length.Add(EdgeLength[e]);
+                    direction.Add(EdgeDirection[e]);
                 }
             }
             start[positions.Count] = to.Count;
@@ -407,6 +463,7 @@ namespace Kehai.Store
             EdgeStart = start;
             EdgeTo = to.ToArray();
             EdgeLength = length.ToArray();
+            EdgeDirection = direction.ToArray();
         }
 
         public int PrunedCells { get; private set; }

@@ -386,6 +386,22 @@ public class StoreMapAndBeliefTests
         Assert.IsEmpty(unreachable, string.Join(", ", unreachable));
     }
 
+    // The motion models read a cell's edges by direction (MotionFeatures.EdgeSlot); cells sit a
+    // little off the grid, so the direction must come from how the map linked them.
+    [Test]
+    public void Map_EachEdgeOfACellGoesItsOwnWay()
+    {
+        Assert.AreEqual(map.EdgeTo.Length, map.EdgeDirection.Length);
+        var features = new MotionFeatures();
+        features.Bind(map);
+        for (int c = 0; c < map.CellCount; c++)
+        {
+            var seen = new HashSet<int>();
+            for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
+                Assert.IsTrue(seen.Add(features.EdgeSlot[e]), $"cell {c} has two edges going direction {features.EdgeSlot[e]}");
+        }
+    }
+
     [Test]
     public void Belief_CollapsesOnASightingAndSpreadsAgain()
     {

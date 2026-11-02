@@ -1,0 +1,5 @@
+# tools/belief: replay, training and export of the belief motion models (README.md).
+# Shares tools/rl/.venv (Python 3.10); these are the only packages it needs.
+numpy>=1.23
+torch>=2.1
+pytest>=8

@@ -66,6 +66,25 @@ public class ShiftRecordTests
         Assert.IsNotEmpty(findings);
     }
 
+    // Playtests add her belief's scores and a shadow filter's (ShiftRecorder.ScoreBelief).
+    [Test]
+    public void RecordingJson_CarriesTheBeliefScores()
+    {
+        ShiftRecording r = Sample();
+        var accuracy = new Kehai.Eval.BeliefAccuracy();
+        r.Belief = new Dictionary<string, object>();
+        accuracy.AddTo(r.Belief);
+        r.Belief["belief_shadows"] = "m3/8";
+        r.Belief["shadow_m3s8_out_of_view_logp"] = -6.25f;
+        Dictionary<string, object> d = MiniJson.ParseObject(r.ToJson(null, null));
+        var belief = (Dictionary<string, object>)d["belief"];
+        Assert.AreEqual("m3/8", belief["belief_shadows"]);
+        Assert.AreEqual(-6.25, (double)belief["shadow_m3s8_out_of_view_logp"], 1e-6);
+        Assert.IsTrue(belief.ContainsKey("belief_out_of_view_logp"));
+        Assert.IsTrue(belief.ContainsKey("belief_lost_45_up_samples"));
+        Assert.IsFalse(MiniJson.ParseObject(Sample().ToJson(null, null)).ContainsKey("belief"), "a shift with no scores has no belief block");
+    }
+
     [Test]
     public void Analysis_CountsWhatHappened()
     {

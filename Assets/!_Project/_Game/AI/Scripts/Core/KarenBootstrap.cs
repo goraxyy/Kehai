@@ -13,6 +13,7 @@ namespace Kehai.Karen
     //   -karen-seed <n>       seed every decision (0 = clock)
     //   -karen-shield on|off  rung F: keep the policy inside the Director's gates (default on)
     //   -karen-policy <name>  rung F: the model under Resources/KarenPolicy/ to run
+    //   -belief-motion <id>   how her belief thinks you move: hand (default), m1, m2, m3, m4
     //   -kehai-no-records     write no shift records, replays or clip markers (RL training runs
     //                         thousands of shifts)
     public static class KarenBootstrap
@@ -81,7 +82,7 @@ namespace Kehai.Karen
             root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
-        static string rungArg, seedArg, shieldArg, policyArg;
+        static string rungArg, seedArg, shieldArg, policyArg, motionArg;
 
         static void ReadCommandLine()
         {
@@ -93,6 +94,7 @@ namespace Kehai.Karen
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
                 if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
                 if (args[i] == "-karen-policy" && i + 1 < args.Length) policyArg = args[i + 1];
+                if (args[i] == "-belief-motion" && i + 1 < args.Length) motionArg = args[i + 1];
                 if (args[i] == "-kehai-no-records") NoRecords = true;
             }
         }
@@ -127,6 +129,7 @@ namespace Kehai.Karen
             if (!string.IsNullOrEmpty(seedArg) && int.TryParse(seedArg, out int seed)) config.seed = seed;
             if (!string.IsNullOrEmpty(shieldArg)) config.shield = ParseSwitch(shieldArg, config.shield);
             if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
+            if (!string.IsNullOrEmpty(motionArg)) config.beliefMotion = motionArg;
         }
 
         // "on", "off", "true", "false", "1", "0".
