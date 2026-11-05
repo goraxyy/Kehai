@@ -12,31 +12,31 @@ namespace Kehai.Karen
     //        + w_task·TaskLeverage(g) + w_novel·Novelty(g)
     //        − w_cost·TensionCost(g)/Tension − w_risk·ExposureRisk(g)
     //        × Permission(g)
-    public sealed class GoalSet
+    public sealed class ActionSet
     {
-        public GoalId Current { get; private set; } = GoalId.Patrol;
+        public ActionId Current { get; private set; } = ActionId.Roam;
         public float CommittedAt { get; private set; } = -999f;
         public readonly List<ThoughtOption> LastOptions = new List<ThoughtOption>();
 
-        readonly Dictionary<GoalId, float> lastChosen = new Dictionary<GoalId, float>();
-        static readonly GoalId[] goals = (GoalId[])System.Enum.GetValues(typeof(GoalId));
+        readonly Dictionary<ActionId, float> lastChosen = new Dictionary<ActionId, float>();
+        static readonly ActionId[] goals = (ActionId[])System.Enum.GetValues(typeof(ActionId));
 
         public void Reset()
         {
-            Current = GoalId.Patrol;
+            Current = ActionId.Roam;
             CommittedAt = -999f;
             lastChosen.Clear();
         }
 
         // Picks the goal to pursue now. `forced` bypasses the minimum commit time — used
         // when an interrupt has fired or the current plan has ended.
-        public GoalId Choose(KarenContext c, bool forced, out string because)
+        public ActionId Choose(KarenContext c, bool forced, out string because)
         {
             LastOptions.Clear();
-            var scores = new Dictionary<GoalId, float>();
-            var whys = new Dictionary<GoalId, string>();
+            var scores = new Dictionary<ActionId, float>();
+            var whys = new Dictionary<ActionId, string>();
 
-            foreach (GoalId g in goals)
+            foreach (ActionId g in goals)
             {
                 float u = Score(g, c, out string why);
                 scores[g] = u;
@@ -44,22 +44,22 @@ namespace Kehai.Karen
             }
 
             // Stay with the current goal unless something beats it clearly.
-            GoalId best = Current;
+            ActionId best = Current;
             float bestScore = scores[Current] + c.Config.hysteresis;
             bool mayLeave = forced || c.Now - CommittedAt >= c.Config.minCommitSeconds;
 
-            foreach (GoalId g in goals)
+            foreach (ActionId g in goals)
             {
                 if (g == Current) continue;
-                if (scores[g] > bestScore && (mayLeave || g == GoalId.Pursue))
+                if (scores[g] > bestScore && (mayLeave || g == ActionId.Hunt))
                 {
                     best = g;
                     bestScore = scores[g];
                 }
             }
 
-            foreach (GoalId g in goals.OrderByDescending(g => scores[g]).Take(4))
-                LastOptions.Add(new ThoughtOption { Name = g.ToString(), Utility = scores[g], Why = whys[g] });
+            foreach (ActionId g in goals.OrderByDescending(g => scores[g]).Take(4))
+                LastOptions.Add(new ThoughtOption { Name = g.Name(), Utility = scores[g], Why = whys[g] });
 
             because = whys[best];
             if (best != Current || forced)
@@ -71,7 +71,7 @@ namespace Kehai.Karen
             return best;
         }
 
-        float Score(GoalId g, KarenContext c, out string why)
+        float Score(ActionId g, KarenContext c, out string why)
         {
             Appraisal a = c.A;
             KarenConfig k = c.Config;
@@ -96,7 +96,7 @@ namespace Kehai.Karen
             float epd = available.Average(t => c.Ledger.ExpectedPanicDelta(t, c));
             float stress = epd * Mathf.Clamp(a.Pressure, -1f, 1f);
 
-            float task = g == GoalId.Deny ? a.TaskLoad : 0f;
+            float task = g == ActionId.Disrupt ? a.TaskLoad : 0f;
 
             float novelty = 1f;
             if (lastChosen.TryGetValue(g, out float when))
@@ -110,73 +110,73 @@ namespace Kehai.Karen
             float u = k.wConfidence * fit + k.wStress * stress + k.wTask * task + k.wNovelty * novelty
                       - k.wCost * cost - k.wRisk * risk;
 
-            u *= c.Director.GoalPermission(g, c);
+            u *= c.Director.ActionPermission(g, c);
 
             why = $"{fitWhy}; stress {stress:+0.00;-0.00}, task {task:0.00}, novelty {novelty:0.0}, cost {cost:0.00}, risk {risk:0.00}";
             return Mathf.Max(0f, u);
         }
 
-        static bool Tactical(GoalId g) => g != GoalId.Patrol && g != GoalId.Investigate && g != GoalId.Sweep && g != GoalId.Pursue;
+        static bool Tactical(ActionId g) => g != ActionId.Roam && g != ActionId.Check && g != ActionId.Search && g != ActionId.Hunt;
 
         // How well the situation suits the goal, before any learning (the "Confidence(g)"
         // term of the utility). Each line reads as the rule it is.
-        static float Fit(GoalId g, KarenContext c, out string why)
+        static float Fit(ActionId g, KarenContext c, out string why)
         {
             Appraisal a = c.A;
             switch (g)
             {
-                case GoalId.Patrol:
+                case ActionId.Roam:
                     why = "maintain coverage";
                     return 0.15f;
 
-                case GoalId.Investigate:
+                case ActionId.Check:
                     if (a.Confidence < 0.06f) { why = "nothing to investigate"; return 0f; }
                     why = $"conf {a.Confidence:0.00}, stale {a.Staleness:0}s";
                     return 0.2f + 0.55f * Mathf.Clamp01(a.Confidence / 0.35f) * (1f - Mathf.Clamp01(a.Staleness / 45f));
 
-                case GoalId.Sweep:
+                case ActionId.Search:
                     why = $"H {a.EntropyNorm:0.00} of max";
                     return 0.12f + 0.45f * a.EntropyNorm * (a.Staleness > 10f ? 1f : 0.4f);
 
-                case GoalId.Flush:
+                case ActionId.Flush:
                     if (a.EntropyNorm < 0.5f || a.Staleness < 15f) { why = "not lost enough to flush"; return 0f; }
                     why = $"lost: H {a.EntropyNorm:0.00}, stale {a.Staleness:0}s — make them make a noise";
                     return 0.25f + 0.5f * a.EntropyNorm * Mathf.Clamp01(a.Staleness / 60f);
 
-                case GoalId.Deny:
+                case ActionId.Disrupt:
                     why = $"TaskLoad {a.TaskLoad:0.00}";
                     return 0.15f;
 
-                case GoalId.Herd:
+                case ActionId.Corner:
                     if (a.Confidence < 0.25f) { why = "no confident peak to herd from"; return 0f; }
                     why = $"conf {a.Confidence:0.00} — close the cut";
                     return 0.2f + 0.5f * a.Confidence;
 
-                case GoalId.Ambush:
+                case ActionId.LieInWait:
                     float route = c.Ledger.BestRouteConfidence(c, out string routeWhy);
                     if (route < 0.35f) { why = "no confident route prior"; return 0f; }
                     why = routeWhy;
                     return 0.15f + 0.65f * route;
 
-                case GoalId.Stalk:
+                case ActionId.Loom:
                     if (a.Confidence < 0.12f) { why = "don't know where to be seen"; return 0f; }
                     float below = Mathf.Max(0f, a.Setpoint - a.Panic);
                     why = $"panic {a.Panic:0.00} below setpoint {a.Setpoint:0.00}";
                     return 0.1f + 0.8f * below;
 
-                case GoalId.Pursue:
+                case ActionId.Hunt:
                     SightSensor s = c.Body.Sight;
                     if (a.Awareness >= s.confirmAt) { why = $"sighting confirmed ({a.Awareness:0.00})"; return 1.05f; }
                     if (a.Awareness >= s.seeAt) { why = $"seen ({a.Awareness:0.00})"; return 0.55f + (a.Awareness - s.seeAt); }
                     why = "not seen";
                     return 0f;
 
-                case GoalId.Withdraw:
+                case ActionId.BackOff:
                     float above = Mathf.Max(0f, a.Panic - a.Setpoint);
                     why = a.InRecovery ? "recovery window (§9.4)" : $"panic {a.Panic:0.00} above setpoint {a.Setpoint:0.00}";
                     return 0.05f + 1.2f * above + (a.InRecovery ? 0.45f : 0f);
 
-                case GoalId.Assist:
+                case ActionId.Lure:
                     if (a.EnergyBelief >= 0.15f) { why = "employee still has energy"; return 0f; }
                     why = $"energy ~{a.EnergyBelief:0.00} — a burnt-out employee who stays is the objective";
                     return 0.9f;
@@ -193,7 +193,7 @@ namespace Kehai.Karen
     {
         // Tactics that could serve `goal` right now. Refusals are appended to `refusals`
         // when it's supplied, so the thought log can say why a tactic was ruled out.
-        public static List<Tactic> Candidates(GoalId goal, KarenContext c, List<string> refusals)
+        public static List<Tactic> Candidates(ActionId goal, KarenContext c, List<string> refusals)
         {
             var result = new List<Tactic>();
             foreach (Tactic t in TacticLibrary.For(goal))
@@ -208,6 +208,7 @@ namespace Kehai.Karen
         // The rung's and the Director's say, before the tactic's own (Available).
         public static bool Gated(Tactic t, KarenContext c, out string why)
         {
+            if (t.Draft) { why = "draft"; return false; }
             why = null;
             return Introduced(t, c, ref why) &&
                    (!Shielded(c) || Permitted(t, c, ref why) && OffCooldown(t, c, ref why) && Affordable(t, c, ref why));
@@ -247,7 +248,7 @@ namespace Kehai.Karen
             return false;
         }
 
-        public static PlanTree Plan(GoalId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
+        public static PlanTree Plan(ActionId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
                                     out Tactic chosen, out List<ThoughtOption> options, out string because)
         {
             var refusals = new List<string>();
@@ -302,7 +303,7 @@ namespace Kehai.Karen
                 chosen = entry.t;
                 because = entry.why + (builder.Target != null ? $" → {builder.Target}" : string.Empty)
                                     + (builder.Truncated ? " (partial: budget)" : string.Empty);
-                return new PlanTree($"{goal}({entry.t.Id})", goal, entry.t, builder.Steps, interrupt) { Target = builder.Target };
+                return new PlanTree($"{goal.Name()}({entry.t.Id})", goal, entry.t, builder.Steps, interrupt) { Target = builder.Target };
             }
 
             because = "every candidate decomposed to nothing";

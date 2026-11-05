@@ -92,6 +92,7 @@ namespace Kehai.Store
         public Vector3[] CellPosition;
         public int[] CellRegion;
         public int[] CellRoom;
+        public bool[] CellIsKarens;   // in the part of the building she works in (KarenWorksIn)
         public int[] EdgeStart;       // CSR adjacency: neighbours of c are EdgeTo[EdgeStart[c]..EdgeStart[c+1])
         public int[] EdgeTo;
         public float[] EdgeLength;
@@ -159,6 +160,7 @@ namespace Kehai.Store
             map.PruneUnreachable();
             map.CarveRooms();
             map.CarveRegions();
+            map.MarkKarensCells();
             map.LinkRegions();
             map.FindChokepoints();
             map.ResolveLandmarks();
@@ -534,23 +536,47 @@ namespace Kehai.Store
         public static bool IsOutdoors(string area)
         {
             return area == "Street" || area == "West alley" || area == "East alley"
-                || area == "South yard" || area == "Backstreet";
+                || area == "South yard" || area == "Backstreet" || area == "Pavement";
         }
+
+        // The parts of the building Karen works in: everything indoors, the backstreet and the
+        // pavement out front. The street and parking lot, the alleys and the yard aren't hers:
+        // her belief grid folds them into one cell, and her body can't walk there (KarenArea).
+        public static bool KarenWorksIn(string area)
+        {
+            return area == "Sales floor" || area == "Lobby" || area == "Stockroom" || area == "Cold storage"
+                || area == "Staff room" || area == "Office" || area == "WC"
+                || area == "Backstreet" || area == "Pavement" || area == "Doorway";
+        }
+
+        // The pavement ends at the far edge of the entrance apron (Entrance_Pedestrian_Apron_01):
+        // the farthest Karen goes out of the front doors.
+        public const float PavementEdge = -106f;
 
         // What each part of the building is called. The physical rooms come from the walls;
         // this table only names them, the same way StoreLayout names the sales floor. First
-        // match wins. World XZ; the store runs south along -Z from the street.
+        // match wins. World XZ; the store runs south along -Z from the street. The west side is
+        // three rooms of 13⅓ m each (INTERIOR_MODELS.md): staff room, office and WC.
         public static string AreaAt(Vector3 p)
         {
-            if (p.z > -110f) return "Street";
+            if (p.z > -110f) return p.z <= PavementEdge && p.x >= 10.5f && p.x <= 85.5f ? "Pavement" : "Street";
             if (p.x < 10.5f) return "West alley";
             if (p.x > 85.5f) return "East alley";
             if (p.z < -189.5f) return "South yard";
             if (p.z < -175.5f) return p.x>=55f ? "Cold storage" : "Stockroom";
-            if (p.x < 25f) return p.z < -150.5f ? "Backstreet" : "Staff room";
+            if (p.x < 25f)
+            {
+                if (p.z < -150.5f) return "Backstreet";
+                if (p.z < -136.667f) return "Staff room";
+                return p.z < -123.333f ? "Office" : "WC";
+            }
             if (p.z >= -120.5f) return "Lobby";
             return "Sales floor";
         }
+
+        // Whether a cell is in Karen's part of the building (KarenWorksIn). A map made by hand,
+        // without Build, is all hers.
+        public bool IsKarens(int cell) => cell >= 0 && cell < CellCount && (CellIsKarens == null || CellIsKarens[cell]);
 
         int RoomAtRaw(Vector3 position, float radius)
         {
@@ -628,6 +654,12 @@ namespace Kehai.Store
             }
 
             NameRegions();
+        }
+
+        void MarkKarensCells()
+        {
+            CellIsKarens = new bool[CellCount];
+            for (int c = 0; c < CellCount; c++) CellIsKarens[c] = KarenWorksIn(AreaAt(CellPosition[c]));
         }
 
         static long TileKey(Vector3 p)
@@ -914,12 +946,16 @@ namespace Kehai.Store
             Landmarks.Add(new Landmark { Kind = kind, Name = name, Position = position, Source = source, Cell = -1, Region = -1 });
         }
 
+        // Each landmark takes the nearest of Karen's cells, then the nearest at all: the coffee
+        // machine and the radio stand against the staff room's west wall (the radio at x 10.4,
+        // past the area table's line), and their nearest cell was in the alley beyond it.
         void ResolveLandmarks()
         {
             for (int i = 0; i < Landmarks.Count; i++)
             {
                 Landmark l = Landmarks[i];
-                l.Cell = NearestCell(l.Position, 4f, skipDoors: false);
+                l.Cell = NearestKarensCell(l.Position, 4f);
+                if (l.Cell < 0) l.Cell = NearestCell(l.Position, 4f, skipDoors: false);
                 l.Region = l.Cell >= 0 ? CellRegion[l.Cell] : -1;
                 Landmarks[i] = l;
             }
@@ -991,6 +1027,20 @@ namespace Kehai.Store
                     float sqr = d.sqrMagnitude;
                     if (sqr < bestSqr) { bestSqr = sqr; best = cell; }
                 }
+            }
+            return best;
+        }
+
+        int NearestKarensCell(Vector3 position, float radius)
+        {
+            int best = -1;
+            float bestSqr = radius * radius;
+            foreach (int cell in CellsNear(position, radius))
+            {
+                if (!IsKarens(cell)) continue;
+                Vector3 d = CellPosition[cell] - position;
+                d.y = 0f;
+                if (d.sqrMagnitude < bestSqr) { bestSqr = d.sqrMagnitude; best = cell; }
             }
             return best;
         }
@@ -1092,7 +1142,7 @@ namespace Kehai.Store
 
         // Same, from several sources at once — distance to the nearest of them. This is the
         // desire field: how far every cell is from the nearest unfinished job.
-        public float[] DistancesFrom(IList<int> sources, float maxDistance = float.MaxValue, float[] into = null)
+        public float[] DistancesFrom(IList<int> sources, float maxDistance = float.MaxValue, float[] into = null, bool[] blocked = null)
         {
             if (into == null || into.Length != CellCount) into = new float[CellCount];
             for (int i = 0; i < CellCount; i++) into[i] = float.PositiveInfinity;
@@ -1112,6 +1162,7 @@ namespace Kehai.Store
                 for (int e = EdgeStart[cell]; e < EdgeStart[cell + 1]; e++)
                 {
                     int n = EdgeTo[e];
+                    if (blocked != null && blocked[n]) continue;
                     float nd = dist + EdgeLength[e];
                     if (nd >= into[n]) continue;
                     into[n] = nd;

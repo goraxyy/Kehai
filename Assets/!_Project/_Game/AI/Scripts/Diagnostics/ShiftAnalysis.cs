@@ -176,9 +176,9 @@ namespace Kehai.Karen
                 Findings.Add($"Your energy dropped to {LowestEnergy * 100f:0}% — coffee earlier would have helped.");
         }
 
-        // "on the Sales floor", "on the Street", "in the Staff room".
+        // "on the Sales floor", "on the Street", "on the Pavement", "in the Staff room".
         static string InArea(string area) =>
-            (area.EndsWith("floor") || area == "Street" ? "on the " : "in the ") + area;
+            (area.EndsWith("floor") || area == "Street" || area == "Pavement" ? "on the " : "in the ") + area;
 
         public string ToJson()
         {

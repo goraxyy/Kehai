@@ -11,19 +11,19 @@ namespace Kehai.Karen
     public static class PolicyObservation
     {
         const int Appraised = 13, ShiftClock = 2, PlayerModel = 11, Spatial = 1;
-        static readonly int GoalCount = System.Enum.GetValues(typeof(GoalId)).Length;
+        static readonly int GoalCount = System.Enum.GetValues(typeof(ActionId)).Length;
         static readonly int PhaseCount = System.Enum.GetValues(typeof(KarenDirector.Phase)).Length;
 
         public static int Size => Appraised + GoalCount + PhaseCount + ShiftClock + 2 * TacticLibrary.All.Count + PlayerModel + Spatial;
 
-        public static float[] Build(GoalId goal, KarenContext c)
+        public static float[] Build(ActionId goal, KarenContext c)
         {
             var v = new float[Size];
             Write(goal, c, v);
             return v;
         }
 
-        public static void Write(GoalId goal, KarenContext c, float[] v)
+        public static void Write(ActionId goal, KarenContext c, float[] v)
         {
             System.Array.Clear(v, 0, v.Length);
             int i = 0;

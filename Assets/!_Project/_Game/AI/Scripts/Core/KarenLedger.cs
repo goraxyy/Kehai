@@ -147,7 +147,8 @@ namespace Kehai.Karen
         void Index()
         {
             arms.Clear();
-            foreach (ArmStat a in Data.arms) arms[a.id] = a;
+            foreach (ArmStat a in Data.arms)
+                if (TacticLibrary.Get(a.id) != null) arms[a.id] = a;   // not the tricks 0.2.0 removed: the chase, Follow, Funnel
             regions.Clear();
             foreach (RegionStat r in Data.regions) regions[r.key] = r;
         }

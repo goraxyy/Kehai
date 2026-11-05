@@ -142,9 +142,9 @@ namespace Kehai.Karen
             if (step < c.Config.dashMinStep) return false;
 
             var path = new NavMeshPath();
-            if (!NavMesh.CalculatePath(c.Body.Position, you, NavMesh.AllAreas, path) || path.corners.Length < 2) return false;
+            if (!NavMesh.CalculatePath(c.Body.Position, you, KarenArea.AgentMask, path) || path.corners.Length < 2) return false;
             Vector3 to = AlongPath(path.corners, step);
-            if (!NavMesh.SamplePosition(to, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) return false;
+            if (!NavMesh.SamplePosition(to, out NavMeshHit hit, 1.5f, KarenArea.AgentMask)) return false;
             if (Flat(hit.position, you) < c.Config.dashKeepAway - 0.5f) return false;
 
             Vector3 from = c.Body.Position;
@@ -249,6 +249,7 @@ namespace Kehai.Karen
             var scored = new List<(Vector3 at, float score)>();
             for (int cell = 0; cell < c.Map.CellCount; cell++)
             {
+                if (!c.Map.IsKarens(cell)) continue;                                // her part of the building only
                 Vector3 p = c.Map.CellPosition[cell];
                 float d = Flat(p, you);
                 if (d < c.Config.dashVanishMin || d > c.Config.dashVanishMax) continue;
