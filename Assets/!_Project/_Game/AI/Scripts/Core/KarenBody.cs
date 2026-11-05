@@ -296,7 +296,9 @@ namespace Kehai.Karen
             if (stepTimer < interval) return;
             stepTimer = 0f;
             float volume = CurrentPace == Pace.Sneak ? 0.25f : CurrentPace == Pace.Run ? 1f : 0.6f;
-            feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
+            // Her steps are a developer's aid since 0.2.0 (KarenFx, F3): players never hear them.
+            // They still go on the noise bus for the record; the bots and replays leave them out.
+            if (KarenFx.StepsAudible) feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
             NoiseBus.Emit(transform.position, volume * 0.8f, NoiseKind.KarenStep, NoiseAuthor.Karen);
         }
 

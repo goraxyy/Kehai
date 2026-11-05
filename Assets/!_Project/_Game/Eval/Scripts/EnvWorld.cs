@@ -353,7 +353,9 @@ namespace Kehai.Eval
 
             NoiseBus.ReadSince(ref noiseCursor, noises);
             foreach (NoiseEvent n in noises)
-                if (n.Kind == NoiseKind.KarenStep && Vector3.Distance(n.Position, me.Position) < 12f)
+                // A bot hears her steps only when a player could: with the developer's switch on
+                // (KarenFx), which is never in a batch run (0.2.0).
+                if (n.Kind == NoiseKind.KarenStep && KarenFx.StepsAudible && Vector3.Distance(n.Position, me.Position) < 12f)
                 {
                     heardKarenAt = Time.time;
                     if (Time.time - stepsNotedAt > 1f) { stepsNotedAt = Time.time; Note("her_steps", "steps", n.Position); }

@@ -55,7 +55,9 @@ namespace Kehai.Replay
                 case NoiseKind.Footstep: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.35f * v };
                 case NoiseKind.CrouchStep: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.12f };
                 case NoiseKind.Sprint: return new Sound { Clip = ProceduralAudio.PlayerStep(i % 3), Volume = 0.6f * v };
-                case NoiseKind.KarenStep: return new Sound { Clip = ProceduralAudio.KarenStep(), Volume = 0.55f * v };
+                // Old recordings also contain her developer-only steps. Neither live
+                // playback nor an exported soundtrack should make them audible.
+                case NoiseKind.KarenStep: return default;
                 case NoiseKind.DroppedItem:
                 case NoiseKind.Impact:
                 case NoiseKind.KickedItem: return new Sound { Clip = Thud(), Volume = 0.8f * v };

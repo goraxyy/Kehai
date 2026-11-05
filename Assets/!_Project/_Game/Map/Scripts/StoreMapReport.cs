@@ -66,13 +66,17 @@ namespace Kehai.Store
             sb.AppendLine("| `l` | lobby | `r` | staff rooms |");
             sb.AppendLine("| `b` | backstreet | `s` | stockroom |");
             sb.AppendLine("| `+` | doorway | ` ` | wall, shelving, or unreachable |");
-            sb.AppendLine("| `P` | Produce | `B` | Bakery |");
-            sb.AppendLine("| `W` | Checkout · Sweets | `D` | Aisle 1 · Soft Drinks |");
-            sb.AppendLine("| `S` | Aisle 2 · Snacks | `T` | Aisle 3 · Tins & Jars |");
-            sb.AppendLine("| `C` | Aisle 4 · Cereal | `N` | Aisle 5 · Noodles |");
-            sb.AppendLine("| `H` | Aisle 6 · Health & Beauty | `K` | Aisle 7 · Household |");
-            sb.AppendLine("| `M` | Dairy wall | `F` | Frozen wall |");
-            sb.AppendLine("| `A` | Pet wall | | |");
+            for (int i = 0; i < StoreLayout.Zones.Length; i += 2)
+            {
+                StoreLayout.Zone left = StoreLayout.Zones[i];
+                sb.Append($"| `{StoreMap.SectionGlyph(left.Section)}` | {left.Sign} |");
+                if (i + 1 < StoreLayout.Zones.Length)
+                {
+                    StoreLayout.Zone right = StoreLayout.Zones[i + 1];
+                    sb.AppendLine($" `{StoreMap.SectionGlyph(right.Section)}` | {right.Sign} |");
+                }
+                else sb.AppendLine(" | |");
+            }
             sb.AppendLine("| `$` | checkout till | `c` | coffee machine |");
             sb.AppendLine("| `t` | time clock | `e` | breaker box |");
             sb.AppendLine("| `m` | store radio | `o` | mop rack |");
