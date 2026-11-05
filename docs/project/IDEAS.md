@@ -184,7 +184,7 @@ not sentences, so it can be counted and charted; only `because` is free text.
 ## 6. How she searches, sees and remembers
 
 Three ideas from the 2026-11-05 whiteboard ([notes](../research/whiteboard-2026-11-05.md)). None is
-built. Each would go into the [2.0.0 build plan](../plans/2.0.0-build-plan.md) only once you pick it.
+built. Each would go into the [0.2.0 build plan](../plans/0.2.0-build-plan.md) only once you pick it.
 
 ### 6.1 Search every spot, on purpose not perfectly
 

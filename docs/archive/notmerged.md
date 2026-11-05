@@ -2,7 +2,7 @@
 
 > **Archived on 2026-11-05.** The to-do list below is out of date: PR #68 has since been pushed
 > as a draft and PR #64 merged. What's next for Karen is the
-> [2.0.0 build plan](../plans/2.0.0-build-plan.md). Sections 2 and 3 still explain how Karen
+> [0.2.0 build plan](../plans/0.2.0-build-plan.md). Sections 2 and 3 still explain how Karen
 > adapts and the tech she uses.
 
 Three things in one place, as of 2026-10-20:

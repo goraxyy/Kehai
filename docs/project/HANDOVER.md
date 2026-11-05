@@ -2,7 +2,7 @@
 
 Written on 2026-10-31, when the work moved to a new account on the **same Mac**. Read this first,
 then [`CLAUDE.md`](../../CLAUDE.md) (the working rules) and the
-[2.0.0 build plan](../plans/2.0.0-build-plan.md), which is what's next for Karen. The older
+[0.2.0 build plan](../plans/0.2.0-build-plan.md), which is what's next for Karen. The older
 [`notmerged.md`](../archive/notmerged.md) (archived on 2026-11-05) still explains how Karen adapts,
 with diagrams, but its to-do list is out of date.
 

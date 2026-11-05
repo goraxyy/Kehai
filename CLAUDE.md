@@ -6,7 +6,7 @@ showpiece.
 
 **Start here:**
 - [`docs/project/HANDOVER.md`](docs/project/HANDOVER.md): where everything is on this Mac, the state of the work, and what's next.
-- [`docs/plans/2.0.0-build-plan.md`](docs/plans/2.0.0-build-plan.md): the Karen 2.0.0 redesign, what's next for her.
+- [`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md): the Karen 0.2.0 redesign, what's next for her.
 - Docs are sorted by topic under `docs/` (`project/`, `plans/`, `karen/`, `store/`, `game/`, `marketing/`, `research/`); finished or stale ones go to `docs/archive/`. The README lists them all.
 - [`docs/store/SCENE_MAP.md`](docs/store/SCENE_MAP.md) and [`docs/store/STORE_MAP.md`](docs/store/STORE_MAP.md): the scene layout and Karen's map. Neither the scene nor the art is in git.
 - Then [`README.md`](README.md), [`docs/karen/Karen.md`](docs/karen/Karen.md), [`docs/karen/KAREN_RESULTS.md`](docs/karen/KAREN_RESULTS.md) and [`docs/project/RELEASE_PLAN.md`](docs/project/RELEASE_PLAN.md).
