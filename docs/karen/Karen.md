@@ -796,8 +796,10 @@ constraints, enforced in code, asserted in tests.
 2. **Bounded Director hinting.** Search bias may shift belief mass toward the player's true
    region by at most `+0.15` per minute, may never exceed `0.5` of total mass, and may never
    trigger while the player is in line of sight of the Body's current path.
-3. **Every tactic has a tell**, ≥ 0.8 s of lead time, perceivable through at least one sense the
-   player currently has. If the lights are out, the tell must be audible.
+3. ~~**Every tactic has a tell**, ≥ 0.8 s of lead time.~~ **Removed in 0.2.0** (the
+   [build plan](../plans/0.2.0-build-plan.md), decision Q17): a trick's sound may still play as it
+   acts, but nothing waits for it and the audit no longer times it. Kept as rule 3, not
+   renumbered, so old logs and results still read.
 4. **Recovery windows are guaranteed.** After a chase (a catch now ends the shift): ≥ 45 s at reduced
    setpoint, no major tactics, no ambush.
 5. **Never deny a nearly-finished task.** No sabotage of a task above 80% completion — that reads

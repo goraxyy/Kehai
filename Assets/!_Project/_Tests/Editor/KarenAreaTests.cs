@@ -167,6 +167,38 @@ public class KarenAreaTests
         }
     }
 
+    // ---- phase 2: the hunt -----------------------------------------------------------------
+
+    [Test]
+    public void SeenOutside_SheWontHunt()
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        var ledger = new KarenLedger(config);
+        var c = new KarenContext { Config = config, Map = map, Belief = Grid(), Director = new KarenDirector(config, ledger) };
+        Assert.AreEqual(1f, c.Director.ActionPermission(ActionId.Hunt, c), "inside, the Director lets a hunt start");
+        c.Belief.Apply(new Observation(SenseChannel.Sight, ParkingLot, 0.95f, 1.5f, "seen in the parking lot"));
+        Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "she'd hunt you in the parking lot");
+    }
+
+    [Test]
+    public void TheForecast_RunsOnAlongTheFloor_TheWayYouWereGoing()
+    {
+        BeliefGrid grid = Grid();
+        // A spot on the sales floor with floor ahead of it along +x.
+        int start = Enumerable.Range(0, map.CellCount).First(c =>
+            StoreMap.AreaAt(map.CellPosition[c]) == "Sales floor" && map.CellAt(map.CellPosition[c] + Vector3.right * 6f, 0.8f) >= 0);
+        Vector3 seen = map.CellPosition[start];
+        Assert.AreEqual(seen, TacticHelpers.Forecast(map, grid, seen, Vector3.zero, 3f), "standing still, you're where she saw you");
+
+        Vector3 ahead = TacticHelpers.Forecast(map, grid, seen, Vector3.right * 4f, 3f);
+        Vector3 moved = ahead - seen;
+        moved.y = 0f;
+        Assert.IsTrue(map.IsKarens(map.CellAt(ahead)), "the forecast is outside her part");
+        Assert.Greater(moved.magnitude, 3f, "she'd run to where she lost you, not on");
+        Assert.LessOrEqual(moved.magnitude, 12.5f, "further than 3 s at 4 m/s");
+        Assert.Greater(Vector3.Dot(moved.normalized, Vector3.right), 0.3f, "the forecast isn't the way you were going");
+    }
+
     // The NavMesh marks that keep her in, baked into the open scene, then the scene reloaded.
     [Test]
     public void HerBody_NeverWalksRoundTheBuilding()

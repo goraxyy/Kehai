@@ -61,14 +61,18 @@ namespace Kehai.Karen
 
         [Header("Body")]
         // On her rounds she walks a little slower than you; hurrying she outpaces your walk, and
-        // running she is slightly faster than your sprint, so a chase in the open is lost: break
-        // her line of sight. KarenBootstrap sets hurry and run from the player's actual speeds.
+        // hunting she sprints at 7.5 m/s against your 6.5 (0.2.0): she gains a metre a second, so
+        // break her line of sight. KarenBootstrap sets hurry and run from the player's actual speeds.
         public float sneakSpeed = 2f;
         public float walkSpeed = 3.4f;
         public float hurrySpeed = 4.2f;
-        public float runSpeed = 6.8f;
-        [Tooltip("Hurry and run as a multiple of the player's walk and sprint.")]
+        public float runSpeed = 7.5f;
+        [Tooltip("Hurry as a multiple of the player's walk.")]
         public float fasterThanPlayer = 1.05f;
+        [Tooltip("Hunt's sprint as a multiple of the player's sprint: 7.5 m/s against 6.5.")]
+        public float sprintsFasterThanPlayer = 7.5f / 6.5f;
+        [Tooltip("How long a hunt keeps running on her belief after she loses you, with nothing new.")]
+        public float huntMemorySeconds = 6f;
         [Tooltip("Unless she's running (a chase), she stops this far from you: her touch kills, and she doesn't walk into you by accident.")]
         public float personalSpace = 2.2f;
         [Tooltip("Her touch: contact within this of her centre (plus your own radius) gets you — her body's radius and a hand's breadth, so passing her in an aisle isn't contact.")]
@@ -114,7 +118,6 @@ namespace Kehai.Karen
         [Header("Fairness contract (§9)")]
         public float searchBiasPerMinute = 0.15f;
         public float searchBiasMaxMass = 0.5f;
-        public float minTellLead = 0.8f;
         public float recoverySeconds = 45f;
         public float denyMaxCompletion = 0.8f;
         public float ambushMaxWait = 90f;
@@ -126,6 +129,8 @@ namespace Kehai.Karen
         public float overtimePerCatch = 60f;
 
         [Header("Blink dash (IDEAS.md, the blink mechanic)")]
+        [Tooltip("Her eye flickers this long before a dash: the blink dash's own cue (not the removed warning rule).")]
+        public float dashFlickerLead = 1f;
         [Tooltip("Close in only when she's at least this far from you.")]
         public float dashCloseInMinRange = 10f;
         [Tooltip("A dash never ends nearer you than this.")]

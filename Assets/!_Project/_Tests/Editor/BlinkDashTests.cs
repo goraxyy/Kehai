@@ -33,7 +33,7 @@ public class BlinkDashTests
     [Test]
     public void TheWaveIsToldFirst_AndDashesAreSpaced()
     {
-        Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, sinceArmed: Config.minTellLead * 0.5f), "no dash before the wave's tell has landed");
+        Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, sinceArmed: Config.dashFlickerLead * 0.5f), "no dash before the wave's tell has landed");
         Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, sinceLast: Config.dashCooldown * 0.5f));
     }
 

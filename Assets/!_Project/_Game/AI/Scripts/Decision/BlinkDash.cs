@@ -21,9 +21,9 @@ namespace Kehai.Karen
     //   Crunch            close-ins, and a vanish if the wave hasn't had one.
     // Stepping out after a vanish ends the wave: the Director starts a recovery.
     //
-    // Fair by the same contract as every trick (Karen.md §9): each wave is told — her eye
-    // flicker, at least minTellLead before any dash — and a dash only happens while she can
-    // see you, never during a chase, never to within dashKeepAway, and never in recovery.
+    // Each wave is told by her eye flicker, dashFlickerLead before any dash: the blink dash's
+    // own cue, kept when 0.2.0 removed the warning rule for tricks. A dash only happens while
+    // she can see you, never during a hunt, never to within dashKeepAway, and never in recovery.
     public sealed class BlinkDash
     {
         public enum Kind { None, CloseIn, Vanish }
@@ -79,7 +79,7 @@ namespace Kehai.Karen
             if (fromCalm || phase == KarenDirector.Phase.Spike)
             {
                 armedAt = Time.time;
-                float lead = Mathf.Max(1f, c.Config.minTellLead);
+                float lead = c.Config.dashFlickerLead;
                 c.World.PlayTell(TellKind.EyeFlicker, c.Body.Position, lead);
                 c.Brain.RecordTell(TellKind.EyeFlicker, c.Body.Position, lead);
                 c.Think("DASH", $"DASH     wave {Wave} {(phase == KarenDirector.Phase.Spike ? "peaks" : "begins")} — she's watching your blinks");
@@ -92,7 +92,7 @@ namespace Kehai.Karen
                                   float sinceArmed, float sinceLastDash, KarenConfig config)
         {
             if (Calm(phase) || inRecovery || chasing) return Kind.None;
-            if (sinceArmed < config.minTellLead || sinceLastDash < config.dashCooldown) return Kind.None;
+            if (sinceArmed < config.dashFlickerLead || sinceLastDash < config.dashCooldown) return Kind.None;
             if (!seesYou || !watched) return Kind.None;          // "in view": she sees you looking at her
 
             bool far = gap >= config.dashCloseInMinRange;
@@ -131,7 +131,6 @@ namespace Kehai.Karen
             if (!done) return Kind.None;
 
             lastDashAt = Time.time;
-            FairnessGuard.CheckToldEffect($"blink dash ({kind})", Time.time - armedAt, c.Config.minTellLead);
             return kind;
         }
 

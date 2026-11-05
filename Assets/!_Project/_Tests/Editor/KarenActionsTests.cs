@@ -66,6 +66,46 @@ public class KarenActionsTests
         Assert.AreEqual(3, TacticLibrary.Get("ambush").IntroducedShift);
     }
 
+    // ---- phase 2: Hunt -----------------------------------------------------------------------
+
+    [Test]
+    public void Hunt_CostsAndCoolsLikeTheChaseDid()
+    {
+        Tactic hunt = TacticLibrary.Get("hunt");
+        Assert.AreEqual(0.6f, hunt.TensionCost, 1e-4f);
+        Assert.AreEqual(90f, hunt.Cooldown, 1e-4f);
+    }
+
+    static KarenContext DirectedContext()
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        var ledger = new KarenLedger(config);
+        return new KarenContext { Config = config, Rng = new KarenRng(7), Ledger = ledger, Director = new KarenDirector(config, ledger) };
+    }
+
+    [Test]
+    public void Hunt_IsHeldBack_WhileYouSettleIn_AndInARecovery()
+    {
+        KarenContext c = DirectedContext();
+        Assert.AreEqual(1f, c.Director.ActionPermission(ActionId.Hunt, c), "off shift and outside nothing, the Director doesn't stop a hunt");
+        c.Director.BeginShift(1, 300f);
+        Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt while you settle in");
+        c.Director.StartRecovery(45f, c, "test");
+        Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt in a recovery");
+    }
+
+    [TestCase(true, 0f, 0.2f, 0f, false, 0f, false, TestName = "Seeing you, she keeps going")]
+    [TestCase(false, 3f, 8f, 3f, false, 0f, false, TestName = "Lost, but not there yet, she keeps going")]
+    [TestCase(false, 2f, 1f, 2f, false, 0f, true, TestName = "There, and you're not: hand over")]
+    [TestCase(false, 7f, 6f, 7f, false, 0f, true, TestName = "Six seconds with nothing new: hand over")]
+    [TestCase(false, 7f, 6f, 1f, false, 0f, false, TestName = "Lost, but a fresh clue: she keeps going")]
+    [TestCase(true, 0f, 3f, 0f, true, 0f, true, TestName = "A recovery: hand over")]
+    [TestCase(true, 0f, 3f, 0f, false, 0.9f, true, TestName = "You went outside: hand over")]
+    public void Hunt_HandsOver_ByTheRules(bool sees, float lostFor, float toGoal, float staleness, bool recovery, float outside, bool expected)
+    {
+        Assert.AreEqual(expected, Pursue.HandOver(sees, lostFor, toGoal, staleness, recovery, outside, 6f, out string why), why);
+    }
+
     [Test]
     public void TheRenamedTricks_HaveTheirNewNames()
     {

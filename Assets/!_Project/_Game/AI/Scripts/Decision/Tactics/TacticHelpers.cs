@@ -11,6 +11,67 @@ namespace Kehai.Karen
     {
         public static Vector3 Believed(KarenContext c) => c.Belief.RegionCentroid(LookRegion(c.Map, c.Belief));
 
+        // Where you'll be `ahead` seconds from now, by her reckoning, for a hunt that has lost
+        // you: from her last sighting, along the floor the way you were going at the speed you
+        // were going, and at each fork the way with more of her belief behind it. Built from
+        // what she saw and believes, never from where you are. (Phase 3's route guesses take
+        // over from this, C3.1.)
+        public static Vector3 Forecast(KarenContext c, float ahead)
+        {
+            SightSensor s = c.Body.Sight;
+            return Forecast(c.Map, c.Belief, s.LastSeenPosition, s.LastSeenVelocity, s.Time_SinceSeen() + ahead);
+        }
+
+        public static Vector3 Forecast(StoreMap map, BeliefGrid belief, Vector3 seen, Vector3 velocity, float seconds)
+        {
+            velocity.y = 0f;
+            float speed = Mathf.Min(velocity.magnitude, 7f);
+            int cell = map.CellAt(seen);
+            if (cell < 0 || speed < 0.3f) return seen;          // standing still: where she saw you
+
+            Vector3 heading = velocity / velocity.magnitude;
+            float left = Mathf.Min(speed * seconds, 20f);
+            var visited = new HashSet<int> { cell };
+            while (left > 0f)
+            {
+                float most = 0f;
+                for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
+                    most = Mathf.Max(most, Around(map, belief, map.EdgeTo[e]));
+
+                int next = -1;
+                float bestScore = float.MinValue, step = 0f;
+                Vector3 dir = heading;
+                for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
+                {
+                    int n = map.EdgeTo[e];
+                    if (visited.Contains(n) || !map.IsKarens(n)) continue;
+                    Vector3 d = map.CellPosition[n] - map.CellPosition[cell];
+                    d.y = 0f;
+                    float length = d.magnitude;
+                    if (length < 1e-3f) continue;
+                    d /= length;
+                    float along = Vector3.Dot(d, heading);
+                    if (along < 0.3f) continue;                   // only onward
+                    float score = along + (most > 0f ? 0.5f * Around(map, belief, n) / most : 0f);
+                    if (score > bestScore) { bestScore = score; next = n; step = map.EdgeLength[e]; dir = d; }
+                }
+                if (next < 0) break;                              // a dead end: you're here somewhere
+                visited.Add(next);
+                left -= step;
+                heading = (heading + dir * 0.35f).normalized;     // follow the floor round a bend
+                cell = next;
+            }
+            return map.CellPosition[cell];
+        }
+
+        // Her belief in a cell and the cells beside it.
+        static float Around(StoreMap map, BeliefGrid belief, int cell)
+        {
+            float sum = belief[cell];
+            for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++) sum += belief[map.EdgeTo[e]];
+            return sum;
+        }
+
         // Whether a region is in her part of the building (StoreMap.KarenWorksIn).
         public static bool Hers(StoreMap map, Region r) => r.Cells.Count > 0 && map.IsKarens(r.Cells[0]);
 

@@ -193,7 +193,10 @@ namespace Kehai.Karen
             switch (goal)
             {
                 case ActionId.Hunt:
-                    return InRecovery || Time.time < suppressPursuitUntil ? 0f : 1f;
+                    // Paced (0.2.0): never while you're settling in or recovering. Never outside
+                    // either: her body can't follow you there.
+                    if (InRecovery || CurrentPhase == Phase.Settle || Time.time < suppressPursuitUntil) return 0f;
+                    return c != null && c.Belief != null && c.Belief.OutsideMass > 0.5f ? 0f : 1f;
                 case ActionId.LieInWait:
                 case ActionId.Corner:
                     return InRecovery ? 0f : 1f;

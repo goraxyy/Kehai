@@ -166,8 +166,17 @@ namespace Kehai.Karen
 
                 case ActionId.Hunt:
                     SightSensor s = c.Body.Sight;
+                    if (c.Belief.OutsideMass > 0.5f) { why = "you're outside: she can't follow you there"; return 0f; }
                     if (a.Awareness >= s.confirmAt) { why = $"sighting confirmed ({a.Awareness:0.00})"; return 1.05f; }
                     if (a.Awareness >= s.seeAt) { why = $"seen ({a.Awareness:0.00})"; return 0.55f + (a.Awareness - s.seeAt); }
+                    // A hunt that has lost you keeps going on her reckoning, fading over its memory
+                    // instead of dropping to 0 the moment awareness does (0.2.0).
+                    float lost = s.Time_SinceSeen(), memory = c.Config.huntMemorySeconds;
+                    if (c.Brain != null && c.Brain.IsChasing && lost < memory)
+                    {
+                        why = $"lost you {lost:0.0}s ago: running on to where you'd be";
+                        return 1.05f - 0.3f * (lost / memory) * (lost / memory);
+                    }
                     why = "not seen";
                     return 0f;
 

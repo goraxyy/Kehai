@@ -637,7 +637,10 @@ namespace Kehai.Karen
             if (CurrentPlan == null) return false;
             ActionId g = CurrentPlan.Action;
             bool exempt = g == ActionId.Hunt || g == ActionId.Loom || g == ActionId.LieInWait || g == ActionId.Lure || g == ActionId.BackOff;
-            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f)
+            // Only when a hunt could actually start: with Hunt cooling down (0.2.0), a sighting
+            // would otherwise cut the plan that's already hurrying to you, every tick.
+            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f
+                && HtnPlanner.Candidates(ActionId.Hunt, c, null).Count > 0)
             {
                 Note("", "  interrupt: SeeingPlayerAtRange");
                 return true;
@@ -706,43 +709,27 @@ namespace Kehai.Karen
             }
         }
 
-        // ---- tells and effects (fairness rule 3) --------------------------------------------
+        // ---- tells and effects -------------------------------------------------------------
 
-        float planTellAt = -999f;
-
-        // A PA line is its own tell (the chime); what the plan does after it has been told.
-        public void NotePlanTell() => planTellAt = Time.time;
-
-        // `ofPlan`: a Tell primitive in the running plan, as opposed to a PA chime or the
-        // time clock's buzz, which carry their own effects.
-        // Told each time she gives a warning: what, where, and how long before the trick.
+        // A trick's sound, logged where it played. Until 0.2.0 each had to come 0.8 s before its
+        // effect (fairness rule 3) and the audit timed the gap; the rule is gone, the log stays.
+        // Told each time a trick sounds: what, where, and how long the sound runs.
         public event System.Action<TellKind, Vector3, float> Told;
 
-        public void RecordTell(TellKind kind, Vector3 at, float lead, bool ofPlan = false)
+        public void RecordTell(TellKind kind, Vector3 at, float lead)
         {
             FairnessGuard.NoteTell(kind, lead);
             Told?.Invoke(kind, at, lead);
-            if (ofPlan) planTellAt = Time.time;
             if (ShiftActive && kind != TellKind.PaChime && kind != TellKind.Footsteps)
                 KarenNarrator.Say(StoryKind.Warning, $"Warning: {KarenNarrator.Tell(kind)} near {KarenNarrator.Place(at)} — something's about to happen.", at);
             Note("TELL", $"TELL     {kind} at {Map.Describe(at)} ({lead:0.0}s lead)");
         }
 
-        public void RecordEffect(string label)
-        {
-            if (CurrentPlan?.Tactic != null && CurrentPlan.Tactic.Tier > 0)
-                FairnessGuard.CheckEffect(CurrentPlan.Tactic.Id, planStartedAt, planTellAt, config.minTellLead);
-            Note("EFFECT", "EFFECT   " + label);
-        }
+        public void RecordEffect(string label) => Note("EFFECT", "EFFECT   " + label);
 
-        // An effect that carries its own tell — PA speech, which always follows its chime.
-        // Checked against that tell rather than against the plan that queued it, which may
-        // have finished by the time the words play.
-        void RecordToldEffect(string label, string by, float toldAt)
-        {
-            FairnessGuard.CheckToldEffect(label, Time.time - toldAt, config.minTellLead);
+        // An effect that carries its own sound before it — PA speech, after its chime.
+        void RecordToldEffect(string label, string by, float toldAt) =>
             Note("EFFECT", $"EFFECT   {label} ({by} {Time.time - toldAt:0.0}s before)");
-        }
 
         void OnPaChime(PaAnnouncement a) => RecordTell(TellKind.PaChime, Body.Position, PaSystem.ChimeSeconds);   // storewide; logged where she is
         void OnPaSpeech(PaAnnouncement a)

@@ -72,6 +72,6 @@ namespace Kehai.Karen
         public string Where(Vector3 p) => Map.Describe(p);
         public string RegionName(int region) => Map.RegionName(region);
 
-        public void Think(string kind, string text) => Brain.Note(kind, text);
+        public void Think(string kind, string text) => Brain?.Note(kind, text);   // a test's context has no brain
     }
 }
