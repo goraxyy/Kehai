@@ -128,7 +128,8 @@ Sorted by topic under `docs/`. Start with the handover, then the 2.0.0 plan.
 | | [`DECISIONS.md`](docs/project/DECISIONS.md) | The big technical choices and why |
 | | [`IDEAS.md`](docs/project/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
 | | [`CHANGELOG.md`](docs/project/CHANGELOG.md) | Changes players will notice |
-| `plans/` | [`2.0.0-build-plan.md`](docs/plans/2.0.0-build-plan.md) | Karen 2.0.0: awareness, where she works, losing sight, actions, tricks and the combo room (approved, not built) |
+| `plans/` | [`2.0.0-build-plan.md`](docs/plans/2.0.0-build-plan.md) | Karen 2.0.0, task by task: who builds what, with boxes to tick (approved, not built) |
+| | [`2.0.0-design-notes.md`](docs/plans/2.0.0-design-notes.md) | Why 2.0.0 is built that way: today's code, the options, the sources, your answers |
 | | [`learned-motion-model.md`](docs/plans/learned-motion-model.md) | The learned motion model, draft PR #68 |
 | | [`karen-capture.md`](docs/plans/karen-capture.md) | What catches you, and new fair ways to kill (approved, not started) |
 | | [`marketing-agents.md`](docs/plans/marketing-agents.md) | Hands-off video publishing |
