@@ -21,9 +21,9 @@ namespace Kehai.Karen
     //   Crunch            close-ins, and a vanish if the wave hasn't had one.
     // Stepping out after a vanish ends the wave: the Director starts a recovery.
     //
-    // Each wave is told by her eye flicker, dashFlickerLead before any dash: the blink dash's
-    // own cue, kept when 0.2.0 removed the warning rule for tricks. A dash only happens while
-    // she can see you, never during a hunt, never to within dashKeepAway, and never in recovery.
+    // No cue before a dash: 0.2.0 removed the warnings, her eye flicker at the start of each
+    // wave with them. A dash only happens while she can see you, never during a hunt, never to
+    // within dashKeepAway, and never in recovery.
     public sealed class BlinkDash
     {
         public enum Kind { None, CloseIn, Vanish }
@@ -36,7 +36,7 @@ namespace Kehai.Karen
 
         int closeInsThisWave;
         bool vanishedThisWave;
-        float armedAt = -999f, lastDashAt = -999f, lurkUntil;
+        float lastDashAt = -999f, lurkUntil;
         KarenDirector.Phase lastPhase = KarenDirector.Phase.OffShift;
 
         public void BeginShift()
@@ -45,7 +45,7 @@ namespace Kehai.Karen
             CloseIns = Vanishes = Reveals = 0;
             closeInsThisWave = 0;
             vanishedThisWave = false;
-            armedAt = lastDashAt = -999f;
+            lastDashAt = -999f;
             lastPhase = KarenDirector.Phase.OffShift;
             Lurking = false;
         }
@@ -55,8 +55,7 @@ namespace Kehai.Karen
         static bool Calm(KarenDirector.Phase p) =>
             p == KarenDirector.Phase.OffShift || p == KarenDirector.Phase.Settle || p == KarenDirector.Phase.Recover;
 
-        // Every Director tick: a wave starts when the Director leaves the calm, and the spike
-        // within it is told again.
+        // Every Director tick: a wave starts when the Director leaves the calm.
         public void Tick(KarenContext c)
         {
             if (!c.Features.Goals) return;
@@ -65,11 +64,7 @@ namespace Kehai.Karen
             bool fromCalm = Calm(lastPhase);
             lastPhase = phase;
 
-            if (Calm(phase))
-            {
-                armedAt = -999f;
-                return;
-            }
+            if (Calm(phase)) return;
             if (fromCalm)
             {
                 Wave++;
@@ -77,22 +72,16 @@ namespace Kehai.Karen
                 vanishedThisWave = false;
             }
             if (fromCalm || phase == KarenDirector.Phase.Spike)
-            {
-                armedAt = Time.time;
-                float lead = c.Config.dashFlickerLead;
-                c.World.PlayTell(TellKind.EyeFlicker, c.Body.Position, lead);
-                c.Brain.RecordTell(TellKind.EyeFlicker, c.Body.Position, lead);
                 c.Think("DASH", $"DASH     wave {Wave} {(phase == KarenDirector.Phase.Spike ? "peaks" : "begins")} — she's watching your blinks");
-            }
         }
 
         // What a blink right now would let her do. Pure, so the rules can be tested.
         public static Kind Choose(KarenDirector.Phase phase, bool inRecovery, bool chasing, bool seesYou, bool watched,
                                   float gap, int closeInsThisWave, bool vanishedThisWave,
-                                  float sinceArmed, float sinceLastDash, KarenConfig config)
+                                  float sinceLastDash, KarenConfig config)
         {
             if (Calm(phase) || inRecovery || chasing) return Kind.None;
-            if (sinceArmed < config.dashFlickerLead || sinceLastDash < config.dashCooldown) return Kind.None;
+            if (sinceLastDash < config.dashCooldown) return Kind.None;
             if (!seesYou || !watched) return Kind.None;          // "in view": she sees you looking at her
 
             bool far = gap >= config.dashCloseInMinRange;
@@ -124,7 +113,7 @@ namespace Kehai.Karen
             Vector3 you = sight.LastSeenPosition;
             float gap = Flat(c.Body.Position, you);
             Kind kind = Choose(c.Director.CurrentPhase, c.Director.InRecovery, c.Brain.IsChasing, sight.SeesNow, sight.IsWatched,
-                               gap, closeInsThisWave, vanishedThisWave, Time.time - armedAt, Time.time - lastDashAt, c.Config);
+                               gap, closeInsThisWave, vanishedThisWave, Time.time - lastDashAt, c.Config);
             if (kind == Kind.None) return kind;
 
             bool done = kind == Kind.CloseIn ? CloseIn(c, you, gap) : Vanish(c, you, sight.LastSeenVelocity);

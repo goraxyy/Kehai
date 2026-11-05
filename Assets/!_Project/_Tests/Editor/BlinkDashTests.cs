@@ -11,8 +11,8 @@ public class BlinkDashTests
 
     static BlinkDash.Kind Choose(KarenDirector.Phase phase, float gap, int closeIns = 0, bool vanished = false,
                                  bool inRecovery = false, bool chasing = false, bool sees = true, bool watched = true,
-                                 float sinceArmed = 10f, float sinceLast = 60f) =>
-        BlinkDash.Choose(phase, inRecovery, chasing, sees, watched, gap, closeIns, vanished, sinceArmed, sinceLast, Config);
+                                 float sinceLast = 60f) =>
+        BlinkDash.Choose(phase, inRecovery, chasing, sees, watched, gap, closeIns, vanished, sinceLast, Config);
 
     [Test]
     public void Calm_NeverDashes()
@@ -30,10 +30,10 @@ public class BlinkDashTests
         Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, chasing: true));
     }
 
+    // No eye flicker before a dash since 0.2.0; dashes are still spaced.
     [Test]
-    public void TheWaveIsToldFirst_AndDashesAreSpaced()
+    public void DashesAreSpaced()
     {
-        Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, sinceArmed: Config.dashFlickerLead * 0.5f), "no dash before the wave's tell has landed");
         Assert.AreEqual(BlinkDash.Kind.None, Choose(Build, 20f, sinceLast: Config.dashCooldown * 0.5f));
     }
 

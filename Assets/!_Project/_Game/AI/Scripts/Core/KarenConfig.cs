@@ -129,8 +129,6 @@ namespace Kehai.Karen
         public float overtimePerCatch = 60f;
 
         [Header("Blink dash (IDEAS.md, the blink mechanic)")]
-        [Tooltip("Her eye flickers this long before a dash: the blink dash's own cue (not the removed warning rule).")]
-        public float dashFlickerLead = 1f;
         [Tooltip("Close in only when she's at least this far from you.")]
         public float dashCloseInMinRange = 10f;
         [Tooltip("A dash never ends nearer you than this.")]
