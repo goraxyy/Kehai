@@ -1,7 +1,7 @@
 # Marketing
 
 What we say about Kehai, the videos we make, and the automation that makes most of them. The
-to-do list is in [RELEASE_PLAN.md](RELEASE_PLAN.md) (Setup and Milestone 5).
+to-do list is in [RELEASE_PLAN.md](../project/RELEASE_PLAN.md) (Setup and Milestone 5).
 
 ---
 
@@ -28,7 +28,7 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 3. **Perfectly polite. One touch ends the shift.**
 4. **Catch the warning:** her tricks come with a tell.
 
-What we may claim is in [`facts.json`](../tools/marketing/facts.json). It's checked against the
+What we may claim is in [`facts.json`](../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
 
 **Who it's for:** players of short indie horror and store sims (*The Convenience Store*,
@@ -57,14 +57,14 @@ these from your shifts (below).
 
 ### 2. Educational (long)
 How games work, shown through how Kehai was made. Topics:
-- **How games stay fast:** GPU occlusion culling, 18.9 → 4.5 ms ([DECISIONS.md](DECISIONS.md#2-rendering))
+- **How games stay fast:** GPU occlusion culling, 18.9 → 4.5 ms ([DECISIONS.md](../project/DECISIONS.md#2-rendering))
 - **Thousands of shelf items without thousands of objects:** shelves as data; a 92 MB scene down to 6 MB
 - **How to make an endless maze:** seeds, chunks, spanning trees, braiding
 - **How Karen guesses where you are:** a belief map from sight, sound and witnesses
 - **How webcam blink detection works**, and why the ~300 ms of a blink is enough
 - **Recording a whole shift in 1 MB:** replays from snapshots
 - **I made an AI play my horror game:** the agent test environment
-- **Does Karen's learning actually help?** The ablation test, honestly ([IDEAS.md](IDEAS.md#4-ablation))
+- **Does Karen's learning actually help?** The ablation test, honestly ([IDEAS.md](../project/IDEAS.md#4-ablation))
 
 ### 3. Updates (long + short)
 New features, explained: Karen's adaptability (the patterns she learns about you), new tactics,
@@ -85,9 +85,9 @@ Steam page. Social sites bring people; the email list and Discord keep them.
 ## The automation
 
 Most shorts are made for you; you approve each one in Telegram. Code and commands:
-[`tools/marketing/README.md`](../tools/marketing/README.md). This is being rebuilt so agents also
+[`tools/marketing/README.md`](../../tools/marketing/README.md). This is being rebuilt so agents also
 find the ideas and the footage, and post on their own: see
-[`plans/marketing-agents.md`](plans/marketing-agents.md). Below is how it works today.
+[`plans/marketing-agents.md`](../plans/marketing-agents.md). Below is how it works today.
 
 1. **You play.** Each shift records its best moments (`F7` marks one yourself).
 2. **Saturday:** Claude picks the week's 2 shorts from those moments.

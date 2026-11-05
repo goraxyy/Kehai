@@ -11,7 +11,8 @@ are from the dev Mac (M2, 8 GB), in the editor, at 1080p.
 6. [Replays record, they don't re-simulate](#6-replays-record-they-dont-re-simulate)
 7. [Quality without rebuilding the pipeline](#7-quality-without-rebuilding-the-pipeline)
 8. [The pipelines](#8-the-pipelines)
-9. [Still open](#9-still-open)
+9. [Reproducible interior models and safe room circulation](#9-reproducible-interior-models-and-safe-room-circulation)
+10. [Still open](#10-still-open)
 
 ---
 
@@ -200,7 +201,7 @@ Existing coffee, radio, punch-clock and tool objects keep their gameplay referen
 bake, moving the navigation bounds' midpoint above the floor. Map sampling then found only a
 handful of cells. Ceilings are now excluded from the bake, and StoreMap samples at the lowest
 navigation level. The added third west room also requires another named rendering layer so
-its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](INTERIOR_MODELS.md).
+its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](../store/INTERIOR_MODELS.md).
 
 ---
 
@@ -208,7 +209,7 @@ its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](INTERIOR_
 
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
-  the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](KAREN_RESULTS.md)).
+  the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).
 - **Karen can stand on a stuck player** without catching them.
 - **Hitches:** the GPU drawer's first growth (130–210 ms, once); the maze's NavMesh rebuild
   (about 20 ms per border crossed).

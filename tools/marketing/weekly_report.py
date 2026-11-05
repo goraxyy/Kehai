@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The weekly report for the owner: what the pipeline made and spent, and what to try next
-(docs/MARKETING.md).
+(docs/marketing/MARKETING.md).
 
     uv run weekly_report.py [--week 2026-W40] [--dry-run] [--root DIR]
 

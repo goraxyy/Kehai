@@ -1,6 +1,6 @@
 # Karen — ablation results
 
-The ablation ladder from [`IDEAS.md`](IDEAS.md#4-ablation), run headless against four simulated
+The ablation ladder from [`IDEAS.md`](../project/IDEAS.md#4-ablation), run headless against four simulated
 players that react to her. Each rung adds one mechanism, so a difference between neighbouring
 rungs is that mechanism. This is the run of 2026-10-16, against today's Karen: her touch kills,
 she is slightly faster than the player, and the Director's blink dash is part of every rung from C.
@@ -12,14 +12,14 @@ she is slightly faster than the player, and the Director's blink dash is part of
 | C | belief grid (incl. negative evidence), utility goals, the tactic library, the Director's pacing and blink dash | nothing — every tactic scored by its authored prior |
 | D | + the bandit | within a shift; starts each shift from the prior |
 | E | + the persistent Ledger | across shifts: tactic values, where you dwell and hide, your routes |
-| F | + a trained PPO policy picks the tactic ([`tools/rl`](../tools/rl/README.md)) | offline, from training runs |
+| F | + a trained PPO policy picks the tactic ([`tools/rl`](../../tools/rl/README.md)) | offline, from training runs |
 
 **Rung F is not in this run.** It is built, but no policy has been trained yet. Without a model it
 falls back to the bandit's pick, which would make it a second copy of E.
 
 ## How it was run
 
-- **Players.** `SimulatedPlayer` in four profiles ([`tools/eval/README.md`](../tools/eval/README.md#the-simulated-players)):
+- **Players.** `SimulatedPlayer` in four profiles ([`tools/eval/README.md`](../../tools/eval/README.md#the-simulated-players)):
   - *efficient*: nearest job first;
   - *skittish*: over-reacts to everything;
   - *reckless*: sprints, ignores noise;

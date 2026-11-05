@@ -2,7 +2,7 @@
 
 Scripts that turn recorded shifts into finished videos, from picking the moments to the text
 that goes with each post. What it's for, the setup and the decisions still open are in
-[`docs/MARKETING.md`](../../docs/MARKETING.md); the video editor has its own
+[`docs/marketing/MARKETING.md`](../../docs/marketing/MARKETING.md); the video editor has its own
 [`editor/README.md`](editor/README.md). launchd runs these steps on a schedule, with approvals in
 Telegram; each one also runs by hand.
 
@@ -125,7 +125,7 @@ Not marketing, but it shares this pipeline's Telegram, Claude client and schedul
 job also pulls new playtest sessions from the upload service, reads and summarises them (the
 `playtest_summary` step), announces them in Telegram, and rebuilds the combined report; a bug
 note becomes a GitHub issue only when you tap 📝 (`pt:` buttons). `uv run playtest.py status`
-shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/PLAYTEST.md).
+shows what's set up. The whole loop is in [`PLAYTEST.md`](../../docs/game/PLAYTEST.md).
 
 ## Exit codes (every script)
 

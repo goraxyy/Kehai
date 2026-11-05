@@ -1,7 +1,7 @@
 # tools/playtest
 
 Everything outside the game for running playtests. The design and the loop are in
-[`PLAYTEST.md`](../../docs/PLAYTEST.md).
+[`PLAYTEST.md`](../../docs/game/PLAYTEST.md).
 
 | | |
 |---|---|

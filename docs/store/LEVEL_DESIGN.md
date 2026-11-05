@@ -8,7 +8,7 @@ describes a built room. The rest of the environment remains planned work.
 
 Plans and model lists for the parts of the store that are still grey boxes: the parking lot, the
 building's outside, the lobby, the restrooms and the staff rooms. It feeds Milestone 7 of
-[RELEASE_PLAN.md](RELEASE_PLAN.md) (level design, models of the entire place). Greybox these
+[RELEASE_PLAN.md](../project/RELEASE_PLAN.md) (level design, models of the entire place). Greybox these
 first and playtest Karen's routes through them before dressing them.
 
 Coordinates are the scene's: x runs east, z runs north, metres. The street is north of the store

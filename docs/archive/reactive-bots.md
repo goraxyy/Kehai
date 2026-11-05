@@ -1,6 +1,6 @@
 # Reactive simulated players
 
-> **Status:** built and merged (PR #62); the full ladder rerun with these players is PR #63 ([KAREN_RESULTS.md](../KAREN_RESULTS.md)). Kept for the record.
+> **Status:** built and merged (PR #62); the full ladder rerun with these players is PR #63 ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)). Kept for the record.
 
 ## Context
 

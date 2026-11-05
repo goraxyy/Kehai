@@ -1108,7 +1108,7 @@ Sanity checks that fail loudly in CI:
 
 Everything in §§2–13 is built. This section maps the design onto the code and says where the
 code departs from the plan above. Results of the ablation ladder are in
-[`KAREN_RESULTS.md`](KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../tools/eval/README.md).
+[`KAREN_RESULTS.md`](KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
 
@@ -1117,7 +1117,7 @@ code departs from the plan above. Results of the ablation ladder are in
 | §2 three minds | `AI/Scripts/Core/KarenBody.cs`, `KarenDirector.cs` (+ `PanicIndex`), `KarenLedger.cs`, tied together by `KarenBrain.cs` |
 | §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
 | §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
-| §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](STORE.md#karens-map) |
+| §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](../store/STORE.md#karens-map) |
 | §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard) |
 | §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
 | §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`; Panic Index and PI pacing in `KarenDirector.cs` |
