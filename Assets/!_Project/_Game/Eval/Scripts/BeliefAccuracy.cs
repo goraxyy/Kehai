@@ -186,12 +186,28 @@ namespace Kehai.Eval
                 BeliefScore.FillLastSeen(baseline, map.CellPosition, clock.Value.Position, Time.time - began);
             else
                 BeliefScore.FillUniform(baseline);
+
+            // Her grid has one cell for everything outside her part of the building, so both
+            // are scored on that: outside is one place, and you're "in" it when you're out there.
+            BeliefGrid belief = brain.Belief;
+            int outside = belief != null && belief.CellCount == n ? belief.OutsideCell : -1;
+            if (outside >= 0)
+            {
+                float folded = 0f;
+                for (int c = 0; c < n; c++)
+                {
+                    if (map.IsKarens(c) || c == outside) continue;
+                    folded += baseline[c];
+                    baseline[c] = 0f;
+                }
+                baseline[outside] += folded;
+                if (!map.IsKarens(truth)) truth = outside;
+            }
             BeliefScore.Result lastSeen = BeliefScore.Score(baseline, map.CellPosition, truth);
             (inView ? LastSeenInView : LastSeenOutOfView).Add(lastSeen);
 
             BeliefScore.Result own = lastSeen;
             Source = "last_seen";
-            BeliefGrid belief = brain.Belief;
             if (brain.config.Features.Belief && belief != null && belief.CellCount == n)
             {
                 for (int c = 0; c < n; c++) grid[c] = belief[c];

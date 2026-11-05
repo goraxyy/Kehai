@@ -104,11 +104,12 @@ public class KarenRuleTests
         foreach (string id in ids) Assert.AreSame(TacticLibrary.All.First(t => t.Id == id), TacticLibrary.Get(id));
     }
 
+    // Tiers 0-3 each keep something live (0.2.0); tier 4 waits for a trick back from draft.
     [Test]
     public void EveryTier_IsPopulated()
     {
-        for (int tier = 0; tier <= 4; tier++)
-            Assert.IsTrue(TacticLibrary.All.Any(t => t.Tier == tier), $"no tactic at tier {tier}");
+        for (int tier = 0; tier <= 3; tier++)
+            Assert.IsTrue(TacticLibrary.Live.Any(t => t.Tier == tier), $"no live tactic at tier {tier}");
     }
 
     // ---- §7: the bandit learns, habituates, and forgets -----------------------------------------
@@ -391,7 +392,8 @@ public class StoreMapAndBeliefTests
     {
         var grid = new BeliefGrid(map);
         float h0 = grid.Entropy;
-        Vector3 at = map.CellPosition[map.CellCount / 2];
+        var hers = Enumerable.Range(0, map.CellCount).Where(map.IsKarens).ToList();   // outside is one cell
+        Vector3 at = map.CellPosition[hers[hers.Count / 2]];
 
         grid.Apply(new Observation(SenseChannel.Sight, at, 0.95f, 1.5f, "test sighting"));
         Assert.Less(grid.Entropy, h0 * 0.6f, "a confident sighting barely moved belief");
@@ -406,7 +408,7 @@ public class StoreMapAndBeliefTests
     public void Belief_ASweepRemovesMassWhereSheLooked()
     {
         var grid = new BeliefGrid(map);
-        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6).Id;
+        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6 && map.IsKarens(r.Cells[0])).Id;
         float before = grid.RegionMass[region];
         var cells = map.Regions[region].Cells.ToList();
         grid.ApplySweep(cells, cells.Select(_ => 0.9f).ToList());
@@ -418,7 +420,7 @@ public class StoreMapAndBeliefTests
     public void Belief_BiasMovesNoMoreThanItIsAllowed()
     {
         var grid = new BeliefGrid(map);
-        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6).Id;
+        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6 && map.IsKarens(r.Cells[0])).Id;
         float before = grid.RegionMass[region];
         grid.Bias(region, 0.15f);
         Assert.LessOrEqual(grid.RegionMass[region] - before, 0.15f + 1e-4f);

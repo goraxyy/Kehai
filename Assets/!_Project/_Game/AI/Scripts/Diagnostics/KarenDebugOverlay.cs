@@ -266,7 +266,7 @@ namespace Kehai.Karen
             sb.AppendLine($"sight {brain.Body.Sight.Band} ({brain.Body.Sight.Awareness:0.00})  energy belief {brain.Energy.Energy:0.00}");
             if (brain.CurrentPlan != null)
                 sb.AppendLine($"plan <b>{brain.CurrentPlan.Name}</b> step {brain.CurrentPlan.Plan.Index + 1}/{brain.CurrentPlan.Plan.Count}: {brain.CurrentPlan.Plan.Current}");
-            sb.AppendLine("goals: " + string.Join("  ", brain.Goals.LastOptions.Select(o => $"{o.Name} {o.Utility:0.00}")));
+            sb.AppendLine("actions: " + string.Join("  ", brain.Actions.LastOptions.Select(o => $"{o.Name} {o.Utility:0.00}")));
             sb.AppendLine();
             foreach (ThoughtRecord r in brain.Log.Latest(16)) sb.AppendLine(r.Text);
             GUILayout.Label(sb.ToString(), small);

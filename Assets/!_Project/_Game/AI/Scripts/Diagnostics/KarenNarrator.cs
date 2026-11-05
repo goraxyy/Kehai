@@ -115,21 +115,21 @@ namespace Kehai.Karen
             return "just a hunch";
         }
 
-        public static string Goal(GoalId goal)
+        public static string ActionName(ActionId goal)
         {
             switch (goal)
             {
-                case GoalId.Patrol: return "walking her rounds";
-                case GoalId.Investigate: return "going to check out something she noticed";
-                case GoalId.Sweep: return "searching the store for you";
-                case GoalId.Flush: return "trying to scare you out of hiding";
-                case GoalId.Deny: return "undoing your work";
-                case GoalId.Herd: return "steering you where she wants you";
-                case GoalId.Ambush: return "lying in wait";
-                case GoalId.Stalk: return "following you at a distance";
-                case GoalId.Pursue: return "coming after you";
-                case GoalId.Withdraw: return "backing off for a while";
-                case GoalId.Assist: return "being... helpful?";
+                case ActionId.Roam: return "walking her rounds";
+                case ActionId.Check: return "going to check out something she noticed";
+                case ActionId.Search: return "searching the store for you";
+                case ActionId.Flush: return "trying to scare you out of hiding";
+                case ActionId.Disrupt: return "undoing your work";
+                case ActionId.Corner: return "steering you where she wants you";
+                case ActionId.LieInWait: return "lying in wait";
+                case ActionId.Loom: return "following you at a distance";
+                case ActionId.Hunt: return "coming after you";
+                case ActionId.BackOff: return "backing off for a while";
+                case ActionId.Lure: return "being... helpful?";
                 default: return goal.ToString().ToLowerInvariant();
             }
         }
@@ -169,6 +169,7 @@ namespace Kehai.Karen
                 case "understudy": return "sending in a fake customer";
                 case "stalk": return "following you at a distance";
                 case "ambush": return "waiting somewhere you're about to go";
+                case "hunt":
                 case "chase": return "chasing you!";
                 case "follow": return "walking after you";
                 case "favour": return "doing you a favour";

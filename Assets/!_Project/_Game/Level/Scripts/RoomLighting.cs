@@ -62,9 +62,14 @@ public static class RoomLighting
         ("Sales floor", SalesFloor), ("Lobby", Lobby), ("Stockroom", Stockroom), ("Staff room", StaffRoom),
     };
 
+    // The office and the WC are rooms of the staff room's part of the building: the lights see
+    // them as its second and third rooms, as they did before the area table named them.
+    public static string PartOf(string area) => area == "Office" || area == "WC" ? "Staff room" : area;
+
     public static int BitFor(string area)
     {
         if(area=="Cold storage")return Stockroom;
+        area = PartOf(area);
         foreach (var (name, bit) in Rooms) if (name == area) return bit;
         return Outside;                                 // the street, the alleys, the yard
     }
@@ -149,7 +154,7 @@ public static class RoomLighting
             var taken = new HashSet<int>();
             for (int r = 0; r < n; r++)
             {
-                Area[r] = AreaOf(map.Rooms[r]);
+                Area[r] = PartOf(AreaOf(map.Rooms[r]));
                 int bit = BitFor(Area[r]);
                 // The first room of a part keeps its layer; another takes a spare one, while any are left.
                 if (bit != Outside && !taken.Add(bit))
@@ -214,7 +219,7 @@ public static class RoomLighting
         // rooms, the one whose floor is nearest. -1 outside, or in a part with no room.
         public int At(Vector3 p)
         {
-            string area = StoreMap.AreaAt(p);
+            string area = PartOf(StoreMap.AreaAt(p));
             if (BitFor(area) == Outside || !ofArea.TryGetValue(area, out List<int> rooms)) return -1;
             if (rooms.Count == 1) return rooms[0];
             int best = -1;
@@ -505,7 +510,7 @@ public static class RoomLighting
             {
                 var p = new Vector3(x, 0f, z);
                 int i;
-                if (walled == null) i = System.Array.FindIndex(Rooms, room => room.area == StoreMap.AreaAt(p));
+                if (walled == null) i = System.Array.FindIndex(Rooms, room => room.area == PartOf(StoreMap.AreaAt(p)));
                 else
                 {
                     // The floor's own room where there's floor near; the area table under walls and fittings.

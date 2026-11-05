@@ -9,7 +9,30 @@ namespace Kehai.Karen
     // never from where the player actually is.
     public static class TacticHelpers
     {
-        public static Vector3 Believed(KarenContext c) => c.Belief.RegionCentroid(c.Belief.PeakRegion);
+        public static Vector3 Believed(KarenContext c) => c.Belief.RegionCentroid(LookRegion(c.Map, c.Belief));
+
+        // Whether a region is in her part of the building (StoreMap.KarenWorksIn).
+        public static bool Hers(StoreMap map, Region r) => r.Cells.Count > 0 && map.IsKarens(r.Cells[0]);
+
+        // The region to look for you in: the likeliest one of hers. When most of her belief is
+        // outside, it's the way out you most likely took — she can't follow you out there, so
+        // she goes to the door you'll come back through.
+        public static int LookRegion(StoreMap map, BeliefGrid belief)
+        {
+            Region peak = map.Regions[belief.PeakRegion];
+            if (Hers(map, peak)) return peak.Id;
+            int exit = belief.LikeliestExit();
+            if (exit >= 0)
+            {
+                int region = map.RegionAt(belief.ExitPosition(exit));
+                if (region >= 0) return region;
+            }
+            int best = -1;
+            float mass = -1f;
+            foreach (Region r in map.Regions)
+                if (Hers(map, r) && belief.RegionMass[r.Id] > mass) { mass = belief.RegionMass[r.Id]; best = r.Id; }
+            return best >= 0 ? best : peak.Id;
+        }
 
         public static Vector3 OnFloor(Vector3 p, float radius = 3f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, NavMesh.AllAreas) ? hit.position : p;
@@ -49,7 +72,7 @@ namespace Kehai.Karen
             float bestScore = float.MinValue;
             foreach (Region r in c.Map.Regions)
             {
-                if (r.IsDoor || r.Cells.Count < 3) continue;
+                if (r.IsDoor || r.Cells.Count < 3 || !Hers(c.Map, r)) continue;
                 float d = Vector3.Distance(r.Centroid, body);
                 if (d > within || d < 5f) continue;
                 float score = WalkFromBelief(c, r.Centroid) * 0.1f
@@ -126,6 +149,7 @@ namespace Kehai.Karen
             c.Map.CellsWithin(target, 14f, cells);
             for (int i = 0; i < cells.Count; i += 3)
             {
+                if (!c.Map.IsKarens(cells[i])) continue;
                 Vector3 p = c.Map.CellPosition[cells[i]];
                 float d = Vector3.Distance(p, target);
                 if (d < 8f) continue;

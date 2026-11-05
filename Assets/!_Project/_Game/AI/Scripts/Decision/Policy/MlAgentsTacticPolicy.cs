@@ -132,7 +132,7 @@ namespace Kehai.Karen
         // ---- one decision -----------------------------------------------------------------
 
         KarenContext context;
-        GoalId goal;
+        ActionId goal;
         bool[] mask;
         int heuristic = -1;
         int action = -1;
@@ -141,7 +141,7 @@ namespace Kehai.Karen
 
         public KarenContext Context => context;
 
-        public bool TryChoose(GoalId goal, IReadOnlyList<Tactic> candidates, Tactic bandit, KarenContext c, out int chosen, out string why)
+        public bool TryChoose(ActionId goal, IReadOnlyList<Tactic> candidates, Tactic bandit, KarenContext c, out int chosen, out string why)
         {
             chosen = -1;
             context = c;

@@ -5,14 +5,16 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    // How she gets about when she isn't doing something to you. Tier 0: no tension cost,
-    // not bandit arms, always permitted.
+    // How she gets about when she isn't doing something to you: the own moves of Roam, Check,
+    // Search and Back off (what each does with no trick), and Ask the customers. Tier 0: no
+    // tension cost, not bandit arms, always permitted.
 
     public sealed class PatrolTactic : Tactic
     {
         public override string Id => "patrol";
-        public override string Title => "Patrol";
-        public override GoalId[] Goals => new[] { GoalId.Patrol };
+        public override string Title => "Roam";
+        public override bool OwnMove => true;
+        public override ActionId[] Actions => new[] { ActionId.Roam };
         public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0f;
@@ -30,7 +32,7 @@ namespace Kehai.Karen
             float bestScore = float.MinValue;
             foreach (Region r in c.Map.Regions)
             {
-                if (r.IsDoor || r.Cells.Count < 4 || StoreMap.IsOutdoors(r.Area)) continue;
+                if (r.IsDoor || r.Cells.Count < 4 || !TacticHelpers.Hers(c.Map, r)) continue;
                 float since = c.Now - c.Brain.LastVisited(r.Id);
                 float score = Mathf.Min(since, 240f) / 240f + c.Belief.RegionMass[r.Id] * 4f
                             - Vector3.Distance(r.Centroid, c.Body.Position) / 120f + c.Rng.Value * 0.2f;
@@ -46,8 +48,9 @@ namespace Kehai.Karen
     public sealed class InvestigateTactic : Tactic
     {
         public override string Id => "investigate";
-        public override string Title => "Investigate";
-        public override GoalId[] Goals => new[] { GoalId.Investigate };
+        public override string Title => "Check";
+        public override bool OwnMove => true;
+        public override ActionId[] Actions => new[] { ActionId.Check };
         public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0f;
@@ -60,10 +63,12 @@ namespace Kehai.Karen
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
-            int region = c.Belief.PeakRegion;
+            // Her likeliest region, or with you outside, the way out you took (LookRegion).
+            int region = TacticHelpers.LookRegion(c.Map, c.Belief);
+            bool outside = region != c.Belief.PeakRegion;
             plan.Target = c.RegionName(region);
             plan.Add(new MoveTo(k => k.Belief.RegionCentroid(region), KarenBody.Pace.Hurry, "investigate " + plan.Target, 1.6f)
-                .When(k => k.Belief.RegionMass[region] > 0.02f, "belief still there"));
+                .When(k => k.Belief.RegionMass[region] > 0.02f || outside && k.Belief.OutsideMass > 0.02f, "belief still there"));
             plan.Add(new LookAround(3f));
         }
     }
@@ -73,8 +78,9 @@ namespace Kehai.Karen
     public sealed class SweepTactic : Tactic
     {
         public override string Id => "sweep";
-        public override string Title => "Sweep";
-        public override GoalId[] Goals => new[] { GoalId.Sweep };
+        public override string Title => "Search";
+        public override bool OwnMove => true;
+        public override ActionId[] Actions => new[] { ActionId.Search };
         public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0f;
@@ -88,7 +94,7 @@ namespace Kehai.Karen
         {
             var hiding = c.Ledger.ConcealmentRegions(c, 3);
             var ranked = c.Map.Regions
-                .Where(r => !r.IsDoor && r.Cells.Count >= 3)
+                .Where(r => !r.IsDoor && r.Cells.Count >= 3 && TacticHelpers.Hers(c.Map, r))
                 .Select(r => new
                 {
                     r,
@@ -115,7 +121,7 @@ namespace Kehai.Karen
     {
         public override string Id => "poll_witnesses";
         public override string Title => "Ask the customers";
-        public override GoalId[] Goals => new[] { GoalId.Sweep, GoalId.Investigate };
+        public override ActionId[] Actions => new[] { ActionId.Search, ActionId.Check };
         public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0f;
@@ -135,6 +141,7 @@ namespace Kehai.Karen
             foreach (CustomerMemory m in CustomerMemory.All)
             {
                 if (m == null || !m.HasSighting || m.possessed) continue;
+                if (c.Belief.IsOutside(m.transform.position)) continue;   // a shopper outside is out of her reach
                 float d = Vector3.Distance(m.transform.position, c.Body.Position);
                 if (d < best) { best = d; witness = m; }
             }
@@ -157,8 +164,9 @@ namespace Kehai.Karen
     public sealed class WithdrawTactic : Tactic
     {
         public override string Id => "withdraw";
-        public override string Title => "Withdraw";
-        public override GoalId[] Goals => new[] { GoalId.Withdraw };
+        public override string Title => "Back off";
+        public override bool OwnMove => true;
+        public override ActionId[] Actions => new[] { ActionId.BackOff };
         public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0.04f;
@@ -176,7 +184,7 @@ namespace Kehai.Karen
             float bestWalk = -1f;
             foreach (Region r in c.Map.Regions)
             {
-                if (r.IsDoor || r.Cells.Count < 4 || StoreMap.IsOutdoors(r.Area)) continue;
+                if (r.IsDoor || r.Cells.Count < 4 || !TacticHelpers.Hers(c.Map, r)) continue;
                 float d = far[r.Cells[0]];
                 if (float.IsInfinity(d) || d <= bestWalk) continue;
                 bestWalk = d;

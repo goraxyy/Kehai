@@ -188,20 +188,20 @@ namespace Kehai.Karen
             }
         }
 
-        public float GoalPermission(GoalId goal, KarenContext c)
+        public float ActionPermission(ActionId goal, KarenContext c)
         {
             switch (goal)
             {
-                case GoalId.Pursue:
+                case ActionId.Hunt:
                     return InRecovery || Time.time < suppressPursuitUntil ? 0f : 1f;
-                case GoalId.Ambush:
-                case GoalId.Herd:
+                case ActionId.LieInWait:
+                case ActionId.Corner:
                     return InRecovery ? 0f : 1f;
-                case GoalId.Withdraw:
-                case GoalId.Assist:
-                case GoalId.Patrol:
-                case GoalId.Investigate:
-                case GoalId.Sweep:
+                case ActionId.BackOff:
+                case ActionId.Lure:
+                case ActionId.Roam:
+                case ActionId.Check:
+                case ActionId.Search:
                     return 1f;
                 default:
                     return CurrentPhase == Phase.OffShift ? 0f : 1f;
@@ -303,7 +303,7 @@ namespace Kehai.Karen
             if (player == null || CurrentPhase == Phase.OffShift) return;
 
             int region = c.Map.RegionAt(player.Position);
-            if (c.A.Awareness > 0.3f || c.Brain.CurrentPlan?.Goal == GoalId.Pursue) lastThreat = Time.time;
+            if (c.A.Awareness > 0.3f || c.Brain.CurrentPlan?.Action == ActionId.Hunt) lastThreat = Time.time;
 
             MotionState motion = player.Motion;
             stillFor = motion == MotionState.Still || motion == MotionState.Crouching ? stillFor + dt : 0f;

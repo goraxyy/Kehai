@@ -1,3 +1,4 @@
+using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -59,6 +60,7 @@ namespace Kehai.Karen
             body.Agent.stoppingDistance = 0.2f;
             body.Agent.speed = config.walkSpeed;
             body.Agent.obstacleAvoidanceType = ObstacleAvoidanceType.MedQualityObstacleAvoidance;
+            body.Agent.areaMask = KarenArea.AgentMask;   // her part of the building only
 
             body.Head = gaze.transform;
             body.eyeRenderer = eyeRenderer;
@@ -93,7 +95,7 @@ namespace Kehai.Karen
 
             body.SetMood(Mood.Calm);
             root.AddComponent<KarenFloorCone>();   // her gaze, painted on the floor
-            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, NavMesh.AllAreas)) body.Agent.Warp(hit.position);
+            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) body.Agent.Warp(hit.position);
             return body;
         }
 
@@ -150,7 +152,9 @@ namespace Kehai.Karen
             if (!Agent.isOnNavMesh) return;
             Agent.isStopped = false;
             Agent.speed = Speed(pace);
-            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            // Sent outside her part of the building, she goes to the nearest point in it instead.
+            destination = KarenArea.Clamp(StoreMap.Current, destination);
+            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 3f, KarenArea.AgentMask))
                 destination = hit.position;
             Agent.SetDestination(destination);
         }
@@ -184,7 +188,7 @@ namespace Kehai.Karen
 
         public void Warp(Vector3 at)
         {
-            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, NavMesh.AllAreas)) Agent.Warp(hit.position);
+            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) Agent.Warp(hit.position);
         }
 
         public void TurnToward(Vector3 point)

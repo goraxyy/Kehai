@@ -3,7 +3,25 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
-    public enum GoalId { Patrol, Investigate, Sweep, Flush, Deny, Herd, Ambush, Stalk, Pursue, Withdraw, Assist }
+    // What she's trying to do right now: once her "goals", her actions since 0.2.0. Each is
+    // scored twice a second and the best one wins (Actions.cs); tricks are the ways to do one.
+    // No action shares a name with a trick. The order is the old goals', so the rung F
+    // policy's observation keeps its layout.
+    public enum ActionId { Roam, Check, Search, Flush, Disrupt, Corner, LieInWait, Loom, Hunt, BackOff, Lure }
+
+    public static class ActionNames
+    {
+        // As people say it: "Lie in wait", not "LieInWait".
+        public static string Name(this ActionId a)
+        {
+            switch (a)
+            {
+                case ActionId.LieInWait: return "Lie in wait";
+                case ActionId.BackOff: return "Back off";
+                default: return a.ToString();
+            }
+        }
+    }
 
     // The handful of scalars the decision layer actually uses (Karen.md §6.2), refreshed at
     // the appraisal rate. Everything above the body reads this, not the raw grid.

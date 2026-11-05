@@ -47,7 +47,7 @@ namespace Kehai.Karen
     {
         public override string Id => "crate_wall";
         public override string Title => "Crate wall";
-        public override GoalId[] Goals => new[] { GoalId.Herd };
+        public override ActionId[] Actions => new[] { ActionId.Corner };
         public override int Tier => 2;
         public override int IntroducedShift => 7;
         public override float TensionCost => 0.2f;
@@ -97,60 +97,11 @@ namespace Kehai.Karen
         }
     }
 
-    public sealed class DoorLockTactic : Tactic
-    {
-        public override string Id => "door_lock";
-        public override string Title => "Door lock";
-        public override GoalId[] Goals => new[] { GoalId.Herd };
-        public override int Tier => 2;
-        public override int IntroducedShift => 7;
-        public override float TensionCost => 0.15f;
-        public override float Cooldown => 120f;
-        public override float PanicPrior => 0.12f;
-        public override TellKind Tell => TellKind.Clunk;
-        public override string Chore => "find another way round";
-        public override string Attacks => "space";
-
-        HingeDoor door;
-        int doorRegion = -1;
-
-        public override bool Available(KarenContext c, out string why)
-        {
-            door = null;
-            float best = float.MaxValue;
-            foreach (HingeDoor d in Object.FindObjectsByType<HingeDoor>())
-            {
-                if (c.World.IsLocked(d)) continue;
-                int region = c.Map.RegionAt(d.transform.position);
-                if (region < 0) continue;
-                float walk = TacticHelpers.WalkFromBelief(c, d.transform.position);
-                if (walk < 5f || walk > 40f) continue;
-                if (!Herding.Winnable(c, new[] { region }, out string check)) continue;
-                if (walk < best) { best = walk; door = d; doorRegion = region; }
-            }
-            why = door == null ? "no door she can lock and keep the shift winnable" : null;
-            return door != null;
-        }
-
-        public override void Plan(KarenContext c, PlanBuilder plan)
-        {
-            HingeDoor target = door;
-            int region = doorRegion;
-            plan.Target = c.RegionName(region);
-            plan.Add(new Tell(TellKind.Clunk, _ => target.transform.position, 0.9f));
-            plan.Add(new Effect("lock " + plan.Target, k =>
-            {
-                k.World.LockDoor(target, 75f);
-                k.Brain.Close(region, 75f);
-            }));
-        }
-    }
-
     public sealed class ShelfRelocationTactic : Tactic
     {
         public override string Id => "shelf_relocation";
         public override string Title => "Shelf relocation";
-        public override GoalId[] Goals => new[] { GoalId.Herd };
+        public override ActionId[] Actions => new[] { ActionId.Corner };
         public override int Tier => 3;
         public override int IntroducedShift => 7;
         public override float TensionCost => 0.35f;
@@ -216,62 +167,13 @@ namespace Kehai.Karen
         }
     }
 
-    // Block every cut edge but one and wait by the survivor. No scripting — §5.3 executed.
-    public sealed class FunnelTactic : Tactic
-    {
-        public override string Id => "funnel";
-        public override string Title => "Funnel";
-        public override GoalId[] Goals => new[] { GoalId.Herd };
-        public override int Tier => 3;
-        public override int IntroducedShift => 8;
-        public override float TensionCost => 0.35f;
-        public override float Cooldown => 180f;
-        public override float PanicPrior => 0.25f;
-        public override TellKind Tell => TellKind.Scrape;
-        public override string Chore => "walk into it, or clear a wall";
-        public override string Attacks => "space";
-
-        List<(int from, int to, Vector3 at)> cut;
-
-        public override bool Available(KarenContext c, out string why)
-        {
-            cut = Herding.Cut(c);
-            if (cut.Count < 2 || cut.Count > 4) { why = $"cut of {cut.Count} edges can't make a funnel"; return false; }
-            var closing = cut.Skip(1).Select(e => e.to).ToList();
-            if (!Herding.Winnable(c, closing, out string check)) { c.Think("CHECK", "fairness rule 6 — " + check + " → funnel VETOED"); why = "would be unwinnable"; return false; }
-            why = null;
-            return true;
-        }
-
-        public override void Plan(KarenContext c, PlanBuilder plan)
-        {
-            var ordered = cut.OrderBy(e => Vector3.Distance(e.at, c.Body.Position)).ToList();
-            var survivor = ordered[ordered.Count - 1];
-            plan.Target = "leave " + c.RegionName(survivor.to) + " open";
-            for (int i = 0; i < ordered.Count - 1; i++)
-            {
-                var e = ordered[i];
-                Vector3 across = Vector3.Cross(Vector3.up, (c.Map.Regions[e.to].Centroid - c.Map.Regions[e.from].Centroid).normalized);
-                plan.Go(e.at, KarenBody.Pace.Hurry, "block " + c.RegionName(e.to), 1.5f);
-                plan.Add(new Tell(TellKind.Scrape, k => k.Body.Position, 1f));
-                plan.Add(new Effect("crate wall at " + c.RegionName(e.to), k =>
-                {
-                    k.World.Crates(e.at, across, 3f, e.to);
-                    k.Brain.Close(e.to, 150f);
-                }));
-            }
-            plan.Go(survivor.at, KarenBody.Pace.Sneak, "wait by the way out", 3f);
-            plan.Add(new Hold(60f, k => k.A.Panic > k.Config.ambushAbortPanic || k.A.Awareness > 0.85f, "silent at the survivor"));
-        }
-    }
-
     // ================================================================ §8.5 social
 
     public sealed class MimicryTactic : Tactic
     {
         public override string Id => "mimicry";
         public override string Title => "Mimicry";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 3;
         public override int IntroducedShift => 6;
         public override float TensionCost => 0.3f;
@@ -304,7 +206,7 @@ namespace Kehai.Karen
     {
         public override string Id => "witness";
         public override string Title => "The witness";
-        public override GoalId[] Goals => new[] { GoalId.Flush, GoalId.Herd };
+        public override ActionId[] Actions => new[] { ActionId.Flush, ActionId.Corner };
         public override int Tier => 2;
         public override int IntroducedShift => 6;
         public override float TensionCost => 0.12f;
@@ -338,7 +240,7 @@ namespace Kehai.Karen
     {
         public override string Id => "understudy";
         public override string Title => "The understudy";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 3;
         public override int IntroducedShift => 8;
         public override float TensionCost => 0.25f;
@@ -371,7 +273,7 @@ namespace Kehai.Karen
     {
         public override string Id => "stalk";
         public override string Title => "Stalk-and-withdraw";
-        public override GoalId[] Goals => new[] { GoalId.Stalk };
+        public override ActionId[] Actions => new[] { ActionId.Loom };
         public override int Tier => 1;
         public override int IntroducedShift => 2;
         public override float TensionCost => 0.08f;
@@ -408,9 +310,9 @@ namespace Kehai.Karen
     {
         public override string Id => "ambush";
         public override string Title => "Ambush";
-        public override GoalId[] Goals => new[] { GoalId.Ambush };
+        public override ActionId[] Actions => new[] { ActionId.LieInWait };
         public override int Tier => 2;
-        public override int IntroducedShift => 8;
+        public override int IntroducedShift => 3;
         public override float TensionCost => 0.2f;
         public override float Cooldown => 150f;
         public override float PanicPrior => 0.3f;
@@ -442,14 +344,16 @@ namespace Kehai.Karen
         }
     }
 
-    // The chase: rare and expensive, a guaranteed quiet afterwards, and being caught is a
-    // written warning, not death.
-    public sealed class ChaseTactic : Tactic
+    // Hunt's own move: run at you. It used to be the chase, a trick; since 0.2.0 it's what Hunt
+    // does with no trick at all. Paced by its cost and cooldown, as the chase was (the Director
+    // also holds Hunt back in a recovery).
+    public sealed class HuntTactic : Tactic
     {
-        public override string Id => "chase";
-        public override string Title => "The chase";
-        public override GoalId[] Goals => new[] { GoalId.Pursue };
-        public override int Tier => 4;
+        public override string Id => "hunt";
+        public override string Title => "Hunt";
+        public override ActionId[] Actions => new[] { ActionId.Hunt };
+        public override bool OwnMove => true;
+        public override int Tier => 0;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0.6f;
         public override float Cooldown => 90f;
@@ -467,37 +371,12 @@ namespace Kehai.Karen
         }
     }
 
-    // When the chase isn't affordable she still closes distance — at a pace a walking
-    // employee can keep ahead of.
-    public sealed class FollowTactic : Tactic
-    {
-        public override string Id => "follow";
-        public override string Title => "Follow";
-        public override GoalId[] Goals => new[] { GoalId.Pursue };
-        public override int Tier => 1;
-        public override int IntroducedShift => 1;
-        public override float TensionCost => 0.03f;
-        public override float Cooldown => 5f;
-        public override float PanicPrior => 0.1f;
-        public override TellKind Tell => TellKind.Footsteps;
-        public override string Chore => "keep walking";
-        public override string Attacks => "you";
-
-        public override void Plan(KarenContext c, PlanBuilder plan)
-        {
-            plan.Target = "close distance";
-            plan.Add(new Tell(TellKind.Footsteps, k => k.Body.Position, 0.8f));
-            plan.Add(new MoveTo(k => k.Body.Sight.Time_SinceSeen() < 3f ? k.Body.Sight.LastSeenPosition : k.Belief.PeakPosition,
-                                KarenBody.Pace.Hurry, "follow", 2.5f, 12f, follow: true));
-        }
-    }
-
     // Below 15% energy she turns helpful (§8.6, §10.3), and means it.
     public sealed class FavourTactic : Tactic
     {
         public override string Id => "favour";
-        public override string Title => "The favour";
-        public override GoalId[] Goals => new[] { GoalId.Assist };
+        public override string Title => "Peace offering";
+        public override ActionId[] Actions => new[] { ActionId.Lure };
         public override int Tier => 1;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0f;

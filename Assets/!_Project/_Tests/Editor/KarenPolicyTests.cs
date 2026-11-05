@@ -54,11 +54,32 @@ public class KarenPolicyTests
         Assert.IsFalse(HtnPlanner.Shielded(Context(KarenRung.F_Policy, shield: false)));
     }
 
+    // A tactic made for the test, so the gates are checked whatever the library holds (0.2.0
+    // removed the chase, which this test used to borrow as its big tactic from shift 1).
+    sealed class GateProbe : Tactic
+    {
+        readonly int tier, shift;
+        readonly float cost, cooldown;
+        public GateProbe(int tier, int shift, float cost, float cooldown) { this.tier = tier; this.shift = shift; this.cost = cost; this.cooldown = cooldown; }
+        public override string Id => $"probe_t{tier}_s{shift}";
+        public override string Title => "Gate probe";
+        public override ActionId[] Actions => new[] { ActionId.Flush };
+        public override int Tier => tier;
+        public override int IntroducedShift => shift;
+        public override float TensionCost => cost;
+        public override float Cooldown => cooldown;
+        public override float PanicPrior => 0f;
+        public override TellKind Tell => TellKind.Footsteps;
+        public override string Chore => "none";
+        public override string Attacks => "nothing";
+        public override void Plan(KarenContext c, PlanBuilder plan) { }
+    }
+
     [Test]
     public void Shield_GatesTierCooldownAndBudget_ButNeverTheCareerTable()
     {
-        Tactic big = TacticLibrary.All.First(t => t.Tier >= 2 && t.IntroducedShift <= 1);
-        Tactic later = TacticLibrary.All.First(t => t.IntroducedShift > 1);
+        Tactic big = new GateProbe(tier: 3, shift: 1, cost: 0.45f, cooldown: 0f);
+        Tactic later = new GateProbe(tier: 1, shift: 5, cost: 0f, cooldown: 0f);
 
         foreach (bool shield in new[] { true, false })
         {
@@ -71,7 +92,7 @@ public class KarenPolicyTests
         }
 
         // Cooldown, on its own: tier 1, affordable, just used.
-        Tactic cheap = TacticLibrary.All.First(t => t.Tier == 1 && t.IntroducedShift <= 1 && t.Cooldown > 0f && t.TensionCost <= 0.5f);
+        Tactic cheap = new GateProbe(tier: 1, shift: 1, cost: 0.1f, cooldown: 10f);
         float lastUsed = cheap.LastUsed;
         try
         {
@@ -144,12 +165,12 @@ public class KarenPolicyTests
         c.Director.BeginShift(3, 300f);
         c.A = new Appraisal { Confidence = 2f, Pressure = -5f, Panic = float.NaN, Staleness = 1e9f, Tension = 0.4f };
 
-        float[] v = PolicyObservation.Build(GoalId.Sweep, c);
+        float[] v = PolicyObservation.Build(ActionId.Search, c);
         Assert.AreEqual(PolicyObservation.Size, v.Length);
         Assert.IsTrue(v.All(x => !float.IsNaN(x) && !float.IsInfinity(x)), "NaN or infinity reached the network");
         Assert.IsTrue(v.All(x => x >= -1f && x <= 1f), "a value outside [-1, 1]");
-        CollectionAssert.AreEqual(v, PolicyObservation.Build(GoalId.Sweep, c), "the same state gave a different observation");
-        CollectionAssert.AreNotEqual(v, PolicyObservation.Build(GoalId.Stalk, c), "the goal isn't in the observation");
+        CollectionAssert.AreEqual(v, PolicyObservation.Build(ActionId.Search, c), "the same state gave a different observation");
+        CollectionAssert.AreNotEqual(v, PolicyObservation.Build(ActionId.Loom, c), "the goal isn't in the observation");
     }
 
     // ---- what it's paid -----------------------------------------------------------------------

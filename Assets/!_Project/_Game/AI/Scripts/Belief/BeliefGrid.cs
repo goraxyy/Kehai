@@ -19,6 +19,12 @@ namespace Kehai.Karen
     //
     // If everything is ruled out, belief resets to the prior: she has lost the scent, and
     // the player can feel it happen.
+    //
+    // Only her part of the building has cells of its own (StoreMap.KarenWorksIn): indoors, the
+    // backstreet and the pavement. Everything else — the street and parking lot, the alleys,
+    // the yard — is one cell, OutsideCell, standing for "outside". It remembers which of her
+    // exits you left by: its mass comes back in through that exit first, and through another
+    // only once you could have walked round outside to it.
     public sealed class BeliefGrid
     {
         readonly StoreMap map;
@@ -61,6 +67,37 @@ namespace Kehai.Karen
         // mistake would make her deaf to everything that contradicts it.
         public float Uncertainty = 0.015f;
 
+        // ---- outside her part of the building ----------------------------------------------
+
+        // Share of the outside's mass per second that comes back in through an exit.
+        public float OutsideReturn = 0.08f;
+        // The outside's share of the prior: almost nothing, but not nothing, or a sighting out
+        // there could never move her belief outside (zero times any likelihood is zero).
+        public float OutsidePrior = 0.002f;
+        // The fastest you can walk round outside from one exit to another (your sprint).
+        public float OutsideSprint = 6.5f;
+        const int LineSeconds = 40;
+        const float ExitSpan = 9f;   // metres of edge one exit covers
+
+        readonly bool[] hers;
+        readonly int[] exitOf;                              // per cell: its exit if it borders outside, else -1
+        readonly List<int[]> exitBorder = new List<int[]>(); // per exit: her cells next to outside
+        readonly int outsideCells;
+        float[,] exitDelay;                                 // seconds from one exit to another, round outside
+        float[][] line;                                     // per exit: outside mass by seconds since it left
+        float[] inflow;
+        float[] returning;
+        float lineClock;
+        int lastExit;
+
+        public int OutsideCell { get; } = -1;
+        public float OutsideMass => OutsideCell >= 0 ? b[OutsideCell] : 0f;
+        public int ExitCount => exitBorder.Count;
+        public bool IsHers(int cell) => hers[cell];
+        public int ExitOf(int cell) => exitOf[cell];
+        public IReadOnlyList<int> ExitBorder(int exit) => exitBorder[exit];
+        public float ExitDelay(int from, int to) => exitDelay[from, to];
+
         public BeliefGrid(StoreMap map)
         {
             this.map = map;
@@ -74,32 +111,163 @@ namespace Kehai.Karen
             Danger = new float[map.CellCount];
             for (int i = 0; i < DesireDistance.Length; i++) DesireDistance[i] = float.PositiveInfinity;
             MaxEntropy = Mathf.Log(Mathf.Max(2, map.Regions.Count));
+
+            hers = new bool[map.CellCount];
+            exitOf = new int[map.CellCount];
+            for (int c = 0; c < hers.Length; c++)
+            {
+                hers[c] = map.IsKarens(c);
+                exitOf[c] = -1;
+                if (!hers[c]) outsideCells++;
+            }
+            if (outsideCells > 0)
+            {
+                OutsideCell = PickOutsideCell();
+                FindExits();
+            }
             ResetToPrior();
+        }
+
+        // The outside cell sits in the middle of the outside: the parking lot.
+        int PickOutsideCell()
+        {
+            Vector3 sum = Vector3.zero;
+            for (int c = 0; c < hers.Length; c++) if (!hers[c]) sum += map.CellPosition[c];
+            Vector3 middle = sum / outsideCells;
+            int best = -1;
+            float bestSqr = float.MaxValue;
+            for (int c = 0; c < hers.Length; c++)
+            {
+                if (hers[c]) continue;
+                Vector3 d = map.CellPosition[c] - middle;
+                float sqr = d.x * d.x + d.z * d.z;
+                if (sqr < bestSqr) { bestSqr = sqr; best = c; }
+            }
+            return best;
+        }
+
+        // Her cells next to the outside, grouped into ways out: cells within 3 m of each other
+        // are one stretch of edge (the pavement's, the backstreet's mouth), cut into exits of
+        // at most ExitSpan along it, so where along the pavement you left still counts. Then
+        // the walk between every pair of exits, round the outside only.
+        void FindExits()
+        {
+            var border = new List<int>();
+            for (int c = 0; c < hers.Length; c++)
+            {
+                if (!hers[c]) continue;
+                for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
+                    if (!hers[map.EdgeTo[e]]) { border.Add(c); break; }
+            }
+
+            var group = new int[border.Count];
+            for (int i = 0; i < group.Length; i++) group[i] = -1;
+            int groups = 0;
+            var stack = new Stack<int>();
+            for (int i = 0; i < border.Count; i++)
+            {
+                if (group[i] >= 0) continue;
+                group[i] = groups;
+                stack.Push(i);
+                while (stack.Count > 0)
+                {
+                    Vector3 here = map.CellPosition[border[stack.Pop()]];
+                    for (int j = 0; j < border.Count; j++)
+                    {
+                        if (group[j] >= 0) continue;
+                        Vector3 d = map.CellPosition[border[j]] - here;
+                        if (d.x * d.x + d.z * d.z > 9f) continue;
+                        group[j] = groups;
+                        stack.Push(j);
+                    }
+                }
+                groups++;
+            }
+
+            var stretches = new List<int>[groups];
+            for (int k = 0; k < groups; k++) stretches[k] = new List<int>();
+            for (int i = 0; i < border.Count; i++) stretches[group[i]].Add(border[i]);
+            foreach (List<int> stretch in stretches)
+            {
+                float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+                foreach (int c in stretch)
+                {
+                    Vector3 p = map.CellPosition[c];
+                    minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x);
+                    minZ = Mathf.Min(minZ, p.z); maxZ = Mathf.Max(maxZ, p.z);
+                }
+                bool alongX = maxX - minX >= maxZ - minZ;
+                float from = alongX ? minX : minZ;
+                int pieces = Mathf.Max(1, Mathf.CeilToInt(((alongX ? maxX : maxZ) - from + 0.01f) / ExitSpan));
+                var cut = new List<int>[pieces];
+                for (int k = 0; k < pieces; k++) cut[k] = new List<int>();
+                foreach (int c in stretch)
+                {
+                    float at = alongX ? map.CellPosition[c].x : map.CellPosition[c].z;
+                    cut[Mathf.Min(pieces - 1, Mathf.FloorToInt((at - from) / ExitSpan))].Add(c);
+                }
+                foreach (List<int> piece in cut)
+                {
+                    if (piece.Count == 0) continue;
+                    foreach (int c in piece) exitOf[c] = exitBorder.Count;
+                    exitBorder.Add(piece.ToArray());
+                }
+            }
+            groups = exitBorder.Count;
+
+            exitDelay = new float[groups, groups];
+            var doorsteps = new List<int>[groups];
+            for (int k = 0; k < groups; k++)
+            {
+                doorsteps[k] = new List<int>();
+                foreach (int c in exitBorder[k])
+                    for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++)
+                        if (!hers[map.EdgeTo[e]]) doorsteps[k].Add(map.EdgeTo[e]);
+            }
+            for (int k = 0; k < groups; k++)
+            {
+                float[] d = map.DistancesFrom(doorsteps[k], float.MaxValue, null, hers);
+                for (int j = 0; j < groups; j++)
+                {
+                    float best = float.PositiveInfinity;
+                    foreach (int c in doorsteps[j]) best = Mathf.Min(best, d[c]);
+                    exitDelay[k, j] = k == j ? 0f : best / OutsideSprint;
+                }
+            }
+
+            line = new float[groups][];
+            for (int k = 0; k < groups; k++) line[k] = new float[LineSeconds];
+            inflow = new float[groups];
         }
 
         // ---- the prior ----------------------------------------------------------
 
-        // Uniform over the floor, weighted toward work and toward habit. Outdoors is given
-        // little weight: an employee on shift is rarely in the street.
+        // Uniform over her part of the building, weighted toward work and toward habit. The
+        // outside starts with next to nothing: an employee on shift is in the building.
         public void RebuildPrior()
         {
             float sum = 0f;
             for (int c = 0; c < prior.Length; c++)
             {
-                Region region = map.Regions[map.CellRegion[c]];
-                float w = StoreMap.IsOutdoors(region.Area) ? 0.25f : 1f;
+                if (!hers[c]) { prior[c] = 0f; continue; }
+                float w = 1f;
                 if (!float.IsInfinity(DesireDistance[c])) w *= 1f + 1.5f * Mathf.Exp(-DesireDistance[c] / 8f);
                 w *= 1f + HabitGain * HabitPrior[c];
                 prior[c] = w;
                 sum += w;
             }
-            for (int c = 0; c < prior.Length; c++) prior[c] /= sum;
+            if (sum <= 0f) return;
+            float inside = OutsideCell >= 0 ? 1f - OutsidePrior : 1f;
+            for (int c = 0; c < prior.Length; c++) prior[c] *= inside / sum;
+            if (OutsideCell >= 0) prior[OutsideCell] = OutsidePrior;
         }
 
         public void ResetToPrior()
         {
             RebuildPrior();
             System.Array.Copy(prior, b, b.Length);
+            ClearLines();
+            SyncLines();
             Refresh();
         }
 
@@ -108,7 +276,8 @@ namespace Kehai.Karen
         public void ResetTo(Vector3 position, float sigma)
         {
             System.Array.Copy(prior, b, b.Length);
-            Multiply(position, sigma, 1f);
+            ClearLines();
+            Multiply(position, sigma, 1f, IsOutside(position));
             Normalise();
         }
 
@@ -120,9 +289,11 @@ namespace Kehai.Karen
         {
             float mobility = Mathf.Clamp(speed * dt / StoreMap.CellSize, 0f, 0.8f) * MovingProbability;
             System.Array.Clear(scratch, 0, scratch.Length);
+            if (inflow != null) System.Array.Clear(inflow, 0, inflow.Length);
 
             for (int c = 0; c < b.Length; c++)
             {
+                if (!hers[c]) continue;            // the outside moves in its exit lines, below
                 float mass = b[c];
                 if (mass <= 0f) continue;
 
@@ -140,12 +311,74 @@ namespace Kehai.Karen
                     total += Weight(here, map.EdgeTo[e]);
 
                 for (int e = start; e < end; e++)
-                    scratch[map.EdgeTo[e]] += leaving * Weight(here, map.EdgeTo[e]) / total;
+                {
+                    int n = map.EdgeTo[e];
+                    float share = leaving * Weight(here, n) / total;
+                    if (hers[n]) scratch[n] += share;
+                    else inflow[exitOf[c]] += share;   // out through this exit
+                }
             }
+
+            if (OutsideCell >= 0) scratch[OutsideCell] = StepOutside(dt);
 
             float u = Mathf.Clamp01(Uncertainty * dt);
             for (int c = 0; c < b.Length; c++) b[c] = (1f - u) * scratch[c] + u * prior[c];
+            SyncLines();
             Refresh();
+        }
+
+        // The outside's mass comes back through the exit it went out by at any time, and
+        // through another only once the walk round outside could have been done. Returns the
+        // mass still outside.
+        float StepOutside(float dt)
+        {
+            int exits = exitBorder.Count;
+            float back = Mathf.Clamp01(OutsideReturn * dt);
+            if (returning == null || returning.Length != exits) returning = new float[exits];
+            System.Array.Clear(returning, 0, exits);
+            for (int k = 0; k < exits; k++)
+            {
+                float[] l = line[k];
+                for (int a = 0; a < LineSeconds; a++)
+                {
+                    float m = l[a];
+                    if (m <= 0f) continue;
+                    float r = m * back;
+                    l[a] = m - r;
+
+                    float age = a + lineClock;
+                    int open = 0;
+                    for (int j = 0; j < exits; j++) if (j == k || age >= exitDelay[k, j]) open++;
+                    for (int j = 0; j < exits; j++)
+                        if (j == k || age >= exitDelay[k, j]) returning[j] += r / open;
+                }
+                if (inflow[k] > 0f)
+                {
+                    l[0] += inflow[k];
+                    lastExit = k;
+                }
+            }
+
+            for (int j = 0; j < exits; j++)
+            {
+                if (returning[j] <= 0f) continue;
+                int[] border = exitBorder[j];
+                float share = returning[j] / border.Length;
+                foreach (int cell in border) scratch[cell] += share;
+            }
+
+            lineClock += dt;
+            while (lineClock >= 1f)
+            {
+                lineClock -= 1f;
+                foreach (float[] l in line)
+                {
+                    l[LineSeconds - 1] += l[LineSeconds - 2];
+                    for (int a = LineSeconds - 2; a > 0; a--) l[a] = l[a - 1];
+                    l[0] = 0f;
+                }
+            }
+            return LineMass();
         }
 
         float Weight(float hereDesire, int n)
@@ -167,10 +400,11 @@ namespace Kehai.Karen
         {
             if (o.IsNegative) return false;   // negatives come in batches, see ApplySweep
 
+            bool outside = IsOutside(o.Position);
             switch (o.Channel)
             {
                 case SenseChannel.Hearing:
-                    MultiplyAlongFloor(o.Position, o.Sigma, o.Confidence);
+                    MultiplyAlongFloor(o.Position, o.Sigma, o.Confidence, outside);
                     break;
 
                 case SenseChannel.Trace:
@@ -178,30 +412,49 @@ namespace Kehai.Karen
                     Vector3 centre = o.Position;
                     if (o.Heading.sqrMagnitude > 0.01f)
                         centre += o.Heading.normalized * Mathf.Min(6f, 1.5f + (Time.time - o.Timestamp) * 1.2f);
-                    MultiplyAlongFloor(centre, o.Sigma, o.Confidence);
+                    MultiplyAlongFloor(centre, o.Sigma, o.Confidence, outside);
                     break;
 
                 default:
-                    Multiply(o.Position, o.Sigma, o.Confidence);
+                    Multiply(o.Position, o.Sigma, o.Confidence, outside);
                     break;
             }
 
+            if (outside) Regroup(o.Position);
             if (o.IsStrong) LastStrongObservation = Time.time;
             return Normalise();
         }
 
+        // Whether a point is outside her part of the building.
+        public bool IsOutside(Vector3 position)
+        {
+            if (OutsideCell < 0) return false;
+            int cell = map.CellAt(position);
+            return cell >= 0 ? !hers[cell] : !StoreMap.KarenWorksIn(StoreMap.AreaAt(position));
+        }
+
         // "I looked and there was nothing here." Every swept cell keeps only the share of
-        // its mass that could have gone unseen.
+        // its mass that could have gone unseen. A look into the outside rules out the share of
+        // it she saw.
         public bool ApplySweep(List<int> cells, List<float> detectProbability)
         {
+            float lookedOutside = 0f;
             for (int i = 0; i < cells.Count; i++)
-                b[cells[i]] *= 1f - Mathf.Clamp01(detectProbability[i]);
+            {
+                int c = cells[i];
+                float p = Mathf.Clamp01(detectProbability[i]);
+                if (hers[c]) b[c] *= 1f - p;
+                else lookedOutside += p;
+            }
+            if (OutsideCell >= 0 && lookedOutside > 0f)
+                b[OutsideCell] *= 1f - Mathf.Clamp01(lookedOutside / outsideCells);
             return Normalise();
         }
 
         // Straight-line Gaussian: sightings, testimony, infrastructure. `confidence` blends
-        // between "barely moves belief" and "belief collapses onto this point".
-        void Multiply(Vector3 position, float sigma, float confidence)
+        // between "barely moves belief" and "belief collapses onto this point". When the point
+        // is outside, the outside cell is where it says you are.
+        void Multiply(Vector3 position, float sigma, float confidence, bool atOutside)
         {
             map.CellsWithin(position, sigma * 3f, nearby);
             MarkNearby();
@@ -210,6 +463,7 @@ namespace Kehai.Karen
 
             for (int c = 0; c < b.Length; c++)
             {
+                if (c == OutsideCell) { b[c] *= atOutside ? 1f : floor; continue; }
                 if (!stamp[c]) { b[c] *= floor; continue; }
                 Vector3 d = map.CellPosition[c] - position;
                 d.y = 0f;
@@ -220,10 +474,10 @@ namespace Kehai.Karen
 
         // The same bump, measured in walking distance: a noise around a corner belongs to
         // the aisle it came from, not the one on the other side of the shelf.
-        void MultiplyAlongFloor(Vector3 position, float sigma, float confidence)
+        void MultiplyAlongFloor(Vector3 position, float sigma, float confidence, bool atOutside)
         {
             int source = map.CellAt(position);
-            if (source < 0) { Multiply(position, sigma, confidence); return; }
+            if (source < 0) { Multiply(position, sigma, confidence, atOutside); return; }
 
             distanceScratch = map.Distances(source, sigma * 3f, distanceScratch);
             float floor = LikelihoodFloor(confidence);
@@ -231,6 +485,7 @@ namespace Kehai.Karen
 
             for (int c = 0; c < b.Length; c++)
             {
+                if (c == OutsideCell) { b[c] *= atOutside ? 1f : floor; continue; }
                 float d = distanceScratch[c];
                 b[c] *= float.IsInfinity(d) ? floor : floor + Mathf.Exp(-d * d * inv);
             }
@@ -251,10 +506,30 @@ namespace Kehai.Karen
             for (int i = 0; i < nearby.Count; i++) stamp[nearby[i]] = false;
         }
 
+        // Sensed outside, near one of her exits: what's outside now waits by that one, fresh.
+        void Regroup(Vector3 position)
+        {
+            if (OutsideCell < 0 || exitBorder.Count == 0) return;
+            int nearest = 0;
+            float bestSqr = float.MaxValue;
+            for (int k = 0; k < exitBorder.Count; k++)
+                foreach (int c in exitBorder[k])
+                {
+                    Vector3 d = map.CellPosition[c] - position;
+                    float sqr = d.x * d.x + d.z * d.z;
+                    if (sqr < bestSqr) { bestSqr = sqr; nearest = k; }
+                }
+            float mass = LineMass();
+            ClearLines();
+            line[nearest][0] = mass;
+            lastExit = nearest;
+        }
+
         // ---- the Director's bounded hint ---------------------------------------------
 
         // Moves up to `amount` of the total mass onto a region. The Director alone calls
-        // this, and caps it (Karen.md §9.2); the grid just does the arithmetic.
+        // this, and caps it (Karen.md §9.2); the grid just does the arithmetic. A hint toward
+        // a place outside goes to the outside cell.
         public void Bias(int region, float amount)
         {
             if (region < 0 || amount <= 0f) return;
@@ -264,7 +539,11 @@ namespace Kehai.Karen
             amount = Mathf.Clamp01(amount);
             for (int c = 0; c < b.Length; c++) b[c] *= 1f - amount;
             float share = amount / r.Cells.Count;
-            foreach (int c in r.Cells) b[c] += share;
+            foreach (int c in r.Cells)
+            {
+                if (hers[c]) b[c] += share;
+                else if (OutsideCell >= 0) b[OutsideCell] += share;
+            }
             Normalise();
         }
 
@@ -280,14 +559,82 @@ namespace Kehai.Karen
                 // Everything ruled out — the scent is lost.
                 Collapses++;
                 System.Array.Copy(prior, b, b.Length);
+                ClearLines();
+                SyncLines();
                 Refresh();
                 return true;
             }
 
             float inv = 1f / sum;
             for (int c = 0; c < b.Length; c++) b[c] *= inv;
+            SyncLines();
             Refresh();
             return false;
+        }
+
+        // The exit lines always add up to the outside cell's mass.
+        void SyncLines()
+        {
+            if (OutsideCell < 0) return;
+            float want = b[OutsideCell], have = LineMass();
+            if (have > 1e-12f) ScaleLines(want / have);
+            else if (want > 0f && line != null && line.Length > 0) line[lastExit][0] = want;
+        }
+
+        float LineMass()
+        {
+            float sum = 0f;
+            if (line != null) foreach (float[] l in line) foreach (float m in l) sum += m;
+            return sum;
+        }
+
+        void ScaleLines(float factor)
+        {
+            if (line == null) return;
+            foreach (float[] l in line)
+                for (int a = 0; a < l.Length; a++) l[a] *= factor;
+        }
+
+        void ClearLines()
+        {
+            if (line == null) return;
+            foreach (float[] l in line) System.Array.Clear(l, 0, l.Length);
+            lineClock = 0f;
+        }
+
+        // How much of the outside's mass went out by each exit.
+        public float OutsideMassVia(int exit)
+        {
+            float sum = 0f;
+            foreach (float m in line[exit]) sum += m;
+            return sum;
+        }
+
+        // The exit most of the outside's mass went out by, or -1 with nothing outside.
+        public int LikeliestExit()
+        {
+            if (OutsideCell < 0 || OutsideMass <= 0f) return -1;
+            int best = 0;
+            for (int k = 1; k < exitBorder.Count; k++)
+                if (OutsideMassVia(k) > OutsideMassVia(best)) best = k;
+            return best;
+        }
+
+        // Where an exit is: its border cell nearest the exit's middle.
+        public Vector3 ExitPosition(int exit)
+        {
+            int[] border = exitBorder[exit];
+            Vector3 sum = Vector3.zero;
+            foreach (int c in border) sum += map.CellPosition[c];
+            Vector3 middle = sum / border.Length;
+            int best = border[0];
+            float bestSqr = float.MaxValue;
+            foreach (int c in border)
+            {
+                Vector3 d = map.CellPosition[c] - middle;
+                if (d.sqrMagnitude < bestSqr) { bestSqr = d.sqrMagnitude; best = c; }
+            }
+            return map.CellPosition[best];
         }
 
         void Refresh()
@@ -343,7 +690,7 @@ namespace Kehai.Karen
             foreach (Region r in map.Regions)
             {
                 string key = r.IsDoor ? null : (string.IsNullOrEmpty(r.Section) ? r.Area : StoreMap.ShortSign(r.Section));
-                if (key == null) continue;
+                if (key == null || r.Cells.Count == 0 || !hers[r.Cells[0]]) continue;   // the outside is one cell, not ruled out
                 mass.TryGetValue(key, out float m);
                 mass[key] = m + regionMass[r.Id];
                 cells.TryGetValue(key, out int n);

@@ -39,7 +39,7 @@ namespace Kehai.Karen
         public KarenRng Rng { get; private set; }
         public Sensorium Sensorium { get; private set; }
         public EnergyBelief Energy { get; } = new EnergyBelief();
-        public GoalSet Goals { get; } = new GoalSet();
+        public ActionSet Actions { get; } = new ActionSet();
         public KarenContext Ctx { get; private set; }
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
@@ -83,6 +83,8 @@ namespace Kehai.Karen
 
         void Start()
         {
+            // Before the map: the bake that keeps her body to her part of the building.
+            string area = KarenArea.Install();
             Map = StoreMap.Current;
             Rng = new KarenRng(config.seed);
             Ledger = new KarenLedger(config) { Persistent = config.Features.Persistent };
@@ -125,6 +127,7 @@ namespace Kehai.Karen
             }
 
             Note("SYSTEM", $"{GameNames.Antagonist} online — rung {config.rung} ({config.Features}), seed {Rng.Seed}. Map: {Map.Summary()}");
+            Note("SYSTEM", area);
         }
 
         // Routes end at a job: the Ledger learns the paths taken between them.
@@ -248,7 +251,7 @@ namespace Kehai.Karen
             else Belief.ResetToPrior();
 
             Sensorium.ForgetShift();
-            Goals.Reset();
+            Actions.Reset();
             AbortPlan();
             Body.Sight.ResetAwareness();
             Body.Warp(StartPosition());
@@ -266,7 +269,7 @@ namespace Kehai.Karen
         // stock pallet in a level with no floor there.
         Vector3 StartPosition()
         {
-            if (NavMesh.SamplePosition(config.start, out NavMeshHit hit, 5f, NavMesh.AllAreas)) return hit.position;
+            if (NavMesh.SamplePosition(config.start, out NavMeshHit hit, 5f, KarenArea.AgentMask)) return hit.position;
             Landmark? home = Map.FindLandmark(LandmarkKind.StockCrateHome);
             return home.HasValue ? home.Value.Position : transform.position;
         }
@@ -417,7 +420,7 @@ namespace Kehai.Karen
             if (desireTimer > 2f) { desireTimer = 0f; RefreshDesire(); }
 
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
-            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Goal != GoalId.Pursue) decideNow = true;
+            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt) decideNow = true;
         }
 
         float lastSenseNote;
@@ -580,21 +583,21 @@ namespace Kehai.Karen
         void Decide(bool forced)
         {
             Ctx.A = Appraised();
-            GoalId goal = Goals.Choose(Ctx, forced, out string because);
+            ActionId goal = Actions.Choose(Ctx, forced, out string because);
 
-            bool keep = CurrentPlan != null && CurrentPlan.Goal == goal && !forced;
+            bool keep = CurrentPlan != null && CurrentPlan.Action == goal && !forced;
             if (keep) return;
 
             WriteBelief();
-            Log.Write(Record("GOAL", $"GOAL     {HtnPlanner.Describe(Goals.LastOptions)}", Goals.LastOptions, goal.ToString(), because));
+            Log.Write(Record("GOAL", $"GOAL     {HtnPlanner.Describe(Actions.LastOptions)}", Actions.LastOptions, goal.ToString(), because));
             Note("", $"  why    {because}");
 
             AbortPlan();
             PlanTree plan = HtnPlanner.Plan(goal, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why);
             if (plan == null)
             {
-                Note("PLAN", $"PLAN     {goal}: nothing workable ({why}) → patrol");
-                plan = HtnPlanner.Plan(GoalId.Patrol, Ctx, Interrupt, out tactic, out options, out why);
+                Note("PLAN", $"PLAN     {goal.Name()}: nothing workable ({why}) → roam");
+                plan = HtnPlanner.Plan(ActionId.Roam, Ctx, Interrupt, out tactic, out options, out why);
                 if (plan == null) return;
             }
 
@@ -632,14 +635,14 @@ namespace Kehai.Karen
         bool Interrupt(KarenContext c)
         {
             if (CurrentPlan == null) return false;
-            GoalId g = CurrentPlan.Goal;
-            bool exempt = g == GoalId.Pursue || g == GoalId.Stalk || g == GoalId.Ambush || g == GoalId.Assist || g == GoalId.Withdraw;
-            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.GoalPermission(GoalId.Pursue, c) > 0f)
+            ActionId g = CurrentPlan.Action;
+            bool exempt = g == ActionId.Hunt || g == ActionId.Loom || g == ActionId.LieInWait || g == ActionId.Lure || g == ActionId.BackOff;
+            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f)
             {
                 Note("", "  interrupt: SeeingPlayerAtRange");
                 return true;
             }
-            if (g != GoalId.Pursue && Sensorium.LoudNoiseNearby)
+            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby)
             {
                 Note("", "  interrupt: LoudNoiseAdjacent");
                 return true;
@@ -831,7 +834,7 @@ namespace Kehai.Karen
             // Contact is the one certain observation she ever gets.
             if (Belief != null) Belief.Apply(new Observation(SenseChannel.Touch, Body.Position, 1f, 1f, "touch"));
 
-            if (CurrentPlan != null && CurrentPlan.Goal == GoalId.Assist) { decideNow = true; return; }
+            if (CurrentPlan != null && CurrentPlan.Action == ActionId.Lure) { decideNow = true; return; }
             Kill();
         }
 
@@ -1015,7 +1018,7 @@ namespace Kehai.Karen
                 if (Dash.Lurking) return GameNames.Antagonist + " is nowhere to be seen.";
                 if (chasing) return GameNames.Antagonist + " is chasing you!";
                 if (CurrentPlan == null) return GameNames.Antagonist + " is thinking.";
-                string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.Goal(CurrentPlan.Goal);
+                string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.ActionName(CurrentPlan.Action);
                 return GameNames.Antagonist + " is " + doing.TrimEnd('!') + ".";
             }
         }
