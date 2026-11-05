@@ -163,7 +163,7 @@ different things:
 
 **Design for A**
 
-- One setting, `KarenFx`, saved like the floor cone. It goes in Settings under the KAREN heading,
+- One setting, `KarenFx`, saved like the floor cone. It goes in Settings under Karen's heading,
   next to or instead of "Floor cone".
 - Optionally a hotkey. F3 is free: F1, F2 and F7–F10 are taken.
 - When it's off, skip the step sound and hide the cone, and possibly the spotlight (question 4).
