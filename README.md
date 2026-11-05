@@ -128,8 +128,7 @@ Sorted by topic under `docs/`. Start with the handover, then the 2.0.0 plan.
 | | [`DECISIONS.md`](docs/project/DECISIONS.md) | The big technical choices and why |
 | | [`IDEAS.md`](docs/project/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
 | | [`CHANGELOG.md`](docs/project/CHANGELOG.md) | Changes players will notice |
-| `plans/` | [`2.0.0-build-plan.md`](docs/plans/2.0.0-build-plan.md) | Karen 2.0.0: awareness, where she works, losing sight, actions and tricks (draft, needs your answers) |
-| | [`readchanges.md`](docs/plans/readchanges.md) | The first redesign plan (PA console, FX switch, sprinting on belief, drafts) |
+| `plans/` | [`2.0.0-build-plan.md`](docs/plans/2.0.0-build-plan.md) | Karen 2.0.0: awareness, where she works, losing sight, actions, tricks and the combo room (approved, not built) |
 | | [`learned-motion-model.md`](docs/plans/learned-motion-model.md) | The learned motion model, draft PR #68 |
 | | [`karen-capture.md`](docs/plans/karen-capture.md) | What catches you, and new fair ways to kill (approved, not started) |
 | | [`marketing-agents.md`](docs/plans/marketing-agents.md) | Hands-off video publishing |
@@ -146,3 +145,4 @@ Sorted by topic under `docs/`. Start with the handover, then the 2.0.0 plan.
 | `research/` | [`whiteboard-2026-11-05.md`](docs/research/whiteboard-2026-11-05.md) | Whiteboard notes: how Alien: Isolation and Hello Neighbor hunt you, and Kehai's three pillars |
 | `archive/` | [`notmerged.md`](docs/archive/notmerged.md) | Old: the 20 October status, how Karen adapts, the tech list |
 | | [`reactive-bots.md`](docs/archive/reactive-bots.md) | Old: the reactive simulated players plan, built in PR #62 |
+| | [`readchanges.md`](docs/archive/readchanges.md) | Old: the first redesign plan, replaced by the 2.0.0 plan |
