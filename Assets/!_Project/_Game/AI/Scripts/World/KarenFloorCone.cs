@@ -8,21 +8,17 @@ namespace Kehai.Karen
     // range, cut short by shelves and walls the way her eyes are, brightest where she sees
     // best (close and straight ahead) and fading where she'd barely notice you. Its colour
     // is her mood, and it pulses red while she can see you. Her spotlight shows the same
-    // thing, but a spotlight is hard to read in a lit store. Esc → Settings turns it off.
+    // thing, but a spotlight is hard to read in a lit store. F3 enables this developer aid
+    // in the editor and development builds; player releases never create its geometry.
     [RequireComponent(typeof(KarenBody))]
     public sealed class KarenFloorCone : MonoBehaviour
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         const int Rays = 48;
         const float EyeHeight = 1.3f;   // over counters, not over shelves
         const float Lift = 0.03f;       // just above the floor
         const float RimWidth = 0.12f;
         static readonly float[] Rings = { 0.25f, 0.55f, 1f };
-
-        public static bool Enabled
-        {
-            get => PlayerPrefs.GetInt("Kehai.KarenCone", 1) == 1;
-            set => PlayerPrefs.SetInt("Kehai.KarenCone", value ? 1 : 0);
-        }
 
         KarenBody body;
         Mesh mesh;
@@ -47,6 +43,7 @@ namespace Kehai.Karen
             mesh.MarkDynamic();
             cone.AddComponent<MeshFilter>().sharedMesh = mesh;
             view = cone.AddComponent<MeshRenderer>();
+            view.enabled = false;
             view.sharedMaterial = Material;
             view.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             view.receiveShadows = false;
@@ -55,7 +52,7 @@ namespace Kehai.Karen
         void LateUpdate()
         {
             SightSensor sight = body.Sight;
-            bool show = Enabled && sight != null;
+            bool show = KarenFx.ConeVisible && sight != null;
             view.enabled = show;
             if (!show) return;
 
@@ -155,17 +152,6 @@ namespace Kehai.Karen
             return best;
         }
 
-        internal static Color Tint(KarenBody.Mood mood)
-        {
-            switch (mood)
-            {
-                case KarenBody.Mood.Alert: return new Color(1f, 0.62f, 0.1f);
-                case KarenBody.Mood.Hunt: return new Color(1f, 0.15f, 0.1f);
-                case KarenBody.Mood.Kind: return new Color(0.35f, 0.95f, 0.55f);
-                default: return new Color(0.15f, 0.5f, 1f);
-            }
-        }
-
         static Color Fade(Color c, float alpha) => new Color(c.r, c.g, c.b, Mathf.Clamp01(alpha));
 
         // Unlit, see-through and coloured per vertex: the sprite shader does exactly that.
@@ -177,6 +163,32 @@ namespace Kehai.Karen
                 Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Universal Render Pipeline/Particles/Unlit");
                 material = new Material(shader) { name = GameNames.Antagonist + " floor cone", renderQueue = 3000 };
                 return material;
+            }
+        }
+
+        void OnDisable()
+        {
+            if (view != null) view.enabled = false;
+        }
+
+        void OnDestroy()
+        {
+            if (mesh != null) Destroy(mesh);
+            if (view != null) Destroy(view.gameObject);
+        }
+#else
+        void Awake() => enabled = false;
+#endif
+
+        // Also used by the replay's separate diagnostic layer.
+        internal static Color Tint(KarenBody.Mood mood)
+        {
+            switch (mood)
+            {
+                case KarenBody.Mood.Alert: return new Color(1f, 0.62f, 0.1f);
+                case KarenBody.Mood.Hunt: return new Color(1f, 0.15f, 0.1f);
+                case KarenBody.Mood.Kind: return new Color(0.35f, 0.95f, 0.55f);
+                default: return new Color(0.15f, 0.5f, 1f);
             }
         }
     }
