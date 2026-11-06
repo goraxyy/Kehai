@@ -45,7 +45,7 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| Esc | Pause: settings (sound, display, mouse, Karen's floor cone, webcam), restart the shift or the main menu; closes any open panel |
+| Esc | Pause: settings (sound, display, mouse, webcam), restart the shift or the main menu; closes any open panel |
 | F1 | Live map of the store and what Karen is doing, in plain words |
 | H (on the F1 map) | Karen's guess of where you are, as a heat map |
 | T (on the F1 map) | Technical view: goal scores and her thought log |
@@ -121,11 +121,17 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 
 ## Settings (Esc)
 
-- **Sound**: **all sounds** at once, then effects, Karen (her footsteps and warnings), music (the radio) and announcements (the PA). A sample plays when you let go of a slider.
+- **Sound**: **all sounds** at once, then effects, Karen (the sounds of her tricks), music (the radio) and announcements (the PA). A sample plays when you let go of a slider.
 - **Display**: resolution, full screen, and quality (Low, Medium, High). High is the game as designed; Medium and Low draw fewer pixels, with less anti-aliasing and shorter shadows.
 - **Mouse**: sensitivity.
-- **Karen**: her floor cone, on or off. It shows where she's looking: blue while she walks her rounds, orange when she's noticed something, red while she hunts you or can see you.
 - **Webcam blinking**: turn it on or off, calibrate, test.
 - Along the bottom: **Resume**, **Restart shift** (the store resets and the same shift begins again; Karen still remembers earlier shifts), **Main menu** and **Quit**. Restart and Main menu ask first.
 
 The game pauses while the menu is open, and your choices are remembered.
+
+## Developer only
+
+In the Unity editor and development builds, **F3** toggles Karen's footsteps and floor cone.
+It starts off each Play session. It is absent from release builds and is not a player setting.
+The cone is blue on her rounds, orange while investigating and red while hunting or seeing you.
+Player replays omit her footsteps and floor cone.

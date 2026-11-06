@@ -32,11 +32,15 @@ by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
 
 - **The shift:** clock in, do the jobs, clock out once the shelves are full, the spills mopped
   and the bins emptied. Energy drains as you go; coffee helps.
-- **The store:** a 150 × 150 m maze with 13 aisles, 80 products on 16,500 shelf slots, 240
-  ceiling lights, power cuts, a radio and automatic doors.
+- **The store:** a 60 × 45 m sales-floor maze of 189 shelf bays, 80 products in 13 sections,
+  thousands of shelf slots, power cuts, a radio and automatic doors.
 - **Karen:** three minds (a body that only knows what it senses, a director that paces the
-  tension, a ledger that remembers you across shifts), a map of where she thinks you are, and 35
-  tricks. Every trick has a warning, and she can never outrun a sprint. Design:
+  tension, a ledger that remembers you across shifts), a map of where she thinks you are, and
+  six live tricks (eight choices for the learner): Ask the customers, Bin tamper, Cut, Ambush,
+  Throw (powder, detergent or tin), and Blackout. Block door is built and tested, awaiting
+  activation as the seventh trick and ninth choice; other tricks remain disabled drafts.
+  Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15% faster. Tricks no longer promise
+  advance warnings. The 0.2.0 comparison with the previous build is still pending. Design:
   [`docs/karen/Karen.md`](docs/karen/Karen.md).
 - **The blink:** opt-in webcam tracking lets Karen act while your eyes are shut. Nothing is
   recorded, and nothing leaves your computer ([`tools/blink`](tools/blink/README.md)).

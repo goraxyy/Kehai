@@ -16,7 +16,7 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 
 **For a slide.**
 - **What:** first-person horror in a store at night. Do your jobs; don't get caught.
-- **Why it's different:** an AI opponent that remembers your habits, warns you before her tricks,
+- **Why it's different:** an AI opponent that remembers your habits, guesses your route,
   and can act while your eyes are shut (optional webcam).
 - **Status:** playable on Mac and Windows; playtests next; then a Steam page.
 
@@ -26,10 +26,16 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 1. **She moves when you blink.**
 2. **My manager keeps a record of where I hide.**
 3. **Perfectly polite. One touch ends the shift.**
-4. **Catch the warning:** her tricks come with a tell.
+4. **She runs faster than you:** 7.5 m/s against your 6.5 m/s sprint, about 15% faster.
 
 What we may claim is in [`facts.json`](../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
+
+**0.2.0 wording:** six live tricks, with three Throw choices (eight learner choices in all).
+Block door is tested but awaits activation; once integrated, the count becomes seven tricks
+and nine learner choices. Drafts are not playable features. Tricks and blink dashes no longer
+promise an advance warning. The old bot results describe the earlier build; the 0.2.0 paired
+comparison is still pending, so do not claim the redesign catches players better.
 
 **Who it's for:** players of short indie horror and store sims (*The Convenience Store*,
 *Supermarket Simulator*, *The Exit 8*, *Alien: Isolation*); stealth fans; developers and AI
@@ -51,7 +57,7 @@ Atmospheric, Indie.
 | **Reddit** | a post | the subreddits below | with each update and good moment |
 
 ### 1. Fun moments (short)
-A catch, a near miss, a trick and its warning, a blackout, a customer lost in the maze. Hook in
+A catch, a near miss, a thrown item you dodge, a blackout, a customer lost in the maze. Hook in
 the first 2 seconds, one idea, captions on, end on a question or a loop. The automation makes
 these from your shifts (below).
 

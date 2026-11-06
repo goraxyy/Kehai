@@ -169,7 +169,7 @@ namespace Kehai.Karen
                 Findings.Add($"She changed plans {Tricks.Values.Sum()} times; what she did most: " +
                              string.Join(", ", Tricks.OrderByDescending(p => p.Value).Take(4).Select(p => $"{p.Key} ×{p.Value}")) + ".");
             if (Warnings > 0)
-                Findings.Add($"There were {Warnings} warning sound{(Warnings == 1 ? "" : "s")} before her tricks — listen for them.");
+                Findings.Add($"Her tricks made {Warnings} sound{(Warnings == 1 ? "" : "s")}; these are not guaranteed advance warnings.");
             if (Heard > 0)
                 Findings.Add($"She heard or found evidence of you {Heard} time{(Heard == 1 ? "" : "s")}.");
             if (LowestEnergy < 0.15f)
@@ -190,7 +190,7 @@ namespace Kehai.Karen
             {
                 ("Shift length (s)", Length), ("Walked (m)", Walked), ("Sprinting (s)", Sprinted), ("Crouching (s)", Crouched),
                 ("Times " + GameNames.Antagonist + " spotted you", Spotted), ("Seconds in her sight", SeenSeconds), ("Closest she got (m)", ClosestAt >= 0f ? ClosestDistance : -1f),
-                ("Chases", Chases), ("Catches", Catches), ("Warning sounds", Warnings), ("Customers served", CustomersServed),
+                ("Chases", Chases), ("Catches", Catches), ("Trick sounds", Warnings), ("Customers served", CustomersServed),
                 ("Directions given", DirectionsGiven), ("Gave up asking", GaveUpAsking), ("Gave up at the till", GaveUpAtTill),
                 ("Longest till wait (s)", LongestTillWait), ("Lowest energy (%)", LowestEnergy * 100f)
             };

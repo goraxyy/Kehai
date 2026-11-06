@@ -1,5 +1,7 @@
 # Changelog
 
+- **2026-11-05 — 0.2.0 branch, not released.** Karen's area and belief grid stay within the store, backstreet and pavement. Hunt runs at 7.5 m/s and continues on route guesses after losing sight; Cut and three Throw choices join the live tricks. Her eyes cover 150° and 36 m, and the combo learner records chains it finds. Advance-warning guarantees are removed; her footsteps and floor cone are developer aids. Block door reuses a removable restock box and awaits activation at integration. Thrown products and player effects now have presentation code, and shift reports list new combos. Full paired gameplay results and the owner's playtest are still pending.
+
 - **2026-10-14** — Furnished the equal 200 m² staff room and office with 51 reusable low-poly models. Ten larger lockers and two changing cabins have aimed open/close interactions; the staff kitchen retains coffee, radio, punch-clock and tool behavior. Added the office entrance, moved the WC entrance clear of its new partition, rebuilt navigation, and expanded Models_Island to 120 × 120 m with labeled visual-only displays and reserved future plots. See `INTERIOR_MODELS.md`.
 
 - **2026-09-29** — Renamed: the game is now **Kehai** (気配) and its antagonist **Aiko** (愛子); they were Karoshi and Karen. The first launch copies the old save data and settings across (`KehaiMigration.cs`).
