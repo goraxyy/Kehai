@@ -322,31 +322,93 @@ namespace Kehai.Karen
 
         int spot = -1;
         string reason;
+        bool forTheLights;
 
         public override bool Available(KarenContext c, out string why)
         {
-            spot = c.Ledger.AmbushRegion(c, out reason);
-            why = spot < 0 ? "no route prior strong enough" : null;
-            return spot >= 0;
+            why = null;
+            if (!Spot(c, out spot, out _, out reason)) { why = "nowhere she's sure you'll pass"; return false; }
+            forTheLights = !PowerSystem.PowerOn;
+            return true;
         }
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
-            Vector3 at = c.Map.Regions[spot].Centroid;
-            plan.Target = c.RegionName(spot) + " — " + reason;
+            Vector3 at = c.Map.CellPosition[spot];
+            bool lights = forTheLights;
+            plan.Target = c.Map.NameAt(at) + " — " + reason;
             plan.Add(new SetSilent(true));
-            plan.Go(at, KarenBody.Pace.Hurry, "pre-position at " + c.RegionName(spot), 1.5f);
+            plan.Go(at, KarenBody.Pace.Hurry, "pre-position at " + c.Map.NameAt(at), 1.5f);
             plan.Add(new Tell(TellKind.SilenceFalls, k => k.Body.Position, 1f));
             plan.Add(new Hold(c.Config.ambushMaxWait,
-                k => k.A.Panic > k.Config.ambushAbortPanic || k.A.Awareness >= k.Body.Sight.confirmAt,
+                k => k.A.Panic > k.Config.ambushAbortPanic || k.A.Awareness >= k.Body.Sight.confirmAt || lights && PowerSystem.PowerOn,
                 "wait, silent (abort if panic > 0.85)"));
             plan.Add(new SetSilent(false));
+        }
+
+        // Where to lie in wait, and how sure she is it's on your way (0.2.0): where most of her
+        // guesses about your route pass, while she has them; with the lights out, on your way to
+        // the breaker box (so Blackout then Ambush rebuilds the old Blackout's wait); else the
+        // Ledger's usual route to your next job.
+        public static bool Spot(KarenContext c, out int cell, out float sure, out string reason)
+        {
+            cell = -1;
+            sure = 0f;
+            reason = null;
+            RoutePredictor p = c.Brain != null ? c.Brain.Predictor : null;
+            if (p != null && p.Active && !c.Body.Sight.SeesNow &&
+                CutTactic.ChooseSpot(c.Map, p, c.Body.Position, c.Config.hurrySpeed, Time.time, out CutTactic.CutSpot s))
+            {
+                cell = s.Cell;
+                sure = s.Weight;
+                reason = $"most of her guesses pass here ({s.Name}, {s.Weight:P0})";
+                return true;
+            }
+            if (!PowerSystem.PowerOn)
+            {
+                Landmark? box = c.Map.FindLandmark(LandmarkKind.BreakerBox);
+                if (box.HasValue && box.Value.Cell >= 0)
+                {
+                    cell = OnTheWay(c, box.Value.Cell, 8f);
+                    if (cell >= 0)
+                    {
+                        sure = 0.6f;
+                        reason = "the lights are out: on your way to the breaker box";
+                        return true;
+                    }
+                }
+            }
+            int region = c.Ledger.AmbushRegion(c, out reason);
+            if (region < 0) return false;
+            cell = c.Map.CellAt(c.Map.Regions[region].Centroid);
+            sure = c.Ledger.BestRouteConfidence(c, out _);
+            return cell >= 0;
+        }
+
+        // A cell `before` metres short of `goal` on the shortest walk to it from where she
+        // believes you are, over her part of the building.
+        static int OnTheWay(KarenContext c, int goal, float before)
+        {
+            float[] toGoal = c.Map.Distances(goal, float.MaxValue, null, TacticHelpers.NotHers(c.Map));
+            int cell = c.Map.CellAt(TacticHelpers.Believed(c));
+            if (cell < 0 || float.IsInfinity(toGoal[cell])) return -1;
+            for (int guard = c.Map.CellCount; guard > 0 && toGoal[cell] > before; guard--)
+            {
+                int next = -1;
+                float best = toGoal[cell];
+                for (int e = c.Map.EdgeStart[cell]; e < c.Map.EdgeStart[cell + 1]; e++)
+                    if (toGoal[c.Map.EdgeTo[e]] < best) { best = toGoal[c.Map.EdgeTo[e]]; next = c.Map.EdgeTo[e]; }
+                if (next < 0) break;
+                cell = next;
+            }
+            return cell;
         }
     }
 
     // Hunt's own move: run at you. It used to be the chase, a trick; since 0.2.0 it's what Hunt
-    // does with no trick at all. Paced by its cost and cooldown, as the chase was (the Director
-    // also holds Hunt back in a recovery).
+    // does with no trick at all. Its pacing is the Hunt action's (KarenDirector.HuntAllowed):
+    // a hunt costs huntTensionCost and waits huntCooldownSeconds after the last, whichever of
+    // its moves runs, so the move itself costs nothing more.
     public sealed class HuntTactic : Tactic
     {
         public override string Id => "hunt";
@@ -355,8 +417,8 @@ namespace Kehai.Karen
         public override bool OwnMove => true;
         public override int Tier => 0;
         public override int IntroducedShift => 1;
-        public override float TensionCost => 0.6f;
-        public override float Cooldown => 90f;
+        public override float TensionCost => 0f;
+        public override float Cooldown => 0f;
         public override float PanicPrior => 0.35f;
         public override TellKind Tell => TellKind.Screech;
         public override string Chore => "get out of her sight: if she touches you, she gets you";

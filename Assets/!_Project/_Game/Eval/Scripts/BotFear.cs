@@ -43,6 +43,9 @@ namespace Kehai.Eval
         // Her touch kills, so everyone backs away from her: when she's in view nearer than
         // KeepClear, or her footsteps are nearer than StepsClear (0: doesn't mind them).
         public float KeepClear = 6f, StepsClear;
+        // 0.2.0: seeing her ahead on its way nearer than TurnBackAt, it turns back (her Cut).
+        // Seeing a throw coming, it sidesteps DodgeReaction seconds later, DodgeChance of the time.
+        public float TurnBackAt = 15f, DodgeChance = 0.7f, DodgeReaction = 0.3f;
 
         public float this[Stimulus s] => Susceptibility[(int)s];
 
@@ -64,18 +67,21 @@ namespace Kehai.Eval
                     t.Tau = 30f; t.SprintAt = 0.3f; t.AbandonAt = 0.4f; t.HideAt = 0.65f; t.FreezeOnStartle = true;
                     t.DropChance = 0.3f; t.AvoidSeconds = 30f; t.AvoidPenalty = 40f; t.LookBase = 0.9f; t.LookGain = 0.8f;
                     t.KeepClear = 8f; t.StepsClear = 10f;
+                    t.TurnBackAt = 20f; t.DodgeChance = 0.6f; t.DodgeReaction = 0.35f;
                     break;
                 case PlayerProfile.Reckless:
                     row = Reckless;
                     t.Tau = 8f; t.SprintAt = 0f; t.AbandonAt = 0.9f; t.HideAt = 2f;
                     t.AvoidSeconds = 10f; t.AvoidPenalty = 10f; t.LookBase = 0.2f; t.LookGain = 0.3f;
                     t.KeepClear = 4f; t.StepsClear = 0f;
+                    t.TurnBackAt = 8f; t.DodgeChance = 0.5f; t.DodgeReaction = 0.3f;
                     break;
                 case PlayerProfile.Cautious:
                     row = Cautious;
                     t.Tau = 20f; t.SprintAt = 0.5f; t.AbandonAt = 0.6f; t.HideAt = 0.55f; t.FreezeOnStartle = true;
                     t.AvoidSeconds = 30f; t.AvoidPenalty = 80f; t.LookBase = 0.5f; t.LookGain = 0.6f; t.Hurries = false;
                     t.KeepClear = 9f; t.StepsClear = 10f;
+                    t.TurnBackAt = 22f; t.DodgeChance = 0.8f; t.DodgeReaction = 0.25f;
                     break;
                 default:
                     row = Efficient;

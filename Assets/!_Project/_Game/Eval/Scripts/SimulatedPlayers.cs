@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Kehai.Karen;
 using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
@@ -17,6 +18,10 @@ namespace Kehai.Eval
     // long way, dropping things, hiding — the very signals her Panic Index reads. Fear drains,
     // and they go back to work. Her touch kills, so all of them back away when she's close,
     // by a way that doesn't pass her.
+    //
+    // Since 0.2.0 they answer her Hunt's tricks as a person would: seeing her standing on the
+    // way ahead (her Cut), they turn back; seeing something thrown at them, they sidestep it
+    // a moment later, most of the time. A throw from behind, they never see.
     //
     // Static bots (-ablation-static-bots) are the old ones, kept as a control: they don't
     // react to her tricks, and only the skittish one flees, when it sees or hears her.
@@ -46,9 +51,17 @@ namespace Kehai.Eval
         string lastSeenRegion, lastThreatRegion;
         Vector3? lastThreatAt;
         float lastThreatTime = -99f;
+        Vector3? turnBackFrom;                  // she's ahead on the way: turn back once the action stops
+        string dodgeSide;                       // a throw to step out of, once the action stops
+        int watching;                           // the throw it has seen coming, and since when
+        float watchingSince;
+        readonly HashSet<int> decided = new HashSet<int>();
 
         public int Hides { get; private set; }
         public int BackOffs { get; private set; }
+        public int TurnBacks { get; private set; }
+        public int ThrowsSeen { get; private set; }
+        public int Dodges { get; private set; }
 
         public SimulatedPlayer(KehaiEnv env, PlayerProfile profile, int seed, bool reactive = true)
         {
@@ -93,6 +106,22 @@ namespace Kehai.Eval
                     yield return run.Current;
                 }
 
+                if (dodgeSide != null)
+                {
+                    yield return Sidestep();
+                    continue;
+                }
+                if (turnBackFrom.HasValue)
+                {
+                    // Not that way: she's on it. Leave the job a while, and go back the way it came.
+                    Vector3 her = turnBackFrom.Value;
+                    turnBackFrom = null;
+                    TurnBacks++;
+                    avoidUntil[Key(action.verb, action.target)] = Time.time + 10f;
+                    yield return BackOff(her);
+                    continue;
+                }
+
                 // A job that just failed (no path, wrong tool, already done) is left alone for a
                 // while rather than retried every frame.
                 if (env.LastResult != null && !(bool)env.LastResult["ok"])
@@ -116,6 +145,9 @@ namespace Kehai.Eval
             env.Metrics.BotStartles = fear.Startles;
             env.Metrics.BotHides = Hides;
             env.Metrics.BotBackOffs = BackOffs;
+            env.Metrics.BotTurnBacks = TurnBacks;
+            env.Metrics.BotThrowsSeen = ThrowsSeen;
+            env.Metrics.BotDodges = Dodges;
             env.Metrics.BotReactive = reactive;
         }
 
@@ -238,7 +270,8 @@ namespace Kehai.Eval
             float next = 0f;
             while (true)
             {
-                if (Time.time >= next)
+                if (WatchThrows()) env.Cancel();
+                else if (Time.time >= next)
                 {
                     next = Time.time + 0.25f;
                     var obs = env.World.Observe(env);
@@ -246,9 +279,77 @@ namespace Kehai.Eval
                     env.Driver.Sprint = action.sprint || fear.Fear >= traits.SprintAt;
                     bool hide = fear.Fear >= traits.HideAt && Time.time > calmUntil;
                     if ((startled && fear.Fear >= traits.AbandonAt) || hide || TooClose(obs, out _)) env.Cancel();
+                    else if (Ahead(obs, out Vector3 her))
+                    {
+                        turnBackFrom = her;
+                        env.Cancel();
+                    }
                 }
                 yield return null;
             }
+        }
+
+        // ---- her Hunt's tricks (0.2.0) --------------------------------------------------------
+
+        // She's in view on the way it's going, nearer than where it's going and than it lets her
+        // be: she got there first (Cut), or she's simply in the way.
+        bool Ahead(Dictionary<string, object> obs, out Vector3 her)
+        {
+            her = default;
+            var karen = (Dictionary<string, object>)obs["karen"];
+            if (!(bool)karen["visible"] || !env.Driver.Moving) return false;
+            her = Point(karen["at"]);
+            return OnTheWay(env.Driver.transform.position, env.Driver.Goal, her, traits.TurnBackAt);
+        }
+
+        // Whether `her` stands on the way from `me` to `goal`: within 35° of it, nearer than the
+        // goal, and nearer than `turnBackAt`.
+        public static bool OnTheWay(Vector3 me, Vector3 goal, Vector3 her, float turnBackAt)
+        {
+            Vector3 toHer = Flat(her - me), toGoal = Flat(goal - me);
+            float distance = toHer.magnitude;
+            return distance <= turnBackAt && toGoal.magnitude > distance && Vector3.Angle(toHer, toGoal) < 35f;
+        }
+
+        // Every frame: a throw it can see coming. It reacts after its reaction time, and steps
+        // aside with its chance of doing so; once a throw is decided, it's decided. True when it
+        // has chosen to dodge.
+        bool WatchThrows()
+        {
+            if (!reactive || dodgeSide != null) return false;
+            if (!EnvWorld.SeesThrow(PlayerPresence.Current, out EnvWorld.ThrowSeen t) || decided.Contains(t.Id)) return false;
+            if (t.Id != watching)
+            {
+                watching = t.Id;
+                watchingSince = Time.time;
+                ThrowsSeen++;
+                Feel(Stimulus.Chase, 0.5f);
+            }
+            if (Time.time - watchingSince < traits.DodgeReaction) return false;
+            decided.Add(t.Id);
+            if (random.NextDouble() >= traits.DodgeChance) return false;
+            dodgeSide = t.StepTo;
+            return true;
+        }
+
+        IEnumerator Sidestep()
+        {
+            string side = dodgeSide;
+            dodgeSide = null;
+            Dodges++;
+            yield return env.Act(new EnvAction { verb = "sidestep", target = side, sprint = true, timeout = 1.5f });
+        }
+
+        // An action of its own (backing off, hiding) with only the throw watch alongside.
+        IEnumerator Act(EnvAction a)
+        {
+            IEnumerator run = env.Act(a);
+            while (run.MoveNext())
+            {
+                if (WatchThrows()) env.Cancel();
+                yield return run.Current;
+            }
+            if (dodgeSide != null) yield return Sidestep();
         }
 
         // A startle's after-effects: freeze for a moment, maybe drop what's in hand.
@@ -312,7 +413,7 @@ namespace Kehai.Eval
                 yield return env.Act(new EnvAction { verb = "wait", seconds = 0.5f });
                 yield break;
             }
-            yield return env.Act(new EnvAction { verb = "move_to", target = to.Name, sprint = true, timeout = 8f });
+            yield return Act(new EnvAction { verb = "move_to", target = to.Name, sprint = true, timeout = 8f });
         }
 
         // Whether the walk from here to `to` stays at least `clearance` from the threat all the
@@ -378,7 +479,7 @@ namespace Kehai.Eval
             if (hide == null) yield break;
 
             Hides++;
-            yield return env.Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
+            yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
             env.Driver.Crouch = true;
             float wait = profile == PlayerProfile.Cautious ? 10f : 6f;
             yield return env.Act(new EnvAction { verb = "wait", seconds = wait + (float)random.NextDouble() * 6f });

@@ -412,6 +412,7 @@ namespace Kehai.Eval
                 case "return_tool": return ReturnTool(a, r);
                 case "drop": return DropHeld(a, r);
                 case "wait": return Wait(a, r);
+                case "sidestep": return Sidestep(a, r);
                 default: return null;
             }
         }
@@ -756,6 +757,27 @@ namespace Kehai.Eval
             float until = Time.time + Mathf.Clamp(a.seconds, 0.1f, 60f);
             while (Time.time < until) yield return null;
             r.Pass("waited");
+        }
+
+        // A quick step to one side of where you face (target "left" or "right"): out of the way
+        // of something thrown at you (0.2.0).
+        IEnumerator Sidestep(EnvAction a, ActionResult r)
+        {
+            string side = (a.target ?? string.Empty).Trim().ToLowerInvariant();
+            if (side != "left" && side != "right") { r.Fail("sidestep target is left or right"); yield break; }
+            Vector3 facing = Driver.transform.forward;
+            facing.y = 0f;
+            Vector3 right = Vector3.Cross(Vector3.up, facing.sqrMagnitude > 1e-4f ? facing.normalized : Vector3.forward);
+            Vector3 dir = side == "right" ? right : -right;
+            Vector3 here = Driver.transform.position;
+            foreach (float step in new[] { 2.5f, 1.5f })
+            {
+                if (!UnityEngine.AI.NavMesh.SamplePosition(here + dir * step, out UnityEngine.AI.NavMeshHit hit, 0.8f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                yield return Approach(hit.position, 0.4f, a, r);
+                if (!r.Finished) r.Pass("stepped " + side);
+                yield break;
+            }
+            r.Fail("no room to step " + side);
         }
     }
 

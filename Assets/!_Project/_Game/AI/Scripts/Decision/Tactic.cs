@@ -48,6 +48,11 @@ namespace Kehai.Karen
             return true;
         }
 
+        // Whether what it did is still in play, as she knows of her own doing: the lights still
+        // out, a door still blocked. The combo learner keeps it as her last trick until it
+        // isn't (LastTrick.Active), however long ago it started.
+        public virtual bool EffectRunning(KarenContext c) => false;
+
         // How exposed doing this leaves her (§6.3 w_risk). 0 = unseen, 1 = in plain view.
         public virtual float ExposureRisk(KarenContext c) => 0f;
 
@@ -126,7 +131,9 @@ namespace Kehai.Karen
                 // §8.5 social
                 new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
                 // §8.6 you
-                new StalkTactic(), new AmbushTactic(), new FavourTactic()
+                new StalkTactic(), new AmbushTactic(), new FavourTactic(),
+                // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
+                new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic()
             };
         }
 

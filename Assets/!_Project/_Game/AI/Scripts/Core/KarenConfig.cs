@@ -61,14 +61,21 @@ namespace Kehai.Karen
 
         [Header("Body")]
         // On her rounds she walks a little slower than you; hurrying she outpaces your walk, and
-        // running she is slightly faster than your sprint, so a chase in the open is lost: break
-        // her line of sight. KarenBootstrap sets hurry and run from the player's actual speeds.
+        // hunting she sprints at 7.5 m/s against your 6.5 (0.2.0): she gains a metre a second, so
+        // break her line of sight. KarenBootstrap sets hurry and run from the player's actual speeds.
         public float sneakSpeed = 2f;
         public float walkSpeed = 3.4f;
         public float hurrySpeed = 4.2f;
-        public float runSpeed = 6.8f;
-        [Tooltip("Hurry and run as a multiple of the player's walk and sprint.")]
+        public float runSpeed = 7.5f;
+        [Tooltip("Hurry as a multiple of the player's walk.")]
         public float fasterThanPlayer = 1.05f;
+        [Tooltip("Hunt's sprint as a multiple of the player's sprint: 7.5 m/s against 6.5.")]
+        public float sprintsFasterThanPlayer = 7.5f / 6.5f;
+        [Tooltip("How long a hunt keeps running on her belief after she loses you, with nothing new.")]
+        public float huntMemorySeconds = 6f;
+        [Tooltip("What a hunt costs from the Director's tension budget, and how long after one before the next: the Hunt action's pacing, whatever trick it runs.")]
+        public float huntTensionCost = 0.6f;
+        public float huntCooldownSeconds = 90f;
         [Tooltip("Unless she's running (a chase), she stops this far from you: her touch kills, and she doesn't walk into you by accident.")]
         public float personalSpace = 2.2f;
         [Tooltip("Her touch: contact within this of her centre (plus your own radius) gets you — her body's radius and a hand's breadth, so passing her in an aisle isn't contact.")]
@@ -76,8 +83,21 @@ namespace Kehai.Karen
         [Tooltip("Her body: a capsule this tall and wide — the player's own size, set at install by KarenBootstrap.")]
         public float bodyHeight = 2f;
         public float bodyRadius = 0.4f;
-        public float sightRange = 18f;
-        public float sightFov = 120f;
+        [Header("Her eyes (0.2.0: KarenBody.ConfigureEye)")]
+        [Tooltip("A cone 150° wide and 36 m long, at half strength 16 m away. The cameras and shoppers keep 18 m, 120° and 8 m.")]
+        public float sightRange = 36f;
+        public float sightFov = 150f;
+        public float sightHalfStrength = 16f;
+        [Tooltip("Awareness per second at a score of 1: as low as still hits the walk-by targets (AwarenessTests).")]
+        public float sightGain = 1.65f;
+        [Tooltip("A score below this is nothing seen: crouched and mostly hidden in the dim stays unseen.")]
+        public float sightFloor = 0.04f;
+        [Tooltip("Seconds her awareness holds after losing you, before it drains.")]
+        public float sightGrace = 0.5f;
+        [Tooltip("Up to this much more gain where her belief already expects you: 1 doubles it.")]
+        public float sightExpectedBoost = 1f;
+        [Tooltip("Cells her \"nothing here\" sweep checks a tick, all of them inside her cone.")]
+        public int sweepCellsPerTick = 120;
         [Tooltip("Where she stands when the game starts and when each shift begins: the floor nearest this point. " +
                  "In a level with no floor near it she starts at the stock pallet instead.")]
         public Vector3 start = new Vector3(32.5f, 0f, -172.5f);
@@ -100,6 +120,8 @@ namespace Kehai.Karen
         public float learningRate = 0.25f;       // α in Q̂ ← Q̂ + α(Δ − Q̂)
         public float rewardWindow = 20f;         // seconds of panic measured after a tactic
         public float priorWeight = 0.6f;
+        [Tooltip("The combo learner (0.2.0): the bandit sees her last trick and the combo room. Off, it's rung E's bandit as before, for the paired comparison.")]
+        public bool comboContext = true;
 
         [Header("Director (§7.3–7.4)")]
         public float kp = 0.8f;
@@ -114,7 +136,6 @@ namespace Kehai.Karen
         [Header("Fairness contract (§9)")]
         public float searchBiasPerMinute = 0.15f;
         public float searchBiasMaxMass = 0.5f;
-        public float minTellLead = 0.8f;
         public float recoverySeconds = 45f;
         public float denyMaxCompletion = 0.8f;
         public float ambushMaxWait = 90f;

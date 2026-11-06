@@ -53,6 +53,7 @@ public class PlayerMotor : MonoBehaviour
     [System.NonSerialized] public bool movementLocked;
 
     CharacterController controller;
+    PlayerEffects effects;          // a throw's blur, slow or stun (0.2.0)
     Vector3 velocity;
     Vector3 planarVelocity;
     float pitch;
@@ -70,6 +71,8 @@ public class PlayerMotor : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        effects = GetComponent<PlayerEffects>();
+        if (effects == null) effects = gameObject.AddComponent<PlayerEffects>();
         if (burnout == null) burnout = FindAnyObjectByType<BurnoutSystem>();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -116,7 +119,7 @@ public class PlayerMotor : MonoBehaviour
             velocity.y = -2f;
 
         Vector3 moveDir;
-        if (movementLocked)
+        if (movementLocked || effects != null && effects.Stunned)
         {
             moveDir = Vector3.zero;
         }
@@ -140,6 +143,7 @@ public class PlayerMotor : MonoBehaviour
             speed = sprintSpeed;
         else if (isCrouching)
             speed = crouchSpeed;
+        if (effects != null) speed *= effects.SpeedFactor;
 
         Vector3 before = transform.position;
         controller.Move(moveDir * speed * Time.deltaTime);

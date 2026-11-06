@@ -40,6 +40,7 @@ VERBS = {
     "return_tool": "put a tool back at its home spot (target mop/crate/flashlight)",
     "drop": "drop what you're holding",
     "wait": "do nothing for a few seconds (seconds)",
+    "sidestep": "step quickly left or right of where you face (target left/right), off the line of something thrown at you",
 }
 
 

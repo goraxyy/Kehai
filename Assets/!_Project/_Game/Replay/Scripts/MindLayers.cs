@@ -238,7 +238,8 @@ namespace Kehai.Replay
         void ShowCone(float t)
         {
             EntitySample pose = default;
-            bool show = On(MindLayer.Cone) && stage.KarenId >= 0 && data.TryPose(stage.KarenId, t, out pose);
+            // Her cone is a developer's aid since 0.2.0 (KarenFx, F3): replays and renders leave it out.
+            bool show = On(MindLayer.Cone) && KarenFx.ConeVisible && stage.KarenId >= 0 && data.TryPose(stage.KarenId, t, out pose);
             cone.SetActive(show);
             if (!show) return;
 

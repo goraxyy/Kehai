@@ -97,4 +97,12 @@ public static class Controls
         new Section("For testing",
             K("L", "Cut the power to the whole store")),
     };
+
+    // Keys only the editor and development builds read (KarenFx). Not in the game's Keys tab or
+    // CONTROLS.md: a player never has them. The test that every key is listed counts these too.
+    public static readonly Section[] Developer =
+    {
+        new Section("Developer builds only",
+            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off")),
+    };
 }

@@ -81,7 +81,7 @@ namespace Kehai.Karen
             root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
-        static string rungArg, seedArg, shieldArg, policyArg;
+        static string rungArg, seedArg, shieldArg, policyArg, comboArg;
 
         static void ReadCommandLine()
         {
@@ -93,13 +93,14 @@ namespace Kehai.Karen
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
                 if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
                 if (args[i] == "-karen-policy" && i + 1 < args.Length) policyArg = args[i + 1];
+                if (args[i] == "-karen-combo" && i + 1 < args.Length) comboArg = args[i + 1];   // the combo learner, on or off (0.2.0)
                 if (args[i] == "-kehai-no-records") NoRecords = true;
             }
         }
 
-        // She is the player's size, and slightly faster: hurrying she outpaces your walk and
-        // running your sprint (fasterThanPlayer), as the scene actually sets them. In the open
-        // a chase is lost — break her line of sight. On her rounds she still walks slower.
+        // She is the player's size, and faster: hurrying she outpaces your walk (fasterThanPlayer)
+        // and hunting she outsprints you (sprintsFasterThanPlayer), as the scene actually sets
+        // them. In the open a hunt is lost — break her line of sight. On her rounds she walks slower.
         static void MatchPlayer(KarenConfig config)
         {
             PlayerMotor motor = Object.FindAnyObjectByType<PlayerMotor>();
@@ -116,7 +117,7 @@ namespace Kehai.Karen
         public static void MatchPlayer(KarenConfig config, float walkSpeed, float sprintSpeed)
         {
             config.hurrySpeed = walkSpeed * config.fasterThanPlayer;
-            config.runSpeed = sprintSpeed * config.fasterThanPlayer;
+            config.runSpeed = sprintSpeed * config.sprintsFasterThanPlayer;
             config.walkSpeed = Mathf.Min(config.walkSpeed, walkSpeed * 0.9f);
             config.sneakSpeed = Mathf.Min(config.sneakSpeed, walkSpeed * 0.6f);
         }
@@ -127,6 +128,7 @@ namespace Kehai.Karen
             if (!string.IsNullOrEmpty(seedArg) && int.TryParse(seedArg, out int seed)) config.seed = seed;
             if (!string.IsNullOrEmpty(shieldArg)) config.shield = ParseSwitch(shieldArg, config.shield);
             if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
+            if (!string.IsNullOrEmpty(comboArg)) config.comboContext = ParseSwitch(comboArg, config.comboContext);
         }
 
         // "on", "off", "true", "false", "1", "0".
