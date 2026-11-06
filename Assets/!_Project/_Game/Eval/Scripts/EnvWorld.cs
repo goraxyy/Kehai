@@ -124,6 +124,68 @@ namespace Kehai.Eval
                    || hit.collider.transform.IsChildOf(brain.Body.transform);
         }
 
+        // A throw of hers, as a person sees it coming: what it is, how soon it's here, where it
+        // is, and which way to step to be off its line (left or right of where you face).
+        public struct ThrowSeen
+        {
+            public int Id;
+            public string Item;
+            public float Eta;
+            public Vector3 At;
+            public string StepTo;
+        }
+
+        // A throw you can see coming (0.2.0): in view, nothing in the way, and on a line that
+        // passes within reach of you. Thrown from behind you, you don't see it.
+        public static bool SeesThrow(PlayerPresence me, out ThrowSeen seen)
+        {
+            seen = default;
+            if (me == null) return false;
+            foreach (Projectile p in Projectile.Flying)
+            {
+                if (p == null) continue;
+                Vector3 at = p.transform.position, d = at - me.Head;
+                if (d.magnitude > 35f || Vector3.Angle(me.Facing, d) > 55f) continue;
+                if (!Incoming(me.Position, at, p.Velocity, out float eta)) continue;
+                if (Physics.Linecast(me.Head, at, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) && !me.Owns(hit.collider)) continue;
+                seen = new ThrowSeen
+                {
+                    Id = p.Number, Item = p.Item.ToString().ToLowerInvariant(), Eta = eta, At = at,
+                    StepTo = StepAside(me.Position, me.transform.forward, at, p.Velocity),
+                };
+                return true;
+            }
+            return false;
+        }
+
+        // Off the line of something flying at you: the side of you it passes further from,
+        // as left or right of `facing`. Dead on, right.
+        public static string StepAside(Vector3 me, Vector3 facing, Vector3 at, Vector3 velocity)
+        {
+            Vector3 v = velocity, rel = me - at;
+            v.y = rel.y = facing.y = 0f;
+            Vector3 off = v.sqrMagnitude > 1e-4f ? rel - v * (Vector3.Dot(rel, v) / v.sqrMagnitude) : Vector3.zero;
+            Vector3 right = Vector3.Cross(Vector3.up, facing);
+            if (off.sqrMagnitude < 0.01f) return "right";
+            return Vector3.Dot(off, right) >= 0f ? "right" : "left";
+        }
+
+        // Whether something at `at`, flying with `velocity`, passes within reach of `me` on the
+        // floor plan, and in how many seconds it's nearest.
+        public static bool Incoming(Vector3 me, Vector3 at, Vector3 velocity, out float eta)
+        {
+            eta = 0f;
+            Vector3 v = velocity, rel = me - at;
+            v.y = rel.y = 0f;
+            float speed2 = v.sqrMagnitude;
+            if (speed2 < 0.25f) return false;
+            eta = Vector3.Dot(rel, v) / speed2;
+            if (eta <= 0f) return false;                           // going away
+            return (rel - v * eta).magnitude < ThrowReach;
+        }
+
+        public const float ThrowReach = 1.5f;   // a line closer than this to you looks like it's coming at you
+
         // Is that spot in view, and clear? (Where she was a moment ago, to tell a vanish from
         // her simply walking behind a shelf or you turning away.)
         static bool SpotInView(PlayerPresence me, Vector3 spot)
@@ -332,6 +394,14 @@ namespace Kehai.Eval
             o["power"] = power;
 
             o["karen"] = KarenAsSeen(me);
+            var thrown = new List<object>();
+            if (SeesThrow(me, out ThrowSeen coming))
+                thrown.Add(new Dictionary<string, object>
+                {
+                    ["item"] = coming.Item, ["eta_s"] = Round(coming.Eta), ["step_to"] = coming.StepTo,
+                    ["at"] = new[] { Round(coming.At.x), Round(coming.At.z) }
+                });
+            o["thrown_at_you"] = thrown;
             heard.RemoveAll(h => Time.time - h.Time > HeardFor);
             o["heard"] = heard.Select(h => (object)new Dictionary<string, object>
             {
@@ -434,6 +504,9 @@ namespace Kehai.Eval
             if (o.TryGetValue("heard", out object h) && h is List<object> hs && hs.Count > 0)
                 sb.AppendLine("Lately you noticed: " + string.Join("; ", hs.Cast<Dictionary<string, object>>()
                     .Select(x => $"{x["kind"]} ({x["distance_m"]} m away, in {x["region"]}, {x["age_s"]} s ago)")) + ".");
+            if (o.TryGetValue("thrown_at_you", out object th) && th is List<object> ts && ts.Count > 0)
+                sb.AppendLine("Coming at you: " + string.Join("; ", ts.Cast<Dictionary<string, object>>()
+                    .Select(x => $"a thrown {x["item"]}, {x["eta_s"]} s away — sidestep {x["step_to"]} to get off its line")) + ".");
             var power = (Dictionary<string, object>)o["power"];
             if (!(bool)power["lights_on"]) sb.AppendLine("The lights are out. Breakers: " + string.Join(", ",
                 ((List<object>)power["breakers"]).Cast<Dictionary<string, object>>().Select(b => $"{b["id"]} {((bool)b["on"] ? "on" : "off")} (hum pitch {b["hum_pitch_rank"]})")));

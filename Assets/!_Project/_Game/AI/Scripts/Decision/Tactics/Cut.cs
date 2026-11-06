@@ -24,6 +24,14 @@ namespace Kehai.Karen
 
         CutSpot spot;
 
+        // For the evaluation (HuntMetrics): a cut's spot, and when its window closes (Time.time).
+        public static event System.Action<Vector3, float> Aimed;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => Aimed = null;
+
+        internal static void RaiseAimed(Vector3 at, float until) => Aimed?.Invoke(at, until);
+
         public override bool Available(KarenContext c, out string why)
         {
             why = null;
@@ -145,6 +153,7 @@ namespace Kehai.Karen
                 retarget = 0.25f;
                 if (CutTactic.ChooseSpot(c.Map, p, c.Body.Position, c.Config.runSpeed, Time.time, out CutTactic.CutSpot next))
                 {
+                    if (!have) CutTactic.RaiseAimed(c.Map.CellPosition[next.Cell], p.SeenAt + next.YouLatest + 1f);
                     spot = next;
                     have = true;
                 }

@@ -67,6 +67,20 @@ namespace Kehai.Karen
     {
         const float Radius = 0.15f;
         static readonly RaycastHit[] hits = new RaycastHit[8];
+        static readonly System.Collections.Generic.List<Projectile> flying = new System.Collections.Generic.List<Projectile>();
+
+        // What's in the air now, for anyone who might see it coming (EnvWorld.SeesThrow).
+        public static System.Collections.Generic.IReadOnlyList<Projectile> Flying => flying;
+        public ThrownItem Item => e.Item;
+        public Vector3 Velocity => velocity;
+        public int Number { get; private set; }     // which throw it is, counted from the start
+        static int thrown;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => flying.Clear();
+
+        void OnEnable() => flying.Add(this);
+        void OnDisable() => flying.Remove(this);
 
         ThrowEvent e;
         Vector3 velocity;
@@ -80,6 +94,7 @@ namespace Kehai.Karen
             var p = go.AddComponent<Projectile>();
             p.thrower = thrower;
             p.born = Time.time;
+            p.Number = ++thrown;
             flight = Mathf.Max(0.2f, flight);
             // The arc that lands on `aim` after `flight` seconds.
             p.velocity = (aim - from) / flight - 0.5f * Physics.gravity * flight;

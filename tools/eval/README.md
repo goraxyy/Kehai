@@ -39,6 +39,7 @@ python3 llm_agent.py --episodes 1 --rung F           # Claude plays (pip install
 | `dispose`, `drink_coffee`, `clock_in`, `clock_out`, `drop`, `toggle_flashlight` | — |
 | `flip_breaker` | `breaker_n` (the observation gives each one's hum pitch rank) |
 | `wait` | `seconds` |
+| `sidestep` | `left` or `right` of where you face: off the line of a throw (`thrown_at_you` says which) |
 
 ## The agent's body
 
@@ -83,6 +84,15 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play -kehai
 runs the three simulated players (efficient, skittish, reckless) against Karen rungs A–E and
 writes `ablation_<time>.jsonl` and a markdown table. `KAREN_RESULTS.md` holds the latest run.
 
+**Two builds, or two settings, side by side:** `compare_builds.py first.jsonl second.jsonl` pairs
+their shifts by rung, player, seed and shift and prints the second minus the first, ± one
+standard error, with the held-out cautious player on its own. It's how 0.2.0 is compared with
+`main`, and the combo learner with `-karen-combo off`. 0.2.0's own numbers are in the jsonl too
+(`HuntMetrics.cs`): `gap_after_loss_m` (metres from her to you 5 s after she loses sight in a
+hunt), `hunt_s`, `sprint_s`, `outside_s`, `far_sightings`, `blind_catches`, `throws`,
+`throw_hits`, `catches_after_throw`, `cuts`, `cuts_right`, `karen_combo_learner` and
+`karen_chains_found`.
+
 ### The simulated players
 
 They play through the same actions and senses as any agent (`EnvWorld.Observe`, which they read
@@ -105,6 +115,14 @@ Her touch kills, so every reacting player also backs away when it sees her close
 reckless one, up to 9 m for the cautious one) or, all but the reckless one, hears her footsteps
 right behind. It runs to a nearby spot whose way leads away from her, never past her, and hides
 the same way.
+
+Her Hunt's tricks (0.2.0) get a person's answers too:
+- **Her Cut:** seeing her ahead on its way, nearer than where it's going, it turns back (from 8 m
+  for the reckless one to 22 m for the cautious one) and leaves that job for 10 s.
+- **Her Throw:** seeing something thrown at it (`thrown_at_you`: in view and on a line that
+  passes within 1.5 m), it sidesteps after a reaction time of 0.25–0.35 s, 50–80% of the time by
+  profile. Thrown from behind, it never sees it.
+- The jsonl counts them: `bot_turn_backs`, `bot_throws_seen`, `bot_dodges`.
 
 How fear shows is exactly what the Panic Index reads. So now her tricks change the reward
 (`karen_reward_mean_abs` in the jsonl, alongside `bot_mean_fear`, `bot_startles` and `bot_hides`).
