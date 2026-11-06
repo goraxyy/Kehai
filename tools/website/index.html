@@ -1,0 +1,1065 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kehai</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Kehai is a first-person horror game about a night shift in a convenience store, and the store's management AI who works out where you are.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 1180px column on a fluorescent-lit floor; the console (a screen) stays dark in
+   both themes; Karen's crimson appears only where she does. Light = store lights on, dark = after hours. */
+:root {
+  --bg: #f1f3f0;          /* paper under fluorescent tubes, a little green */
+  --surface: #ffffff;
+  --ink: #151518;          /* brand ink */
+  --ink-2: #2a2a30;
+  --muted: #5b615d;
+  --line: #d8ddd7;
+  --karen: #c8102e;        /* brand crimson, a touch deeper for paper */
+  --tag: #ffd640;          /* her guess, and the shelf-edge labels */
+  --you: #0a8fbd;
+  --screen: #0a0b0c;       /* the console: always a screen */
+  --screen-2: #121416;
+  --screen-line: #1f2326;
+  --screen-ink: #dde3e0;
+  --screen-dim: #7d8681;
+  --karen-screen: #ff5454; /* the in-game colours of the F1 map */
+  --you-screen: #4dd2ff;
+  --guess-screen: #ffd640;
+  --display: "Instrument Serif", "Iowan Old Style", "Times New Roman", serif;
+  --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --wrap: 1180px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0c0d; --surface: #131416; --ink: #eceeeb; --ink-2: #c9ccc8; --muted: #8d938f;
+    --line: #25282b; --karen: #ff4d5e; --tag: #ffd640; --you: #4dd2ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0c0d; --surface: #131416; --ink: #eceeeb; --ink-2: #c9ccc8; --muted: #8d938f;
+  --line: #25282b; --karen: #ff4d5e; --tag: #ffd640; --you: #4dd2ff; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--sans);
+  font-size: 1.0625rem; line-height: 1.6; -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--you); outline-offset: 3px; border-radius: 4px; }
+.wrap {
+  max-width: var(--wrap); margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.mono { font-family: var(--mono); }
+.eyebrow {
+  font-family: var(--mono); font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted);
+}
+h1, h2, h3 { font-weight: 400; text-wrap: balance; margin: 0; }
+h2 { font-family: var(--display); font-size: clamp(2.1rem, 4.4vw, 3.4rem); line-height: 1.04; letter-spacing: -.01em; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 36rem; }
+
+/* ---- header ------------------------------------------------------------------------------ */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.top .wrap { display: flex; align-items: center; gap: 24px; padding-block: 14px; }
+.mark { display: flex; align-items: baseline; gap: 10px; text-decoration: none; }
+.word { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; letter-spacing: .38em; }
+.word .dead { animation: dead 7s infinite steps(1); }
+@keyframes dead { 0%, 61%, 63%, 64%, 100% { opacity: 1 } 62%, 63.5% { opacity: .18 } 70%, 92% { opacity: .22 } }
+.mark .jp { font-size: .8rem; color: var(--muted); letter-spacing: .1em; white-space: nowrap; }
+.nav { display: flex; gap: 22px; margin-left: auto; font-size: .9rem; }
+.nav a { text-decoration: none; color: var(--muted); }
+.nav a:hover { color: var(--ink); }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; border: 0;
+  background: var(--ink); color: var(--bg); font: 500 .9rem var(--sans); padding: 10px 16px;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--karen); box-shadow: 0 0 0 3px color-mix(in srgb, var(--karen) 25%, transparent); }
+@media (max-width: 760px) { .nav { display: none; } .top .pill { margin-left: auto; } .bar .long { display: none; } }
+
+/* ---- hero -------------------------------------------------------------------------------- */
+.hero { padding-block: clamp(48px, 9vw, 104px) 36px; }
+.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.hero h1 {
+  font-family: var(--display); font-size: clamp(3rem, 8.2vw, 6.6rem); line-height: .95;
+  letter-spacing: -.02em; max-width: 14ch;
+}
+.hero h1 em { font-style: italic; color: var(--karen); }
+.hero .lede { font-size: 1.15rem; }
+.signup { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; }
+.field {
+  display: flex; align-items: center; gap: 6px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 5px 5px 18px;
+  min-width: 0; flex: 0 1 430px;
+}
+.field input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink);
+  font: 400 1rem var(--sans); outline: none; padding: 6px 0;
+}
+.field input::placeholder { color: var(--muted); }
+.note { font-size: .85rem; color: var(--muted); }
+.note[data-state="ok"] { color: var(--ink-2); }
+
+/* ---- the console -------------------------------------------------------------------------- */
+.console {
+  margin-top: 40px; background: var(--screen); color: var(--screen-ink); border-radius: 16px;
+  border: 1px solid #000; overflow: hidden;
+  box-shadow: 0 40px 80px -40px rgba(0,0,0,.55), 0 0 0 1px color-mix(in srgb, var(--line) 40%, transparent);
+}
+.bar {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px; min-width: 0;
+  border-bottom: 1px solid var(--screen-line); font-family: var(--mono); font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--screen-dim);
+}
+.bar .rec { width: 8px; height: 8px; border-radius: 50%; background: var(--karen-screen); animation: rec 1.6s infinite; }
+@keyframes rec { 50% { opacity: .25 } }
+.bar .clock { margin-left: auto; color: var(--screen-ink); font-variant-numeric: tabular-nums; }
+.screen { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.mapbox { position: relative; border-right: 1px solid var(--screen-line); }
+.mapbox canvas { display: block; width: 100%; height: auto; aspect-ratio: 55 / 56; cursor: crosshair; touch-action: pan-y; }
+.mapbox .hint {
+  position: absolute; left: 14px; bottom: 12px; right: 14px; font-family: var(--mono);
+  font-size: .72rem; color: var(--screen-dim); pointer-events: none;
+}
+.caught {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+  background: rgba(0,0,0,.86); font-family: var(--display); font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  color: #fff; padding: 24px;
+}
+.caught small { display: block; font-family: var(--mono); font-size: .75rem; color: var(--screen-dim); margin-top: 8px; letter-spacing: .08em; }
+.side { display: grid; grid-template-rows: auto auto 1fr auto; min-width: 0; }
+.readouts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--screen-line); }
+.ro { padding: 14px 16px; border-bottom: 1px solid var(--screen-line); min-width: 0; }
+.ro:nth-child(odd) { border-right: 1px solid var(--screen-line); }
+.ro:nth-last-child(-n+2) { border-bottom: 0; }
+.ro .k { font-family: var(--mono); font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--screen-dim); }
+.ro .v { font-family: var(--mono); font-size: .92rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ro .v.you { color: var(--you-screen); }
+.ro .v.guess { color: var(--guess-screen); }
+.status { display: inline-flex; align-items: center; gap: 8px; }
+.status i { width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--karen-screen); }
+.status[data-s="ROAM"] i { background: #8d938f; }
+.status[data-s="CHECK"] i { background: var(--guess-screen); }
+.compare { padding: 14px 16px; border-bottom: 1px solid var(--screen-line); font-size: .84rem; color: var(--screen-dim); }
+.compare b { color: var(--screen-ink); font-weight: 500; }
+.log {
+  margin: 0; padding: 12px 16px; font-family: var(--mono); font-size: .74rem; line-height: 1.75;
+  color: var(--screen-dim); list-style: none; overflow: hidden; min-height: 11.5em;
+}
+.log li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log li:last-child { color: var(--screen-ink); }
+.log .t { color: #4f5753; margin-right: 8px; }
+.log .w { color: var(--screen-ink); }
+.log .r { color: var(--karen-screen); }
+.log .y { color: var(--guess-screen); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--screen-line); }
+.key {
+  font: 500 .74rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--screen-ink);
+  background: var(--screen-2); border: 1px solid var(--screen-line); border-radius: 6px;
+  padding: 7px 10px; cursor: pointer;
+}
+.key[aria-pressed="true"] { background: var(--screen-ink); color: var(--screen); }
+.legend { display: flex; gap: 14px; margin-left: auto; align-items: center; font: .7rem var(--mono); color: var(--screen-dim); }
+.legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: -1px; border-radius: 50%; background: var(--c); }
+.legend .k::before { border-radius: 1px; transform: rotate(45deg); }
+@media (max-width: 860px) {
+  .screen { grid-template-columns: 1fr; }
+  .mapbox { border-right: 0; border-bottom: 1px solid var(--screen-line); }
+  .legend { margin-left: 0; width: 100%; }
+}
+.caption { margin-top: 14px; font-size: .9rem; color: var(--muted); max-width: 46rem; }
+
+/* ---- the statement ------------------------------------------------------------------------ */
+.statement { padding-block: clamp(80px, 13vw, 160px); }
+.statement p {
+  font-family: var(--display); font-size: clamp(2rem, 5.2vw, 4.2rem); line-height: 1.06;
+  letter-spacing: -.015em; max-width: 18ch; text-wrap: balance;
+}
+.statement .w { color: var(--ink); }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .statement .w {
+      color: color-mix(in srgb, var(--ink) 28%, var(--bg));
+      animation: lit linear both; animation-timeline: view(); animation-range: entry 60% cover 42%;
+    }
+    @keyframes lit { to { color: var(--ink); } }
+  }
+}
+.statement .w.k { color: var(--karen); animation-name: litk; }
+@keyframes litk { to { color: var(--karen); } }
+
+/* ---- sections ----------------------------------------------------------------------------- */
+section.block { padding-block: clamp(64px, 9vw, 120px); border-top: 1px solid var(--line); overflow-x: clip; }
+section, .console { scroll-margin-top: 72px; }
+.head { display: grid; gap: 14px; margin-bottom: 44px; max-width: 46rem; }
+
+/* the shift: a receipt beside the store */
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 80px); align-items: start; }
+@media (max-width: 860px) { .shift { grid-template-columns: minmax(0, 1fr); } }
+.receipt {
+  --paper: #fbfbf8;
+  background: var(--paper); color: #1d1d1f; font-family: var(--mono); font-size: .8rem; line-height: 1.7;
+  padding: 26px 22px 34px; width: min(100%, 380px); justify-self: center;
+  transform: rotate(-1.2deg); box-shadow: 0 30px 50px -30px rgba(0,0,0,.35);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 10px repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 10px repeat-x;
+}
+.receipt .c { text-align: center; }
+.receipt .big { font-size: 1.05rem; letter-spacing: .4em; font-weight: 500; }
+.receipt hr { border: 0; border-top: 1px dashed #9a9a96; margin: 12px 0; }
+.receipt .row { display: flex; gap: 8px; }
+.receipt .row span:first-child { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.receipt .row span:first-child::after { content: " ........................................"; color: #9a9a96; }
+.receipt .lock { color: #b0102a; }
+.receipt .small { font-size: .7rem; color: #5d5d5a; }
+.barcode {
+  height: 46px; margin: 16px auto 4px; width: 82%;
+  background: repeating-linear-gradient(90deg, #1d1d1f 0 2px, transparent 2px 4px, #1d1d1f 4px 5px, transparent 5px 9px, #1d1d1f 9px 12px, transparent 12px 13px, #1d1d1f 13px 14px, transparent 14px 18px);
+}
+.facts { display: grid; gap: 26px; }
+.facts p { color: var(--ink-2); max-width: 32rem; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  font: 500 .72rem var(--mono); letter-spacing: .04em; color: #151518; background: #fff;
+  border: 1px solid #d6d6d0; border-left: 10px solid var(--tag); border-radius: 3px; padding: 5px 9px 5px 8px;
+}
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.fig { padding: 16px 12px 0 0; }
+.fig b { display: block; font-family: var(--display); font-size: 2.3rem; line-height: 1; font-weight: 400; font-variant-numeric: tabular-nums; }
+.fig span { font-size: .82rem; color: var(--muted); }
+@media (max-width: 520px) { .figs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; } }
+
+/* three minds */
+.minds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.mind { padding: 26px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.mind + .mind { border-left: 1px solid var(--line); }
+.mind h3 { font-family: var(--display); font-size: 1.9rem; line-height: 1; }
+.mind p { color: var(--ink-2); font-size: .98rem; }
+.mind svg { width: 100%; height: auto; display: block; }
+@media (max-width: 860px) { .minds { grid-template-columns: minmax(0, 1fr); } .mind + .mind { border-left: 0; border-top: 1px solid var(--line); } }
+
+/* the employee file */
+.file-wrap { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 6vw, 80px); align-items: center; }
+@media (max-width: 860px) { .file-wrap { grid-template-columns: minmax(0, 1fr); } }
+.file {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 0 54px;
+  font-size: .92rem; position: relative;
+}
+.file header { display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.file dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); }
+.file dt, .file dd { margin: 0; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.file dt { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-top: 15px; }
+.file dd { color: var(--ink); }
+.file dl > :nth-last-child(-n+2) { border-bottom: 0; }
+.redact { background: var(--ink); color: transparent; border-radius: 2px; user-select: none; padding: 0 .2em; }
+.stamp {
+  position: absolute; right: 18px; bottom: 16px; font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--karen); border: 1.5px solid var(--karen); padding: 4px 8px; border-radius: 3px;
+  transform: rotate(-6deg); opacity: .85;
+}
+.heat { display: grid; gap: 6px; margin-top: 4px; }
+.heat div { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 4.5rem; align-items: center; gap: 10px; font-size: .85rem; }
+.heat i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--tag), var(--karen)); }
+.heat em { font-style: normal; font-family: var(--mono); font-size: .72rem; color: var(--muted); text-align: right; }
+
+/* the blink */
+.blink { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 80px); align-items: center; }
+@media (max-width: 860px) { .blink { grid-template-columns: minmax(0, 1fr); } }
+.aisle {
+  position: relative; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 14px; overflow: hidden;
+  background: var(--screen); border: 1px solid #000;
+}
+.aisle .shelves {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to right, #15181a 0 18%, transparent 18% 82%, #15181a 82%),
+    repeating-linear-gradient(to bottom, #0d0f10 0 14px, #1a1e20 14px 15px),
+    radial-gradient(60% 40% at 50% 6%, rgba(220,240,232,.16), transparent 70%),
+    #0b0d0e;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+.aisle .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 44%; background: linear-gradient(#111416, #1b1f22); clip-path: polygon(41% 0, 59% 0, 100% 100%, 0 100%); }
+.aisle .light { position: absolute; left: 30%; right: 30%; top: 7%; height: 3px; background: #dfeee8; box-shadow: 0 0 24px 6px rgba(223,238,232,.35); border-radius: 2px; }
+.karen-fig {
+  position: absolute; left: 50%; bottom: 31%; width: 40px; height: 118px; margin-left: -20px;
+  background: #050506; border-radius: 20px; transform-origin: 50% 100%;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+  transition: transform .05s linear, opacity .05s linear;
+}
+.karen-fig::after { content: ""; position: absolute; top: 20px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--karen-screen); box-shadow: 0 0 6px 2px rgba(255,84,84,.6); }
+.lids { position: absolute; inset: 0; pointer-events: none; }
+.lids::before, .lids::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .09s ease-in; }
+.lids::before { top: 0; } .lids::after { bottom: 0; }
+.aisle.shut .lids::before, .aisle.shut .lids::after { height: 51%; }
+.aisle .dist { position: absolute; left: 14px; top: 12px; font: .72rem var(--mono); color: var(--screen-dim); letter-spacing: .08em; }
+.aisle .said { position: absolute; left: 14px; right: 14px; bottom: 12px; font: .75rem var(--mono); color: var(--screen-ink); }
+.blink-ctl { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn {
+  font: 500 .92rem var(--sans); border-radius: 999px; padding: 11px 18px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* the handbook */
+.handbook { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); }
+.rule { padding: 26px 26px 26px 0; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.rule:nth-child(odd) { border-right: 1px solid var(--line); }
+.rule:nth-child(even) { padding-left: 26px; }
+.rule h3 { font-family: var(--display); font-size: 1.65rem; line-height: 1.1; }
+.rule p { color: var(--ink-2); font-size: .98rem; max-width: 30rem; }
+@media (max-width: 760px) { .handbook { grid-template-columns: minmax(0, 1fr); } .rule:nth-child(odd) { border-right: 0; } .rule:nth-child(even) { padding-left: 0; } }
+
+/* now hiring */
+.hiring { background: var(--ink); color: var(--bg); }
+.hiring .wrap { padding-block: clamp(64px, 9vw, 112px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 80px); align-items: start; }
+@media (max-width: 860px) { .hiring .wrap { grid-template-columns: minmax(0, 1fr); } }
+.hiring h2 { color: var(--bg); }
+.hiring .lede { color: color-mix(in srgb, var(--bg) 78%, var(--ink)); margin-top: 16px; }
+.job { border: 1px solid color-mix(in srgb, var(--bg) 22%, var(--ink)); border-radius: 14px; overflow: hidden; }
+.job .jh { display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid color-mix(in srgb, var(--bg) 22%, var(--ink)); }
+.job .jh .eyebrow { color: color-mix(in srgb, var(--bg) 60%, var(--ink)); }
+.job dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); }
+.job dt, .job dd { margin: 0; padding: 12px 20px; border-bottom: 1px solid color-mix(in srgb, var(--bg) 14%, var(--ink)); }
+.job dt { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--bg) 58%, var(--ink)); padding-top: 15px; }
+.job form { padding: 18px 20px 20px; display: grid; gap: 10px; }
+.job .field { background: transparent; border-color: color-mix(in srgb, var(--bg) 30%, var(--ink)); flex: 1 1 auto; }
+.job .field input { color: var(--bg); }
+.job .field input::placeholder { color: color-mix(in srgb, var(--bg) 50%, var(--ink)); }
+.job .pill { background: var(--bg); color: var(--ink); }
+.job .note { color: color-mix(in srgb, var(--bg) 62%, var(--ink)); }
+
+footer { padding-block: 40px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: baseline; font-size: .85rem; color: var(--muted); }
+footer .wrap > :last-child { margin-left: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .word .dead, .bar .rec { animation: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Kehai, home">
+      <span class="word">KEH<span class="dead">A</span>I</span><span class="jp" lang="ja">気配</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#karen">Karen</a>
+      <a href="#shift">The shift</a>
+      <a href="#fair">Fairness</a>
+      <a href="#hiring">Playtest</a>
+    </nav>
+    <a class="pill" href="#hiring"><span class="dot" aria-hidden="true"></span>Join the night shift</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">A first-person horror game · night shift · 22:00 to 06:00</div>
+      <h1>The night shift has a <em>manager.</em></h1>
+      <p class="lede">Stock the shelves, mop the spills, serve the customers. Karen, the store's management AI, works out where you are from what she sees and hears, and keeps a record of how you work.</p>
+      <form class="signup" id="signup-top" novalidate>
+        <div class="field">
+          <input aria-label="Email" id="email-top" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+          <button class="pill" type="submit">Get the playtest</button>
+        </div>
+        <p class="note" id="note-top" aria-live="polite">One email when the first playtest opens. Nothing else.</p>
+      </form>
+
+      <div class="console" id="karen" aria-label="Karen's console: a live map of the store">
+        <div class="bar">
+          <span class="rec" aria-hidden="true"></span>
+          <span>Karen<span class="long"> · store management · Kehai #0417</span></span>
+          <span class="clock" id="clock">02:47:00</span>
+        </div>
+        <div class="screen">
+          <div class="mapbox">
+            <canvas id="map" width="1100" height="1120" role="img" aria-label="Top-down map of the store. A cyan dot is you, a red diamond is Karen, and a yellow-to-red cloud is where she thinks you are."></canvas>
+            <div class="hint" id="hint">Move your cursor through the store. She can't see the cursor. She hears it move.</div>
+            <div class="caught" id="caught" hidden><div>Caught.<small>THE SHIFT STARTS AGAIN FROM THE BEGINNING. WHAT SHE LEARNED STAYS.</small></div></div>
+          </div>
+          <div class="side">
+            <div class="readouts">
+              <div class="ro"><div class="k">Karen</div><div class="v"><span class="status" id="status" data-s="ROAM"><i aria-hidden="true"></i><span>Roam</span></span></div></div>
+              <div class="ro"><div class="k">Last heard you</div><div class="v" id="heard">—</div></div>
+              <div class="ro"><div class="k">You are in</div><div class="v you" id="you-at">Lobby</div></div>
+              <div class="ro"><div class="k">Her guess</div><div class="v guess" id="guess-at">Anywhere</div></div>
+            </div>
+            <div class="compare" id="sure">She is <b id="sure-pct">2%</b> sure of her guess. She never gets your position; she gets noises, glimpses, and the places she checked and found empty.</div>
+            <ol class="log" id="log" aria-label="Karen's thought log"></ol>
+            <div class="tools">
+              <button class="key" id="breaker" type="button" aria-pressed="false">Trip the breaker</button>
+              <button class="key" id="reset" type="button">Restart shift</button>
+              <div class="legend" aria-hidden="true">
+                <span style="--c: var(--you-screen)">You</span>
+                <span class="k" style="--c: var(--karen-screen)">Karen</span>
+                <span style="--c: var(--guess-screen)">Her guess</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">The real floor plan, as Karen's map sees it: 1.5 m cells, the aisles, the stockroom, the cold room. A simplified version of her runs in your browser. In the game she has more senses, more tricks, and the whole night.</p>
+    </div>
+  </section>
+
+  <section class="statement" aria-label="How Karen hunts">
+    <div class="wrap">
+      <p id="statement">She doesn't know where you are. She knows where you might be, and she checks.</p>
+    </div>
+  </section>
+
+  <section class="block" id="shift">
+    <div class="wrap">
+      <div class="head">
+        <div class="eyebrow">The shift</div>
+        <h2>Clock in. Do the jobs. Try to clock out.</h2>
+      </div>
+      <div class="shift">
+        <div class="receipt" aria-label="Tonight's shift, as a receipt">
+          <div class="c big">KEHAI</div>
+          <div class="c">STORE #0417 · OPEN 24H</div>
+          <div class="c small">NIGHT SHIFT 22:00 → 06:00</div>
+          <hr>
+          <div class="row"><span>RESTOCK SHELVES</span><span>UNTIL FULL</span></div>
+          <div class="row"><span>MOP THE SPILLS</span><span>ALL</span></div>
+          <div class="row"><span>BAG THE BINS, TAKE TO SKIP</span><span>ALL</span></div>
+          <div class="row"><span>SERVE AT THE TILL</span><span>AS NEEDED</span></div>
+          <div class="row"><span>WALK LOST CUSTOMERS</span><span>AS ASKED</span></div>
+          <div class="row"><span>COFFEE</span><span>WHEN TIRED</span></div>
+          <hr>
+          <div class="row lock"><span>CLOCK OUT</span><span>LOCKED</span></div>
+          <div class="small">Until the shelves are full, the spills are mopped and the rubbish is out.</div>
+          <hr>
+          <div class="c">THANK YOU FOR YOUR FLEXIBILITY</div>
+          <div class="barcode" aria-hidden="true"></div>
+          <div class="c small">0417 2200 0600 KAREN</div>
+        </div>
+        <div class="facts">
+          <p>Every job is real work in a maze of shelving. Your energy drains through the shift, and faster when you sprint; coffee brings it back. At zero you can only walk. Sprint anyway, and she hears it.</p>
+          <div class="figs">
+            <div class="fig"><b>60 × 45</b><span>metres of sales floor</span></div>
+            <div class="fig"><b>189</b><span>shelf bays</span></div>
+            <div class="fig"><b>80</b><span>products</span></div>
+            <div class="fig"><b>13</b><span>sections</span></div>
+          </div>
+          <div class="tags" aria-label="Some of the aisles">
+            <span class="tag">AISLE 3 · SOFT DRINKS</span>
+            <span class="tag">AISLE 5 · TINS &amp; JARS</span>
+            <span class="tag">AISLE 7 · NOODLES, PASTA &amp; RICE</span>
+            <span class="tag">AISLE 9 · HOUSEHOLD &amp; CLEANING</span>
+            <span class="tag">AISLE 11 · FROZEN</span>
+            <span class="tag">AISLE 13 · SWEETS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="minds-h">
+    <div class="wrap">
+      <div class="head">
+        <div class="eyebrow">Karen</div>
+        <h2 id="minds-h">Three minds, one manager.</h2>
+        <p class="lede">She's polite, formal and calm. She's also the reason you keep looking behind you.</p>
+      </div>
+      <div class="minds">
+        <article class="mind">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <defs><radialGradient id="cone" cx="0" cy="1" r="1"><stop offset="0" stop-color="var(--karen)" stop-opacity=".38"/><stop offset="1" stop-color="var(--karen)" stop-opacity="0"/></radialGradient></defs>
+            <path d="M150 140 L10 102 A145 145 0 0 1 290 102 Z" fill="url(#cone)" transform="rotate(0)"/>
+            <path d="M150 140 L10 102 M150 140 L290 102" stroke="var(--karen)" stroke-opacity=".5" fill="none"/>
+            <path d="M150 140 L58 112 A96 96 0 0 1 242 112" stroke="var(--line)" stroke-dasharray="3 4" fill="none"/>
+            <rect x="143" y="133" width="14" height="14" transform="rotate(45 150 140)" fill="var(--karen)"/>
+            <text x="150" y="26" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">150° · 36 m</text>
+            <text x="150" y="80" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">half strength at 16 m</text>
+          </svg>
+          <h3>The body</h3>
+          <p>She sees in a 150° cone out to 36 metres, sharper where she expects you, weaker in the dark. She hears sprints, drops and doors. Customers tell her where they saw you.</p>
+        </article>
+        <article class="mind">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <line x1="10" y1="128" x2="290" y2="128" stroke="var(--line)"/>
+            <path d="M10 112 C 70 104, 110 92, 160 78 S 250 50, 290 42" stroke="var(--muted)" stroke-dasharray="4 4" fill="none"/>
+            <path d="M10 118 L40 114 L62 96 L70 70 L80 92 L104 104 L128 84 L140 60 L150 36 L162 70 L186 92 L206 72 L222 58 L232 30 L244 62 L262 74 L280 50 L290 46" stroke="var(--karen)" stroke-width="2" fill="none" stroke-linejoin="round"/>
+            <text x="10" y="144" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">22:00</text>
+            <text x="290" y="144" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">06:00</text>
+            <text x="12" y="16" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">your fear · her target (dashed)</text>
+          </svg>
+          <h3>The director</h3>
+          <p>She paces the night like a horror film: pressure, a scare, then room to breathe, with the target rising as the shifts go on. An illustration of one night.</p>
+        </article>
+        <article class="mind">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <text x="10" y="16" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">where you hide, by shift</text>
+            <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-2)">
+              <text x="10" y="46">Staff room, locker 3</text><rect x="150" y="38" width="130" height="8" rx="4" fill="var(--karen)"/>
+              <text x="10" y="76">WC, end cubicle</text><rect x="150" y="68" width="70" height="8" rx="4" fill="var(--karen)" fill-opacity=".6"/>
+              <text x="10" y="106">Cold storage</text><rect x="150" y="98" width="30" height="8" rx="4" fill="var(--karen)" fill-opacity=".35"/>
+              <text x="10" y="136">Aisle 12 · Pet</text><rect x="150" y="128" width="12" height="8" rx="4" fill="var(--karen)" fill-opacity=".2"/>
+            </g>
+          </svg>
+          <h3>The ledger</h3>
+          <p>She keeps a record of you across shifts: where you hide, the routes you take, and which of her tricks worked. Change your habits and the record fades.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="file-h">
+    <div class="wrap file-wrap">
+      <div class="head" style="margin: 0">
+        <div class="eyebrow">She remembers</div>
+        <h2 id="file-h">Your file, after three shifts.</h2>
+        <p class="lede">Death doesn't reset her. When she catches you, the shift starts again from the beginning, and everything she wrote down stays in the file.</p>
+      </div>
+      <div class="file" aria-label="An example employee file">
+        <header><span class="eyebrow">Employee file · night associate</span><span class="eyebrow">Example</span></header>
+        <dl>
+          <dt>Hides in</dt><dd>Staff room, locker 3. Three shifts running.</dd>
+          <dt>Usual route</dt><dd>Stockroom → Aisle 7 → the till</dd>
+          <dt>When seen</dt><dd>Sprints for the stockroom door</dd>
+          <dt>Blackout</dt><dd>Little effect. She'll try something else.</dd>
+          <dt>Notes</dt><dd>Avoids the cold room. <span class="redact">checks behind every 9 s</span></dd>
+        </dl>
+        <span class="stamp">On file</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="blink-h">
+    <div class="wrap blink">
+      <div>
+        <div class="aisle" id="aisle">
+          <div class="shelves"></div><div class="floor"></div><div class="light"></div>
+          <div class="karen-fig" id="kfig"></div>
+          <div class="lids" aria-hidden="true"></div>
+          <div class="dist" id="kdist">28.0 m</div>
+          <div class="said" id="ksaid" aria-live="polite">She's at the end of the aisle, and she can see you.</div>
+        </div>
+        <div class="blink-ctl">
+          <button class="btn primary" id="blinkbtn" type="button">Blink</button>
+          <button class="btn" id="blinkreset" type="button">Start again</button>
+        </div>
+      </div>
+      <div class="head" style="margin: 0">
+        <div class="eyebrow">The blink · optional</div>
+        <h2 id="blink-h">She moves when you blink.</h2>
+        <p class="lede">Turn on the webcam and it watches your eyes. While she can see you, she can move inside your blink: she closes the distance, or she's gone and waiting somewhere else. Never during a chase.</p>
+        <p class="note">The webcam is opt-in, stays on your computer and is never recorded. Here the button stands in for your eyelids. She's a black capsule for now.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="fair" aria-labelledby="fair-h">
+    <div class="wrap">
+      <div class="head">
+        <div class="eyebrow">From the staff handbook</div>
+        <h2 id="fair-h">She's hard. She's fair.</h2>
+      </div>
+      <div class="handbook">
+        <div class="rule"><h3>She never gets your exact location.</h3><p>She works from sight, sound, traces and what customers tell her. After 45 seconds without a sighting, her director nudges her toward your area. Never your spot.</p></div>
+        <div class="rule"><h3>Every shift can be finished.</h3><p>Whatever she blocks, every job you still have and the time clock stay reachable.</p></div>
+        <div class="rule"><h3>She's faster in a chase.</h3><p>About 15%: 7.5 m/s against your 6.5. Break her line of sight and change your route, because she runs to where she thinks you went.</p></div>
+        <div class="rule"><h3>Her touch ends the shift.</h3><p>The screen goes black and the shift starts again from the beginning. What she has learned about you stays.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hiring" id="hiring" aria-labelledby="hire-h">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow" style="color: inherit; opacity: .6">Playtest</div>
+        <h2 id="hire-h">Now hiring: night shift associates.</h2>
+        <p class="lede">The first playtest is for a small group. So far only the developer and simulated players have worked here.</p>
+      </div>
+      <div class="job">
+        <div class="jh"><span class="eyebrow">Position · night associate</span><span class="eyebrow">Kehai #0417</span></div>
+        <dl>
+          <dt>Hours</dt><dd>Whenever you like</dd>
+          <dt>Where</dt><dd>Your computer: macOS or Windows</dd>
+          <dt>Pay</dt><dd>None</dd>
+          <dt>You'll need</dt><dd>Headphones</dd>
+          <dt>Manager</dt><dd>Karen</dd>
+        </dl>
+        <form id="signup-bottom" novalidate>
+          <div class="field">
+            <input aria-label="Email" id="email-bottom" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+            <button class="pill" type="submit">Apply</button>
+          </div>
+          <p class="note" id="note-bottom" aria-live="polite">One email when the playtest opens.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><span class="mono" style="letter-spacing:.3em">KEHAI</span> · <span lang="ja">気配</span>, the sense that someone is there</span>
+    <span>A game by TokenLimit</span>
+    <span>Karen is fictional.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+  // ---- sign-ups ---------------------------------------------------------------------------------
+  // The playtest plan's Worker takes these at /signup. Until it's deployed, the form says so.
+  const SIGNUP_URL = "";
+  for (const [formId, inputId, noteId] of [["signup-top", "email-top", "note-top"], ["signup-bottom", "email-bottom", "note-bottom"]]) {
+    const form = document.getElementById(formId), input = document.getElementById(inputId), note = document.getElementById(noteId);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = input.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { note.textContent = "That doesn't look like an email address."; note.dataset.state = ""; input.focus(); return; }
+      if (!SIGNUP_URL) { note.textContent = "Sign-ups open with the first playtest. This page is a preview, so nothing was sent."; note.dataset.state = "ok"; return; }
+      try {
+        const r = await fetch(SIGNUP_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+        note.textContent = r.ok ? "You're on the list. One email when the playtest opens." : "That didn't go through. Try again in a minute.";
+        note.dataset.state = r.ok ? "ok" : "";
+      } catch { note.textContent = "That didn't go through. Check your connection and try again."; }
+    });
+  }
+
+  // ---- the statement, word by word --------------------------------------------------------------
+  const st = document.getElementById("statement");
+  st.innerHTML = st.textContent.split(" ").map(w => `<span class="w${/checks/.test(w) ? " k" : ""}">${w}</span>`).join(" ");
+
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- the store, as her map sees it (docs/store/STORE_MAP.md, z −106 to −189) -----------------
+  const GRID = [
+    "~~~:::::::::::::::::::::::::::::::::::::@::::::::::::~~",
+    "~~~::::::::::::::::::::::::::::::::::::::::::::::::::~~",
+    "~~~:::::::::::::::uu:::+++::::::::::::::++::uu:::::::~~",
+    "___::::::::: lllllluull+++llll lllllllll++llllllll   __",
+    "___::::::::: lllllllllllllllllllllllllllllllllllll   __",
+    "___::::::::::llllllllllllllllllllllllllllllllllllllll__",
+    "___::::::::::llllllllllllllllllllllllllllllllllllllll__",
+    "___::u   u::+lllllllllllllllllllllllllllllllllllll   __",
+    "___::::::::::llllllllllllllllullllllllllllllllllll   __",
+    "___::::::::::lllll  lll+++l   ulllllllll++u ulllll   __",
+    "___::::::::: WWWuWWWWWW+++BBBBBuuBBBPPPP++PPPPPuuPPPP__",
+    "___::::::::: WWWWWWWWWWBBBBBBBBBBBBBPPPPPPPPPPPPPPPPP__",
+    "___::::::::::WWWWWWWWWWBBBBBBBBBBBBBPPPPPPPPPPPPPPPPP__",
+    "___::::::::: WWWWWWWWWWBBBBBBBBBBBBBPPPPPPPPPPPPPPPPP__",
+    "___::::::::u WWWWWWWWWWBBBBBBBBBBBBBPPPPPPPPPPPPPPPPP__",
+    "___:::   :::uWWWWWWWWWWBBBBBBBBBBBBBPPPPPPPPPPPPPPPPP__",
+    "___:::   :::+WWWWWWWWWWBBB       BBB       PPP       __",
+    "___::::::::::WW$WW$ WW $BBBBBBBBBBBBPPPPPP PPPPPPPPP __",
+    "___::::::::::WWWWWW WW BBBBBBBBBBBBBPPPPPP PPPPPPPPP __",
+    "___::::::::::WWWWWW WW BBBBBB       PPPPPP        PP __",
+    "___: : ::::++WWWWWWWWWWBBBBBB BBBBBBPPP PPPPPPPPP PP __",
+    "___rrrrrrrr++WWWWWWWWWWBBBBBB BBBBBBPPP PPPPPPPPP PP __",
+    "___rrrrrrrrrtWWWWWWWWWWBBBBBB BBBBBBPPP PPPPPPPPP PP __",
+    "___rrrrrrrrrrHHHHHH HH HHHCCCCCCCCCCSSSSSSSSSSDDDDDD __",
+    "___rrr   rrr+HHHHHH HH HHHCCCCCCCCCCSSSSSSSSSSDDDDDD __",
+    "___rrrrrrrrr+HHHHHH HH HHHCCCCCCCCCCSSSSSSSSSSDDDDDD __",
+    "___rrrrrrrrrrHHHHHH HH HHH       CCCSSS              __",
+    "___mrr rrrrrrHHHHHH HH HHHCCCCCC CCCSSSSSSSSSSDDDDDD __",
+    "___crrrrrrrrrHHHHHH HH HHHCCCCCC CCCSSSSSSSSSSDDDDDD __",
+    "___ox u++rrr HHHHHH HH HHH   CCC                 DDD __",
+    "___bbbb++bbbeHHHHHHHHHHHHHCCCCCC CCCSSSSSSSSSSDDDDDD __",
+    "___bbbbbbbbb HHHHHHHHHHHHHCCCCCC CCCSSSSSSSSSSDDDDDD __",
+    "___bbbbbbbbbbHHHHHHHHHHHHHCCCCCC CCCSSSSSSSSSSDDDDDD __",
+    "___bbbbbbbb  KKKKKK KK KKKNNN NNNNNNTTTTTTTTTTDDDDDD __",
+    "___bbbbbbbk  KKKKKK KK KKKNNN NNNNNNTTTTTTTTTTDDDDDD __",
+    "___bbbbbbbb  KKKKKK KK KKKNNN NNNNNNTTTTTTTTTTDDDDDD __",
+    "___bbbbbbbbbbKKK    KK KKK    NNN                DDD __",
+    "___bbbbbbbb  KKKAAAKKK KKKNNNNNNNNNNTTTTTTTTTTDDDDDD __",
+    "___bbbbbbbk  KKKAAAKKK KKKNNNNNNNNNNTTTTTTTTTTDDDDDD __",
+    "___bbbbbbbb  KKKAAAK          NNN                DDD __",
+    "___bbbbbbbbbbAAAAAAAAAAAAAFFF FFFFFFMMMMMMMMMMMMMMMM __",
+    "___bbbbbbbb  AAAAAAAAAAAAAFFF FFFFFFMMMMMMMMMMMMMMMM __",
+    "___bbbbbbbk  AAAAAAAAAAAAAFFF FFFFFFMMMMMMMMMMMMMMMM __",
+    "___bbbbbbbb  AAAAAA AAAAAAFFFFFF FFFMMMMMMMMMMMMMMMM __",
+    "___bbbbbbbbbbAAAAAA AAAAAAFFFFFF FFFMMMMMMMMMMMMMMMM __",
+    "___bbbbbbbbbbAAAAAA AAAAAAFFFFFF FFFMMMMMMMMMMMMMMMM __",
+    "___bbbs++             s++s         c   c++ c    c    __",
+    "___ss sss             ssss       ccccccccccccccccccc __",
+    "___ssssssssssssssssssssssssssssssccccccccccccccccccc __",
+    "___ssssssssssssssssssssssssssssssccccccccccccccccccc __",
+    "___sss          sss          sss+ccccccccccccccccccc __",
+    "___sss          sss          sss+cc     cccccc    cc __",
+    "___sss          sss          ssssccccccccccccccccccc __",
+    "___ssssssssssssssss sssssssssssssccccccccccccccccccc __",
+    "___sssssssssssssss  sssssssssssssccccccccccccccccccc __",
+    "___                              ccccccccccccccccccc __"
+  ];
+  const ROWS = GRID.length, COLS = GRID[0].length;
+  const AISLES = { P: "Aisle 1 · Fruit & Veg", B: "Aisle 2 · Bakery", D: "Aisle 3 · Soft Drinks", S: "Aisle 4 · Snacks",
+    T: "Aisle 5 · Tins & Jars", C: "Aisle 6 · Cereal", N: "Aisle 7 · Noodles", H: "Aisle 8 · Health & Beauty",
+    K: "Aisle 9 · Household", M: "Aisle 10 · Dairy", F: "Aisle 11 · Frozen", A: "Aisle 12 · Pet", W: "Aisle 13 · Sweets" };
+  const at = (c, r) => (r >= 0 && r < ROWS && c >= 0 && c < COLS) ? GRID[r][c] : " ";
+  const open = (c, r) => { const g = at(c, r); return g !== " " && g !== "~" && g !== "_"; };
+  function place(c, r) {
+    const g = at(c, r);
+    if (AISLES[g]) return AISLES[g];
+    if (g === "l") return "Lobby";
+    if (g === "r" || g === "t" || g === "m" || g === "o") return "Staff room";
+    if (g === "b" || g === "k" || g === "x" || g === "e") return "Backstreet";
+    if (g === "s") return "Stockroom";
+    if (g === "c") return r > 46 ? "Cold storage" : "Staff room";
+    if (g === ":") return r < 4 ? "Pavement" : r < 13 ? "WC" : "Office";
+    if (g === "$") return "The till";
+    if (g === "+") return "A doorway";
+    if (g === "u") return "By a bin";
+    return "Pavement";
+  }
+  const idx = (c, r) => r * COLS + c;
+  const cells = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (open(c, r)) cells.push(idx(c, r));
+  const find = ch => { for (let r = 0; r < ROWS; r++) { const c = GRID[r].indexOf(ch); if (c >= 0) return { c, r }; } return null; };
+  const CLOCK = find("t"), TILL = find("$"), BREAKER = find("e");
+
+  // breadth-first paths on the 1.5 m grid (8-way, no corner cutting)
+  const prev = new Int32Array(ROWS * COLS);
+  function path(from, to) {
+    const s = idx(from.c, from.r), g = idx(to.c, to.r);
+    if (!open(to.c, to.r)) return [];
+    prev.fill(-1); prev[s] = s;
+    const q = [s];
+    for (let h = 0; h < q.length; h++) {
+      const u = q[h]; if (u === g) break;
+      const uc = u % COLS, ur = (u / COLS) | 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        const nc = uc + dc, nr = ur + dr;
+        if (!open(nc, nr) || (dr && dc && (!open(uc + dc, ur) || !open(uc, ur + dr)))) continue;
+        const v = idx(nc, nr); if (prev[v] !== -1) continue;
+        prev[v] = u; q.push(v);
+      }
+    }
+    if (prev[g] === -1) return [];
+    const out = []; for (let v = g; v !== s; v = prev[v]) out.push({ c: v % COLS, r: (v / COLS) | 0 });
+    return out.reverse();
+  }
+  function lineOfSight(x0, y0, x1, y1) {
+    const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d * 3);
+    for (let i = 1; i < n; i++) { const t = i / n; if (!open(Math.floor(x0 + (x1 - x0) * t), Math.floor(y0 + (y1 - y0) * t))) return false; }
+    return true;
+  }
+  function rayLength(x, y, a, max) {
+    const dx = Math.cos(a), dy = Math.sin(a);
+    for (let s = .25; s < max; s += .25) if (!open(Math.floor(x + dx * s), Math.floor(y + dy * s))) return s;
+    return max;
+  }
+
+  // ---- the sim (1 cell = 1.5 m; speeds from the game, in cells a second) ------------------------
+  const M = 1 / 1.5, WALK = 4 * M, SPRINT = 6.5 * M, K_WALK = 3.4 * M, K_HURRY = 4.2 * M, K_RUN = 7.5 * M;
+  const HALF_FOV = 75 * Math.PI / 180, RANGE = 36 * M;
+  let you, karen, belief, rings, log, simTime, lastHeard, blackout = false, caughtUntil = 0, auto = true, pointerAt = null;
+  const B = new Float32Array(ROWS * COLS), B2 = new Float32Array(ROWS * COLS);
+
+  function reset() {
+    you = { x: CLOCK.c + .5, y: CLOCK.r + .5, path: [], goal: null, vx: 0, vy: 0, noiseT: 0 };
+    const sk = find("s");
+    karen = { x: 26.5, y: 52.5, a: -Math.PI / 2, path: [], state: "ROAM", t: 0, seenFor: 0, lastSeen: null, goal: null, replan: 0, lookT: 0 };
+    B.fill(0); const p = 1 / cells.length; for (const i of cells) B[i] = p;
+    rings = []; log = []; simTime = 0; lastHeard = null; caughtUntil = 0;
+    say("Shift started. Clocked in at the staff room.", "w");
+  }
+  const clockText = () => { const s = 2 * 3600 + 47 * 60 + Math.floor(simTime); return [s / 3600 | 0, (s / 60 | 0) % 60, s % 60].map(n => String(n).padStart(2, "0")).join(":"); };
+  function say(text, cls) { log.push({ t: clockText(), text, cls }); if (log.length > 7) log.shift(); drawLog(); }
+
+  function sees() {
+    const dx = you.x - karen.x, dy = you.y - karen.y, d = Math.hypot(dx, dy);
+    const range = RANGE * (blackout ? .45 : 1);
+    if (d > range) return false;
+    let da = Math.atan2(dy, dx) - karen.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+    return Math.abs(da) <= HALF_FOV && lineOfSight(karen.x, karen.y, you.x, you.y);
+  }
+  function hear(x, y, loud) {
+    const d = Math.hypot(x - karen.x, y - karen.y);
+    if (d > loud) return;
+    // a cloud where the sound came from, wider the further away she was
+    const sigma = 1.2 + d * .09, c0 = Math.floor(x), r0 = Math.floor(y), R = Math.ceil(sigma * 2.5);
+    let add = 0;
+    for (let r = r0 - R; r <= r0 + R; r++) for (let c = c0 - R; c <= c0 + R; c++) {
+      if (!open(c, r)) continue;
+      const w = Math.exp(-((c - c0) ** 2 + (r - r0) ** 2) / (2 * sigma * sigma));
+      B[idx(c, r)] += w * .9; add += w * .9;
+    }
+    normalise();
+    const fresh = lastHeard === null || simTime - lastHeard > 4;
+    lastHeard = simTime;
+    if (fresh && karen.state !== "HUNT") {
+      say(`Heard ${loud > 10 ? "running" : "footsteps"} · ${place(c0, r0)} · ${Math.round(d * 1.5)} m away`, "y");
+      karen.state = "CHECK"; karen.replan = 0;
+    }
+  }
+  function normalise() { let s = 0; for (const i of cells) s += B[i]; if (s > 0) for (const i of cells) B[i] /= s; }
+  function peak() { let best = cells[0]; for (const i of cells) if (B[i] > B[best]) best = i; return { c: best % COLS, r: (best / COLS) | 0 }; }
+  function sureness(p) { let s = 0; for (let r = p.r - 2; r <= p.r + 2; r++) for (let c = p.c - 2; c <= p.c + 2; c++) if (open(c, r)) s += B[idx(c, r)]; return s; }
+  function sample() { let x = Math.random(), i = 0; for (; i < cells.length - 1; i++) { x -= B[cells[i]]; if (x <= 0) break; } return { c: cells[i] % COLS, r: (cells[i] / COLS) | 0 }; }
+
+  // her belief spreads (you might have moved) and drains from what she can see (you weren't there)
+  function think() {
+    for (const i of cells) {
+      const c = i % COLS, r = (i / COLS) | 0; let s = 0, n = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (open(c + dc, r + dr)) { s += B[idx(c + dc, r + dr)]; n++; }
+      B2[i] = B[i] * .55 + (s / n) * .45;
+    }
+    for (const i of cells) B[i] = B2[i];
+    const range = RANGE * (blackout ? .45 : 1), seen = sees();
+    for (let a = -HALF_FOV; a <= HALF_FOV; a += .06) {
+      const ang = karen.a + a, len = rayLength(karen.x, karen.y, ang, range);
+      for (let s = .5; s < len; s += .7) {
+        const c = Math.floor(karen.x + Math.cos(ang) * s), r = Math.floor(karen.y + Math.sin(ang) * s);
+        if (seen && Math.abs(c - Math.floor(you.x)) < 2 && Math.abs(r - Math.floor(you.y)) < 2) continue;
+        B[idx(c, r)] *= .12;
+      }
+    }
+    normalise();
+  }
+
+  function stepMover(m, speed, dt) {
+    while (m.path.length && dt > 0) {
+      const n = m.path[0], tx = n.c + .5, ty = n.r + .5, dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy);
+      if (d < .05) { m.path.shift(); continue; }
+      const step = Math.min(d, speed * dt);
+      m.x += dx / d * step; m.y += dy / d * step; dt -= step / speed;
+      if (m === karen) karen.a = turn(karen.a, Math.atan2(dy, dx), 9 * (1 / 60));
+      if (step >= d) m.path.shift();
+    }
+  }
+  const turn = (a, b, k) => { let d = Math.atan2(Math.sin(b - a), Math.cos(b - a)); return a + d * Math.min(1, k * 6); };
+
+  function stepYou(dt) {
+    const from = { c: Math.floor(you.x), r: Math.floor(you.y) };
+    if (pointerAt && open(pointerAt.c, pointerAt.r)) {
+      auto = false;
+      if (!you.goal || you.goal.c !== pointerAt.c || you.goal.r !== pointerAt.r) { you.goal = pointerAt; you.path = path(from, pointerAt); }
+    } else if (auto && !you.path.length) {
+      // left alone, a worker goes about the jobs: aisles, the till, the bins, the clock
+      const pick = cells[(Math.random() * cells.length) | 0];
+      you.goal = { c: pick % COLS, r: (pick / COLS) | 0 }; you.path = path(from, you.goal);
+    }
+    const far = you.path.length > 6, speed = far ? SPRINT : WALK;
+    const x0 = you.x, y0 = you.y;
+    if (you.path.length) stepMover(you, auto ? WALK : speed, dt);
+    const v = Math.hypot(you.x - x0, you.y - y0) / Math.max(dt, 1e-4);
+    you.noiseT -= dt;
+    if (v > .3 && you.noiseT <= 0) {
+      const running = v > WALK * 1.15, loud = running ? 30 * M : 7 * M;
+      you.noiseT = running ? .45 : .8;
+      rings.push({ x: you.x, y: you.y, r: 0, max: loud, life: 1 });
+      hear(you.x, you.y, loud);
+    }
+  }
+
+  function stepKaren(dt) {
+    karen.replan -= dt;
+    const seen = sees();
+    karen.seenFor = seen ? karen.seenFor + dt : 0;
+    if (karen.seenFor > (blackout ? .5 : .25)) {
+      if (karen.state !== "HUNT") say(`Seen · ${Math.round(Math.hypot(you.x - karen.x, you.y - karen.y) * 1.5)} m · hunt`, "r");
+      karen.state = "HUNT"; karen.lastSeen = { x: you.x, y: you.y, vx: you.x - (karen.lastSeen ? karen.lastSeen.x : you.x), t: simTime };
+      B.fill(0); B[idx(Math.floor(you.x), Math.floor(you.y))] = 1;
+      if (karen.replan <= 0) { karen.path = path({ c: Math.floor(karen.x), r: Math.floor(karen.y) }, { c: Math.floor(you.x), r: Math.floor(you.y) }); karen.replan = .25; }
+    } else if (karen.state === "HUNT" && simTime - karen.lastSeen.t > .4 && !karen.path.length) {
+      say("Lost sight · running to where you were going", "w");
+      karen.state = "CHECK"; karen.replan = 0;
+    }
+    if (karen.state === "CHECK" && karen.replan <= 0) {
+      const p = peak(); karen.goal = p; karen.replan = 1.2;
+      karen.path = path({ c: Math.floor(karen.x), r: Math.floor(karen.y) }, p);
+      if (!karen.path.length || sureness(p) < .02) { karen.state = "ROAM"; }
+    }
+    if (karen.state === "CHECK" && karen.goal && !karen.path.length) {
+      if (lastHeard !== null && simTime - lastHeard > 6) { say(`Nothing at ${place(karen.goal.c, karen.goal.r)} · crossing it off`, "w"); karen.state = "ROAM"; }
+      karen.lookT += dt; karen.a += dt * 1.6;
+    }
+    if (karen.state === "ROAM" && (!karen.path.length || karen.replan < -6)) {
+      const g = sample(); karen.goal = g; karen.replan = 0;
+      karen.path = path({ c: Math.floor(karen.x), r: Math.floor(karen.y) }, g);
+      if (Math.random() < .35) say(`Roam · checking ${place(g.c, g.r)}`, "");
+    }
+    const speed = karen.state === "HUNT" ? K_RUN : karen.state === "CHECK" ? K_HURRY : K_WALK;
+    stepMover(karen, speed, dt);
+    if (Math.hypot(you.x - karen.x, you.y - karen.y) < .9) caught();
+  }
+  function caught() {
+    say("Caught · the shift starts again", "r");
+    caughtUntil = simTime + 2.2; document.getElementById("caught").hidden = false;
+  }
+
+  // ---- drawing ----------------------------------------------------------------------------------
+  const cv = document.getElementById("map"), g = cv.getContext("2d");
+  let cs = 20, base = null;
+  function layout() {
+    const w = cv.clientWidth || 600, dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr * ROWS / COLS);
+    cs = cv.width / COLS; base = drawBase();
+  }
+  function drawBase() {
+    const o = document.createElement("canvas"); o.width = cv.width; o.height = cv.height;
+    const b = o.getContext("2d");
+    b.fillStyle = "#0a0b0c"; b.fillRect(0, 0, o.width, o.height);
+    // the building's footprint: anything not street or alley; shelving reads as raised blocks
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const ch = at(c, r), x = c * cs, y = r * cs;
+      if (ch === "~" || ch === "_") { b.fillStyle = "#0d0f10"; b.fillRect(x, y, cs, cs); continue; }
+      if (ch === " ") { b.fillStyle = "#1a1d20"; b.fillRect(x + cs * .08, y + cs * .08, cs * .84, cs * .84); continue; }
+      b.fillStyle = AISLES[ch] ? "#121517" : ch === "+" ? "#171a1d" : "#101315"; b.fillRect(x, y, cs, cs);
+    }
+    b.strokeStyle = "rgba(255,255,255,.035)"; b.lineWidth = 1;
+    for (let c = 0; c <= COLS; c += 2) { b.beginPath(); b.moveTo(c * cs, 0); b.lineTo(c * cs, o.height); b.stroke(); }
+    for (let r = 0; r <= ROWS; r += 2) { b.beginPath(); b.moveTo(0, r * cs); b.lineTo(o.width, r * cs); b.stroke(); }
+    // section labels at the first cell of each aisle, and the landmarks you work at
+    b.font = `${Math.max(9, cs * .62)}px "IBM Plex Mono", monospace`; b.fillStyle = "rgba(221,227,224,.26)";
+    const seen = new Set();
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const ch = at(c, r);
+      if (AISLES[ch] && !seen.has(ch)) { seen.add(ch); b.fillText(AISLES[ch].split(" · ")[0].replace("Aisle ", "A"), c * cs + 2, r * cs + cs * .85); }
+    }
+    const mark = (p, label) => { if (!p) return; b.fillStyle = "rgba(221,227,224,.55)"; b.fillRect(p.c * cs + cs * .3, p.r * cs + cs * .3, cs * .4, cs * .4); b.fillStyle = "rgba(221,227,224,.42)"; b.fillText(label, p.c * cs + cs * 1.1, p.r * cs + cs * .8); };
+    mark(CLOCK, "time clock"); mark(TILL, "till"); mark(BREAKER, "breaker");
+    return o;
+  }
+  function draw() {
+    g.drawImage(base, 0, 0);
+    // her guess: faint yellow to strong orange-red, as on the game's F1 map. Measured against an
+    // even spread, so "she has no idea" draws nothing and a sharp guess draws a hot spot.
+    const N = cells.length, top = Math.log(80);
+    for (const i of cells) {
+      const ratio = B[i] * N; if (ratio < 1.6) continue;
+      const t = Math.min(1, Math.log(ratio) / top);
+      const c = i % COLS, r = (i / COLS) | 0;
+      g.fillStyle = `rgba(255,${Math.round(214 - 138 * t)},${Math.round(64 - 30 * t)},${(.06 + .6 * t).toFixed(3)})`;
+      g.fillRect(c * cs, r * cs, cs, cs);
+    }
+    // her view, cut short by the shelving
+    const range = RANGE * (blackout ? .45 : 1), hunt = karen.state === "HUNT";
+    g.beginPath(); g.moveTo(karen.x * cs, karen.y * cs);
+    for (let a = -HALF_FOV; a <= HALF_FOV + 1e-6; a += .045) {
+      const ang = karen.a + a, len = rayLength(karen.x, karen.y, ang, range);
+      g.lineTo((karen.x + Math.cos(ang) * len) * cs, (karen.y + Math.sin(ang) * len) * cs);
+    }
+    g.closePath(); g.fillStyle = hunt ? "rgba(255,84,84,.22)" : "rgba(255,84,84,.09)"; g.fill();
+    // noise rings
+    for (const ring of rings) {
+      g.beginPath(); g.arc(ring.x * cs, ring.y * cs, ring.r * cs, 0, Math.PI * 2);
+      g.strokeStyle = `rgba(77,210,255,${(ring.life * .5).toFixed(3)})`; g.lineWidth = Math.max(1, cs * .08); g.stroke();
+    }
+    if (blackout) { g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(0, 0, cv.width, cv.height); }
+    // you
+    g.beginPath(); g.arc(you.x * cs, you.y * cs, cs * .42, 0, Math.PI * 2); g.fillStyle = "#4dd2ff"; g.fill();
+    g.beginPath(); g.arc(you.x * cs, you.y * cs, cs * .9, 0, Math.PI * 2); g.fillStyle = "rgba(77,210,255,.14)"; g.fill();
+    // Karen: a red diamond, as on the F1 map
+    g.save(); g.translate(karen.x * cs, karen.y * cs); g.rotate(Math.PI / 4);
+    const k = cs * (hunt && Math.sin(simTime * 20) > 0 ? .62 : .52);
+    g.fillStyle = "#ff5454"; g.fillRect(-k / 2, -k / 2, k, k); g.restore();
+  }
+
+  // ---- the panel ----------------------------------------------------------------------------------
+  const $ = id => document.getElementById(id);
+  const LOGCLS = { y: "y", r: "r", w: "w", "": "" };
+  function drawLog() {
+    $("log").innerHTML = log.map(l => `<li><span class="t">${l.t}</span><span class="${LOGCLS[l.cls] || ""}">${l.text.replace(/[<&]/g, ch => ch === "<" ? "&lt;" : "&amp;")}</span></li>`).join("");
+  }
+  const NAMES = { ROAM: "Roam", CHECK: "Check", HUNT: "Hunt" };
+  function panel() {
+    $("clock").textContent = clockText();
+    const s = $("status"); s.dataset.s = karen.state; s.lastElementChild.textContent = NAMES[karen.state];
+    $("heard").textContent = lastHeard === null ? "—" : `${(simTime - lastHeard).toFixed(1)} s ago`;
+    $("you-at").textContent = place(Math.floor(you.x), Math.floor(you.y));
+    const p = peak(), sure = sureness(p);
+    $("guess-at").textContent = sure < .03 ? "Anywhere" : place(p.c, p.r);
+    $("sure-pct").textContent = `${Math.round(Math.min(.99, sure) * 100)}%`;
+  }
+
+  // ---- input --------------------------------------------------------------------------------------
+  function cellFrom(e) {
+    const rect = cv.getBoundingClientRect();
+    return { c: Math.floor((e.clientX - rect.left) / rect.width * COLS), r: Math.floor((e.clientY - rect.top) / rect.height * ROWS) };
+  }
+  cv.addEventListener("pointermove", e => { if (e.pointerType === "mouse") { pointerAt = cellFrom(e); $("hint").hidden = true; } });
+  cv.addEventListener("pointerdown", e => { pointerAt = cellFrom(e); $("hint").hidden = true; });
+  cv.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") pointerAt = null; });
+  $("breaker").addEventListener("click", () => {
+    blackout = !blackout; $("breaker").setAttribute("aria-pressed", String(blackout));
+    $("breaker").textContent = blackout ? "Reset the breaker" : "Trip the breaker";
+    say(blackout ? "Blackout · the lights are out; she sees less, and so do you" : "Lights back on", blackout ? "r" : "w");
+  });
+  $("reset").addEventListener("click", () => { reset(); auto = true; $("caught").hidden = true; });
+
+  // ---- the loop -------------------------------------------------------------------------------------
+  let last = 0, thinkT = 0, panelT = 0, visible = true, running = !reduced;
+  function frame(ts) {
+    const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
+    if (visible && running) {
+      simTime += dt;
+      if (caughtUntil) {
+        if (simTime > caughtUntil) { $("caught").hidden = true; const keep = log.slice(-2); reset(); log = keep; drawLog(); }
+      } else {
+        stepYou(dt); stepKaren(dt);
+        thinkT -= dt; if (thinkT <= 0) { think(); thinkT = .25; }
+        for (const ring of rings) { ring.r += dt * 18; ring.life = Math.max(0, 1 - ring.r / ring.max); }
+        rings = rings.filter(r => r.life > 0);
+      }
+      draw();
+      panelT -= dt; if (panelT <= 0) { panel(); panelT = .2; }
+    }
+    requestAnimationFrame(frame);
+  }
+  reset(); layout();
+  if (reduced) {
+    // one still frame: a few seconds of her shift, then stop until someone moves
+    for (let i = 0; i < 240; i++) { simTime += 1 / 30; stepYou(1 / 30); stepKaren(1 / 30); if (i % 8 === 0) think(); }
+    draw(); panel();
+    cv.addEventListener("pointerdown", () => { running = true; }, { once: true });
+  }
+  new ResizeObserver(() => { layout(); draw(); }).observe(cv);
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(cv);
+  requestAnimationFrame(frame);
+
+  // ---- the blink ---------------------------------------------------------------------------------
+  // A dash closes about 45% of the gap (2.5–9 m) and never ends nearer than 6 m; or she vanishes
+  // and waits 8–16 m away, out of sight (docs/project/IDEAS.md §1).
+  const aisle = $("aisle"), fig = $("kfig");
+  let kd = 28, gone = false;
+  function show() {
+    const s = Math.max(.18, Math.min(1.2, 5.5 / kd));
+    fig.style.transform = `scale(${s.toFixed(3)})`; fig.style.opacity = gone ? "0" : "1";
+    $("kdist").textContent = gone ? "— m" : `${kd.toFixed(1)} m`;
+  }
+  function blink() {
+    aisle.classList.add("shut");
+    setTimeout(() => {
+      aisle.classList.remove("shut");
+      if (gone) { gone = false; kd = 8 + Math.random() * 8; $("ksaid").textContent = "There she is, nearer than before. She waited."; }
+      else if (kd <= 6.05) { $("ksaid").textContent = "She won't dash nearer than 6 m. From here, she walks."; }
+      else if (Math.random() < .25) { gone = true; $("ksaid").textContent = "She's gone. She's waiting somewhere you didn't look."; }
+      else { kd = Math.max(6, kd - Math.max(2.5, Math.min(9, (kd - 6) * .45))); $("ksaid").textContent = kd <= 6.05 ? "Six metres. She won't dash any nearer." : "You blinked. She's closer."; }
+      show();
+    }, reduced ? 0 : 180);
+  }
+  $("blinkbtn").addEventListener("click", blink);
+  $("blinkreset").addEventListener("click", () => { kd = 28; gone = false; $("ksaid").textContent = "She's at the end of the aisle, and she can see you."; show(); });
+  show();
+})();
+</script>
