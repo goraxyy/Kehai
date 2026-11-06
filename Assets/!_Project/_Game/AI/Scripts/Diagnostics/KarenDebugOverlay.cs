@@ -24,12 +24,14 @@ namespace Kehai.Karen
         public bool showOverlay;
         public bool showScrubber;
         public bool showHeat;
+        public bool showRoutes;
         public bool showTechnical;
 
         KarenBrain brain;
         MapPainter painter;
         GUIStyle body, heading, small;
 
+        Vector2 routeScroll;
         float replayT;
         bool playing;
         float speed = 4f;
@@ -49,7 +51,7 @@ namespace Kehai.Karen
             if (Input.GetKeyDown(overlayKey))
             {
                 showOverlay = !showOverlay;
-                if (showOverlay) SetReplay(false);
+                SetReplay(false);
                 AudioMeter.Ensure();
             }
             if (Input.GetKeyDown(replayKey)) SetReplay(!showScrubber);
@@ -86,8 +88,8 @@ namespace Kehai.Karen
                 replayT = 0f;
                 playing = r != null && r.Frames.Count > 0;
             }
-            Cursor.lockState = on ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = on;
+            Cursor.lockState = on || showOverlay ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = on || showOverlay;
         }
 
         static ShiftRecording Recording => ShiftRecorder.Instance != null ? ShiftRecorder.Instance.Current ?? ShiftRecorder.Instance.Last : null;
@@ -160,13 +162,42 @@ namespace Kehai.Karen
 
             painter.Draw(live, rec.Recent, Time.time, true, Mathf.RoundToInt(size * 0.85f));
             if (showHeat && brain.Belief != null) painter.DrawBelief(brain.Belief);
+            if (showRoutes) painter.DrawRoutes(brain.Map, brain.Predictor, Mathf.RoundToInt(size * 0.85f));
             MapPainter.Legend(new Rect(margin, painter.Area.yMax + margin, mapWidth - margin, legendH), size);
 
             var panel = new Rect(mapWidth + margin, margin, Screen.width - mapWidth - margin * 2f, Screen.height - margin * 2f);
             GUILayout.BeginArea(panel);
+            routeScroll = GUILayout.BeginScrollView(routeScroll);
+            showRoutes = GUILayout.Toggle(showRoutes, "Routes — her guesses", GUI.skin.button);
+            if (showRoutes) RouteList();
             if (showTechnical) Technical();
             else Story(live);
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        void RouteList()
+        {
+            RoutePredictor predictor = brain.Predictor;
+            if (predictor == null || predictor.Guesses.Count == 0)
+            {
+                GUILayout.Label("No route guesses right now.", small);
+                return;
+            }
+            GUILayout.Label($"Arrival at each route's end, seconds after last sighting ({Mathf.Max(0f, Time.time - predictor.SeenAt):0.0}s ago). These are guesses, not your position.", small);
+            for (int i = 0; i < predictor.Guesses.Count; i++)
+            {
+                RouteGuess g = predictor.Guesses[i];
+                if (g.Along == null || g.Along.Length == 0) continue;
+                var w = RoutePredictor.Window(g, g.Along.Length - 1);
+                Color saved = GUI.color;
+                GUI.color = MapPainter.RouteColour(i);
+                // Route names are data, not IMGUI rich-text markup.
+                string name = (g.Name ?? "route").Replace("<", "‹").Replace(">", "›");
+                GUILayout.Label(MapPainter.RouteLabel(i, name, g.Weight, w.earliest, w.likely, w.latest), small);
+                GUI.color = saved;
+            }
+            GUILayout.Space(FontSize * 0.4f);
         }
 
         void Story(ShiftFrame f)

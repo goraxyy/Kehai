@@ -159,7 +159,7 @@ namespace Kehai.Karen
                     DashedCircle(ToScreen(f.Guess), Px(r), new Color(Guess.r, Guess.g, Guess.b, 0.9f));
                     Text(ToScreen(f.Guess) + new Vector2(0f, Px(r) + 2f), GameNames.Antagonist + "'s guess", Guess, Mathf.RoundToInt(fontSize * 0.75f), TextAnchor.UpperCenter, true);
                 }
-                Rotated(cone, k, Px(36f), f.KarenYaw, new Color(1f, 0.25f, 0.25f, f.KarenSees ? 0.38f : 0.18f));
+                if (fromWallClock && KarenFx.ConeVisible) Rotated(cone, k, Px(36f), f.KarenYaw, new Color(1f, 0.25f, 0.25f, f.KarenSees ? 0.38f : 0.18f));
                 bool flash = f.Chasing && Mathf.Repeat(Time.unscaledTime * 4f, 1f) < 0.5f;
                 Rotated(Texture2D.whiteTexture, k, Mathf.Max(12f, Px(1.3f)), 45f, flash ? Color.white : KarenRed);
                 Text(k + new Vector2(Mathf.Max(10f, Px(1.2f)), 0f), f.Chasing ? GameNames.Antagonist + " — CHASING" : GameNames.Antagonist, KarenRed, fontSize, TextAnchor.MiddleLeft, true);
@@ -198,6 +198,43 @@ namespace Kehai.Karen
             GUI.DrawTexture(new Rect(topLeft.x, topLeft.y, Px(map.Columns * StoreMap.CellSize), Px(map.Rows * StoreMap.CellSize)), heat);
         }
 
+        // Route numbers match the list beside the map. Clip to the floor plan so a long
+        // guess cannot draw through the story panel. Cells come from Karen's own predictor.
+        public void DrawRoutes(StoreMap map, RoutePredictor predictor, int fontSize)
+        {
+            if (map == null || predictor == null) return;
+            GUI.BeginGroup(Area);
+            for (int n = 0; n < predictor.Guesses.Count; n++)
+            {
+                RouteGuess g = predictor.Guesses[n];
+                if (g.Path == null || g.Path.Length == 0) continue;
+                Color colour = RouteColour(n);
+                colour.a = 0.35f + 0.65f * Mathf.Clamp01(g.Weight);
+                Vector2 previous = default, end = default;
+                bool hasPrevious = false;
+                foreach (int cell in g.Path)
+                {
+                    if (cell < 0 || cell >= map.CellPosition.Length) { hasPrevious = false; continue; }
+                    Vector3 p = map.CellPosition[cell];
+                    end = ToScreen(new Vector2(p.x, p.z)) - Area.position;
+                    if (hasPrevious) Line(previous, end, 1.5f + 3f * Mathf.Clamp01(g.Weight), colour, 0f);
+                    previous = end;
+                    hasPrevious = true;
+                }
+                if (!hasPrevious) continue;
+                Sprite(ring, end, fontSize * 1.4f, colour);
+                Text(end, (n + 1).ToString(), colour, fontSize, TextAnchor.MiddleCenter, true);
+            }
+            GUI.EndGroup();
+            GUI.color = Color.white;
+        }
+
+        public static Color RouteColour(int index) => Color.HSVToRGB(Mathf.Repeat(0.12f + index * 0.17f, 1f), 0.55f, 1f);
+
+        // Both viewers label arrival relative to the last sighting, not wall-clock time.
+        public static string RouteLabel(int index, string name, float weight, float earliest, float likely, float latest) =>
+            $"{index + 1}. {name} · {Mathf.Clamp01(weight):P0} · {earliest:0.0}–{latest:0.0}s (likely {likely:0.0}s)";
+
         // ---- the legend ------------------------------------------------------------------------
 
         public static void Legend(Rect r, int fontSize)
@@ -209,7 +246,7 @@ namespace Kehai.Karen
                 (circle, Shopper, "Shopping", 0f), (circle, ToTill, "Going to till", 0f), (circle, Waiting, "Waiting at till", 0f),
                 (circle, Asking, "Wants directions", 0f), (circle, Following, "Following you", 0f), (circle, Possessed, GameNames.Antagonist + "'s puppet", 0f),
                 (ring, SoundYou, "Your noise", 0f), (ring, SoundKaren, "Her noise", 0f), (ring, SoundCustomer, "Other noise", 0f),
-                (circle, Warning, "Warning sound", 0f), (circle, Spill, "Spill", 0f), (Texture2D.whiteTexture, EmptyShelf, "Empty shelf", 0f),
+                (circle, Warning, "Trick sound", 0f), (circle, Spill, "Spill", 0f), (Texture2D.whiteTexture, EmptyShelf, "Empty shelf", 0f),
                 (Texture2D.whiteTexture, new Color(0.3f, 0.8f, 0.4f), "Bin (fills red)", 0f), (cross, KarenRed, "Locked door", 0f),
             };
             int perRow = Mathf.Max(1, Mathf.FloorToInt(r.width / (fontSize * 8.5f)));
