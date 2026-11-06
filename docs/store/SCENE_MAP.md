@@ -1,6 +1,6 @@
 # Scene map: SampleScene
 
-Generated on 2026-10-31 by `tools/scene/scene_map.py` from `Assets/!_Project/_Core/Scenes/SampleScene.unity`. Don't edit by hand: rerun the script after changing the scene.
+Generated on 2026-11-06 by `tools/scene/scene_map.py` from `Assets/!_Project/_Core/Scenes/SampleScene.unity`. Don't edit by hand: rerun the script after changing the scene.
 
 The scene and the art aren't in git (the repository is code and docs only), so this file is how the repository records **where everything is**. Karen's own map of the same store (regions, links, chokepoints) is [`STORE_MAP.md`](STORE_MAP.md); the building, products and stocking are in [`STORE.md`](STORE.md); room plans in [`LEVEL_DESIGN.md`](LEVEL_DESIGN.md) and [`INTERIOR_MODELS.md`](INTERIOR_MODELS.md).
 
