@@ -7,7 +7,7 @@ Outline an 8 to 12 minute, 16:9 devlog for YouTube, with a voice-over and gamepl
 **The usual shape** (adapt it to what the month has):
 1. A cold open: the month's best moment, 20 to 40 seconds, then the title.
 2. What changed this month, shown, not listed.
-3. One system explained with her mind on screen (belief map, guess, view cone, sound rings):
+3. One system explained with her mind on screen (belief map, guess, sound rings):
    how she found you, why she chose that trick.
 4. One thing that didn't work, honestly (from the notes or the commits).
 5. The month's best moments, with a line on each.

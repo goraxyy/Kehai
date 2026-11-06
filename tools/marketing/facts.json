@@ -70,8 +70,8 @@
     {
       "id": "tactics",
       "status": "qualified",
-      "say": "The 0.2.0 branch has six live tricks: Ask the customers, Bin tamper, Cut, Ambush, Throw and Blackout. Throw has three item choices, making eight live choices for the learner. Block door is built and tested but still awaits activation; it will be the seventh trick and ninth choice. Other tricks are disabled drafts.",
-      "evidence": [{ "file": "README.md", "contains": "six live tricks (eight choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
+      "say": "The 0.2.0 branch has seven live tricks: Ask the customers, Bin tamper, Cut, Ambush, Throw, Block door and Blackout. Throw has three item choices, making nine live choices for the learner. Other tricks are disabled drafts.",
+      "evidence": [{ "file": "README.md", "contains": "seven live tricks (nine choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
       "avoid": ["35 tactics", "34 tactics"],
       "why": "Count tricks separately from their item choices and from actions such as Hunt. Do not present disabled drafts as playable tricks."
     },

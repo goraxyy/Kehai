@@ -140,12 +140,12 @@ namespace Kehai.Karen
         public static IEnumerable<Tactic> For(ActionId goal) => All.Where(t => t.Actions.Contains(goal));
 
         // The drafts (0.2.0 build plan §6): off in play until reworked or removed. Live today are
-        // the own moves, Ask the customers, Bin tamper, Cut, Ambush, the three throws and Blackout.
+        // the own moves, Ask the customers, Bin tamper, Cut, Ambush, the three throws, Block door and Blackout.
         static readonly HashSet<string> Drafts = new HashSet<string>
         {
             "mirror_black", "fog", "camera_bolt_on", "shelf_sweep", "spill", "task_falsification", "tool_theft",
             "overtime", "pa_decoy", "pa_announce_position", "pa_task_readback", "pa_countdown", "pa_footsteps",
-            "phantom_chime", "silence", "crate_wall", "door_lock", "shelf_relocation", "mimicry", "witness",
+            "phantom_chime", "silence", "crate_wall", "shelf_relocation", "mimicry", "witness",
             "understudy", "stalk", "favour",
         };
 

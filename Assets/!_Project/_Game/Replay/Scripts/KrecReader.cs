@@ -55,6 +55,32 @@ namespace Kehai.Replay
         public byte[] Grid;
     }
 
+    // Her guesses at your route at one moment, once a hunt has lost you (Karen 0.2.0): each
+    // with its weight, its path on the floor and how far along it each point is. A frame with
+    // no guesses means she has dropped them.
+    public sealed class RouteFrame
+    {
+        public float T;
+        public float LostAt;                  // when she last saw you, in replay time
+        public Vector3 Seen;                  // where she last saw you
+        public float Sprint, Walk, Crouch;    // the speeds the windows assume, m/s
+        public RouteLine[] Guesses = new RouteLine[0];
+
+        // When you could be at point i of a guess, in replay time: earliest at a sprint, likely
+        // at a walk, latest crouching.
+        public (float earliest, float likely, float latest) Window(RouteLine g, int i) =>
+            (LostAt + g.Along[i] / Sprint, LostAt + g.Along[i] / Walk, LostAt + g.Along[i] / Crouch);
+    }
+
+    public sealed class RouteLine
+    {
+        public string Name;       // "to the time clock", "turned back", "hiding close by"
+        public int Kind;          // 0 a goal, 1 turned back, 2 hiding (Karen's GuessKind)
+        public float Weight;      // the guesses' weights add up to 1
+        public Vector3[] Path;    // her cells' centres, from where she last saw you
+        public float[] Along;     // metres along the path to each point
+    }
+
     // A whole recording, read back: the timeline of every entity, the view, the events and
     // her belief map. `TryPose` answers "where was it at t", the way the replay will ask.
     public sealed class ReplayData
@@ -68,6 +94,7 @@ namespace Kehai.Replay
         public readonly List<CameraSample> Camera = new List<CameraSample>();
         public readonly List<ReplayEvent> Events = new List<ReplayEvent>();
         public readonly List<BeliefFrame> Belief = new List<BeliefFrame>();
+        public readonly List<RouteFrame> Routes = new List<RouteFrame>();
 
         public float End => Complete ? Length : Ticks.Count > 0 ? Ticks[Ticks.Count - 1] : 0f;
 
@@ -125,6 +152,18 @@ namespace Kehai.Replay
                 if (Belief[mid].T <= t) { found = mid; lo = mid + 1; } else hi = mid - 1;
             }
             return found >= 0 ? Belief[found] : null;
+        }
+
+        // Her route guesses in force at t: null before the first, and none once she drops them.
+        public RouteFrame RoutesAt(float t)
+        {
+            int lo = 0, hi = Routes.Count - 1, found = -1;
+            while (lo <= hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (Routes[mid].T <= t) { found = mid; lo = mid + 1; } else hi = mid - 1;
+            }
+            return found >= 0 ? Routes[found] : null;
         }
 
         // The first event at or after t (events are written in the order they happened).
@@ -203,6 +242,7 @@ namespace Kehai.Replay
                 bool viewStarted = false;
                 Vector3Int viewQ = default;
                 byte[] belief = null;
+                RouteFrame routes = null;
                 float t = 0f;
 
                 while (true)
@@ -307,6 +347,11 @@ namespace Kehai.Replay
                                 break;
                             }
 
+                            case KrecTag.Routes:
+                                routes = ReadRoutes(r, routes);
+                                data.Routes.Add(routes);
+                                break;
+
                             case KrecTag.End:
                                 data.Length = r.ReadSingle();
                                 data.ClockedOut = r.ReadBoolean();
@@ -321,6 +366,66 @@ namespace Kehai.Replay
                 }
             }
             return data;
+        }
+
+        // New guesses come whole; a weights-only frame keeps the routes of the one before it.
+        static RouteFrame ReadRoutes(BinaryReader r, RouteFrame last)
+        {
+            var f = new RouteFrame { T = r.ReadSingle() };
+            byte what = r.ReadByte();
+            switch (what)
+            {
+                case 0:
+                    return f;
+
+                case 1:
+                    f.LostAt = r.ReadSingle();
+                    f.Seen = Krec.Position(Krec.ReadPosition(r));
+                    f.Sprint = r.ReadSingle();
+                    f.Walk = r.ReadSingle();
+                    f.Crouch = r.ReadSingle();
+                    f.Guesses = new RouteLine[r.ReadByte()];
+                    for (int i = 0; i < f.Guesses.Length; i++)
+                    {
+                        var g = new RouteLine { Name = r.ReadString(), Kind = r.ReadByte(), Weight = r.ReadUInt16() / 65535f };
+                        int n = Krec.ReadVarint(r);
+                        if (n < 0 || n > 100000) throw new KrecFormatException($"a route of {n} points");
+                        g.Path = new Vector3[n];
+                        g.Along = new float[n];
+                        Vector3Int at = default;
+                        int along = 0;
+                        for (int k = 0; k < n; k++)
+                        {
+                            at += new Vector3Int(Krec.ReadVarint(r), Krec.ReadVarint(r), Krec.ReadVarint(r));
+                            along += Krec.ReadVarint(r);
+                            g.Path[k] = Krec.Position(at);
+                            g.Along[k] = along / 100f;
+                        }
+                        f.Guesses[i] = g;
+                    }
+                    return f;
+
+                case 2:
+                {
+                    int count = r.ReadByte();
+                    if (last == null || last.Guesses.Length != count) throw new KrecFormatException("route weights without their routes");
+                    f.LostAt = last.LostAt;
+                    f.Seen = last.Seen;
+                    f.Sprint = last.Sprint;
+                    f.Walk = last.Walk;
+                    f.Crouch = last.Crouch;
+                    f.Guesses = new RouteLine[count];
+                    for (int i = 0; i < count; i++)
+                    {
+                        RouteLine g = last.Guesses[i];
+                        f.Guesses[i] = new RouteLine { Name = g.Name, Kind = g.Kind, Weight = r.ReadUInt16() / 65535f, Path = g.Path, Along = g.Along };
+                    }
+                    return f;
+                }
+
+                default:
+                    throw new KrecFormatException($"unknown routes record {what}");
+            }
         }
 
         // The end of what was written: the game quit mid-shift, or the file was copied half-done.

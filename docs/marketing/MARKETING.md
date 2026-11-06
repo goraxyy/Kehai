@@ -31,9 +31,8 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 What we may claim is in [`facts.json`](../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
 
-**0.2.0 wording:** six live tricks, with three Throw choices (eight learner choices in all).
-Block door is tested but awaits activation; once integrated, the count becomes seven tricks
-and nine learner choices. Drafts are not playable features. Tricks and blink dashes no longer
+**0.2.0 wording:** seven live tricks, with three Throw choices (nine learner choices in all).
+Drafts are not playable features. Tricks and blink dashes no longer
 promise an advance warning. The old bot results describe the earlier build; the 0.2.0 paired
 comparison is still pending, so do not claim the redesign catches players better.
 

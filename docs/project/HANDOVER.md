@@ -18,7 +18,7 @@ with diagrams, but its to-do list is out of date.
 - **Old names.** The game was Karoshi until 2026-09-29, and Karen was briefly Aiko (09-30 to 10-10). Those names survive only in `KehaiMigration.cs` and in readers of old save files. Never bring them back.
 - **The showpiece is Karen's AI.** It's described in [`Karen.md`](../karen/Karen.md), measured in [`KAREN_RESULTS.md`](../karen/KAREN_RESULTS.md), and explained simply in [`notmerged.md`](../archive/notmerged.md). The pieces:
   - a Bayes-filter belief grid;
-  - utility actions and HTN plans over 36 tricks, 13 of them live in 0.2.0 (before it: utility goals and HTN plans over 34 tactics, all in play);
+  - utility actions and HTN plans over 36 tricks, 14 of them live in 0.2.0 (before it: utility goals and HTN plans over 34 tactics, all in play);
   - guesses at your route while she hunts, which her Cut and Ambush race to (0.2.0);
   - a PI-controlled Director that paces tension in waves;
   - a UCB bandit and a per-player Ledger, which since 0.2.0 also learns which pairs of tricks pay (the combo room);
@@ -107,10 +107,10 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 - **PR #74, Karen 0.2.0** (`0.2.0` → `main`). **The owner merges it once everything is built; don't merge it.**
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
-  - **Built [C]:** phases 0–5's code: her area and grid, actions and drafts, Hunt at 7.5 m/s on her guesses, no warnings, the route guesses, Cut, Throw and their effects, her eyes, the combo room, bots that turn back and dodge, and the ablation's measurements. All 262 EditMode tests pass.
+  - **Built [C]:** phases 0–5's code: her area and grid, actions and drafts, Hunt at 7.5 m/s on her guesses, no warnings, the route guesses, Cut, Throw and their effects, her eyes, the combo room, bots that turn back and dodge, and the ablation's measurements. At syncs 2–4 (6 November) the second builder's work was merged in, Block door went live, and replays record her route guesses (`.krec` version 2). All 284 EditMode tests pass.
   - **Left [C]:** the ablation against `main` (C5.3: about an hour with the editor closed, set up and waiting for the owner's go), then its results (C5.4).
-  - **Left [B]:** Block door rebuilt (B2.1, committed on `0.2.0-b`, not merged in yet), the thrown items seen (B3.1), the effects felt (B3.2), her guesses drawn (B3.3), the combo list in the shift report (B4.1), the claims (B5.1), and closing B1.2.
-  - **Left for the owner:** re-export the maps (Y1.1), playtest a shift (Y5.1), then review and merge (Y5.2). Before pulling the merge into the main folder, move its untracked `AGENTS.md` aside: the branch tracks its own.
+  - **Built [B]:** the map legend, the developer switch (F3), replays without her steps, Block door rebuilt round a restock box, the thrown items seen, the effects felt, the combo list in the shift report, and the claims (B1.1–B5.1). **Left [B]:** her guesses drawn on the F1 map and in replays (B3.3), after merging `0.2.0` back.
+  - **Left for the owner:** playtest a shift (Y5.1; the second builder re-exported the maps, Y1.1, at your request), then review and merge (Y5.2). Before pulling the merge into the main folder, move its untracked `AGENTS.md` aside: the branch tracks its own.
 - **Draft PR #68, the learned motion model** (`feat/learned-motion`). About 70% done, paused before training.
   - Built: the code, the tests, the Python training tools, and the dataset (288 shifts, parity-checked).
   - Left: training (about 5 h), the held-out test (144 shifts) and closed loop (48), and the results.

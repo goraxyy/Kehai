@@ -40,7 +40,9 @@ public sealed class FurnitureDoor : HighlightInteractable
         if (roomDoor != null) roomDoor.Use(player.transform.position, NoiseAuthor.Player);
         else wantsOpen = !wantsOpen;
     }
-    public override string GetPrompt() => roomDoor != null && roomDoor.Locked ? "Locked" : (IsOpen ? "Close " : "Open ") + label;
+    public override string GetPrompt() =>
+        roomDoor != null && roomDoor.Blocker != null && roomDoor.Blocker.IsBlocking ? "Move box to unblock door"
+        : roomDoor != null && roomDoor.Locked ? "Locked" : (IsOpen ? "Close " : "Open ") + label;
     public void SetOpen(bool open) { if(roomDoor==null)wantsOpen=open; }
 
     void Update()

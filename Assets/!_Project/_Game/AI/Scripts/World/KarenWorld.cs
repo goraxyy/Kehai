@@ -243,6 +243,7 @@ namespace Kehai.Karen
             placed.Clear();
             foreach (HingeDoor door in lockedUntil.Keys) if (door != null) door.SetLocked(false);
             lockedUntil.Clear();
+            DoorBlock.ClearAll();
             Pa.Clear();
             HudFeed.Clear();
             Breakers.ResetForShift();

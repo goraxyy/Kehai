@@ -10,7 +10,7 @@ with this `id`.
 - Put each line over its cue: the scenes under a line show the shot its cue names, trimmed to the
   events that matter. Cut every 3 to 8 seconds; hold longer on her mind when it's being explained.
 - Sections can open with a `lower-third` naming them. Use labels, arrows and circles to point out
-  what the voice is talking about (her guess, the sound ring, the cone), briefly.
+  what the voice is talking about (her guess, the sound ring), briefly.
 - Music under the talking parts at about 0.25; let the game's sound lead in the moments.
 - 16:9: keep text 5% from the edges; the lower third and captions share the bottom fifth.
 - The end card: 6 to 10 seconds with the call to action. The video runs 8 to 12 minutes.

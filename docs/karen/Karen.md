@@ -1325,7 +1325,7 @@ how these changes play out over whole shifts is still open ([§16.7](#167-tests-
 | Goals | Patrol, Investigate, Pursue… | actions: Roam, Check, Hunt… (no name shared with a trick) |
 | The chase | the chase and Follow, at 6.8 m/s | Hunt, at 7.5 m/s, which keeps running on her guesses after losing you |
 | Prediction | her belief grid only | plus 3–6 guesses at your route, with time windows |
-| Tricks | 34, all of them in play | 36: 13 live, 23 drafts; Cut and Throw are new |
+| Tricks | 34, all of them in play | 36: 14 live, 22 drafts; Cut and Throw are new, Block door rebuilt |
 | Warnings | every trick warned ≥ 0.8 s ahead | removed (rule 3) |
 | Combos | welded into tricks (Blackout's wait, Funnel) | none built in; a combo room she fills herself |
 | Her footsteps and floor cone | for everyone | for the developer only (F3) |
@@ -1366,7 +1366,8 @@ took, ready for your return.
 
 **Actions.** The goals are renamed actions ([§6.3](#63-goal-selection-utility-not-states)). Each
 action without a live trick has its own move, titled after it: Roam, Check, Search, Back off and
-Hunt. Corner, Loom and Lure have neither until their drafts return (a test pins that list). The
+Hunt. Loom and Lure have neither until their drafts return (a test pins that list); Corner has
+Block door. The
 enum keeps the old order, so rung F's observation keeps its layout, and the thought log's record
 kind stays "GOAL" because the tools read it.
 
@@ -1398,6 +1399,9 @@ kind stays "GOAL" because the tools read it.
   - **Weights:** each guess's prior, times her belief along its route inside its window. So "she
     looked and you weren't there" lowers a guess the way it lowers her grid.
   - **Hunt's run** goes to the best guess. Cut and Ambush read them too.
+  - **Replays keep them.** The recording stores her guesses twice a second (`.krec` version 2,
+    `ReplayData.RoutesAt`), so a replay shows what she guessed then, not a guess made again
+    later.
 - **Real-world example:** a sat-nav guessing which turn you'll take and re-routing when you miss
   it. Radar does the same for many aircraft at once, a method called multiple hypothesis
   tracking ([Reid, 1979](https://doi.org/10.1109/TAC.1979.1102177)).
@@ -1413,7 +1417,7 @@ kind stays "GOAL" because the tools read it.
 | 1 | **Cut** (new) | Hunt's: go to where you'll be, by a shorter way |
 | 2 | Ambush | from shift 3 (was 8); waits where your guessed routes pass |
 | 2 | **Throw** (new): flour, oil, a tin | Hunt's, from shift 3; each item is its own choice for the learner |
-| 2 | Block door | once the second builder's rebuild (B2.1) is merged; a draft until then |
+| 2 | Block door | rebuilt (below); live again since sync 2 |
 | 3 | Blackout | lights only: its wait went with the combos |
 | 4 | — | empty |
 
@@ -1449,12 +1453,23 @@ kind stays "GOAL" because the tools read it.
   the player's motor. The bots drive the same motor, so they feel them too.
 - **For the other builder:** `ThrowEvents` (thrown, landed, hit) drives the visuals.
 
+**Block door** (`Tactics/BlockDoor.cs`, `DoorBlock.cs`, rebuilt by the second builder):
+- **What it does:** she takes a restock box that's resting in its slot and puts it against a
+  closed door, so the door won't open. You pick the box up and carry it off, and the door works
+  again; the box is the same one, with its home slot.
+- **Fairness:** a blocked door counts in her closures (`KarenBrain.ClosedRegions`) until the box
+  moves, so rule 6 checks every job and the time clock stays reachable with it shut. It isn't
+  one of her timed closures: it lasts until someone moves the box.
+- **The prompt:** the box and the door's handle both say "Move box to unblock door".
+- **It ends** when the box is picked up, recalled home or moved, and at the end of the shift
+  (`KarenWorld.ClearShift` calls `DoorBlock.ClearAll`).
+
 **Removed or renamed:**
 - the chase and Follow, merged into Hunt;
 - Funnel, deleted;
 - Blackout's wait, so Blackout is lights only;
 - the favour, renamed Peace offering, and a draft;
-- Door lock, renamed Block door, in its own file (`Tactics/BlockDoor.cs`) for the rebuild.
+- Door lock, renamed Block door and rebuilt around a restock box (above).
 
 The Ledger drops records of removed tricks when it loads.
 
@@ -1482,7 +1497,7 @@ No trick has a combo built into it any more. Instead she finds her own.
 
 | | |
 |---|---|
-| In play | her last trick, for 20 s, or as long as its effect runs (`Tactic.EffectRunning`): Blackout's while any lights are out; Block door's once the second builder adds it |
+| In play | her last trick, for 20 s, or as long as its effect runs (`Tactic.EffectRunning`): Blackout's while any lights are out; Block door's while a box still blocks a door |
 | Scoring | right after another trick, a trick is scored by what that pair has paid. Until the pair has a few uses, that's pulled toward what the trick pays alone (a shrink of 2 uses), and it's explored by the pair's own count |
 | Reward | a chained use's reward goes to the pair only, so "alone" stays alone |
 | Found | after 3 uses, if it pays at least 0.1 more panic change than its second trick alone; written down with the shift |
@@ -1516,7 +1531,8 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 
 ### 16.7 Tests, and what's not measured yet
 
-**The EditMode suite: 262 tests, all passing** (5 November, on an APFS clone). 0.2.0's own:
+**The EditMode suite: 284 tests, all passing** (6 November, on an APFS clone, after syncs 2–4).
+0.2.0's own:
 
 | File | What it checks |
 |---|---|
@@ -1526,6 +1542,9 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 | `ComboTests` (new) | the planted check; no false finds; the paired gain; the room's memory and fading; what counts as in play; the gate stays in charge |
 | `BotFearTests` | the bots turn back, dodge, and step the right way |
 | `KarenTests` | updated: the sprint, the tiers, no tell check |
+| `DoorBlockTests` (new, the second builder's) | the box blocks the door and frees it when picked up, stowed, recalled, moved or destroyed; a full inventory leaves it; resets; placement; highlights; her closures and the handle's prompt |
+| `PresentationTests` (new, the second builder's) | the thrown products exist; the screen effects clear; the throw art has no collider and leaves the RNG alone |
+| `KrecTests` | plus her route guesses: written, read back and found by time |
 
 **Not measured yet** (the ablation, C5.3, waits for the owner's go; the plan has the runs):
 - the gap between her and you 5 s after she loses you, against `main` (primary);
@@ -1538,9 +1557,5 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 - the sweep's cost during play.
 
 **Left over in 0.2.0:**
-- **The shift report still counts "warning sounds"** and tells you to listen for them before her
-  tricks (`ShiftAnalysis.cs`, `ShiftReportHtml.cs`). The sounds still play, but they no longer
-  come first.
-- **`CONTROLS.md` still lists the floor cone in Settings.**
-- Both are requests to the second builder (the build plan's §7), with Block door's
-  `EffectRunning` and the marketing facts.
+- **Her guesses aren't drawn yet,** on the F1 map or in replays (the second builder's B3.3). The
+  replays already record them.

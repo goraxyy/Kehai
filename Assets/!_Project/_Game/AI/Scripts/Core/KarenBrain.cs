@@ -66,6 +66,7 @@ namespace Kehai.Karen
         readonly Dictionary<int, float> lastVisited = new Dictionary<int, float>();
         readonly Dictionary<int, float> closedUntil = new Dictionary<int, float>();
         readonly HashSet<int> closedNow = new HashSet<int>();
+        readonly HashSet<int> closedAll = new HashSet<int>();
         readonly List<(float t, Vector3 p)> heard = new List<(float, Vector3)>();
         readonly List<(Tactic tactic, float t0, float p0, string after)> pendingRewards = new List<(Tactic, float, float, string)>();
 
@@ -1015,7 +1016,17 @@ namespace Kehai.Karen
 
         // ---- closures, visits, sabotage -------------------------------------------------------
 
-        public ICollection<int> ClosedRegions => closedNow;
+        // Timed closures, plus every door a box still blocks: those last until someone moves the box.
+        public ICollection<int> ClosedRegions
+        {
+            get
+            {
+                closedAll.Clear();
+                closedAll.UnionWith(closedNow);
+                DoorBlock.AddClosedRegions(closedAll);
+                return closedAll;
+            }
+        }
 
         public void Close(int region, float seconds)
         {

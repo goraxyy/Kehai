@@ -11,11 +11,11 @@ checks and turns into videos, so follow each step's schema and rules exactly.
 record of how you work, and hunts you.
 
 **The hooks, strongest first.** Lead every short with one, in the first two seconds:
-1. **She moves when you blink.** Opt-in webcam blink tracking; her eye flickers, then {{karen}} acts
-   inside your blink.
+1. **She moves when you blink.** Opt-in webcam blink tracking; {{karen}} acts inside your blink.
 2. **She keeps a record of you.** She remembers where you hide and the routes you take, across shifts.
 3. **Administrative horror.** Perfectly polite, and one touch ends the shift.
-4. **Catch the warning.** Her tricks come with a tell: a flicker, a chime, a PA crackle.
+4. **She runs to where you went.** Lose her and she keeps going on her guess of your route:
+   change your route, not just your hiding spot.
 
 **Who watches:** horror and store-sim players who like short indie horror; stealth fans; the AI and
 gamedev crowd, who share technical clips.

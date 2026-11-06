@@ -18,6 +18,9 @@ namespace Kehai.Replay
     //   Camera   t, what changed: position delta, rotation, FOV, eyelids, what's in hand
     //   Event    t, type, payload (a sound, a tell, the PA, the lights, a thought, a shelf slot…)
     //   Belief   t, her guess, how sure, the grid as bytes XOR'd with the previous one
+    //   Routes   t, her guesses at your route once a hunt has lost you (version 2, Karen 0.2.0):
+    //            the routes whole when she makes new ones, then only their weights, and an
+    //            empty frame when she drops them
     //   End      length, clocked out
     public enum KrecKind : byte
     {
@@ -26,7 +29,7 @@ namespace Kehai.Replay
         Bin = 14, Bag = 15
     }
 
-    public enum KrecTag : byte { Tick = 1, Spawn = 2, Despawn = 3, Pose = 4, Camera = 5, Event = 6, Belief = 7, End = 255 }
+    public enum KrecTag : byte { Tick = 1, Spawn = 2, Despawn = 3, Pose = 4, Camera = 5, Event = 6, Belief = 7, Routes = 8, End = 255 }
 
     public enum KrecEvent : byte
     {
@@ -58,7 +61,7 @@ namespace Kehai.Replay
     public static class Krec
     {
         public const string Magic = "KREC";
-        public const ushort Version = 1;
+        public const ushort Version = 2;               // 2 adds her route guesses; 1 still reads
         public const float TickRate = 30f;
         public const float CameraRate = 60f;
         public const float BeliefRate = 2f;

@@ -36,9 +36,8 @@ by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
   thousands of shelf slots, power cuts, a radio and automatic doors.
 - **Karen:** three minds (a body that only knows what it senses, a director that paces the
   tension, a ledger that remembers you across shifts), a map of where she thinks you are, and
-  six live tricks (eight choices for the learner): Ask the customers, Bin tamper, Cut, Ambush,
-  Throw (powder, detergent or tin), and Blackout. Block door is built and tested, awaiting
-  activation as the seventh trick and ninth choice; other tricks remain disabled drafts.
+  seven live tricks (nine choices for the learner): Ask the customers, Bin tamper, Cut, Ambush,
+  Throw (powder, detergent or tin), Block door and Blackout; other tricks remain disabled drafts.
   Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15% faster. Tricks no longer promise
   advance warnings. The 0.2.0 comparison with the previous build is still pending. Design:
   [`docs/karen/Karen.md`](docs/karen/Karen.md).

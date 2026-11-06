@@ -161,7 +161,7 @@ namespace Kehai.Karen
                 case "phantom_chime": return "making the front doors chime for nobody";
                 case "silence": return "going completely quiet";
                 case "crate_wall": return "blocking a route with stacked crates";
-                case "door_lock": return "locking a door on your route";
+                case "door_lock": return "pushing a box against a door on your route";
                 case "shelf_relocation": return "rolling a shelf into your way";
                 case "funnel": return "closing off routes to steer you";
                 case "mimicry": return "taking over a customer to watch you";

@@ -35,18 +35,18 @@ public class KarenActionsTests
     public void TheLiveTricks_AreTheOnesThePlanKeeps()
     {
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
-        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
+        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "door_lock", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
     }
 
-    // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush and Disrupt
-    // have a live trick; Corner, Loom and Lure have neither until their drafts come back.
+    // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush, Disrupt and
+    // Corner have a live trick; Loom and Lure have neither until their drafts come back.
     [Test]
-    public void EveryAction_HasItsOwnMoveOrALiveTrick_ButCornerLoomAndLure()
+    public void EveryAction_HasItsOwnMoveOrALiveTrick_ButLoomAndLure()
     {
         foreach (ActionId a in new[] { ActionId.Roam, ActionId.Check, ActionId.Search, ActionId.Hunt, ActionId.BackOff })
             Assert.IsTrue(TacticLibrary.For(a).Any(t => t.OwnMove && !t.Draft), $"{a.Name()} has no own move");
         var dormant = AllActions.Where(a => !TacticLibrary.For(a).Any(t => !t.Draft)).ToList();
-        CollectionAssert.AreEquivalent(new[] { ActionId.Corner, ActionId.Loom, ActionId.Lure }, dormant);
+        CollectionAssert.AreEquivalent(new[] { ActionId.Loom, ActionId.Lure }, dormant);
     }
 
     [Test]

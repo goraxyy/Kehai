@@ -45,7 +45,7 @@ def session_zip(code="T07", bugs=("the mop went through the wall",), answers=Tru
     record = {"shift": 1, "length": 170.0, "clockedOut": True,
               "plan": {"bounds": [0, 0, 100, 100], "floor": [[0, 0, 100, 0, 100, 100, 1]],
                        "shapes": [{"k": "Shelf", "c": [10, 10, 20, 10, 20, 20, 10, 20]}], "rooms": [], "pins": [], "sections": {}},
-              "analysis": {"numbers": {"Times Karen spotted you": 4, "Catches": 1, "Warning sounds": 3, "Customers served": 2,
+              "analysis": {"numbers": {"Times Karen spotted you": 4, "Catches": 1, "Trick sounds": 3, "Customers served": 2,
                                        "Lowest energy (%)": 40.5},
                            "findings": ["You clocked out after 2:50."], "jobs": [["mopped a spill", 2]]}}
     buf = io.BytesIO()
@@ -108,7 +108,7 @@ def test_facts_say_how_they_got_on(world):
     assert f["first_clock_in_s"] == 30 and f["walked_before_clock_in_m"] == pytest.approx(9.0)
     assert f["e_on_nothing"] == 2 and f["task_list_opened"] and not f["map_opened"]
     s = f["shifts"][0]
-    assert (s["n"], s["spotted"], s["catches"], s["warnings"], s["clocked_out"]) == (1, 4, 1, 3, True)
+    assert (s["n"], s["spotted"], s["catches"], s["trick_sounds"], s["clocked_out"]) == (1, 4, 1, 3, True)
     assert f["fps"] == {"avg": 44.9, "lowest": 31.5, "worst_frame_ms": 90.0}
     assert f["errors"] == 1 and f["error_messages"] == ["NullReferenceException: boom"]
     assert f["answers"]["karen"] == "Scary" and f["bugs"][0]["note"] == "the mop went through the wall"
