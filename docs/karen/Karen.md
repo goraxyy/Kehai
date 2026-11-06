@@ -9,6 +9,12 @@ document, not an implementation. It describes what Karen perceives, how it think
 across a single shift and across a career, the full library of things it can do to you, and how
 all of that maps onto the systems that already exist in this project.
 
+> **Karen 0.2.0** (the `0.2.0` branch, November 2026) changes a good part of what follows: her
+> eyes, where she works, goals that become actions, the Hunt, two new tricks, no warnings, and a
+> learner that finds combos. [§16](#16-karen-020) lists every change and where it lives in the
+> code. The sections below keep the original design, with a short **0.2.0** note wherever it no
+> longer matches.
+
 ---
 
 ## 0. TL;DR
@@ -51,7 +57,7 @@ a task is fear the player carries for the next ten minutes.
 
 **2. The Body never cheats, the Director never touches the Body.**
 Alien Isolation's split. The Director may spawn a noise, cut the lights, or nudge a *search
-region* — it may never teleport the Body, and it may never hand the Body your coordinates. If a
+region* — it may never teleport the Body, and it may never hand the Body your exact location. If a
 player reviews a replay, every single thing the Body did must be explainable from something it
 could actually have sensed. This is a hard architectural boundary, not a guideline.
 
@@ -159,6 +165,28 @@ Detection integrates upward while the score is positive and decays while it isn'
 through a gap between two `ShelfUnit`s does not instantly promote to a chase. **Crucially, the
 flashlight raises your own `lightLevel`** — light is the resource you trade for safety.
 
+**In 0.2.0** (`SightSensor`, set up by `KarenBody.ConfigureEye`):
+
+| Setting | Before | 0.2.0 |
+|---|---|---|
+| Cone | 120°, 18 m | **150°, 36 m** |
+| `distanceFalloff` | half strength at 8 m | half strength at **16 m** (cameras and possessed shoppers keep 8) |
+| Gain (option A) | 2.2 | **1.65**, tuned down to the targets, because the bigger cone made her too quick |
+| Score floor | 0.02 | **0.04**, so crouched in the dim stays unseen |
+| Grace (option E) | none | awareness **holds for 0.5 s** after you leave her view, then drains |
+| Expectation (option D) | none | it fills up to **2× as fast** where her belief expects you (`BeliefGrid.Expectation`) |
+
+The targets, and how she does on the walk-by set (`AwarenessTests`):
+
+| You | Target | 0.2.0 |
+|---|---|---|
+| Walking 10 m away in a lit aisle | seen within 0.7 s | 0.67 s |
+| 15 m away, 45° off-centre | within 1.5 s | 1.40 s |
+| Crouched, a third of you showing, in the dim | never | never |
+
+With a 36 m cone, long aisles stop being safe: she sees down most of the sales floor in 1–2 s.
+The falloff is `1 / (1 + (d / 16)²)`. More in [§16.1](#161-her-eyes).
+
 ### 3.2 Hearing — an event bus, not a physics query
 
 Every noisy thing in the store already exists in code; it just needs to announce itself. One
@@ -254,6 +282,11 @@ subtracts probability. Without this, search AI re-checks the same three aisles f
 player learns to stand still. With it, Karen *clears* the map methodically and closes in — which
 is the single most frightening property a searcher can have.
 
+**In 0.2.0** the sweep checks only the cells inside her cone (`Sensorium.ConeCells`), 120 a tick,
+each weighed by how well she'd see a person standing there. In the editor a sweep costs about
+1.3 ms and 108 rays. It uses the same eye model as her sight (`SightSensor.Visibility`), so it
+no longer keeps its own copy of the numbers.
+
 ---
 
 ## 4. Belief: where it thinks you are
@@ -271,6 +304,17 @@ flows the way a body can actually walk.
 ```
 b(c)  =  P(player is in cell c)          Σ b(c) = 1
 ```
+
+**In 0.2.0 her grid stops at her part of the building:** the store, the office, the WC, the
+backstreet and the pavement, to z −106 (`StoreMap.CellIsKarens`). Everything outside is **one
+cell**. It remembers which exit you used, and mass reaches the other exits only after the walk
+round, about 95 m. Her body stops at the same line (the `KarenArea` NavMesh area). She never
+hunts you outside: she sets up for your return instead.
+
+**Where you're going (0.2.0, `RoutePredictor`).** On top of the grid she keeps 3–6 guesses at
+your route, each with a time window: when you'd get there sprinting, walking or crouching. The
+grid reweighs them, including "she looked and you weren't there". Hunt, Cut and Ambush read
+them. More in [§16.2](#162-where-she-works) and [§16.3](#163-actions-and-the-hunt).
 
 ### 4.2 Predict — probability leaks the way you can move
 
@@ -458,6 +502,11 @@ U(g) = w_conf ·Confidence(g)
 `Withdraw` scoring highly is not a bug. An antagonist that knows when to leave is the rarest and
 most memorable thing in the genre.
 
+**In 0.2.0** goals are now **actions**, renamed so that none shares a name with a trick: Roam
+(was Patrol), Check (Investigate), Search (Sweep), Flush, Disrupt (Deny), Corner (Herd), Lie in
+wait (Ambush), Loom (Stalk), Hunt (Pursue), Back off (Withdraw) and Lure (Assist). They're in
+`Actions.cs` (was `Goals.cs`). [§16.3](#163-actions-and-the-hunt).
+
 ### 6.4 Planning: HTN over a tactic library
 
 A goal is abstract. An HTN planner decomposes it into primitive tasks the Body can execute:
@@ -568,6 +617,10 @@ Three notes on why this specific shape:
 Optionally: Thompson sampling instead of UCB, keeping a Beta posterior per arm. Smoother, less
 jittery early, and it makes the "Karen is uncertain about you" phase read better.
 
+**In 0.2.0**, on rung E, the bandit also sees her last trick. A trick started while another is
+still in play is scored by what that pair has paid, and pairs that pay are written into a
+**combo room**. [§16.5](#165-the-combo-room).
+
 ### 7.3 The Panic Index — the reward signal
 
 You cannot learn what scares a player without measuring fear. You can't measure fear. You *can*
@@ -668,6 +721,11 @@ that holds the whole design together.
 
 Every entry is a ScriptableObject: preconditions, tension cost, cooldown, expected-panic prior,
 the tell it must emit, and the *chore it generates*. Grouped by which sense it attacks.
+
+**In 0.2.0** most of this library is now **drafts**, kept in the code but off in play until
+they're reworked or removed. Live are Ask the customers, Bin tamper, Ambush, Blackout (lights
+only) and the new Cut and Throw, plus each action's own move. A trick's "tell" below may still
+sound as it acts, but no trick waits for it any more. [§16.4](#164-the-tricks).
 
 ### 8.1 Attacking sight
 
@@ -1108,8 +1166,9 @@ Sanity checks that fail loudly in CI:
 
 ## 15. Implementation status
 
-Everything in §§2–13 is built. This section maps the design onto the code and says where the
-code departs from the plan above. Results of the ablation ladder are in
+Everything in §§2–13 is built, though since 0.2.0 most of §8's tricks are drafts, off in play
+([§16.4](#164-the-tricks)). This section maps the design onto the code and says where the code
+departs from the plan above. Results of the ablation ladder are in
 [`KAREN_RESULTS.md`](KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
@@ -1120,19 +1179,20 @@ code departs from the plan above. Results of the ablation ladder are in
 | §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
 | §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
 | §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](../store/STORE.md#karens-map) |
-| §6 thinking | `AI/Scripts/Decision/` — `Goals.cs` (utility + hysteresis, HTN planner), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard) |
+| §6 thinking | `AI/Scripts/Decision/` — `Actions.cs` (utility + hysteresis, HTN planner; `Goals.cs` until 0.2.0), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard), `RoutePredictor.cs` (her guesses at your route, 0.2.0) |
 | §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
-| §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`; Panic Index and PI pacing in `KarenDirector.cs` |
-| §8 tactic library | `AI/Scripts/Decision/Tactics/` — 35 tactics across tiers 0–4 |
-| §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every tell, synthesised) |
+| §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`, with the combo room in `ComboRoom.cs` (0.2.0); Panic Index and PI pacing in `KarenDirector.cs` |
+| §8 tactic library | `AI/Scripts/Decision/Tactics/` — 36 tactics, of which 13 are live in 0.2.0 and 23 are drafts (`TacticLibrary.IsDraft`); live tricks fill tiers 0–3 |
+| §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every trick's sound, synthesised), `KarenArea` (her part of the NavMesh, 0.2.0), `Projectile` (Throw, 0.2.0) |
 | §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
-| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers`, `AblationRunner`, `EnvServer`; see `IDEAS.md` (the agent test environment, ablation) |
+| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers` (+ `BotFear`), `AblationRunner`, `EnvServer`, `HuntMetrics` (0.2.0's measurements); see `IDEAS.md` (the agent test environment, ablation) |
 | blink channel | `Blink/Scripts/` + `tools/blink/` (the signal); `AI/Scripts/Decision/BlinkDash.cs` (what she does with it: the dash, in waves — see `IDEAS.md`, the blink mechanic) |
 | rung F, a trained tactic chooser | `AI/Scripts/Decision/Policy/` (the seam, observation, mask, reward; the ML-Agents agent) + `_Core/Editor/KehaiRl.cs` + `tools/rl/` |
 
 Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
 version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line, and
 rung F adds `-karen-shield on|off` and `-karen-policy <model>` (`tools/rl/README.md`).
+`-karen-combo off` (0.2.0) gives rung E's bandit without her last trick, for paired comparisons.
 `-kehai-no-records` turns off shift records, replays and clip markers for long training runs.
 
 ### Keys
@@ -1141,7 +1201,8 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 
 | Key | What |
 |---|---|
-| Esc | settings: restart the shift, volume by kind of sound (Karen's own slider included), mouse, her floor cone, the webcam |
+| Esc | settings: restart the shift, volume by kind of sound (Karen's own slider included), mouse, the webcam |
+| F3 | in the editor and development builds only: her footsteps and floor cone, on or off (0.2.0; players don't get them) |
 | F1 | live map of the store (you, Karen, her guess, customers, sounds, jobs) and a plain-words story of what Karen is doing; **H** adds her belief heat map, **T** the technical view |
 | F2 | replay of the shift so far on the same map: drag the timeline, Space plays, 1/2/3 speed, ←/→ jump 5 s, O opens the full report |
 | F8 | blink channel consent panel (webcam path stays off until you agree); starts the camera helper |
@@ -1153,12 +1214,15 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 
 ### Her speed
 
-She is slightly faster than you (changed 2026-10-16). `KarenBootstrap` sets her hurry and run to
-1.05 × the player's actual walk and sprint (`fasterThanPlayer`): with the default player, hurry
-4.2 and run 6.8 m/s against a 4 m/s walk and a 6.5 m/s sprint. On her rounds she still walks
-slower (3.4 m/s) and sneaks at 2. In the open a chase is lost; breaking her line of sight is
-how you get away. Her blink dash isn't movement at all — it's a jump while your eyes are shut
-(`IDEAS.md`, the blink mechanic).
+**When she hunts, she sprints at 7.5 m/s against your 6.5** (0.2.0; it was 6.8). `KarenBootstrap`
+sets her speeds from the player's actual ones:
+- **run:** your sprint × `sprintsFasterThanPlayer` (7.5 ÷ 6.5), so she gains a metre a second;
+- **hurry:** your walk × 1.05 (`fasterThanPlayer`), so 4.2 m/s against your 4;
+- **her rounds:** a walk at 3.4 m/s, and a sneak at 2.
+
+From 12 m behind, she catches you in about 12 s of straight running, so a corner or a door still
+has to save you: breaking her line of sight is how you get away. Her blink dash isn't movement
+at all — it's a jump while your eyes are shut (`IDEAS.md`, the blink mechanic).
 
 ### Her body
 
@@ -1172,7 +1236,11 @@ to read in it but where she is. Her gaze still shows, as the spot light and on t
 `SightSensor`, cut short by shelves and walls, brightest where her eyes weigh a sighting most
 (close and straight ahead). Blue while she walks her rounds, orange when she's noticed
 something, red when she's hunting; it pulses red while she can actually see you. Her spotlight
-says the same, but a spotlight is hard to read in a lit store. Esc → Settings can hide it.
+says the same, but a spotlight is hard to read in a lit store.
+
+**Since 0.2.0 the cone is for the developer only:** it's drawn only in the editor and development
+builds, while F3's switch (`KarenFx`) is on, together with her footsteps. Players, bots and
+replays get neither, and the cone is no longer in Settings.
 
 ### Shift records
 
@@ -1206,11 +1274,10 @@ the wall colliders, so the map is the store as it actually is.
   statically combined mesh that can't be read at runtime in a build (or headless), and a bake from
   render meshes came back without a floor. People are kept out of the bake, and the few props with
   non-readable mesh colliders stand in as boxes while it runs.
-- **Tell accounting.** The fairness guard checks each effect against its own plan's latest tell, so
-  an unrelated PA chime can't count for (or against) it; a PA line is a tell in itself (the chime
-  always plays 1.3 s before the words), and tells are timed on the clock, not by counting frames.
-  Across the 216-shift ablation, and the 300 shifts of its 2026-10-16 rerun with reacting players
-  (`KAREN_RESULTS.md`), the guard recorded none.
+- **Tell accounting** (removed in 0.2.0, with rule 3). Until then the fairness guard checked each
+  effect against its own plan's latest tell, timed on the clock. Across the 216-shift ablation,
+  and the 300 shifts of its 2026-10-16 rerun with reacting players (`KAREN_RESULTS.md`), it
+  recorded no violation. The guard still checks pacing (rule 4) on every rung.
 - **A catch ends the shift** (since 2026-10-16; it used to be a written warning and a lecture).
   In play the store loads again with the same shift; in the eval harness the episode ends,
   counted as neither clocked out nor timed out.
@@ -1218,7 +1285,7 @@ the wall colliders, so the map is the store as it actually is.
   part of the Director's waves on every rung from C. The trained-policy rung that was G is now F.
 - **Learning scope per rung** follows the ablation table in `IDEAS.md` exactly: C uses the authored prior, D learns
   within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
-  two shifts). F is E with the bandit's final pick handed to a policy
+  two shifts), and since 0.2.0 also learns which pairs of tricks pay (§16.5). F is E with the bandit's final pick handed to a policy
   trained by PPO (Unity ML-Agents): the arms still learn, feed goal utility and order the
   fallbacks, and the policy starts by imitating them. Its action mask is the planner's candidate
   list, so with the shield on it can only pick what the Director allows; with it off,
@@ -1231,9 +1298,249 @@ the wall colliders, so the map is the store as it actually is.
 
 ### The CI sanity checks from §13
 
-`_Tests/Editor/KarenTests.cs` (21 edit-mode tests; `Unity -batchmode -runTests -testPlatform EditMode`):
-the body, belief and decision code never read the player (source scan), every tactic has a tell of
-at least 0.8 s and a chore, the bandit learns and habituates and explores, the Ledger forgets within
-two shifts, the Director gates big tactics while settling, seeds are deterministic, the map reaches
-every region from the time clock, belief collapses on a sighting and spreads again, sweeps remove
-mass, the search bias is capped, and the thought log, eval wire format and blink packets parse.
+`_Tests/Editor/KarenTests.cs` (22 edit-mode tests; `Unity -batchmode -runTests -testPlatform EditMode`):
+the body, belief and decision code never read the player (source scan), she sprints a metre a
+second faster than you, every tactic leaves a chore and says what it attacks, every tier has a
+live trick, the bandit learns and habituates and explores, the Ledger forgets within two shifts,
+the Director gates big tactics while settling, seeds are deterministic, the map reaches every
+region from the time clock, belief collapses on a sighting and spreads again, sweeps remove mass,
+the search bias is capped, and the thought log, eval wire format and blink packets parse. The
+"every tactic has a tell of at least 0.8 s" check went with rule 3 in 0.2.0. The whole EditMode
+suite is 262 tests in 26 files; 0.2.0's own are listed in §16.7.
+
+---
+
+## 16. Karen 0.2.0
+
+What the 0.2.0 redesign changed, where each change lives, and how it's checked. The decisions
+are in the [build plan](../plans/0.2.0-build-plan.md), and the reasoning and sources in the
+[design notes](../plans/0.2.0-design-notes.md). Measured results are in
+[`KAREN_RESULTS.md`](KAREN_RESULTS.md). **The ablation against `main` hasn't been run yet**, so
+how these changes play out over whole shifts is still open ([§16.7](#167-tests-and-whats-not-measured-yet)).
+
+| Area | Before | 0.2.0 |
+|---|---|---|
+| Her eyes | 120°, 18 m, half strength at 8 m | 150°, 36 m, half strength at 16 m; faster where she expects you; a 0.5 s grace |
+| Where she works | the whole map, outside included | the building, the backstreet and the pavement; outside is one cell |
+| Goals | Patrol, Investigate, Pursue… | actions: Roam, Check, Hunt… (no name shared with a trick) |
+| The chase | the chase and Follow, at 6.8 m/s | Hunt, at 7.5 m/s, which keeps running on her guesses after losing you |
+| Prediction | her belief grid only | plus 3–6 guesses at your route, with time windows |
+| Tricks | 34, all of them in play | 36: 13 live, 23 drafts; Cut and Throw are new |
+| Warnings | every trick warned ≥ 0.8 s ahead | removed (rule 3) |
+| Combos | welded into tricks (Blackout's wait, Funnel) | none built in; a combo room she fills herself |
+| Her footsteps and floor cone | for everyone | for the developer only (F3) |
+
+### 16.1 Her eyes
+
+The numbers and the walk-by results are in [§3.1](#31-sight--graded-not-binary). Where they live:
+- `KarenBody.ConfigureEye` sets her eye in one place. The cameras and possessed shoppers keep the
+  old one: 120°, 18 m, half strength at 8 m, a floor of 0.02 (tested).
+- `SightSensor.Detect` is the score without the rays, and `Visibility` its eye part, which the
+  sweep shares. `Integrate` fills the meter, holds it for the grace, then drains it.
+- `BeliefGrid.Expectation` says how much more than an even spread her belief puts on your cell and
+  the cells next to it: 0 at even, 1 at four times that or more. Her eye asks only about a spot
+  where it sees you, and rungs without the belief grid don't get it.
+- **The gain is close to as low as it can go:** a tenth lower misses a target (tested).
+- **"Moving at you" is worked out, not timed:** "seen", plus her appraisal (5 times a second),
+  plus two frames, at worst. The ablation times it in play.
+
+### 16.2 Where she works
+
+**Her area** is the building (sales floor, stockroom, staff room, office and WC), the backstreet,
+and the pavement to z −106, the edge of `Entrance_Pedestrian_Apron_01` (`StoreMap.KarenWorksIn`,
+`CellIsKarens`). Her grid, her body and every spot she picks stop there.
+
+| Part | What it does | Code |
+|---|---|---|
+| Her grid | Belief on her cells only, about 2,000–2,700 of them, plus one outside cell. The outside starts at 0.2%, not 0: zero times any likelihood is zero, so a sighting in the parking lot could never have moved her belief out there | `BeliefGrid` |
+| Exits | Cut into 9 m stretches of edge, so where along the pavement you left still counts. Belief reaches another exit only after the walk round: about 13 s at a sprint from the middle of the pavement, 7.7 s from its west end down the west alley | `BeliefGrid.ExitDelay` |
+| Her body | Everything outside her area is marked as its own NavMesh area (area 3, unnamed, so `ProjectSettings` stays untouched), and her agent's mask leaves it out. Every maze rebake keeps the marks. As a last line, `MoveTo` sends her to her nearest point instead of anywhere outside | `KarenArea`, `StoreRebake`, `KarenBody.MoveTo` |
+| Spots she picks | Roam, Check, Search, Back off and Hunt only pick her cells. With her belief mostly outside, the place to look is the exit you most likely left by | `TacticHelpers.LookRegion` |
+| Landmarks | The coffee machine and the radio snap to the staff room, not the alley | `StoreMap` |
+
+**She never hunts you outside.** With her belief mostly outside, Hunt's score and permission are
+0. A running hunt hands over, she stops at the edge of her area, and Check goes to the exit you
+took, ready for your return.
+
+### 16.3 Actions and the Hunt
+
+**Actions.** The goals are renamed actions ([§6.3](#63-goal-selection-utility-not-states)). Each
+action without a live trick has its own move, titled after it: Roam, Check, Search, Back off and
+Hunt. Corner, Loom and Lure have neither until their drafts return (a test pins that list). The
+enum keeps the old order, so rung F's observation keeps its layout, and the thought log's record
+kind stays "GOAL" because the tools read it.
+
+**Hunt** takes over the chase and Follow, which are gone.
+- **Speed:** she sprints at 7.5 m/s against your 6.5 ([§15](#her-speed)).
+- **While she sees you,** she runs at you, leading you a little.
+- **After she loses you,** she runs to her best guess at where you're going (below), so she keeps
+  hunting on belief instead of stopping where she last saw you.
+- **She hands over to Search** when she gets there and you're not, after 6 s with nothing new
+  (`huntMemorySeconds`), in a recovery, or with you outside. Hunt's score fades over those 6 s
+  (`Pursue.HandOver`).
+- **The Director paces it** (`KarenDirector.HuntAllowed`): refused while you settle in and during
+  a recovery; 0.6 tension; a 90 s cooldown; a recovery when it ends. That's one cost and one
+  cooldown for the action, whichever of its moves runs: the run, Cut or Throw.
+
+**Her guesses at your route** (decision D1, `RoutePredictor`, owned by the brain as
+`KarenBrain.Predictor`).
+- **What it is:** a few guesses at the route you might be on, each with a weight and a time
+  window, kept alongside her belief grid instead of a second grid.
+- **How Kehai uses it:**
+  - **Built** when a hunt loses you, refreshed 4 times a second, and kept for 30 s afterwards so
+    Ambush can use them.
+  - **Where it looks:** your jobs and the time clock, the breaker box while the lights are out,
+    and her exits. It keeps the four that best fit your heading and distance, plus two that are
+    always there: "turned back" and "hiding close by".
+  - **Time windows:** for each spot on a route, when you could get there: earliest at your
+    sprint (6.5 m/s), likely at your walk (4.0), latest crouching (2.5). She looks at most 8 s
+    ahead.
+  - **Weights:** each guess's prior, times her belief along its route inside its window. So "she
+    looked and you weren't there" lowers a guess the way it lowers her grid.
+  - **Hunt's run** goes to the best guess. Cut and Ambush read them too.
+- **Real-world example:** a sat-nav guessing which turn you'll take and re-routing when you miss
+  it. Radar does the same for many aircraft at once, a method called multiple hypothesis
+  tracking ([Reid, 1979](https://doi.org/10.1109/TAC.1979.1102177)).
+
+### 16.4 The tricks
+
+**Live tricks, by tier:**
+
+| Tier | Trick | Notes |
+|---|---|---|
+| 0 | Ask the customers | skips shoppers who are outside |
+| 1 | Bin tamper | |
+| 1 | **Cut** (new) | Hunt's: go to where you'll be, by a shorter way |
+| 2 | Ambush | from shift 3 (was 8); waits where your guessed routes pass |
+| 2 | **Throw** (new): flour, oil, a tin | Hunt's, from shift 3; each item is its own choice for the learner |
+| 2 | Block door | once the second builder's rebuild (B2.1) is merged; a draft until then |
+| 3 | Blackout | lights only: its wait went with the combos |
+| 4 | — | empty |
+
+**Cut** (`Tactics/Cut.cs`, `CutTactic`, `CutRun`):
+- **How it runs:** on her best guess's route, once that guess holds 30% of the weight, she picks
+  the first spot she can reach at least 1 s before your earliest time. She runs there by her own
+  shortest way, waits through your window, and then drops or keeps the guess by what she saw. She
+  re-plans 4 times a second, and goes back to sprinting at you if she sees you.
+- **What the tests found, honestly:**
+  - **Cut usually doesn't fire.** On a 25 m dash she's never a second ahead anywhere.
+  - **On a 45–60 m run it helps sometimes:** never worse, clearly closer in 1 of 8 starts (3.4 m
+    against 13.4 m), and 11.3 m against the sprint's 12.5 m on average.
+  - **The first version did worse than the sprint** (11.0 m against 8.0), because it picked spots
+    on routes she doubted. That's why she now waits for a 30% guess.
+
+**Throw** (`Tactics/Throw.cs`, `World/Projectile.cs`):
+- **When:** she must see you, with a clear line. One throw per Hunt, a 30 s cooldown, and 0.2
+  tension.
+- **How:** an arc under gravity, aimed at where you'll be when it lands. Walls stop it, and it
+  finds you only by hitting your body, so you can dodge it.
+- **The items** (`ThrownItems`, tested):
+
+  | Item | Effect | From |
+  |---|---|---|
+  | Flour or powder | blurs your vision for 4 s | 8–15 m |
+  | Oil or detergent | slows you by 25% for 2 s | 10–15 m |
+  | A tin | stuns you for 1 s | 15–20 m |
+
+- **The rule: an item alone never makes a catch certain.** The ranges come from it. Take a stun
+  from 15 m: she covers 7.5 m during that second and is still 7.5 m away, so you have 7.5 s of
+  straight running to break her line of sight.
+- **The effects** are `PlayerEffects` (`Slow`, `Stun`, `Blur`, and `Changed` for the screen), on
+  the player's motor. The bots drive the same motor, so they feel them too.
+- **For the other builder:** `ThrowEvents` (thrown, landed, hit) drives the visuals.
+
+**Removed or renamed:**
+- the chase and Follow, merged into Hunt;
+- Funnel, deleted;
+- Blackout's wait, so Blackout is lights only;
+- the favour, renamed Peace offering, and a draft;
+- Door lock, renamed Block door, in its own file (`Tactics/BlockDoor.cs`) for the rebuild.
+
+The Ledger drops records of removed tricks when it loads.
+
+**No more warnings.** Rule 3 is removed ([§9](#9-the-fairness-contract)). A trick's `Tell` plays
+its sound and the plan goes straight on, and the audit no longer times it. The blink dash's eye
+flicker went too, so a wave starts with no cue; dashes are still spaced by their cooldown.
+
+**The drafts** (`TacticLibrary.IsDraft`, listed in the build plan's §6) stay in the code but are
+never a candidate (tested). They're a short-term list to rework or remove, not parked for good.
+
+### 16.5 The combo room
+
+No trick has a combo built into it any more. Instead she finds her own.
+
+**The learner is a contextual bandit.**
+- **What it is:** a bandit (try options, keep doing what pays, as in [§7.2](#72-tactic-selection-as-a-bandit))
+  that also looks at the situation before it chooses, and learns what pays in each situation.
+- **How Kehai uses it:** the situation is her last trick, while it's still in play. So Ambush
+  right after a Blackout is scored apart from Ambush on its own. A pair that pays clearly better
+  than its second trick alone is "found" and written into the **combo room**.
+- **Real-world example:** a music app choosing the next song by the one you just played, not
+  just by what you like in general.
+
+**The rules** (`ComboRoom.cs`, `KarenLedger.cs`):
+
+| | |
+|---|---|
+| In play | her last trick, for 20 s, or as long as its effect runs (`Tactic.EffectRunning`): Blackout's while any lights are out; Block door's once the second builder adds it |
+| Scoring | right after another trick, a trick is scored by what that pair has paid. Until the pair has a few uses, that's pulled toward what the trick pays alone (a shrink of 2 uses), and it's explored by the pair's own count |
+| Reward | a chained use's reward goes to the pair only, so "alone" stays alone |
+| Found | after 3 uses, if it pays at least 0.1 more panic change than its second trick alone; written down with the shift |
+| Fading | each shift, uses × 0.8 and the value drifts 15% back to the second trick's own; below a third of a use, it's forgotten |
+| The gate | a pair is never run as one move. Each part passes the gate on its own (tier, cooldown, budget) and pays its own tension, so the tension adds up. The room only reorders what the gate passed (tested) |
+
+**Her action choice reads it too:** an action's expected panic uses the pair's value, so after a
+Blackout, Lie in wait looks better once Blackout → Ambush has paid.
+
+**Where you see it:** `COMBO` lines in the thought log and the performance review, the narrator
+("Karen found a combo: …"), `KarenStats.ChainsFound`, and the shift record's `chains` list, which
+the shift report will show (B4.1).
+
+**Checked in a planted world** (`ComboTests`, results in `KAREN_RESULTS.md`): she finds a chain
+that's planted there, finds none where none pays, and earns more than the same learner without
+her last trick. Whether real chains exist in the store, and pay, is the ablation's question.
+`-karen-combo off` gives rung E without it, for that comparison.
+
+### 16.6 Fairness
+
+- **Rule 3 is removed;** rules 1, 2 and 4–8 hold, and the guard still checks pacing on every rung.
+- **Pillar 2 is reworded:** the Director never gives the Body your *exact location*. Its bounded
+  hint stays: after 45 s with no clue, at most 0.15 of her belief a minute toward your real
+  region, never past half, and never while you can see her path (`KarenDirector.MaybeBias`).
+- **Her footsteps and floor cone are for the developer only** (F3, `KarenFx`): players, bots and
+  replays never get them.
+- **The bots still know her only through what a person would see.** A throw reaches them as
+  `EnvWorld.ThrowSeen` (in view, nothing in the way, on a line that passes within 1.5 m), never as
+  the projectile, and `Players_NeverReadKaren` still passes.
+- **Throw can't make a catch certain** (§16.4, tested).
+
+### 16.7 Tests, and what's not measured yet
+
+**The EditMode suite: 262 tests, all passing** (5 November, on an APFS clone). 0.2.0's own:
+
+| File | What it checks |
+|---|---|
+| `KarenAreaTests` (new) | every room's name; her part of the building; her grid; the walk round; seen outside, she won't hunt; her body never walks round the building; every place she looks is hers |
+| `KarenActionsTests` (new) | no action shares a trick's name; drafts are never candidates; the live list; the removed tricks; Ambush on shift 3; Hunt's pacing and hand-over rules; the forecast; the guesses (keep going, turn back, ruled out); Cut beats the sprint and stays in her part; no throw makes a catch certain; the effects |
+| `AwarenessTests` (new) | the walk-by set and the targets; the cameras' eye; the sweep's coverage and cost in the store |
+| `ComboTests` (new) | the planted check; no false finds; the paired gain; the room's memory and fading; what counts as in play; the gate stays in charge |
+| `BotFearTests` | the bots turn back, dodge, and step the right way |
+| `KarenTests` | updated: the sprint, the tiers, no tell check |
+
+**Not measured yet** (the ablation, C5.3, waits for the owner's go; the plan has the runs):
+- the gap between her and you 5 s after she loses you, against `main` (primary);
+- seconds to "moving at you" in play;
+- seconds she spends outside her area, which must be 0;
+- how often Cut and Throw fire in real shifts, how often Cut's spot is right, and catches within
+  5 s of a throw;
+- whether the bots' turning back and dodging happen in play, not just at their decision points;
+- whether the combo learner finds real chains in the store;
+- the sweep's cost during play.
+
+**Left over in 0.2.0:**
+- **The shift report still counts "warning sounds"** and tells you to listen for them before her
+  tricks (`ShiftAnalysis.cs`, `ShiftReportHtml.cs`). The sounds still play, but they no longer
+  come first.
+- **`CONTROLS.md` still lists the floor cone in Settings.**
+- Both are requests to the second builder (the build plan's §7), with Block door's
+  `EffectRunning` and the marketing facts.

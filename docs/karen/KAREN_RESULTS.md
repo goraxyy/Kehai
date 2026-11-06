@@ -5,6 +5,11 @@ players that react to her. Each rung adds one mechanism, so a difference between
 rungs is that mechanism. This is the run of 2026-10-16, against today's Karen: her touch kills,
 she is slightly faster than the player, and the Director's blink dash is part of every rung from C.
 
+> **Karen 0.2.0** changes her eyes, where she works, the Hunt, her tricks and her learning
+> ([Karen.md §16](Karen.md#16-karen-020)). Everything above [Karen 0.2.0, so far](#karen-020-so-far)
+> is about the Karen before it. 0.2.0's own ablation hasn't run yet; its test results, and the
+> metrics fixed for the ablation before it runs, are in that section.
+
 | rung | Karen | learns |
 |---|---|---|
 | A | random patrol; chases what she sees | — |
@@ -357,6 +362,103 @@ construction.
 
 What this shows is in finding 5 above. The player who hides most (cautious) is the one she
 knows least about, and the one where the grid's prediction gains most over the last sighting.
+
+## Karen 0.2.0, so far
+
+**The ablation against the old Karen hasn't run yet** (the build plan's C5.3). What's here comes
+from the EditMode tests: her own code, run on scripted situations, not whole shifts. All 262
+tests pass (5 November).
+
+### Her eyes: the walk-by set
+
+Six scripted passes plus the 15 m target, stepped at 60 frames a second through her own eye
+(`AwarenessTests`). Lit is 0.9, dim 0.3. "Seen" is her awareness reaching its threshold; "moving at
+you" adds her appraisal (5 times a second) and two frames, at worst, so it's worked out, not timed.
+
+| You are | Score | Seen | Moving at you by | Where she expects you |
+|---|---|---|---|---|
+| Walking, 10 m, dead centre | 0.461 | **0.67 s** (target 0.7) | 0.90 s | 0.33 s |
+| Walking, 10 m, 45° off | 0.295 | 1.03 s | 1.27 s | 0.52 s |
+| Walking, 10 m, 70° off | 0.059 | 5.12 s | 5.35 s | 2.57 s |
+| Walking, 15 m, 45° off | 0.218 | **1.40 s** (target 1.5) | 1.63 s | 0.70 s |
+| Walking, 25 m, dead centre | 0.186 | 1.63 s | 1.87 s | 0.82 s |
+| Walking, 36 m, dead centre | 0.106 | 2.88 s | 3.12 s | 1.45 s |
+| Crouched, a third showing, 10 m, 45° off, dim | 0.037 | **never** | never | never |
+
+- **Every target is met.** The crouched case scores under the 0.04 floor, even where she expects
+  you. With two thirds of you showing, she sees you.
+- **The gain (1.65) is close to as low as it can go:** a tenth lower misses a target (tested).
+- **The bigger sweep** (`AwarenessInTheStoreTests`, 164 spots across her store, facing four ways):
+  a cell in view is looked at every 4.3 ticks, against 5.1 before. A sweep casts 108 rays on
+  average (120 at most) in 1.3 ms in the editor, 10 sweeps a second. Before, it cast about a third
+  of its 70. Whether that matters in play is for the ablation.
+
+### The combo learner: the planted check
+
+A simulation, not the store (`ComboTests`): a ten-minute shift is a choice every 10 s between
+Blackout, Ambush, Bin tamper and doing nothing, each with its own cooldown. Ambush pays +0.30
+while the lights are out and +0.02 otherwise; Blackout +0.10 and Bin tamper +0.08, all with noise.
+The choosing and learning are the game's own code (`HtnPlanner.Rank`, `KarenLedger`), with a ledger
+kept between shifts as on rung E.
+
+**Written down before the run** (20 seeds, 8 shifts each):
+
+| Criterion | Result |
+|---|---|
+| Blackout → Ambush is found within 8 shifts in every seed | **Holds:** found in every seed, on shift 3, 4 or 5 (4 is typical) |
+| Where no chain pays more than its parts, none is found in any seed | **Holds:** none found |
+| Over shifts 4–8, she earns more with her last trick than without, paired by seed, by more than 2 standard errors | **Holds:** +0.23 panic a shift, SE 0.017 |
+
+**What it can't show:**
+- This is the world it was built for, so it only shows the learner can find a chain that's there.
+  Whether real chains exist in the store, and pay, is the ablation's question.
+- It flattens her two-step choice (an action, then its trick) into one, so it tests the learner,
+  not the actions' scores.
+- After 8 shifts a found chain reads +0.22, under the planted +0.30, because values drift back
+  between shifts by design.
+- An earlier threshold (0.05 more than the trick alone) gave false finds in a Python prototype of
+  the same world: 0.25 a career on average. With 0.1 it gave none, so it's 0.1.
+
+### Cut against the plain sprint
+
+Scripted runners that keep going after she loses sight (`KarenActionsTests`):
+- **On a 25 m dash, Cut never fires:** she's never a second ahead of you anywhere.
+- **On 45–60 m runs (8 starts),** it's never worse than the sprint, and clearly closer in 1 of 8
+  (3.4 m against 13.4 m). On average she ends 11.3 m from you, against the sprint's 12.5 m.
+- **The first version did worse than the sprint** (11.0 m against 8.0 m): it picked spots on routes
+  she doubted. Cut now waits until her best guess holds 30% of the weight.
+
+### The ablation: planned, not run
+
+**Primary metrics, fixed before any run** (the build plan's §5):
+1. Seconds from first being visible to her moving at you, over the walk-by set (above, worked out
+   from the tests; the ablation times it in play).
+2. Metres between her and your real position 5 s after she loses sight in a hunt, paired by seed
+   (`gap_after_loss_m`). Lower means she stays on you.
+3. Fairness violations: must stay 0, under rules 1, 2 and 4–8.
+4. For the combo learner: setpoint error against the same learner without her last trick, paired
+   by seed.
+
+**Secondary:** detections, first detection and catches; seconds outside her area (must be 0);
+belief accuracy; Hunts and seconds sprinting; catches where you hadn't seen her in the 5 s before;
+catches within 5 s of a throw; how often Cut's spot was right; sightings from beyond 18 m; and
+how often the bots turned back and dodged.
+
+**The runs** (one after another, about an hour, with the editor closed):
+
+| Run | What | Shifts |
+|---|---|---|
+| 0.2.0 | rungs C and E, all four players, 3 careers, shifts 3–8 | 144 |
+| `main` | the same seeds; only the measuring code added | 144 |
+| 0.2.0, combo learner off | rung E only, `-karen-combo off` | 72 |
+
+- **Players:** efficient, skittish and reckless; the cautious player is held out, reported on its
+  own and never used to tune.
+- **Compared** with `tools/eval/compare_builds.py`, pairing by rung, player, seed and shift.
+- **A known difference:** on `main`, "outside her area" counts the pavement too, because `main` has
+  no Pavement area.
+
+The results go here when it's run, negative ones included.
 
 ## Earlier runs
 
