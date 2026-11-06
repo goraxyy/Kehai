@@ -1531,7 +1531,8 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 
 ### 16.7 Tests, and what's not measured yet
 
-**The EditMode suite: 284 tests, all passing** (6 November, on an APFS clone, after syncs 2–4).
+**The EditMode suite: 290 tests, all passing** (6 November, on an APFS clone, with everything
+both builders made).
 0.2.0's own:
 
 | File | What it checks |
@@ -1545,6 +1546,7 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 | `DoorBlockTests` (new, the second builder's) | the box blocks the door and frees it when picked up, stowed, recalled, moved or destroyed; a full inventory leaves it; resets; placement; highlights; her closures and the handle's prompt |
 | `PresentationTests` (new, the second builder's) | the thrown products exist; the screen effects clear; the throw art has no collider and leaves the RNG alone |
 | `KrecTests` | plus her route guesses: written, read back and found by time |
+| `RouteLayerTests` (new, the second builder's) | the replay's routes layer: seeking, weights and windows from the recording, hiding guesses, plain-text names, old files, no cone, materials freed |
 
 **Not measured yet** (the ablation, C5.3, waits for the owner's go; the plan has the runs):
 - the gap between her and you 5 s after she loses you, against `main` (primary);
@@ -1556,6 +1558,7 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 - whether the combo learner finds real chains in the store;
 - the sweep's cost during play.
 
-**Left over in 0.2.0:**
-- **Her guesses aren't drawn yet,** on the F1 map or in replays (the second builder's B3.3). The
-  replays already record them.
+**Her guesses, drawn** (the second builder's B3.3): F1 has a "Routes — her guesses" button that
+draws each live guess on the floor plan, numbered, with its weight and when you could reach its
+end. Replays have a `routes` layer drawn only from the recording, so seeking back shows what she
+guessed then. Recordings from before version 2 show none.

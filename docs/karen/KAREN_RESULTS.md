@@ -366,8 +366,8 @@ knows least about, and the one where the grid's prediction gains most over the l
 ## Karen 0.2.0, so far
 
 **The ablation against the old Karen hasn't run yet** (the build plan's C5.3). What's here comes
-from the EditMode tests: her own code, run on scripted situations, not whole shifts. All 284
-tests pass (6 November, after the second builder's work and Block door went in).
+from the EditMode tests: her own code, run on scripted situations, not whole shifts. All 290
+tests pass (6 November, with everything both builders made).
 
 ### Her eyes: the walk-by set
 
