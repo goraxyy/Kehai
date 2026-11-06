@@ -5,10 +5,11 @@ Karen, the store's AI, hunts you using only what she senses. Karen's AI is the t
 showpiece.
 
 **Start here:**
-- [`docs/HANDOVER.md`](docs/HANDOVER.md): where everything is on this Mac, the state of the work, and what's next.
-- [`docs/notmerged.md`](docs/notmerged.md): how Karen adapts, with diagrams, and what's left to build.
-- [`docs/SCENE_MAP.md`](docs/SCENE_MAP.md) and [`docs/STORE_MAP.md`](docs/STORE_MAP.md): the scene layout and Karen's map. Neither the scene nor the art is in git.
-- Then [`README.md`](README.md), [`docs/Karen.md`](docs/Karen.md), [`docs/KAREN_RESULTS.md`](docs/KAREN_RESULTS.md) and [`docs/RELEASE_PLAN.md`](docs/RELEASE_PLAN.md).
+- [`docs/project/HANDOVER.md`](docs/project/HANDOVER.md): where everything is on this Mac, the state of the work, and what's next.
+- [`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md): the Karen 0.2.0 redesign, what's next for her.
+- Docs are sorted by topic under `docs/` (`project/`, `plans/`, `karen/`, `store/`, `game/`, `marketing/`, `research/`); finished or stale ones go to `docs/archive/`. The README lists them all.
+- [`docs/store/SCENE_MAP.md`](docs/store/SCENE_MAP.md) and [`docs/store/STORE_MAP.md`](docs/store/STORE_MAP.md): the scene layout and Karen's map. Neither the scene nor the art is in git.
+- Then [`README.md`](README.md), [`docs/karen/Karen.md`](docs/karen/Karen.md), [`docs/karen/KAREN_RESULTS.md`](docs/karen/KAREN_RESULTS.md) and [`docs/project/RELEASE_PLAN.md`](docs/project/RELEASE_PLAN.md).
 
 ## Rules
 
@@ -26,7 +27,7 @@ showpiece.
 **Unity and the Mac** (an M2 with 8 GB)
 - **Never run a second Unity** (batch tests, ablations, renders, builds) while the owner's editor is open (`pgrep -f "Unity.app/Contents/MacOS/Unity"`). Do the non-Unity work first, then ask.
 - **One heavy job at a time,** holding the lock at `~/TokenLimit/marketing/state/heavy.lock`: a directory with the holder's pid.
-- **Verify on an APFS clone** (`cp -Rc`) when you can't use the editor: productName `Kehai-verify`, then restore the editor prefs and delete the clone afterwards. The recipe is in `docs/HANDOVER.md` §6.
+- **Verify on an APFS clone** (`cp -Rc`) when you can't use the editor: productName `Kehai-verify`, then restore the editor prefs and delete the clone afterwards. The recipe is in `docs/project/HANDOVER.md` §6.
 - **Nothing you run may make sound.** Batch runs are silent by design. Mute the GUI editor (`EditorUtility.audioMasterMute`) before entering Play there. Never touch the Mac's volume.
 - **Batch-mode loops** over game actions must yield at least one frame per iteration.
 
@@ -55,5 +56,5 @@ showpiece.
 python3 tools/eval/analyze_ablation.py <kehai_eval>/ablation_<time>.jsonl
 
 # Regenerate the scene map after changing the scene
-python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/SCENE_MAP.md
+python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/store/SCENE_MAP.md
 ```

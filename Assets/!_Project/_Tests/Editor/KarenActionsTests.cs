@@ -1,0 +1,170 @@
+using System.Collections.Generic;
+using System.Linq;
+using Kehai.Karen;
+using NUnit.Framework;
+
+// Karen 0.2.0, phase 1: goals became actions, tricks are the ways to do them, and the drafts
+// are off in play. These pin the shape the build plan settled on, so a change to it is a
+// change on purpose.
+public class KarenActionsTests
+{
+    static IEnumerable<ActionId> AllActions => System.Enum.GetValues(typeof(ActionId)).Cast<ActionId>();
+
+    [Test]
+    public void NoAction_SharesANameWithATrick()
+    {
+        var actions = AllActions.Select(a => a.Name().ToLowerInvariant()).ToList();
+        foreach (Tactic t in TacticLibrary.All.Where(t => !t.OwnMove))
+            CollectionAssert.DoesNotContain(actions, t.Title.ToLowerInvariant(), $"the trick {t.Id} is named like an action");
+    }
+
+    [Test]
+    public void ADraft_IsNeverACandidate()
+    {
+        var c = new KarenContext { Config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 }, Rng = new KarenRng(7) };
+        var drafts = TacticLibrary.All.Where(t => t.Draft).ToList();
+        Assert.IsNotEmpty(drafts);
+        foreach (Tactic t in drafts)
+        {
+            Assert.IsFalse(HtnPlanner.Gated(t, c, out string why), $"{t.Id} passed the gate");
+            Assert.AreEqual("draft", why, t.Id);
+        }
+    }
+
+    [Test]
+    public void TheLiveTricks_AreTheOnesThePlanKeeps()
+    {
+        var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
+        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "door_lock", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
+    }
+
+    // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush, Disrupt and
+    // Corner have a live trick; Loom and Lure have neither until their drafts come back.
+    [Test]
+    public void EveryAction_HasItsOwnMoveOrALiveTrick_ButLoomAndLure()
+    {
+        foreach (ActionId a in new[] { ActionId.Roam, ActionId.Check, ActionId.Search, ActionId.Hunt, ActionId.BackOff })
+            Assert.IsTrue(TacticLibrary.For(a).Any(t => t.OwnMove && !t.Draft), $"{a.Name()} has no own move");
+        var dormant = AllActions.Where(a => !TacticLibrary.For(a).Any(t => !t.Draft)).ToList();
+        CollectionAssert.AreEquivalent(new[] { ActionId.Loom, ActionId.Lure }, dormant);
+    }
+
+    [Test]
+    public void TheChaseFollowAndFunnel_AreGone_AndHuntRunsOnItsOwn()
+    {
+        foreach (string id in new[] { "chase", "follow", "funnel" })
+            Assert.IsNull(TacticLibrary.Get(id), $"{id} is still in the library");
+        Tactic hunt = TacticLibrary.Get("hunt");
+        Assert.IsNotNull(hunt);
+        Assert.IsTrue(hunt.OwnMove);
+        CollectionAssert.AreEqual(new[] { ActionId.Hunt }, hunt.Actions);
+    }
+
+    [Test]
+    public void Ambush_ComesOnShiftThree()
+    {
+        Assert.AreEqual(3, TacticLibrary.Get("ambush").IntroducedShift);
+    }
+
+    // ---- phase 2: Hunt -----------------------------------------------------------------------
+
+    // The pacing is the Hunt action's, whichever of its moves or tricks runs (phase 3).
+    [Test]
+    public void Hunt_CostsAndCoolsAsAnAction_NotPerTrick()
+    {
+        var config = new KarenConfig();
+        Assert.AreEqual(0.6f, config.huntTensionCost, 1e-4f);
+        Assert.AreEqual(90f, config.huntCooldownSeconds, 1e-4f);
+        Assert.AreEqual(0f, TacticLibrary.Get("hunt").TensionCost, "the own move costs nothing more");
+        Assert.AreEqual(0f, TacticLibrary.Get("cut").TensionCost, "Cut costs nothing more");
+    }
+
+    [TestCase(false, false, false, 120f, 0.7f, 0f, true, TestName = "Rested and paid for: a hunt may start")]
+    [TestCase(false, false, false, 30f, 0.7f, 0f, false, TestName = "Thirty seconds after the last: cooling down")]
+    [TestCase(false, false, false, 120f, 0.4f, 0f, false, TestName = "Too little tension to pay for it")]
+    [TestCase(true, false, false, 30f, 0.1f, 0f, true, TestName = "A hunt already running goes on")]
+    [TestCase(true, true, false, 120f, 0.7f, 0f, false, TestName = "Never in a recovery")]
+    [TestCase(false, false, true, 120f, 0.7f, 0f, false, TestName = "Never while you settle in")]
+    [TestCase(true, false, false, 120f, 0.7f, 0.9f, false, TestName = "Never with you outside")]
+    public void Hunt_IsPacedByTheRules(bool hunting, bool recovery, bool settling, float sinceLast, float tension, float outside, bool expected)
+    {
+        Assert.AreEqual(expected, KarenDirector.HuntAllowed(hunting, recovery, settling, sinceLast, tension, outside, new KarenConfig(), out string why), why);
+    }
+
+    static KarenContext DirectedContext()
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        var ledger = new KarenLedger(config);
+        return new KarenContext { Config = config, Rng = new KarenRng(7), Ledger = ledger, Director = new KarenDirector(config, ledger) };
+    }
+
+    [Test]
+    public void Hunt_IsHeldBack_WhileYouSettleIn_AndInARecovery()
+    {
+        KarenContext c = DirectedContext();
+        c.Director.BeginShift(1, 300f);
+        Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt while you settle in");
+        c.Director.StartRecovery(45f, c, "test");
+        Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt in a recovery");
+    }
+
+    [TestCase(true, 0f, 0.2f, 0f, false, 0f, false, TestName = "Seeing you, she keeps going")]
+    [TestCase(false, 3f, 8f, 3f, false, 0f, false, TestName = "Lost, but not there yet, she keeps going")]
+    [TestCase(false, 2f, 1f, 2f, false, 0f, true, TestName = "There, and you're not: hand over")]
+    [TestCase(false, 7f, 6f, 7f, false, 0f, true, TestName = "Six seconds with nothing new: hand over")]
+    [TestCase(false, 7f, 6f, 1f, false, 0f, false, TestName = "Lost, but a fresh clue: she keeps going")]
+    [TestCase(true, 0f, 3f, 0f, true, 0f, true, TestName = "A recovery: hand over")]
+    [TestCase(true, 0f, 3f, 0f, false, 0.9f, true, TestName = "You went outside: hand over")]
+    public void Hunt_HandsOver_ByTheRules(bool sees, float lostFor, float toGoal, float staleness, bool recovery, float outside, bool expected)
+    {
+        Assert.AreEqual(expected, Pursue.HandOver(sees, lostFor, toGoal, staleness, recovery, outside, 6f, out string why), why);
+    }
+
+    // ---- phase 3: Throw ----------------------------------------------------------------------
+
+    // An item alone never makes a catch certain: sprinting on after its effect, you're still
+    // SafeGap metres ahead of her, from the closest she may throw it.
+    [Test]
+    public void NoThrow_MakesACatchCertain()
+    {
+        var config = new KarenConfig();
+        var motor = new UnityEngine.GameObject("player").AddComponent<PlayerMotor>();
+        try
+        {
+            foreach (ThrownItem item in System.Enum.GetValues(typeof(ThrownItem)))
+            {
+                float gap = ThrownItems.GapAfter(item, ThrownItems.MinRange(item), config.runSpeed, motor.sprintSpeed);
+                Assert.GreaterOrEqual(gap, ThrownItems.SafeGap, $"{item} from {ThrownItems.MinRange(item)} m leaves you {gap:0.0} m ahead");
+                Assert.Less(ThrownItems.MinRange(item), ThrownItems.MaxRange(item), item.ToString());
+            }
+            Assert.GreaterOrEqual(ThrownItems.MinRange(ThrownItem.Tin), 15f, "a stun only from 15 m or more");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(motor.gameObject); }
+    }
+
+    [Test]
+    public void Effects_SlowAndStunYou_AndWearOff()
+    {
+        var go = new UnityEngine.GameObject("player");
+        try
+        {
+            var fx = go.AddComponent<PlayerEffects>();
+            Assert.AreEqual(1f, fx.SpeedFactor);
+            fx.Slow(0.25f, 2f);
+            Assert.AreEqual(0.75f, fx.SpeedFactor, 1e-4f);
+            fx.Stun(1f);
+            Assert.AreEqual(0f, fx.SpeedFactor, "stunned, you don't move");
+            fx.Clear();
+            Assert.AreEqual(1f, fx.SpeedFactor);
+            Assert.IsFalse(fx.Blurred || fx.Slowed || fx.Stunned);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+
+    [Test]
+    public void TheRenamedTricks_HaveTheirNewNames()
+    {
+        Assert.AreEqual("Block door", TacticLibrary.Get("door_lock").Title);
+        Assert.AreEqual("Peace offering", TacticLibrary.Get("favour").Title);
+    }
+}

@@ -46,7 +46,7 @@ public static class Controls
             K("Up / Down", "Choose an answer when a customer asks you something"),
             K("E / Enter", "Give that answer")),
         new Section("Menus and maps",
-            K("Esc", "Pause: settings (sound, display, mouse, " + GameNames.Antagonist + "'s floor cone, webcam), restart the shift or the main menu; closes any open panel"),
+            K("Esc", "Pause: settings (sound, display, mouse, webcam), restart the shift or the main menu; closes any open panel"),
             K("F1", "Live map of the store and what " + GameNames.Antagonist + " is doing, in plain words"),
             K("H (on the F1 map)", GameNames.Antagonist + "'s guess of where you are, as a heat map"),
             K("T (on the F1 map)", "Technical view: goal scores and her thought log"),
@@ -96,5 +96,13 @@ public static class Controls
             K("Left Shift + F7", "Mark a bug at this moment (in a playtest build, then say what went wrong)")),
         new Section("For testing",
             K("L", "Cut the power to the whole store")),
+    };
+
+    // Keys only the editor and development builds read (KarenFx). Not in the game's Keys tab or
+    // CONTROLS.md: a player never has them. The test that every key is listed counts these too.
+    public static readonly Section[] Developer =
+    {
+        new Section("Developer builds only",
+            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off")),
     };
 }

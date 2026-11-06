@@ -60,35 +60,35 @@ public class KarenRuleTests
     // ---- her speed: slightly faster than you ---------------------------------------------------
 
     [Test]
-    public void Karen_IsSlightlyFasterThanTheEmployee()
+    public void Karen_SprintsAMetreASecondFasterThanTheEmployee()
     {
         var motor = new GameObject("player").AddComponent<PlayerMotor>();
         try
         {
             var config = new KarenConfig();
-            Assert.Greater(config.runSpeed, motor.sprintSpeed, "running, she should just outpace a sprint");
-            Assert.LessOrEqual(config.runSpeed, motor.sprintSpeed * 1.1f, "only slightly");
+            Assert.AreEqual(7.5f, config.runSpeed, 1e-4f, "hunting, she sprints at 7.5 m/s (0.2.0)");
+            Assert.AreEqual(motor.sprintSpeed * config.sprintsFasterThanPlayer, config.runSpeed, 1e-3f, "against your 6.5");
             Assert.Greater(config.hurrySpeed, motor.walkSpeed, "hurrying, she should outpace a walking employee");
             Assert.Less(config.walkSpeed, motor.walkSpeed, "on her rounds she walks slower than you");
 
             // A scene with other speeds moves hers with them.
             KarenBootstrap.MatchPlayer(config, 3f, 5f);
-            Assert.AreEqual(5f * config.fasterThanPlayer, config.runSpeed, 1e-4f);
+            Assert.AreEqual(5f * config.sprintsFasterThanPlayer, config.runSpeed, 1e-4f);
             Assert.AreEqual(3f * config.fasterThanPlayer, config.hurrySpeed, 1e-4f);
             Assert.Less(config.walkSpeed, 3f);
         }
         finally { Object.DestroyImmediate(motor.gameObject); }
     }
 
-    // ---- §9: every threat is telegraphed and answerable --------------------------------------
+    // ---- §9: every threat is answerable ------------------------------------------------------
+    // (Rule 3, "every trick warns you 0.8 s ahead", was removed in 0.2.0.)
 
     [Test]
-    public void EveryTactic_HasATellOfAtLeast800ms_AndAChore()
+    public void EveryTactic_LeavesAChore_AndSaysWhatItAttacks()
     {
         Assert.That(TacticLibrary.All.Count, Is.GreaterThanOrEqualTo(30));
         foreach (Tactic t in TacticLibrary.All)
         {
-            if (t.Tier > 0) Assert.GreaterOrEqual(t.TellLead, 0.8f, $"{t.Id}: tell {t.TellLead}s is under the 0.8 s floor");
             Assert.IsFalse(string.IsNullOrWhiteSpace(t.Chore), $"{t.Id} leaves the player nothing to do");
             Assert.IsFalse(string.IsNullOrWhiteSpace(t.Attacks), $"{t.Id} doesn't say what it attacks");
             Assert.That(t.Tier, Is.InRange(0, 4), t.Id);
@@ -104,11 +104,12 @@ public class KarenRuleTests
         foreach (string id in ids) Assert.AreSame(TacticLibrary.All.First(t => t.Id == id), TacticLibrary.Get(id));
     }
 
+    // Tiers 0-3 each keep something live (0.2.0); tier 4 waits for a trick back from draft.
     [Test]
     public void EveryTier_IsPopulated()
     {
-        for (int tier = 0; tier <= 4; tier++)
-            Assert.IsTrue(TacticLibrary.All.Any(t => t.Tier == tier), $"no tactic at tier {tier}");
+        for (int tier = 0; tier <= 3; tier++)
+            Assert.IsTrue(TacticLibrary.Live.Any(t => t.Tier == tier), $"no live tactic at tier {tier}");
     }
 
     // ---- §7: the bandit learns, habituates, and forgets -----------------------------------------
@@ -391,7 +392,8 @@ public class StoreMapAndBeliefTests
     {
         var grid = new BeliefGrid(map);
         float h0 = grid.Entropy;
-        Vector3 at = map.CellPosition[map.CellCount / 2];
+        var hers = Enumerable.Range(0, map.CellCount).Where(map.IsKarens).ToList();   // outside is one cell
+        Vector3 at = map.CellPosition[hers[hers.Count / 2]];
 
         grid.Apply(new Observation(SenseChannel.Sight, at, 0.95f, 1.5f, "test sighting"));
         Assert.Less(grid.Entropy, h0 * 0.6f, "a confident sighting barely moved belief");
@@ -406,7 +408,7 @@ public class StoreMapAndBeliefTests
     public void Belief_ASweepRemovesMassWhereSheLooked()
     {
         var grid = new BeliefGrid(map);
-        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6).Id;
+        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6 && map.IsKarens(r.Cells[0])).Id;
         float before = grid.RegionMass[region];
         var cells = map.Regions[region].Cells.ToList();
         grid.ApplySweep(cells, cells.Select(_ => 0.9f).ToList());
@@ -418,7 +420,7 @@ public class StoreMapAndBeliefTests
     public void Belief_BiasMovesNoMoreThanItIsAllowed()
     {
         var grid = new BeliefGrid(map);
-        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6).Id;
+        int region = map.Regions.First(r => !r.IsDoor && r.Cells.Count >= 6 && map.IsKarens(r.Cells[0])).Id;
         float before = grid.RegionMass[region];
         grid.Bias(region, 0.15f);
         Assert.LessOrEqual(grid.RegionMass[region] - before, 0.15f + 1e-4f);

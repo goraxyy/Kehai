@@ -44,6 +44,7 @@ namespace Kehai.Replay
         int cameraFov = -1, cameraLids = -1, cameraHeld = -1;
         bool cameraStarted;
         byte[] lastBelief;
+        int routeCount;
 
         public string Path { get; }
         public bool Closed { get; private set; }
@@ -299,6 +300,62 @@ namespace Kehai.Replay
                 lastBelief[i] = grid[i];
             }
         }
+
+        // Her route guesses: new ones whole, each point as a millimetre step from the one before
+        // and its distance along in centimetres; after that only their weights.
+        public void Routes(float t, RouteFrame f)
+        {
+            w.Write((byte)KrecTag.Routes);
+            w.Write(t);
+            w.Write((byte)1);
+            w.Write(f.LostAt);
+            Krec.WritePosition(w, Krec.Quantise(f.Seen));
+            w.Write(f.Sprint);
+            w.Write(f.Walk);
+            w.Write(f.Crouch);
+            w.Write((byte)f.Guesses.Length);
+            foreach (RouteLine g in f.Guesses)
+            {
+                w.Write(g.Name ?? "");
+                w.Write((byte)g.Kind);
+                w.Write(RouteWeight(g.Weight));
+                Krec.WriteVarint(w, g.Path.Length);
+                Vector3Int at = default;
+                int along = 0;
+                for (int i = 0; i < g.Path.Length; i++)
+                {
+                    Vector3Int p = Krec.Quantise(g.Path[i]);
+                    int s = Mathf.RoundToInt(g.Along[i] * 100f);
+                    Krec.WriteVarint(w, p.x - at.x);
+                    Krec.WriteVarint(w, p.y - at.y);
+                    Krec.WriteVarint(w, p.z - at.z);
+                    Krec.WriteVarint(w, s - along);
+                    at = p;
+                    along = s;
+                }
+            }
+            routeCount = f.Guesses.Length;
+        }
+
+        public void RouteWeights(float t, float[] weights)
+        {
+            if (weights.Length != routeCount) throw new ArgumentException("route weights need the routes they weigh");
+            w.Write((byte)KrecTag.Routes);
+            w.Write(t);
+            w.Write((byte)2);
+            w.Write((byte)weights.Length);
+            foreach (float x in weights) w.Write(RouteWeight(x));
+        }
+
+        public void NoRoutes(float t)
+        {
+            w.Write((byte)KrecTag.Routes);
+            w.Write(t);
+            w.Write((byte)0);
+            routeCount = 0;
+        }
+
+        static ushort RouteWeight(float x) => (ushort)Mathf.RoundToInt(Mathf.Clamp01(x) * 65535f);
 
         public void End(float length, bool clockedOut)
         {

@@ -71,13 +71,16 @@ namespace Kehai.Karen
         public List<RegionStat> regions = new List<RegionStat>();
         public List<RouteStat> routes = new List<RouteStat>();
         public List<CounterStat> counterplay = new List<CounterStat>();
+        public List<ChainStat> chains = new List<ChainStat>();     // the combo room (0.2.0)
     }
 
     // The Ledger (Karen.md §2.3, §7). It does not decide what happens; it decides what Karen
     // is inclined to try, and what she expects of this particular employee.
     //
     //   Bandit    — every tactic is an arm. UCB (or Thompson) with a habituation penalty
-    //               and an authored prior that fades as evidence arrives (§7.2).
+    //               and an authored prior that fades as evidence arrives (§7.2). Since
+    //               0.2.0 it's contextual: it sees her last trick, and the combo room
+    //               keeps what each chain of two has paid.
     //   Habits    — where you dwell, where you hide, the routes you take between jobs.
     //   Decay     — every learned prior fades without reinforcement, so changing your
     //               behaviour visibly works within two shifts (fairness rule 7).
@@ -86,6 +89,7 @@ namespace Kehai.Karen
         public LedgerData Data { get; private set; } = new LedgerData();
         public bool Persistent { get; set; }
         public string PlayerName => Data.playerName;
+        public ComboRoom Room { get; } = new ComboRoom();
 
         readonly KarenConfig config;
         readonly Dictionary<string, ArmStat> arms = new Dictionary<string, ArmStat>();
@@ -132,6 +136,7 @@ namespace Kehai.Karen
             if (!Persistent) return;
             Data.arms = arms.Values.ToList();
             Data.regions = regions.Values.ToList();
+            Data.chains = Room.All.ToList();
             string dir = Path.GetDirectoryName(SavePath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(SavePath, JsonUtility.ToJson(Data, true));
@@ -147,9 +152,11 @@ namespace Kehai.Karen
         void Index()
         {
             arms.Clear();
-            foreach (ArmStat a in Data.arms) arms[a.id] = a;
+            foreach (ArmStat a in Data.arms)
+                if (TacticLibrary.Get(a.id) != null) arms[a.id] = a;   // not the tricks 0.2.0 removed: the chase, Follow, Funnel
             regions.Clear();
             foreach (RegionStat r in Data.regions) regions[r.key] = r;
+            Room.Load(Data.chains);
         }
 
         // ---- shift boundaries -----------------------------------------------------------
@@ -168,6 +175,7 @@ namespace Kehai.Karen
                 arms.Clear();
                 regions.Clear();
                 Data.routes.Clear();
+                Room.Clear();
             }
 
             foreach (ArmStat a in arms.Values) a.lastUsed = -9999f;
@@ -196,6 +204,7 @@ namespace Kehai.Karen
                 a.q = Mathf.Lerp(a.q, prior, 0.15f);
                 a.n *= 0.8f;
             }
+            Room.Fade(Alone);
 
             if (energyAtEnd <= 0.01f) Data.burnouts++;
             Save();
@@ -217,7 +226,45 @@ namespace Kehai.Karen
         public float ExpectedPanicDelta(Tactic t, KarenContext c)
         {
             if (!c.Features.Bandit) return t.PanicPrior;
-            return arms.TryGetValue(t.Id, out ArmStat a) && a.n > 0.5f ? a.q : t.PanicPrior;
+            float own = arms.TryGetValue(t.Id, out ArmStat a) && a.n > 0.5f ? a.q : t.PanicPrior;
+            ChainStat chain = InContext(t, c) ? Room.Find(c.Last.Id, t.Id) : null;
+            return chain != null && chain.n > 0.5f ? Shrunk(chain, own) : own;
+        }
+
+        // What a trick pays on its own, as far as she knows.
+        public float Alone(string id)
+        {
+            if (arms.TryGetValue(id, out ArmStat a) && a.n > 0.5f) return a.q;
+            Tactic t = TacticLibrary.Get(id);
+            return t != null ? t.PanicPrior : 0f;
+        }
+
+        // ---- the combo learner (0.2.0, C4.5) ------------------------------------------------
+
+        // A chain's own evidence counts this many uses' worth against the trick's own value:
+        // until a pair has been tried a few times, she goes by what its second part pays alone.
+        const float Shrink = 2f;
+
+        bool InContext(Tactic t, KarenContext c) => config.comboContext && c.Last.Active && c.Last.Id != t.Id;
+
+        static float Shrunk(ChainStat chain, float own) => (chain.n * chain.q + Shrink * own) / (chain.n + Shrink);
+
+        // The chain a trick starting now would be the second part of: her last trick, while it's
+        // still in play. Null when it isn't, or the learner can't see it.
+        public string ChainedOn(Tactic t, KarenContext c) => t.Learnable && InContext(t, c) ? c.Last.Id : null;
+
+        // A trick's reward. Started on its own, it goes to the trick's arm, as before 0.2.0;
+        // started as a chain's second part, it goes to the chain, so the arm stays what the
+        // trick pays alone and the chain is measured against it (a tabular contextual bandit,
+        // backed off to the arm). Returns the chain if this made it found.
+        public ChainStat Settle(string tacticId, string after, float delta)
+        {
+            if (after == null)
+            {
+                Reward(tacticId, delta);
+                return null;
+            }
+            return Room.Reward(after, tacticId, delta, Alone(tacticId), shift);
         }
 
         // The authored escalation curve: a tactic just introduced this shift gets a push.
@@ -236,7 +283,19 @@ namespace Kehai.Karen
 
             float value;
             string how;
-            if (config.thompson)
+            if (InContext(t, c))
+            {
+                // Contextual: what this trick has paid right after her last one, backed off to
+                // what it pays alone until the pair has evidence of its own, and explored by the
+                // pair's own count.
+                ChainStat chain = Room.Find(c.Last.Id, t.Id);
+                float pairs = chain != null ? chain.n : 0f;
+                float q = chain != null ? Shrunk(chain, a.q) : a.q;
+                float explore = config.ucbC * Mathf.Sqrt(Mathf.Log(total + Room.After(c.Last.Id)) / (pairs + Shrink));
+                value = q + explore;
+                how = $"after {c.Last}: Q̂={q:+0.00;-0.00} n={pairs:0.#} ucb+{explore:0.00}";
+            }
+            else if (config.thompson)
             {
                 float sigma = 0.15f / Mathf.Sqrt(a.n + 1f);
                 value = a.q + sigma * c.Rng.Gaussian();

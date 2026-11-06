@@ -74,15 +74,15 @@ public class RoomLightingTests
             Assert.IsTrue(Mathf.IsPowerOfTwo(bit) && bit != RoomLighting.Outside, $"0x{bit:X} is one indoor layer");
     }
 
-    // A wall between the two staff rooms runs up to the outside wall: it's lit by the two rooms,
-    // not by the sun, which lit the staff room through it.
+    // The wall between the staff room and the office (z −136⅔, INTERIOR_MODELS.md) runs up to
+    // the outside wall: it's lit by the two rooms, not by the sun, which lit the staff room through it.
     [Test]
     public void AWallThatMeetsTheOutsideWall_IsntOutside()
     {
         StoreMap map = Store();
-        int mask = RoomLighting.MaskFor(new Bounds(new Vector3(17.75f, 1.5f, -130.7f), new Vector3(14.5f, 3f, 0.2f)), map);
-        int staff = RoomLighting.BitAt(new Vector3(18f, 1f, -140f), map), behind = RoomLighting.BitAt(new Vector3(18f, 1f, -120f), map);
-        Assert.AreEqual(staff | behind, mask);
+        int mask = RoomLighting.MaskFor(new Bounds(new Vector3(17.75f, 1.5f, -136.667f), new Vector3(14.5f, 3f, 0.2f)), map);
+        int staff = RoomLighting.BitAt(new Vector3(18f, 1f, -140f), map), office = RoomLighting.BitAt(new Vector3(18f, 1f, -130f), map);
+        Assert.AreEqual(staff | office, mask);
     }
 
     // The west wall stands half a metre inside the area table's line: its inside face is the
@@ -91,7 +91,8 @@ public class RoomLightingTests
     public void AnOutsideWall_IsLitByTheRoomInsideIt_AsWellAsOutside()
     {
         StoreMap map = Store();
-        int mask = RoomLighting.MaskFor(new Bounds(new Vector3(10f, 2f, -137.5f), new Vector3(0.03f, 4f, 5f)), map);
+        // A stretch of the staff room's west wall, clear of the office partition at z −136⅔.
+        int mask = RoomLighting.MaskFor(new Bounds(new Vector3(10f, 2f, -143f), new Vector3(0.03f, 4f, 5f)), map);
         int staff = RoomLighting.BitAt(new Vector3(18f, 1f, -140f), map);
         Assert.AreEqual(RoomLighting.Outside | staff, mask);
     }

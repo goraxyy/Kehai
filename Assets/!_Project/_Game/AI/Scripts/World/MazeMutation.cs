@@ -52,16 +52,9 @@ namespace Kehai.Karen
             foreach (Bay b in before.Bays)
                 if (b.Unit != null && StoreMap.AreaAt(b.Position) == "Sales floor") bays.Add(b.Unit);
 
-            var ignored = IgnorePeople();
-            var standIns = BoxStandIns();
-            NavMeshCollectGeometry geometry = surface.useGeometry;
-            int layers = surface.layerMask;
-            // Rebake from physics colliders: the store's floor is a statically combined render
-            // mesh, which isn't readable in a build (or headless), and a bake from render meshes
-            // then comes back without a floor. Colliders are always readable. Shoppers and items
-            // (Interactable) and anything marked NavIgnore stay out, as they did in the original bake.
-            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-            surface.layerMask = layers & ~(1 << LayerMask.NameToLayer("Interactable"));
+            // Rebaked from physics colliders, with people left out (StoreRebake). The marks that
+            // keep Karen's body inside (KarenArea) are in the scene and go into every bake.
+            var rebake = new StoreRebake(surface);
 
             int attempts = 0;
             while (kept.Count < wanted && attempts < wanted * 3 && bays.Count > 0)
@@ -99,54 +92,11 @@ namespace Kehai.Karen
                 log.AppendLine($"  {bay.name} {Short(from)}→{Short(to)}: kept");
             }
 
-            surface.useGeometry = geometry;
-            surface.layerMask = layers;
-            foreach (NavMeshModifier m in ignored) if (m != null) Object.Destroy(m);
-            foreach (var (mesh, box) in standIns)
-            {
-                if (box != null) Object.Destroy(box);
-                if (mesh != null) mesh.enabled = true;
-            }
+            rebake.Dispose();
 
             report = $"maze mutation: {kept.Count}/{wanted} moves kept after {attempts} attempts\n" + log;
             LastMoves = kept;
             return kept;
-        }
-
-        // A few props (racks, bins) collide through meshes that aren't imported readable, and a
-        // runtime bake can't read those in a build. For the length of the bake each stands in
-        // as the box around its mesh — plenty for a NavMesh.
-        static List<(MeshCollider, BoxCollider)> BoxStandIns()
-        {
-            var list = new List<(MeshCollider, BoxCollider)>();
-            foreach (MeshCollider mc in Object.FindObjectsByType<MeshCollider>())
-            {
-                if (!mc.enabled || mc.isTrigger || mc.sharedMesh == null || mc.sharedMesh.isReadable) continue;
-                var box = mc.gameObject.AddComponent<BoxCollider>();
-                box.center = mc.sharedMesh.bounds.center;
-                box.size = mc.sharedMesh.bounds.size;
-                mc.enabled = false;
-                list.Add((mc, box));
-            }
-            return list;
-        }
-
-        // People aren't architecture: keep every body out of the bake, or each would leave a
-        // hole in the floor where it happened to be standing.
-        static List<NavMeshModifier> IgnorePeople()
-        {
-            var added = new List<NavMeshModifier>();
-            var bodies = new List<Component>();
-            bodies.AddRange(Object.FindObjectsByType<CharacterController>());
-            bodies.AddRange(Object.FindObjectsByType<NavMeshAgent>());
-            foreach (Component body in bodies)
-            {
-                if (body.GetComponent<NavMeshModifier>() != null) continue;
-                var m = body.gameObject.AddComponent<NavMeshModifier>();
-                m.ignoreFromBuild = true;
-                added.Add(m);
-            }
-            return added;
         }
 
         static readonly Vector3[] Offsets =

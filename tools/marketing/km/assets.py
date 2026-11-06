@@ -3,7 +3,7 @@
 Files live in <working folder>/assets/<kind>/ and are listed in assets/manifest.json; both are
 mirrored to Google Drive (TokenLimit Marketing/assets) through rclone when it's set up.
 Nothing without a licence gets in, and no music that isn't cleared for YouTube, TikTok and
-Instagram (docs/MARKETING.md).
+Instagram (docs/marketing/MARKETING.md).
 """
 from __future__ import annotations
 
@@ -179,7 +179,7 @@ def sync(root: Path, dry_run: bool = False) -> list[str]:
     if not pending:
         return ["Drive: nothing to upload"]
     if not drive_ready():
-        return [f"Drive: not set up yet ({len(pending)} asset(s) wait): install rclone and add the '{paths.DRIVE_REMOTE}' remote (docs/MARKETING.md, Setup), then run add_asset.py --sync"]
+        return [f"Drive: not set up yet ({len(pending)} asset(s) wait): install rclone and add the '{paths.DRIVE_REMOTE}' remote (docs/marketing/MARKETING.md, Setup), then run add_asset.py --sync"]
     actions = []
     for a in pending:
         remote = f"{paths.DRIVE_REMOTE}:{paths.DRIVE_FOLDER}/{a['file']}"

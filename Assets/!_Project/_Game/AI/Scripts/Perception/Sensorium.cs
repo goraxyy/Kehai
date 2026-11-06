@@ -70,7 +70,11 @@ namespace Kehai.Karen
         public bool UseInfrastructure = true;
         public bool UseNegative = true;
 
-        public int SweepCellsPerTick = 70;
+        public int SweepCellsPerTick = 120;
+
+        // The sweep's cost (0.2.0): cells inside her cone, and rays cast, on the last sweep.
+        public int SweepConeCells { get; private set; }
+        public int SweepRays { get; private set; }
 
         readonly StoreMap map;
         readonly EnergyBelief energy;
@@ -120,7 +124,7 @@ namespace Kehai.Karen
             else NoiseBus.ReadSince(ref noiseCursor, noises);
             if (UseTraces) CollectTraces(sight, bodyRoot);
             if (UseTestimony) CollectTestimony(bodyPosition);
-            if (UseNegative && sight.DetectNow <= 0.02f) CollectSweep(sight, bodyRoot);
+            if (UseNegative && !sight.SeesNow) CollectSweep(sight, bodyRoot);
 
             Positive.AddRange(infrastructure);
             infrastructure.Clear();
@@ -228,10 +232,14 @@ namespace Kehai.Karen
         }
 
         // Absence (Karen.md §3.6): cells in view that turned out empty. Round-robin over the
-        // cone so a sweep costs a fixed number of raycasts per tick.
+        // cells inside her cone so a sweep costs a fixed number of raycasts per tick, and each
+        // cell's chance is her own eye's (SightSensor.Visibility) for someone standing there in
+        // the open.
         void CollectSweep(SightSensor sight, Transform bodyRoot)
         {
-            map.CellsWithin(sight.Eye, sight.range, cone);
+            ConeCells(map, sight, cone);
+            SweepConeCells = cone.Count;
+            SweepRays = 0;
             if (cone.Count == 0) return;
 
             int budget = Mathf.Min(SweepCellsPerTick, cone.Count);
@@ -240,22 +248,28 @@ namespace Kehai.Karen
                 int cell = cone[(sweepOffset + k) % cone.Count];
                 Vector3 p = map.CellPosition[cell] + Vector3.up * 1f;
                 Vector3 d = p - sight.Eye;
-                float distance = d.magnitude;
-                float angle = Vector3.Angle(sight.Forward, d);
-                if (angle > sight.HalfAngle) continue;
-                if (!sight.CanSee(p, bodyRoot)) continue;
-
-                float t = Mathf.Clamp01(angle / sight.HalfAngle);
-                float angular = 1f - t * t;
-                float falloff = 1f / (1f + (distance / 8f) * (distance / 8f));
-                float light = Mathf.Lerp(sight.darkVision, 1f, LightProbe.LevelAt(map.CellPosition[cell]));
-                float p0 = Mathf.Clamp01(angular * falloff * light * 0.85f);
+                float p0 = Mathf.Clamp01(sight.Visibility(Vector3.Angle(sight.Forward, d), d.magnitude, LightProbe.LevelAt(map.CellPosition[cell])) * 0.85f);
                 if (p0 < 0.03f) continue;
+                SweepRays++;
+                if (!sight.CanSee(p, bodyRoot)) continue;
 
                 SweptCells.Add(cell);
                 SweptProbability.Add(p0);
             }
             sweepOffset = (sweepOffset + budget) % Mathf.Max(1, cone.Count);
+        }
+
+        // The cells inside an eye's cone, at chest height: in range and within its half angle.
+        public static void ConeCells(StoreMap map, SightSensor sight, List<int> into)
+        {
+            map.CellsWithin(sight.Eye, sight.range, into);
+            int kept = 0;
+            for (int i = 0; i < into.Count; i++)
+            {
+                Vector3 d = map.CellPosition[into[i]] + Vector3.up * 1f - sight.Eye;
+                if (Vector3.Angle(sight.Forward, d) <= sight.HalfAngle) into[kept++] = into[i];
+            }
+            into.RemoveRange(kept, into.Count - kept);
         }
     }
 }

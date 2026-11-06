@@ -210,15 +210,15 @@ namespace Kehai.Karen
 
     // ---- tells and effects ----------------------------------------------------------
 
-    // The fairness contract's rule 3: every tactic announces itself at least minTellLead
-    // seconds before it lands, through a sense the player still has. The brain logs the
-    // TELL; the EFFECT that follows is timestamped too, so the gap can be asserted.
+    // A trick's sound, played as it acts. Until 0.2.0 this was the fairness contract's rule 3:
+    // every trick warned you at least 0.8 s before it landed, and the plan waited here for
+    // that long. The rule is gone (build plan §7.8); the sound stays, as atmosphere, and the
+    // plan goes straight on. `lead` is how long the sound plays. The brain still logs it.
     public sealed class Tell : Primitive
     {
         readonly TellKind kind;
         readonly Func<KarenContext, Vector3> at;
         readonly float lead;
-        float startedAt, required;
 
         public Tell(TellKind kind, Func<KarenContext, Vector3> at, float lead)
         {
@@ -230,17 +230,12 @@ namespace Kehai.Karen
 
         protected override void Begin(KarenContext c)
         {
-            required = Mathf.Max(lead, c.Config.minTellLead);
             Vector3 where = at(c);
-            c.World.PlayTell(kind, where, required);
-            c.Brain.RecordTell(kind, where, required, ofPlan: true);
-            startedAt = Time.time;
+            c.World.PlayTell(kind, where, lead);
+            c.Brain.RecordTell(kind, where, lead);
         }
 
-        // Measured from when the tell began, so the frame it starts in doesn't count towards
-        // the lead (at a coarse time step that frame alone is most of a tenth of a second).
-        protected override Status Tick(KarenContext c, float dt) =>
-            Time.time - startedAt >= required ? Status.Success : Status.Running;
+        protected override Status Tick(KarenContext c, float dt) => Status.Success;
     }
 
     public sealed class Effect : Primitive
@@ -306,7 +301,6 @@ namespace Kehai.Karen
             // the words as the effect when they actually play.
             string text = line(c);
             announcement = c.World.Pa.Announce(text);
-            if (!announcement.Jammed) c.Brain.NotePlanTell();
         }
 
         protected override Status Tick(KarenContext c, float dt)
@@ -318,12 +312,16 @@ namespace Kehai.Karen
 
     // ---- pursuit ------------------------------------------------------------------
 
-    // The chase. Runs at whatever she can currently see, falls back to belief when she
-    // can't, and gives up once she has lost you for long enough.
+    // Hunt's run (0.2.0): at you while she sees you; when she loses you, on to where her
+    // reckoning says you'll be (TacticHelpers.Forecast), not where you were. It hands over —
+    // to Search, as the brain decides next — when she gets there and you're not, after
+    // huntMemorySeconds with nothing new, in a recovery, or when her belief puts you outside,
+    // where she can't follow (the run stops at the pavement's edge).
     public sealed class Pursue : Primitive
     {
         readonly float max;
         float t, lostFor, retarget;
+        Vector3 goal;
 
         public Pursue(float max = 25f)
         {
@@ -331,38 +329,60 @@ namespace Kehai.Karen
             Label = "pursue";
         }
 
-        protected override void Begin(KarenContext c)
-        {
-            c.Body.SetMood(KarenBody.Mood.Hunt);
-            c.Brain.SetChasing(true);
-        }
+        protected override void Begin(KarenContext c) => goal = c.Body.Sight.LastSeenPosition;
 
         protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             SightSensor sight = c.Body.Sight;
-            if (sight.SeesNow) lostFor = 0f; else lostFor += dt;
+            bool sees = sight.SeesNow;
+            if (sees) lostFor = 0f; else lostFor += dt;
 
             retarget -= dt;
             if (retarget <= 0f)
             {
                 retarget = 0.25f;
-                // Lead the target a little along the way it was last seen moving.
-                Vector3 goal = sight.Time_SinceSeen() < 2f
-                    ? sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f)
-                    : c.Belief.PeakPosition;
+                // Seen: lead you a little along the way you were moving. Lost: on to where you'd
+                // be two seconds from now — by her best guess of your route (RoutePredictor), or
+                // until she has one, by walking on the way you went.
+                if (sees || sight.Time_SinceSeen() < 0.5f)
+                    goal = sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f);
+                else if (c.Brain.Predictor != null && c.Brain.Predictor.Active)
+                    goal = c.Brain.Predictor.Expected(Time.time, 2f, sight.LastSeenVelocity.magnitude);
+                else
+                    goal = TacticHelpers.Forecast(c, 2f);
                 c.Body.MoveTo(goal, KarenBody.Pace.Run);
             }
 
-            if (lostFor > 5f) return Status.Failure;
+            // Once she has guesses about your route, the hunt stops its run once to choose again:
+            // cutting you off (Cut) may now beat running on.
+            if (!sees && lostFor > 0.75f && c.Brain.Predictor != null && c.Brain.Predictor.Active
+                && c.Brain.MayReplanHunt(sight.LastSeenTime))
+                return Status.Success;
+
+            Vector3 d = c.Body.Position - goal;
+            d.y = 0f;
+            if (HandOver(sees, lostFor, d.magnitude, c.Belief.Staleness, c.Director.InRecovery, c.Belief.OutsideMass,
+                         c.Config.huntMemorySeconds, out string why))
+            {
+                c.Think("HUNT", "HUNT     " + why);
+                return Status.Failure;
+            }
             return t >= max ? Status.Success : Status.Running;
         }
 
-        protected override void End(KarenContext c, bool aborted)
+        // When a hunt gives up, and why. Pure, so the rules can be tested.
+        public static bool HandOver(bool sees, float lostFor, float toGoal, float staleness, bool inRecovery,
+                                    float outsideMass, float memory, out string why)
         {
-            c.Brain.SetChasing(false);
-            c.Body.SetMood(KarenBody.Mood.Calm);
+            why = null;
+            if (outsideMass > 0.5f) why = "you went outside: she can't follow you there";
+            else if (inRecovery) why = "a recovery: she lets you go";
+            else if (!sees && lostFor > 0.5f && toGoal < 1.5f) why = "got to where you'd be, and you weren't there";
+            else if (!sees && lostFor > memory && staleness > memory) why = $"nothing new for {memory:0}s";
+            return why != null;
         }
+
     }
 
     public static class SightExtensions
@@ -429,15 +449,15 @@ namespace Kehai.Karen
         readonly BtCondition interrupt;
         public readonly BtSequence Plan;
         public string Name;
-        public GoalId Goal;
+        public ActionId Action;
         public Tactic Tactic;
         public string Target;       // what it's aimed at, in words (a place, a shelf, "close distance")
         public bool Interrupted { get; private set; }
 
-        public PlanTree(string name, GoalId goal, Tactic tactic, List<Primitive> steps, Func<KarenContext, bool> interrupt)
+        public PlanTree(string name, ActionId goal, Tactic tactic, List<Primitive> steps, Func<KarenContext, bool> interrupt)
         {
             Name = name;
-            Goal = goal;
+            Action = goal;
             Tactic = tactic;
             Plan = new BtSequence(steps);
             this.interrupt = new BtCondition(interrupt);

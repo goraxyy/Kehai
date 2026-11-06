@@ -14,7 +14,7 @@ namespace Kehai.Karen
     {
         public abstract string Id { get; }
         public abstract string Title { get; }
-        public abstract GoalId[] Goals { get; }
+        public abstract ActionId[] Actions { get; }
         public abstract int Tier { get; }               // 0 movement, 1 cheap, 2 moderate, 3 big, 4 the chase
         public abstract int IntroducedShift { get; }    // career table, §10.2
         public abstract float TensionCost { get; }
@@ -25,8 +25,16 @@ namespace Kehai.Karen
         public abstract string Chore { get; }           // what it leaves the player to do
         public abstract string Attacks { get; }         // sight, work, sound, trust, space, social, you
 
-        // Movement goals (patrol, sweep...) aren't bandit arms — they're how she gets about.
+        // Movement (roaming, searching...) isn't a bandit arm — it's how she gets about.
         public virtual bool Learnable => Tier > 0;
+
+        // An action's own move: what it does with no trick at all (Roam's walk, Hunt's run). Not a
+        // trick, so it's free to be named after its action.
+        public virtual bool OwnMove => false;
+
+        // On the owner's short-term list of tricks to improve or remove (0.2.0): kept in the code
+        // and the library, so ids and Ledger records stay put, but the gate refuses it.
+        public bool Draft => TacticLibrary.IsDraft(Id);
 
         [System.NonSerialized] public float LastUsed = -9999f;
         [System.NonSerialized] public int UsesThisShift;
@@ -39,6 +47,11 @@ namespace Kehai.Karen
             why = null;
             return true;
         }
+
+        // Whether what it did is still in play, as she knows of her own doing: the lights still
+        // out, a door still blocked. The combo learner keeps it as her last trick until it
+        // isn't (LastTrick.Active), however long ago it started.
+        public virtual bool EffectRunning(KarenContext c) => false;
 
         // How exposed doing this leaves her (§6.3 w_risk). 0 = unseen, 1 = in plain view.
         public virtual float ExposureRisk(KarenContext c) => 0f;
@@ -101,9 +114,9 @@ namespace Kehai.Karen
         {
             all = new List<Tactic>
             {
-                // movement (tier 0)
+                // own moves and movement (tier 0)
                 new PatrolTactic(), new InvestigateTactic(), new SweepTactic(), new PollWitnessesTactic(),
-                new WithdrawTactic(),
+                new WithdrawTactic(), new HuntTactic(),
 
                 // §8.1 sight
                 new BlackoutTactic(), new MirrorBlackTactic(), new FogTactic(), new CameraBoltOnTactic(),
@@ -114,15 +127,32 @@ namespace Kehai.Karen
                 new PaDecoyTactic(), new PaAnnouncePositionTactic(), new PaTaskReadbackTactic(),
                 new PaCountdownTactic(), new PaFootstepsTactic(), new PhantomChimeTactic(), new SilenceTactic(),
                 // §8.4 space
-                new CrateWallTactic(), new DoorLockTactic(), new ShelfRelocationTactic(), new FunnelTactic(),
+                new CrateWallTactic(), new DoorLockTactic(), new ShelfRelocationTactic(),
                 // §8.5 social
                 new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
                 // §8.6 you
-                new StalkTactic(), new AmbushTactic(), new ChaseTactic(), new FollowTactic(), new FavourTactic()
+                new StalkTactic(), new AmbushTactic(), new FavourTactic(),
+                // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
+                new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic()
             };
         }
 
-        public static IEnumerable<Tactic> For(GoalId goal) => All.Where(t => t.Goals.Contains(goal));
+        public static IEnumerable<Tactic> For(ActionId goal) => All.Where(t => t.Actions.Contains(goal));
+
+        // The drafts (0.2.0 build plan §6): off in play until reworked or removed. Live today are
+        // the own moves, Ask the customers, Bin tamper, Cut, Ambush, the three throws, Block door and Blackout.
+        static readonly HashSet<string> Drafts = new HashSet<string>
+        {
+            "mirror_black", "fog", "camera_bolt_on", "shelf_sweep", "spill", "task_falsification", "tool_theft",
+            "overtime", "pa_decoy", "pa_announce_position", "pa_task_readback", "pa_countdown", "pa_footsteps",
+            "phantom_chime", "silence", "crate_wall", "shelf_relocation", "mimicry", "witness",
+            "understudy", "stalk", "favour",
+        };
+
+        public static bool IsDraft(string id) => Drafts.Contains(id);
+
+        // What can actually happen in play: every tactic that isn't a draft.
+        public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);
 
         public static Tactic Get(string id) => All.FirstOrDefault(t => t.Id == id);
 

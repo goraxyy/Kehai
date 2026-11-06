@@ -30,10 +30,12 @@ lost customers helped, then clock out at the time clock once the doors have clos
 work is done. Your energy drains as you work and faster when you sprint; coffee restores it.
 
 The store has a manager system called Karen. She walks the floor, watches, listens, and
-interferes: lights go out, spills appear, the HUD can lie, the PA can lie, doors lock. If
-she catches you, you get a written warning and your shift is extended. Everything she does
-is telegraphed by a sound or a flicker a moment before it happens, and every trick leaves
-you something to do about it (breakers to flip, a spill to mop, a camera to unplug).
+interferes: she can turn out the lights, ask customers about you, tamper with bins, wait on
+your route, cut you off, or throw powder, detergent or tins. A hit can briefly blur your
+vision, slow you or stun you. If she catches you, you die and the shift restarts; her memory
+of you persists. She runs at 7.5 m/s against your 6.5 m/s sprint. Break sight and change route,
+and sidestep a visible incoming throw when you can. Tricks do not promise an advance warning.
+Restore power at the breakers when the lights go out.
 
 Each turn you receive an observation. Call the `act` tool exactly once with the single most
 useful next action. Targets are the ids in the observation (spill_3, bay_41, cust_7, bin_2,

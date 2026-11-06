@@ -14,7 +14,7 @@ namespace Kehai.Karen
     {
         public override string Id => "blackout";
         public override string Title => "Blackout";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 3;
         public override int IntroducedShift => 3;
         public override float TensionCost => 0.45f;
@@ -31,6 +31,10 @@ namespace Kehai.Karen
             return PowerSystem.PowerOn;
         }
 
+        // The lights she put out are still out: the whole store, or a wing's circuit.
+        public override bool EffectRunning(KarenContext c) =>
+            !PowerSystem.PowerOn || BreakerPanel.Instance != null && !BreakerPanel.Instance.AllOn;
+
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Escalation by career: one wing first, the whole store later.
@@ -46,21 +50,8 @@ namespace Kehai.Karen
                 else k.World.TripCircuit(wing);
                 CustomerMemory.MakeNearbyJumpy(believed, 20f, 60f);
             }));
-
-            // Then wait where the chore has to go: on the way to the breaker box.
-            Landmark? box = c.Map.FindLandmark(LandmarkKind.BreakerBox);
-            if (box.HasValue && c.Ledger.RoutePrior(c, c.Belief.PeakRegion, box.Value.Region, out int ambushRegion, out _))
-            {
-                Vector3 at = c.Map.Regions[ambushRegion].Centroid;
-                plan.Go(at, KarenBody.Pace.Hurry, "wait on the route to the breakers", 1.5f);
-                plan.Add(new Hold(60f, k => k.A.Panic > k.Config.ambushAbortPanic || PowerSystem.PowerOn, "silent at " + c.RegionName(ambushRegion)));
-            }
-            else if (box.HasValue)
-            {
-                Vector3 near = box.Value.Position + (believed - box.Value.Position).normalized * 8f;
-                plan.Go(TacticHelpers.OnFloor(near), KarenBody.Pace.Hurry, "wait near the breakers", 2f);
-                plan.Add(new Hold(45f, k => k.A.Panic > k.Config.ambushAbortPanic, "silent near the breaker box"));
-            }
+            // No wait on the breaker route any more: that's Ambush's to do, and a chain of the two
+            // is the combo room's to find (0.2.0).
         }
     }
 
@@ -68,7 +59,7 @@ namespace Kehai.Karen
     {
         public override string Id => "mirror_black";
         public override string Title => "Mirror-black";
-        public override GoalId[] Goals => new[] { GoalId.Stalk, GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Loom, ActionId.Flush };
         public override int Tier => 1;
         public override int IntroducedShift => 3;
         public override float TensionCost => 0.05f;
@@ -99,7 +90,7 @@ namespace Kehai.Karen
     {
         public override string Id => "fog";
         public override string Title => "Fog";
-        public override GoalId[] Goals => new[] { GoalId.Flush, GoalId.Herd };
+        public override ActionId[] Actions => new[] { ActionId.Flush, ActionId.Corner };
         public override int Tier => 2;
         public override int IntroducedShift => 6;
         public override float TensionCost => 0.2f;
@@ -125,7 +116,7 @@ namespace Kehai.Karen
     {
         public override string Id => "camera_bolt_on";
         public override string Title => "Camera bolt-on";
-        public override GoalId[] Goals => new[] { GoalId.Herd, GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Corner, ActionId.Disrupt };
         public override int Tier => 2;
         public override int IntroducedShift => 8;
         public override float TensionCost => 0.15f;
@@ -169,7 +160,7 @@ namespace Kehai.Karen
     {
         public override string Id => "shelf_sweep";
         public override string Title => "Shelf sweep";
-        public override GoalId[] Goals => new[] { GoalId.Deny, GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt, ActionId.Flush };
         public override int Tier => 1;
         public override int IntroducedShift => 1;
         public override float TensionCost => 0.1f;
@@ -225,7 +216,7 @@ namespace Kehai.Karen
     {
         public override string Id => "spill";
         public override string Title => "Spill";
-        public override GoalId[] Goals => new[] { GoalId.Deny, GoalId.Herd };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt, ActionId.Corner };
         public override int Tier => 1;
         public override int IntroducedShift => 4;
         public override float TensionCost => 0.08f;
@@ -269,7 +260,7 @@ namespace Kehai.Karen
     {
         public override string Id => "bin_tamper";
         public override string Title => "Bin tamper";
-        public override GoalId[] Goals => new[] { GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt };
         public override int Tier => 1;
         public override int IntroducedShift => 4;
         public override float TensionCost => 0.06f;
@@ -306,7 +297,7 @@ namespace Kehai.Karen
     {
         public override string Id => "task_falsification";
         public override string Title => "Task falsification";
-        public override GoalId[] Goals => new[] { GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt };
         public override int Tier => 3;
         public override int IntroducedShift => 9;
         public override float TensionCost => 0.2f;
@@ -358,7 +349,7 @@ namespace Kehai.Karen
     {
         public override string Id => "tool_theft";
         public override string Title => "Tool theft";
-        public override GoalId[] Goals => new[] { GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt };
         public override int Tier => 2;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.1f;
@@ -405,7 +396,7 @@ namespace Kehai.Karen
     {
         public override string Id => "overtime";
         public override string Title => "The overtime";
-        public override GoalId[] Goals => new[] { GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt };
         public override int Tier => 4;
         public override int IntroducedShift => 10;
         public override float TensionCost => 0.3f;
@@ -450,7 +441,7 @@ namespace Kehai.Karen
     {
         public override string Id => "pa_decoy";
         public override string Title => "PA decoy";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 2;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.12f;
@@ -478,7 +469,7 @@ namespace Kehai.Karen
     {
         public override string Id => "pa_announce_position";
         public override string Title => "PA: your position";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 2;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.15f;
@@ -512,7 +503,7 @@ namespace Kehai.Karen
     {
         public override string Id => "pa_task_readback";
         public override string Title => "PA: your task list, slightly wrong";
-        public override GoalId[] Goals => new[] { GoalId.Deny, GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt, ActionId.Flush };
         public override int Tier => 1;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.06f;
@@ -533,7 +524,7 @@ namespace Kehai.Karen
     {
         public override string Id => "pa_countdown";
         public override string Title => "PA: countdown";
-        public override GoalId[] Goals => new[] { GoalId.Deny };
+        public override ActionId[] Actions => new[] { ActionId.Disrupt };
         public override int Tier => 1;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.04f;
@@ -560,7 +551,7 @@ namespace Kehai.Karen
     {
         public override string Id => "pa_footsteps";
         public override string Title => "PA: her footsteps, elsewhere";
-        public override GoalId[] Goals => new[] { GoalId.Flush, GoalId.Stalk };
+        public override ActionId[] Actions => new[] { ActionId.Flush, ActionId.Loom };
         public override int Tier => 2;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.1f;
@@ -586,7 +577,7 @@ namespace Kehai.Karen
     {
         public override string Id => "phantom_chime";
         public override string Title => "Phantom chime";
-        public override GoalId[] Goals => new[] { GoalId.Flush };
+        public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 1;
         public override int IntroducedShift => 2;
         public override float TensionCost => 0.03f;
@@ -613,7 +604,7 @@ namespace Kehai.Karen
     {
         public override string Id => "silence";
         public override string Title => "Silence";
-        public override GoalId[] Goals => new[] { GoalId.Stalk };
+        public override ActionId[] Actions => new[] { ActionId.Loom };
         public override int Tier => 1;
         public override int IntroducedShift => 5;
         public override float TensionCost => 0.04f;

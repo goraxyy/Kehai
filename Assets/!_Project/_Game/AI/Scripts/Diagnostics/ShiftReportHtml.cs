@@ -9,7 +9,20 @@ namespace Kehai.Karen
         public static string Build(string json, int shift) =>
             Template.Replace("__TITLE__", "Shift " + shift + " — report")
                     .Replace("__ANTAGONIST__", GameNames.Antagonist)
+                    .Replace("__TACTIC_NAMES__", TacticNames())
                     .Replace("__DATA__", json.Replace("</", "<\\/"));
+
+        static string TacticNames()
+        {
+            var json = new System.Text.StringBuilder("{");
+            foreach (Tactic tactic in TacticLibrary.All)
+            {
+                if (json.Length > 1) json.Append(',');
+                json.Append('"').Append(MiniJson.EscapeInner(tactic.Id)).Append("\":\"")
+                    .Append(MiniJson.EscapeInner(KarenNarrator.Tactic(tactic.Id))).Append('"');
+            }
+            return json.Append('}').ToString().Replace("</", "<\\/");
+        }
 
         const string Template = @"<!doctype html>
 <html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -46,6 +59,10 @@ input[type=range]{flex:1;min-width:160px}
 .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 14px;margin-top:10px;font-size:14px;color:var(--dim)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
 .findings li{margin:6px 0}
+.combo-scroll{overflow-x:auto}
+.combos{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.combos th,.combos td{text-align:left;padding:9px;border-bottom:1px solid var(--line)}
+.combos th{font-size:13px;color:var(--dim)}
 .bars div{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:14px}
 .bars .bar{height:10px;background:var(--you);border-radius:5px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
@@ -71,7 +88,6 @@ input[type=range]{flex:1;min-width:160px}
   </div>
   <div class='mbar' id='mbar' title='Clip moments (gold) and the markers that made them: click to jump'><u id='mcur'></u></div>
   <div class='layers'>
-   <label><input type='checkbox' id='lCone' checked> __ANTAGONIST__'s view</label>
    <label><input type='checkbox' id='lGuess' checked> Her guess</label>
    <label><input type='checkbox' id='lSound' checked> Sounds</label>
    <label><input type='checkbox' id='lCust' checked> Customers</label>
@@ -89,6 +105,10 @@ input[type=range]{flex:1;min-width:160px}
   <div id='events'></div>
  </section>
 </main>
+<section style='padding:0 24px 16px'><div class='box'><h2>Combos found this shift</h2>
+<p class='sub'>Tricks she learned work better together. Panic change compares the chain with its second trick alone; it does not measure catches. Uses are weighted and fade between shifts.</p>
+<p id='combo-empty' class='sub'></p><div class='combo-scroll'><table class='combos' id='combos' hidden><thead><tr><th>Chain</th><th>Uses (weighted)</th><th>Panic change</th><th>Second trick alone</th><th>Difference</th></tr></thead><tbody id='combo-rows'></tbody></table></div>
+</div></section>
 <section style='padding:0 24px 24px'><div class='box'><h2>Analysis</h2><ul class='findings' id='findings'></ul><div class='grid2' id='tables'></div></div></section>
 <script id='data' type='application/json'>__DATA__</script>
 <script>
@@ -107,7 +127,7 @@ const $ = id => document.getElementById(id);
 $('title').textContent = 'Shift ' + D.shift + (D.player ? ' — ' + D.player : '');
 $('subtitle').textContent = (D.started||'') + ' · ' + fmt(D.length) + (D.clockedOut ? ' · clocked out' : ' · did not clock out') + (D.rung ? ' · __ANTAGONIST__ ' + D.rung : '');
 const N = (D.analysis && D.analysis.numbers) || {};
-[['Times __ANTAGONIST__ spotted you','spotted'],['Closest she got (m)','closest (m)'],['Catches','caught'],['Customers served','served'],['Walked (m)','walked (m)'],['Warning sounds','warnings']].forEach(([k,label])=>{
+[['Times __ANTAGONIST__ spotted you','spotted'],['Closest she got (m)','closest (m)'],['Catches','caught'],['Customers served','served'],['Walked (m)','walked (m)'],['Trick sounds','trick sounds']].forEach(([k,label])=>{
   if (!(k in N)) return; const v = N[k]; const c = document.createElement('div'); c.className='card';
   c.innerHTML = '<b>'+(v<0?'—':(v>=100?Math.round(v):v))+'</b><span>'+label+'</span>'; $('cards').appendChild(c); });
 
@@ -179,7 +199,6 @@ function draw(){
   }
   if (f[7]){
     if (L('lGuess') && f[16]>0.05){ const r = px*(12-9*Math.min(1,f[16])); g.setLineDash([7*u,6*u]); ring(f[14],f[15],r,COL.guess,0.9,2.5*u); g.setLineDash([]); label(X(f[14]),Y(f[15])+r+fs*0.7,'her guess',COL.guess,Math.round(fs*0.8),'center'); }
-    if (L('lCone')){ const a=(f[10]-90)*Math.PI/180; g.beginPath(); g.moveTo(X(f[8]),Y(f[9])); g.arc(X(f[8]),Y(f[9]),px*18,a-Math.PI/3,a+Math.PI/3); g.closePath(); g.fillStyle = f[12]? '#ff54545e':'#ff545430'; g.fill(); }
     const kx=X(f[8]),ky=Y(f[9]),kr=Math.max(8*u,px*0.8); g.save(); g.translate(kx,ky); g.rotate(Math.PI/4); g.fillStyle = f[13] && (Math.floor(T*4)%2) ? '#fff':COL.karen; g.fillRect(-kr/1.4,-kr/1.4,kr*1.4,kr*1.4); g.restore();
     label(kx+kr*1.3,ky,f[13]?'__ANTAGONIST__ — chasing':'__ANTAGONIST__',COL.karen,fs);
   }
@@ -233,8 +252,28 @@ for (const m of MO.slice(0,20)){ const d=document.createElement('div'); d.classN
   d.onclick=()=>seek(m.start); $('moments').appendChild(d); }
 
 // Legend
-[['You',COL.you],['__ANTAGONIST__ (with her view cone)',COL.karen],['Her guess of where you are',COL.guess],['Customer shopping',COL.shop],['Heading to the till',COL.till],['Waiting at the till (seconds)',COL.wait],['Wants directions (line to the shelf)',COL.ask],['Following you',COL.follow],['__ANTAGONIST__\'s puppet',COL.puppet],['Your noise (the ring shows how far it carried)',COL.you],['__ANTAGONIST__\'s noise',COL.karen],['A customer\'s noise',COL.other],['The store\'s noise (doors, machines)',COL.store],['Warning — a trick is coming',COL.warn],['Spill',COL.spill],['Empty shelf',COL.empty]]
+[['You',COL.you],['__ANTAGONIST__',COL.karen],['Her guess of where you are',COL.guess],['Customer shopping',COL.shop],['Heading to the till',COL.till],['Waiting at the till (seconds)',COL.wait],['Wants directions (line to the shelf)',COL.ask],['Following you',COL.follow],['__ANTAGONIST__\'s puppet',COL.puppet],['Your noise (the ring shows how far it carried)',COL.you],['__ANTAGONIST__\'s noise',COL.karen],['A customer\'s noise',COL.other],['The store\'s noise (doors, machines)',COL.store],['Trick sound',COL.warn],['Spill',COL.spill],['Empty shelf',COL.empty]]
  .forEach(([t,c])=>{ const d=document.createElement('div'); d.innerHTML='<i style=background:'+c+'></i>'; d.appendChild(document.createTextNode(t)); $('legend').appendChild(d); });
+
+// The combo room. Old recordings have no chains field; an empty new one means none found.
+const TACTIC_NAMES = __TACTIC_NAMES__;
+function signed(v){ return (v>=0?'+':'')+v.toFixed(3); }
+if (!Array.isArray(D.chains)) $('combo-empty').textContent='This recording predates combo tracking.';
+else if (!D.chains.length) $('combo-empty').textContent='No new combos found this shift.';
+else {
+  $('combos').hidden=false;
+  for (const chain of D.chains){
+    const uses=Number(chain.uses), paid=Number(chain.paid), alone=Number(chain.alone);
+    if (![uses,paid,alone].every(Number.isFinite)) continue;
+    const row=document.createElement('tr');
+    const first=TACTIC_NAMES[chain.first] || chain.first || 'Unknown trick';
+    const then=TACTIC_NAMES[chain.then] || chain.then || 'Unknown trick';
+    for (const value of [first+' → '+then,uses.toFixed(1),signed(paid),signed(alone),signed(paid-alone)]){
+      const cell=document.createElement('td'); cell.textContent=value; row.appendChild(cell);
+    }
+    $('combo-rows').appendChild(row);
+  }
+}
 
 // Analysis
 const A = D.analysis || {findings:[]};

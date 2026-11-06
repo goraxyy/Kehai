@@ -12,14 +12,14 @@
     {
       "id": "faster_in_a_chase",
       "status": "true",
-      "say": "In a chase she is 5% faster than you, so in the open a chase is lost; breaking her line of sight is how you get away. On her rounds she walks slower than you.",
-      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenConfig.cs", "contains": "public float fasterThanPlayer = 1.05f" }],
+      "say": "In a chase she is about 15% faster than your sprint (7.5 m/s against 6.5), so breaking her line of sight and changing route matters. On her rounds she walks slower than you.",
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenConfig.cs", "contains": "public float sprintsFasterThanPlayer = 7.5f / 6.5f;" }],
       "avoid": ["outrun a sprint"]
     },
     {
       "id": "blink_dash",
       "status": "true",
-      "say": "With the opt-in webcam on, she can move inside your blink: she closes the distance, or vanishes and waits somewhere else. Her eye flickers first, and a dash only happens while she can see you, never during a chase.",
+      "say": "With the opt-in webcam on, she can move inside your blink: she closes the distance, or vanishes and waits somewhere else. A dash only happens while she can see you, never during a chase.",
       "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/BlinkDash.cs", "contains": "you blink, and she is suddenly much" }],
       "avoid": []
     },
@@ -48,45 +48,38 @@
     {
       "id": "what_learning_does",
       "status": "qualified",
-      "say": "In tests against simulated players, learning made her slightly calmer, not better, with a first small sign of tailoring to each player. No real players have tested it.",
+      "say": "Earlier tests against simulated players found that learning made her slightly calmer, not better, with a first small sign of tailoring to each player. No real players have tested it. These results do not measure the 0.2.0 redesign; its paired evaluation is pending.",
       "why": "So say she remembers; never say remembering makes her smarter, harder or better at catching you.",
-      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "Learning (D, E) makes her slightly calmer, not better." }],
+      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "Learning (D, E) makes her slightly calmer, not better." }],
       "avoid": ["uses it against you", "learns to beat you", "learns how to beat", "gets smarter", "gets better the more"]
     },
     {
       "id": "belief_finds_you_faster",
-      "status": "true",
-      "say": "Against simulated players, her belief map and planner find the player in about a third of the time of simple patrols (31 s against 85 to 101 s).",
-      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "first detection 31 ± 6 s" }],
-      "avoid": []
-    },
-    {
-      "id": "warnings",
       "status": "qualified",
-      "say": "Her tricks come with a warning at least 0.8 s ahead: a flicker, a chime, a PA crackle, a ballast whine.",
-      "why": "That was checked in bot tests on shifts 4 to 7 only, and overtime has no warning. So never say every trick has one.",
-      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Core/KarenConfig.cs", "contains": "public float minTellLead = 0.8f" }],
-      "avoid": ["every trick has a warning"]
+      "say": "In the earlier build, her belief map and planner found simulated players in about a third of the time of simple patrols (31 s against 85 to 101 s). These results do not measure the 0.2.0 redesign; its paired evaluation is pending.",
+      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "first detection 31 ± 6 s" }],
+      "avoid": []
     },
     {
       "id": "overtime",
       "status": "do_not_claim",
-      "say": "Overtime is a late tactic that has never run in a test and has no warning. Don't lead with it or call it her signature.",
+      "say": "Overtime is a disabled draft. It is not a live trick in 0.2.0. Don't lead with it or call it her signature.",
       "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactics/TacticsFacility.cs", "contains": "new Effect(\"arm the overtime\"" }],
       "avoid": ["gives you overtime", "signature move"]
     },
     {
       "id": "tactics",
-      "status": "true",
-      "say": "She has 34 tactics. Six late ones (ambush, camera bolt-on, funnel, understudy, task falsification, overtime) have never run in a test.",
-      "evidence": [{ "file": "docs/HANDOVER.md", "contains": "over 34 tactics" }],
-      "avoid": ["35 tactics"]
+      "status": "qualified",
+      "say": "The 0.2.0 branch has seven live tricks: Ask the customers, Bin tamper, Cut, Ambush, Throw, Block door and Blackout. Throw has three item choices, making nine live choices for the learner. Other tricks are disabled drafts.",
+      "evidence": [{ "file": "README.md", "contains": "seven live tricks (nine choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
+      "avoid": ["35 tactics", "34 tactics"],
+      "why": "Count tricks separately from their item choices and from actions such as Hunt. Do not present disabled drafts as playable tricks."
     },
     {
       "id": "the_store",
       "status": "true",
       "say": "The sales floor is a 60 × 45 m maze of 189 shelf bays, with 80 products in 13 sections.",
-      "evidence": [{ "file": "docs/STORE.md", "contains": "60 × 45 m maze of 189 shelf bays" }],
+      "evidence": [{ "file": "docs/store/STORE.md", "contains": "60 × 45 m maze of 189 shelf bays" }],
       "avoid": ["150 × 150"]
     },
     {
@@ -94,21 +87,21 @@
       "status": "qualified",
       "say": "The shelves hold thousands of items, kept as data rather than scene objects.",
       "why": "The docs say 16,500 and the scene counts about 19,600, so don't give an exact number yet.",
-      "evidence": [{ "file": "docs/STORE.md", "contains": "**16,500 slots**" }],
+      "evidence": [{ "file": "docs/store/STORE.md", "contains": "**16,500 slots**" }],
       "avoid": ["16,500"]
     },
     {
       "id": "who_has_played",
       "status": "true",
       "say": "So far only the developer and simulated players have played it. Don't claim players, reviews, reactions or sales.",
-      "evidence": [{ "file": "docs/RELEASE_PLAN.md", "contains": "nobody but bots has played it yet" }],
+      "evidence": [{ "file": "docs/project/RELEASE_PLAN.md", "contains": "nobody but bots has played it yet" }],
       "avoid": ["players love", "players are saying"]
     },
     {
       "id": "reinforcement_learning",
       "status": "do_not_claim",
       "say": "A reinforcement-learning policy is built but has never been trained. Don't say she's trained that way.",
-      "evidence": [{ "file": "docs/KAREN_RESULTS.md", "contains": "no policy has been trained yet" }],
+      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "no policy has been trained yet" }],
       "avoid": ["trained neural network", "reinforcement learning agent"]
     },
     {
@@ -116,7 +109,7 @@
       "status": "qualified",
       "say": "She's a black capsule for now, and the art is placeholder until the redesign.",
       "why": "So never describe her as a person, a face or a figure, and don't promise final looks.",
-      "evidence": [{ "file": "docs/HANDOVER.md", "contains": "a black capsule body" }],
+      "evidence": [{ "file": "docs/project/HANDOVER.md", "contains": "a black capsule body" }],
       "avoid": []
     }
   ]

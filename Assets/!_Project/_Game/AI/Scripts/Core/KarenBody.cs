@@ -1,3 +1,4 @@
+using Kehai.Store;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -42,6 +43,19 @@ namespace Kehai.Karen
         Vector3 burstFrom;
         float burstMax;
 
+        // Her eye's numbers (0.2.0, phase 4). The walk-by set (AwarenessTests) builds its eye
+        // with this too, so it times exactly hers.
+        public static void ConfigureEye(SightSensor eye, KarenConfig config)
+        {
+            eye.range = config.sightRange;
+            eye.fieldOfView = config.sightFov;
+            eye.halfStrengthAt = config.sightHalfStrength;
+            eye.gain = config.sightGain;
+            eye.scoreFloor = config.sightFloor;
+            eye.grace = config.sightGrace;
+            eye.expectedBoost = config.sightExpectedBoost;
+        }
+
         public static KarenBody Build(Transform parent, KarenConfig config, Vector3 at)
         {
             var root = new GameObject("KAREN_Body");
@@ -59,13 +73,13 @@ namespace Kehai.Karen
             body.Agent.stoppingDistance = 0.2f;
             body.Agent.speed = config.walkSpeed;
             body.Agent.obstacleAvoidanceType = ObstacleAvoidanceType.MedQualityObstacleAvoidance;
+            body.Agent.areaMask = KarenArea.AgentMask;   // her part of the building only
 
             body.Head = gaze.transform;
             body.eyeRenderer = eyeRenderer;
             body.eyeLight = gaze;
             body.Sight = gaze.gameObject.AddComponent<SightSensor>();
-            body.Sight.range = config.sightRange;
-            body.Sight.fieldOfView = config.sightFov;
+            ConfigureEye(body.Sight, config);
             body.Sight.ignoreRoot = root.transform;
 
             // Touch: a trigger around her. The only way she ever "knows" where you are for
@@ -93,7 +107,7 @@ namespace Kehai.Karen
 
             body.SetMood(Mood.Calm);
             root.AddComponent<KarenFloorCone>();   // her gaze, painted on the floor
-            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, NavMesh.AllAreas)) body.Agent.Warp(hit.position);
+            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) body.Agent.Warp(hit.position);
             return body;
         }
 
@@ -150,7 +164,9 @@ namespace Kehai.Karen
             if (!Agent.isOnNavMesh) return;
             Agent.isStopped = false;
             Agent.speed = Speed(pace);
-            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            // Sent outside her part of the building, she goes to the nearest point in it instead.
+            destination = KarenArea.Clamp(StoreMap.Current, destination);
+            if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 3f, KarenArea.AgentMask))
                 destination = hit.position;
             Agent.SetDestination(destination);
         }
@@ -184,7 +200,7 @@ namespace Kehai.Karen
 
         public void Warp(Vector3 at)
         {
-            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, NavMesh.AllAreas)) Agent.Warp(hit.position);
+            if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) Agent.Warp(hit.position);
         }
 
         public void TurnToward(Vector3 point)
@@ -292,7 +308,9 @@ namespace Kehai.Karen
             if (stepTimer < interval) return;
             stepTimer = 0f;
             float volume = CurrentPace == Pace.Sneak ? 0.25f : CurrentPace == Pace.Run ? 1f : 0.6f;
-            feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
+            // Her steps are a developer's aid since 0.2.0 (KarenFx, F3): players never hear them.
+            // They still go on the noise bus for the record; the bots and replays leave them out.
+            if (KarenFx.StepsAudible) feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
             NoiseBus.Emit(transform.position, volume * 0.8f, NoiseKind.KarenStep, NoiseAuthor.Karen);
         }
 

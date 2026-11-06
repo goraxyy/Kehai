@@ -43,6 +43,7 @@ namespace Kehai.Eval
         // The simulated player's side (SimulatedPlayer, BotFear), set as its shift ends.
         public float BotMeanFear, BotPeakFear;
         public int BotStartles, BotHides, BotBackOffs;
+        public int BotTurnBacks, BotThrowsSeen, BotDodges;   // 0.2.0: from her Cut and her Throw
         public bool BotReactive = true;
         public float TacticEntropy;
         public float MeanPanic, PanicSetpointRmse;
@@ -53,6 +54,9 @@ namespace Kehai.Eval
 
         // How well she knew where the player was, scored against where they were.
         public readonly BeliefAccuracy Belief = new BeliefAccuracy();
+        public readonly HuntMetrics Hunt = new HuntMetrics();       // 0.2.0's measurements (build plan §5)
+        public bool ComboLearner;                                   // her bandit saw her last trick
+        public int ChainsFound;
 
         // The trace: what the agent tried, when, and at what.
         public struct Step { public float T; public string Verb; public string Kind; public bool Ok; }
@@ -76,6 +80,7 @@ namespace Kehai.Eval
             started = Time.time;
             violationsAtStart = FairnessGuard.Violations;
             Belief.Begin();
+            Hunt.Begin();
             Subscribe();
         }
 
@@ -93,6 +98,7 @@ namespace Kehai.Eval
 
         public void Unsubscribe()
         {
+            Hunt.End();
             GameEvents.SpillCleaned -= OnSpill;
             GameEvents.ShelfRestocked -= OnShelf;
             GameEvents.BinBagged -= OnBin;
@@ -134,6 +140,7 @@ namespace Kehai.Eval
         public void Tick(TaskManager tasks, BurnoutSystem burnout, Transform player)
         {
             if (player != null) Belief.Tick(Time.deltaTime, player.position);
+            if (player != null) Hunt.Tick(Time.deltaTime, player.position);
 
             foreach (CustomerNPC c in CustomerNPC.All)
             {
@@ -199,6 +206,8 @@ namespace Kehai.Eval
                     MeanPanic = h.Average(x => x.panic);
                 }
                 PanicSetpointRmse = brain.Stats.SetpointRmse;
+                ComboLearner = brain.config.comboContext;
+                ChainsFound = s.ChainsFound.Count;
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
@@ -225,12 +234,15 @@ namespace Kehai.Eval
                 ["karen_reward_mean_abs"] = RewardMeanAbs,
                 ["bot_reactive"] = BotReactive, ["bot_mean_fear"] = BotMeanFear, ["bot_peak_fear"] = BotPeakFear,
                 ["bot_startles"] = BotStartles, ["bot_hides"] = BotHides, ["bot_back_offs"] = BotBackOffs,
+                ["bot_turn_backs"] = BotTurnBacks, ["bot_throws_seen"] = BotThrowsSeen, ["bot_dodges"] = BotDodges,
                 ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
                 ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
                 ["karen_fairness_violations"] = FairnessViolations,
+                ["karen_combo_learner"] = ComboLearner, ["karen_chains_found"] = ChainsFound,
                 ["failures"] = Failures
             };
             Belief.AddTo(d);
+            Hunt.AddTo(d);
             return d;
         }
     }

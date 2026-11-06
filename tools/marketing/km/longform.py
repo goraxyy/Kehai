@@ -1,4 +1,4 @@
-"""The monthly long video, with the owner's ✋ gates in Telegram (docs/MARKETING.md).
+"""The monthly long video, with the owner's ✋ gates in Telegram (docs/marketing/MARKETING.md).
 
 outline ✋ → (the outline's shots render) script ✋ → (voice, the edit, the English cut)
 rough cut ✋ → (packaging, the Russian audio, subtitles) the final files on Drive for YouTube

@@ -13,7 +13,8 @@ namespace Kehai.Replay
     // player's view 60 times a second, the player, Karen, customers, her understudies, doors,
     // shelf units, her props, spills, bins, bags, tools and every item off its shelf 30 times a
     // second, the lights and the shelf slots as they change, what was heard and said, her
-    // thought log, and her belief map twice a second. Only listens; changes nothing.
+    // thought log, and her belief map and route guesses twice a second. Only listens; changes
+    // nothing.
     //
     // Playtest builds also record the stretches between shifts, before the first clock-in and
     // after each clock-out, as <shift records>/interlude_<next shift>_<time>.krec: where the
@@ -72,6 +73,10 @@ namespace Kehai.Replay
         readonly Dictionary<Object, Tracked> byOwner = new Dictionary<Object, Tracked>();
         int nextId = 1;
         float nextTick, nextCamera, nextBelief, nextDiscovery, nextSlots;
+        bool routesShown;             // the file holds guesses she hasn't dropped yet
+        float routesSeenAt;
+        RouteGuess routesFirst;
+        float[] routeWeights;
 
         KarenBrain brain;
         PaSystem pa;
@@ -164,6 +169,7 @@ namespace Kehai.Replay
             {
                 nextBelief = Mathf.Max(nextBelief + 1f / Krec.BeliefRate, t);
                 RecordBelief(t);
+                RecordRoutes(t);
             }
         }
 
@@ -209,6 +215,7 @@ namespace Kehai.Replay
             byOwner.Clear();
             nextId = 1;
             nextTick = nextCamera = nextBelief = nextDiscovery = nextSlots = 0f;
+            routesShown = false;
             circuits = -1;
             view = null;
             lids = null;
@@ -602,6 +609,45 @@ namespace Kehai.Replay
                 binBytes[i] = max > 0f ? (byte)Mathf.RoundToInt(255f * Mathf.Sqrt(binMass[i] / max)) : (byte)0;
             Vector3 peak = belief.PeakPosition;
             writer.Belief(t, new Vector2(peak.x, peak.z), belief.Confidence, binBytes);
+        }
+
+        // Her route guesses, with the belief map: the routes when she makes new ones, their
+        // weights after, and one empty frame when she drops them. The predictor runs on Time.time
+        // and the recording on its own clock, so when she lost you is carried over as how long ago.
+        void RecordRoutes(float t)
+        {
+            RoutePredictor p = brain != null ? brain.Predictor : null;
+            if (p == null || !p.Active)
+            {
+                if (routesShown) writer.NoRoutes(t);
+                routesShown = false;
+                return;
+            }
+            IReadOnlyList<RouteGuess> guesses = p.Guesses;
+            if (routesShown && p.SeenAt == routesSeenAt && guesses[0] == routesFirst && routeWeights.Length == guesses.Count)
+            {
+                for (int i = 0; i < guesses.Count; i++) routeWeights[i] = guesses[i].Weight;
+                writer.RouteWeights(t, routeWeights);
+                return;
+            }
+            var frame = new RouteFrame
+            {
+                LostAt = t - (Time.time - p.SeenAt), Seen = p.Seen,
+                Sprint = RoutePredictor.Sprint, Walk = RoutePredictor.Walk, Crouch = RoutePredictor.Crouch,
+                Guesses = new RouteLine[guesses.Count]
+            };
+            for (int i = 0; i < guesses.Count; i++)
+            {
+                RouteGuess g = guesses[i];
+                var path = new Vector3[g.Path.Length];
+                for (int k = 0; k < path.Length; k++) path[k] = brain.Map.CellPosition[g.Path[k]];
+                frame.Guesses[i] = new RouteLine { Name = g.Name, Kind = (int)g.Kind, Weight = g.Weight, Path = path, Along = (float[])g.Along.Clone() };
+            }
+            writer.Routes(t, frame);
+            routesShown = true;
+            routesSeenAt = p.SeenAt;
+            routesFirst = guesses[0];
+            routeWeights = new float[guesses.Count];
         }
 
         // ---- what's heard and said ----------------------------------------------------------

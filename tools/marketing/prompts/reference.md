@@ -27,39 +27,38 @@ hear.
 - **Belief:** a probability map of where you might be. It sharpens when she sees or hears you,
   spreads out over time, and clears where she looks and doesn't find you. Her **guess** is the
   centre of that map.
-- **Decisions:** utility-scored goals and a planner over 34 tactics. **Learning:** a bandit picks
-  the tricks that work on you; a persistent ledger remembers where you dwell and hide and the routes
-  you take, across shifts. It fades if you change your habits. In tests against simulated players
-  learning made her slightly calmer, not better.
-- **Fairness, checked in bot tests on shifts 4 to 7:** her body never reads your true position,
-  though after 45 s without a sighting her Director nudges her belief toward your region; her tricks
-  have a warning at least 0.8 s ahead (a flicker, a chime, a PA crackle, a ballast whine). In a
-  chase she is 5% faster than you: breaking her line of sight is how you get away.
-- **Her gaze** is painted on the floor, cut short by shelves: blue on her rounds, orange when she's
-  noticed something, red while she hunts or sees you.
-- **Her tactics:** blackout (breakers trip after a flicker and a whine; you fetch the flashlight and
-  reset them in the dark) · mirror-black (one light dies right above you) · fog (a sabotaged freezer
-  floods an aisle) · camera bolt-on (a camera installed over your favourite hiding spot) · shelf
-  sweep (a shelf you filled is emptied; the loose stock is a noisy carpet) · spill (the mop bucket
-  kicked over at a chokepoint; walking through leaves a wet trail she can follow) · bin tamper ·
-  task falsification (your task list lies, with a flicker and a tick as the tell) · tool theft (the
-  mop hidden where you go last) · overtime (late, untested, don't lead with it) · the PA (announces your position "for customer
-  convenience", a cleanup decoy, fake footsteps, a countdown of your shift, your tasks read back
-  slightly wrong) · phantom chime (the doors open for nobody) · silence (her footsteps stop) ·
-  crate wall · door lock · shelf relocation (the maze changes; you can hear it) · funnel (every way
-  out blocked but one) · mimicry (she possesses a customer: it stops shopping, walks one aisle over
-  at your speed, and turns to face you) · the witness (a customer herded into your hiding aisle) ·
-  the understudy (a polite "new hire" who follows you to learn the job) · stalk (seen at the end of
-  an aisle, then gone) · ambush (waiting, silent, where you always pass) · the chase (rare) · the
-  favour (when you're exhausted she brings you coffee and means it) · patrol, sweep, investigate,
-  follow, withdraw.
+- **Decisions:** utility-scored actions and a planner over her tricks. **Learning:** a bandit
+  picks the tricks that work on you, and a combo room notes which pairs work better together; a
+  persistent ledger remembers where you dwell and hide and the routes you take, across shifts. It
+  fades if you change your habits. Earlier tests against simulated players found learning made her
+  slightly calmer, not better; the 0.2.0 redesign hasn't been measured yet.
+- **Fairness:** her body never reads your true position, and her Director never hands her your
+  exact location, though after 45 s without a sighting it nudges her belief toward your region.
+  Her tricks make sounds, but nothing promises a warning before them. Players never hear her
+  footsteps. In a chase she is about 15% faster than you (7.5 m/s against 6.5): she keeps running
+  to where she guesses you went, so breaking her line of sight and changing route is how you get
+  away.
+- **Her gaze** isn't shown to players: the floor cone is a developer view, and footage doesn't
+  have it.
+- **Her own moves:** roam, check a noise, search, hunt (she sprints at you, then runs on her
+  guesses of your route) and back off.
+- **Her live tricks:** ask the customers (shoppers tell her where they saw you) · bin tamper ·
+  cut (she races to where you'll be by a shorter way) · ambush (from shift 3: waiting, silent,
+  where your guessed routes pass) · throw (powder that blurs your view, detergent that slows you,
+  a tin that stuns you for a second) · block door (she pushes a restock box against a door; pick
+  it up to free the door) · blackout (the breakers trip; you fetch the flashlight and reset them in
+  the dark).
+- **Drafts, off in play:** mirror-black, fog, camera bolt-on, shelf sweep, spill, task
+  falsification, tool theft, overtime, the PA tricks, phantom chime, silence, crate wall, shelf
+  relocation, mimicry, the witness, the understudy, stalk and the peace offering. Don't show or
+  promise them.
 
 ## The blink channel
 
 Opt-in webcam blink tracking (Apple Vision or MediaPipe), all on the computer, nothing recorded.
 {{karen}} can move inside the ~300 ms of your blink: closing in (suddenly much nearer) or vanishing
-(gone, then waiting silently somewhere you didn't expect). Her eye flickers first, and a dash only
-happens while she can see you, never during a chase. B blinks from the keyboard.
+(gone, then waiting silently somewhere you didn't expect). A dash only happens while she can see
+you, never during a chase. B blinks from the keyboard.
 
 ## Clip markers (what the game noticed in a shift)
 
@@ -67,10 +66,10 @@ happens while she can see you, never during a chase. B blinks from the keyboard.
 didn't see you · `found_blind` she found you without seeing you (from her belief alone) ·
 `blink_move` she moved during your blink · `learned` she learned something about you · `blackout`
 the power went (value: seconds) · `possessed` mimicry · `undone_work` she undid work you'd just done
-(value: seconds between) · `pa_call` the PA spoke · `prop_trick` a planned trick (crate wall, fog,
-door lock, camera, shelf relocation, mimicry) until it took effect · `clock_refused` overtime ·
+(value: seconds between) · `pa_call` the PA spoke · `prop_trick` a planned trick that builds something
+(in 0.2.0 only block door is live) until it took effect · `clock_refused` overtime ·
 `loud_mistake` you sprinted or dropped something, she heard it and closed in · `tell_then_trick` a
-warning, then the trick · `shift_review` clock-out · `karen_stuck` she got stuck (a bug: don't use
+trick's sound, then the trick · `shift_review` clock-out · `karen_stuck` she got stuck (a bug: don't use
 for marketing) · `customer_chaos` a customer gave up at the till or got lost · `manual_good` the
 developer pressed F7: worth a clip · `manual_bug` Shift+F7: a bug, not marketing.
 
@@ -86,8 +85,8 @@ with a chase or a catch); `kept` moments hold a manual marker. Each comes with t
   best here).
 - **Subject:** `karen` or `you`.
 - **Her mind** (layers drawn into the shot): `belief` (her probability map, red to yellow) ·
-  `guess` (a ring where she thinks you are, tighter the surer she is) · `cone` (her view, red
-  while she sees you) · `sound` (rings for every noise: you blue, her red, others grey) ·
+  `guess` (a ring where she thinks you are, tighter the surer she is) · `cone` (her view: a
+  developer's aid since 0.2.0, left out of renders, so don't ask for it) · `sound` (rings for every noise: you blue, her red, others grey) ·
   `thoughts` (her last three thoughts as text) · `actors` (dots for where everyone is).
 - **Alpha:** her mind alone on a transparent background, for a picture in picture over another
   shot ("what she knows" over "what happened").

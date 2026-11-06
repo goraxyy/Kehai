@@ -135,6 +135,53 @@ public class KrecTests
         Assert.AreEqual(0.7f, d.Belief[1].Confidence, 1e-4f);
     }
 
+    // Her route guesses (version 2): new ones whole, then weights that keep the same routes,
+    // then none; each answers "what were her guesses at t" for the replay's seek.
+    [Test]
+    public void HerRouteGuesses_ReadBackAsWritten_AndAnswerByTime()
+    {
+        var header = new KrecHeader { Stem = "shift_03_routes", Shift = 3, BeliefCols = 1, BeliefRows = 1, BeliefMask = new byte[] { 1 } };
+        var clock = new RouteLine { Name = "to the time clock", Kind = 0, Weight = 0.7f,
+                                    Path = new[] { new Vector3(40f, 0f, -150f), new Vector3(41.5f, 0f, -150f), new Vector3(43f, 0.1f, -148.5f) },
+                                    Along = new[] { 0f, 1.5f, 3.62f } };
+        var back = new RouteLine { Name = "turned back", Kind = 1, Weight = 0.3f, Path = new[] { new Vector3(40f, 0f, -150f) }, Along = new[] { 0f } };
+        using (var w = new KrecWriter(path))
+        {
+            w.Header(header);
+            w.Tick(0f);
+            w.Routes(0.5f, new RouteFrame { LostAt = 0.2f, Seen = new Vector3(40f, 0f, -150f), Sprint = 6.5f, Walk = 4f, Crouch = 2.5f,
+                                            Guesses = new[] { clock, back } });
+            w.RouteWeights(1f, new[] { 0.2f, 0.8f });
+            Assert.Throws<System.ArgumentException>(() => w.RouteWeights(1.2f, new[] { 1f }), "weights for routes that weren't written");
+            w.NoRoutes(1.5f);
+            w.End(2f, false);
+        }
+
+        ReplayData d = KrecReader.Load(path);
+        Assert.AreEqual(3, d.Routes.Count);
+        Assert.IsNull(d.RoutesAt(0.4f), "nothing before her first guesses");
+
+        RouteFrame first = d.RoutesAt(0.7f);
+        Assert.AreEqual(2, first.Guesses.Length);
+        Assert.AreEqual("to the time clock", first.Guesses[0].Name);
+        Assert.AreEqual(1, first.Guesses[1].Kind);
+        Assert.AreEqual(0.7f, first.Guesses[0].Weight, 1e-4f);
+        Assert.AreEqual(43f, first.Guesses[0].Path[2].x, 0.0006f);
+        Assert.AreEqual(-148.5f, first.Guesses[0].Path[2].z, 0.0006f);
+        Assert.AreEqual(3.62f, first.Guesses[0].Along[2], 0.006f);
+        var (earliest, likely, latest) = first.Window(first.Guesses[0], 1);
+        Assert.AreEqual(0.2f + 1.5f / 6.5f, earliest, 1e-3f);
+        Assert.AreEqual(0.2f + 1.5f / 4f, likely, 1e-3f);
+        Assert.AreEqual(0.2f + 1.5f / 2.5f, latest, 1e-3f);
+
+        RouteFrame reweighed = d.RoutesAt(1.2f);
+        Assert.AreEqual(0.8f, reweighed.Guesses[1].Weight, 1e-4f);
+        Assert.AreSame(first.Guesses[0].Path, reweighed.Guesses[0].Path, "a weights frame keeps the routes before it");
+        Assert.AreEqual(0.2f, reweighed.LostAt, 1e-6f);
+
+        Assert.IsEmpty(d.RoutesAt(1.8f).Guesses, "she dropped them");
+    }
+
     [Test]
     public void SomethingThatHeldStillDoesntDrift()
     {

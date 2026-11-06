@@ -5,7 +5,8 @@ using UnityEngine.AI;
 
 namespace Kehai.Karen
 {
-    // The fairness contract (Karen.md §9), enforced in code.
+    // The fairness contract (Karen.md §9), enforced in code. Rule 3, "every trick warns you",
+    // was removed in 0.2.0: its timing checks are gone, and the audit keeps the pacing.
     //
     // Some of the checks need the truth — whether the employee could still finish the
     // shift, whether they can see her path — and this is the one place outside the Director
@@ -13,7 +14,7 @@ namespace Kehai.Karen
     // says yes or no, and every no is written to the thought log as a CHECK.
     public static class FairnessGuard
     {
-        // Rule 3 bookkeeping: when did the current plan last announce itself?
+        // When a trick last sounded, for the log and the replays (no longer a rule).
         public static float LastTell { get; private set; } = -999f;
         public static string LastTellKind { get; private set; }
         public static int Violations { get; private set; }
@@ -32,26 +33,6 @@ namespace Kehai.Karen
         {
             LastTell = Time.time;
             LastTellKind = kind.ToString();
-        }
-
-        // Called as a tactic's effect lands. The plan's own most recent tell must have come at
-        // least `minLead` seconds before (another tell — a PA chime for something else —
-        // neither counts for it nor against it).
-        public static bool CheckEffect(string tactic, float planStarted, float planTell, float minLead)
-        {
-            if (planTell < planStarted)
-                return Fail($"{tactic}: effect with no tell in this plan");
-            float lead = Time.time - planTell;
-            if (lead + 0.02f < minLead)
-                return Fail($"{tactic}: tell only {lead:0.00}s before the effect (< {minLead:0.0}s)");
-            return true;
-        }
-
-        public static bool CheckToldEffect(string what, float lead, float minLead)
-        {
-            if (lead + 0.02f < minLead)
-                return Fail($"{what}: tell only {lead:0.00}s before the effect (< {minLead:0.0}s)");
-            return true;
         }
 
         // Rule 4: no tactic above tier 1 while the employee is settling into the shift or

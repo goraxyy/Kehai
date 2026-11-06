@@ -7,7 +7,7 @@ Pick the moments that make the best 15–40 second vertical shorts, and say how 
 
 **Choosing**
 - One clear idea per short, readable without sound in two seconds: a catch, a near miss, a trick
-  and its warning, her undoing your work, a possessed customer, a blackout. Prefer
+  and what it cost you, her undoing your work, a possessed customer, a blackout. Prefer
   moments whose events tell a story with a turn (calm → tell → trick → consequence).
 - Spread the week across different hooks and tactics; don't pick three chases.
 - Score is a guide, not the rule. A low-scoring moment with one perfect beat beats a busy one.
@@ -20,7 +20,7 @@ Pick the moments that make the best 15–40 second vertical shorts, and say how 
 F7-good moments.
 
 **Shots for each pick** (2 to 4): the shots the editor will cut between. Typical sets:
-- the story from above: `topdown` with `cone` and `sound` (or `belief` and `guess` when her
+- the story from above: `topdown` with `sound` and `actors` (or `belief` and `guess` when her
   reasoning is the point);
 - the feeling: `pov` (yours), or `chase` behind her;
 - the reveal: `cctv` on her;

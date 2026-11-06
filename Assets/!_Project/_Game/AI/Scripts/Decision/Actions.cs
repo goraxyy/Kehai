@@ -1,0 +1,355 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+
+namespace Kehai.Karen
+{
+    // Goal selection by utility, not by state (Karen.md §6.3). Every goal is scored every
+    // decision; the best one wins, with hysteresis so she doesn't flap between two.
+    //
+    //   U(g) = w_conf·Fit(g) + w_stress·ExpectedPanicDelta(g)·sign(pressure)
+    //        + w_task·TaskLeverage(g) + w_novel·Novelty(g)
+    //        − w_cost·TensionCost(g)/Tension − w_risk·ExposureRisk(g)
+    //        × Permission(g)
+    public sealed class ActionSet
+    {
+        public ActionId Current { get; private set; } = ActionId.Roam;
+        public float CommittedAt { get; private set; } = -999f;
+        public readonly List<ThoughtOption> LastOptions = new List<ThoughtOption>();
+
+        readonly Dictionary<ActionId, float> lastChosen = new Dictionary<ActionId, float>();
+        static readonly ActionId[] goals = (ActionId[])System.Enum.GetValues(typeof(ActionId));
+
+        public void Reset()
+        {
+            Current = ActionId.Roam;
+            CommittedAt = -999f;
+            lastChosen.Clear();
+        }
+
+        // Picks the goal to pursue now. `forced` bypasses the minimum commit time — used
+        // when an interrupt has fired or the current plan has ended.
+        public ActionId Choose(KarenContext c, bool forced, out string because)
+        {
+            LastOptions.Clear();
+            var scores = new Dictionary<ActionId, float>();
+            var whys = new Dictionary<ActionId, string>();
+
+            foreach (ActionId g in goals)
+            {
+                float u = Score(g, c, out string why);
+                scores[g] = u;
+                whys[g] = why;
+            }
+
+            // Stay with the current goal unless something beats it clearly.
+            ActionId best = Current;
+            float bestScore = scores[Current] + c.Config.hysteresis;
+            bool mayLeave = forced || c.Now - CommittedAt >= c.Config.minCommitSeconds;
+
+            foreach (ActionId g in goals)
+            {
+                if (g == Current) continue;
+                if (scores[g] > bestScore && (mayLeave || g == ActionId.Hunt))
+                {
+                    best = g;
+                    bestScore = scores[g];
+                }
+            }
+
+            foreach (ActionId g in goals.OrderByDescending(g => scores[g]).Take(4))
+                LastOptions.Add(new ThoughtOption { Name = g.Name(), Utility = scores[g], Why = whys[g] });
+
+            because = whys[best];
+            if (best != Current || forced)
+            {
+                Current = best;
+                CommittedAt = c.Now;
+                lastChosen[best] = c.Now;
+            }
+            return best;
+        }
+
+        float Score(ActionId g, KarenContext c, out string why)
+        {
+            Appraisal a = c.A;
+            KarenConfig k = c.Config;
+
+            // Which tactics could serve this goal right now at all?
+            var available = HtnPlanner.Candidates(g, c, null);
+            if (available.Count == 0)
+            {
+                why = "no tactic available";
+                return 0f;
+            }
+
+            float fit = Fit(g, c, out string fitWhy);
+            if (fit <= 0f)
+            {
+                why = fitWhy;
+                return 0f;
+            }
+
+            // Expected panic delta: what this goal's tactics have done to *this* player,
+            // pushed the way the Director wants panic to move.
+            float epd = available.Average(t => c.Ledger.ExpectedPanicDelta(t, c));
+            float stress = epd * Mathf.Clamp(a.Pressure, -1f, 1f);
+
+            float task = g == ActionId.Disrupt ? a.TaskLoad : 0f;
+
+            float novelty = 1f;
+            if (lastChosen.TryGetValue(g, out float when))
+                novelty = Mathf.Clamp01((c.Now - when) / 60f);
+            if (!Tactical(g)) novelty = 0.5f;
+
+            float cheapest = available.Min(t => t.TensionCost);
+            float cost = cheapest <= 0f ? 0f : Mathf.Min(1f, cheapest / Mathf.Max(0.05f, a.Tension));
+            float risk = available.Min(t => t.ExposureRisk(c));
+
+            float u = k.wConfidence * fit + k.wStress * stress + k.wTask * task + k.wNovelty * novelty
+                      - k.wCost * cost - k.wRisk * risk;
+
+            u *= c.Director.ActionPermission(g, c);
+
+            why = $"{fitWhy}; stress {stress:+0.00;-0.00}, task {task:0.00}, novelty {novelty:0.0}, cost {cost:0.00}, risk {risk:0.00}";
+            return Mathf.Max(0f, u);
+        }
+
+        static bool Tactical(ActionId g) => g != ActionId.Roam && g != ActionId.Check && g != ActionId.Search && g != ActionId.Hunt;
+
+        // How well the situation suits the goal, before any learning (the "Confidence(g)"
+        // term of the utility). Each line reads as the rule it is.
+        static float Fit(ActionId g, KarenContext c, out string why)
+        {
+            Appraisal a = c.A;
+            switch (g)
+            {
+                case ActionId.Roam:
+                    why = "maintain coverage";
+                    return 0.15f;
+
+                case ActionId.Check:
+                    if (a.Confidence < 0.06f) { why = "nothing to investigate"; return 0f; }
+                    why = $"conf {a.Confidence:0.00}, stale {a.Staleness:0}s";
+                    return 0.2f + 0.55f * Mathf.Clamp01(a.Confidence / 0.35f) * (1f - Mathf.Clamp01(a.Staleness / 45f));
+
+                case ActionId.Search:
+                    why = $"H {a.EntropyNorm:0.00} of max";
+                    return 0.12f + 0.45f * a.EntropyNorm * (a.Staleness > 10f ? 1f : 0.4f);
+
+                case ActionId.Flush:
+                    if (a.EntropyNorm < 0.5f || a.Staleness < 15f) { why = "not lost enough to flush"; return 0f; }
+                    why = $"lost: H {a.EntropyNorm:0.00}, stale {a.Staleness:0}s — make them make a noise";
+                    return 0.25f + 0.5f * a.EntropyNorm * Mathf.Clamp01(a.Staleness / 60f);
+
+                case ActionId.Disrupt:
+                    why = $"TaskLoad {a.TaskLoad:0.00}";
+                    return 0.15f;
+
+                case ActionId.Corner:
+                    if (a.Confidence < 0.25f) { why = "no confident peak to herd from"; return 0f; }
+                    why = $"conf {a.Confidence:0.00} — close the cut";
+                    return 0.2f + 0.5f * a.Confidence;
+
+                case ActionId.LieInWait:
+                    if (!AmbushTactic.Spot(c, out _, out float sure, out string spotWhy) || sure < 0.35f)
+                    {
+                        why = "nowhere she's sure you'll pass";
+                        return 0f;
+                    }
+                    why = spotWhy;
+                    return 0.15f + 0.65f * sure;
+
+                case ActionId.Loom:
+                    if (a.Confidence < 0.12f) { why = "don't know where to be seen"; return 0f; }
+                    float below = Mathf.Max(0f, a.Setpoint - a.Panic);
+                    why = $"panic {a.Panic:0.00} below setpoint {a.Setpoint:0.00}";
+                    return 0.1f + 0.8f * below;
+
+                case ActionId.Hunt:
+                    SightSensor s = c.Body.Sight;
+                    if (c.Belief.OutsideMass > 0.5f) { why = "you're outside: she can't follow you there"; return 0f; }
+                    if (a.Awareness >= s.confirmAt) { why = $"sighting confirmed ({a.Awareness:0.00})"; return 1.05f; }
+                    if (a.Awareness >= s.seeAt) { why = $"seen ({a.Awareness:0.00})"; return 0.55f + (a.Awareness - s.seeAt); }
+                    // A hunt that has lost you keeps going on her reckoning, fading over its memory
+                    // instead of dropping to 0 the moment awareness does (0.2.0).
+                    float lost = s.Time_SinceSeen(), memory = c.Config.huntMemorySeconds;
+                    if (c.Brain != null && c.Brain.IsChasing && lost < memory)
+                    {
+                        why = $"lost you {lost:0.0}s ago: running on to where you'd be";
+                        return 1.05f - 0.3f * (lost / memory) * (lost / memory);
+                    }
+                    why = "not seen";
+                    return 0f;
+
+                case ActionId.BackOff:
+                    float above = Mathf.Max(0f, a.Panic - a.Setpoint);
+                    why = a.InRecovery ? "recovery window (§9.4)" : $"panic {a.Panic:0.00} above setpoint {a.Setpoint:0.00}";
+                    return 0.05f + 1.2f * above + (a.InRecovery ? 0.45f : 0f);
+
+                case ActionId.Lure:
+                    if (a.EnergyBelief >= 0.15f) { why = "employee still has energy"; return 0f; }
+                    why = $"energy ~{a.EnergyBelief:0.00} — a burnt-out employee who stays is the objective";
+                    return 0.9f;
+            }
+            why = string.Empty;
+            return 0f;
+        }
+    }
+
+    // Turns a goal into a plan: pick one of the goal's tactics (by learned value where the
+    // rung allows, by authored prior otherwise), then decompose it into primitives under a
+    // time budget (Karen.md §6.4).
+    public static class HtnPlanner
+    {
+        // Tactics that could serve `goal` right now. Refusals are appended to `refusals`
+        // when it's supplied, so the thought log can say why a tactic was ruled out.
+        public static List<Tactic> Candidates(ActionId goal, KarenContext c, List<string> refusals)
+        {
+            var result = new List<Tactic>();
+            foreach (Tactic t in TacticLibrary.For(goal))
+            {
+                bool ok = Gated(t, c, out string why) && t.Available(c, out why);
+                if (ok) result.Add(t);
+                else refusals?.Add($"{t.Id}: {why}");
+            }
+            return result;
+        }
+
+        // The rung's and the Director's say, before the tactic's own (Available).
+        public static bool Gated(Tactic t, KarenContext c, out string why)
+        {
+            if (t.Draft) { why = "draft"; return false; }
+            why = null;
+            return Introduced(t, c, ref why) &&
+                   (!Shielded(c) || Permitted(t, c, ref why) && OffCooldown(t, c, ref why) && Affordable(t, c, ref why));
+        }
+
+        // The Director's gates — tier permission, cooldowns, the tension budget — hold on every
+        // rung but one: rung F with its shield off, which exists to find out what a trained
+        // policy does without them (FairnessGuard.CheckPacing counts it).
+        public static bool Shielded(KarenContext c) => !c.Features.Policy || c.Config.shield;
+
+        static bool Introduced(Tactic t, KarenContext c, ref string why)
+        {
+            if (!c.Features.Goals && t.Tier > 0) { why = "rung has no tactics"; return false; }
+            if ((c.Brain != null && c.Brain.CareerOverride) || t.IntroducedShift <= c.ShiftNumber) return true;
+            why = $"introduced on shift {t.IntroducedShift}";
+            return false;
+        }
+
+        static bool Permitted(Tactic t, KarenContext c, ref string why)
+        {
+            if (c.Director.PermitsTier(t.Tier, c)) return true;
+            why = $"tier {t.Tier} not permitted ({c.Director.PhaseName})";
+            return false;
+        }
+
+        static bool OffCooldown(Tactic t, KarenContext c, ref string why)
+        {
+            if (!t.OnCooldown(c.Now)) return true;
+            why = $"cooldown {t.Cooldown - (c.Now - t.LastUsed):0}s";
+            return false;
+        }
+
+        static bool Affordable(Tactic t, KarenContext c, ref string why)
+        {
+            if (t.TensionCost <= c.A.Tension + 1e-4f) return true;
+            why = $"costs {t.TensionCost:0.00}, budget {c.A.Tension:0.00}";
+            return false;
+        }
+
+        public static PlanTree Plan(ActionId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
+                                    out Tactic chosen, out List<ThoughtOption> options, out string because)
+        {
+            var refusals = new List<string>();
+            List<Tactic> candidates = Candidates(goal, c, refusals);
+            options = new List<ThoughtOption>();
+            chosen = null;
+            because = null;
+
+            if (candidates.Count == 0)
+            {
+                because = "no candidates: " + string.Join("; ", refusals.Take(3));
+                return null;
+            }
+
+            List<(Tactic t, float s, string why)> scored = Rank(candidates, c);
+
+            // On rung F the policy picks (Policy/TacticPolicy.cs), told what the bandit would
+            // have: rung E's choice, exactly. Movement-only goals aren't its business, as they
+            // aren't the bandit's.
+            if (c.Features.Policy && c.Policy != null && candidates.Any(t => t.Learnable) &&
+                c.Policy.TryChoose(goal, candidates, scored[0].t, c, out int index, out string pickedWhy) &&
+                index >= 0 && index < candidates.Count)
+                PolicyFirst(scored, candidates[index], pickedWhy);
+
+            foreach (var entry in scored.Take(4))
+                options.Add(new ThoughtOption { Name = entry.t.Id, Utility = entry.s, Why = entry.why });
+
+            foreach (var entry in scored)
+            {
+                var builder = new PlanBuilder(c.Config.planBudgetMs);
+                entry.t.Plan(c, builder);
+                if (builder.Steps.Count == 0) continue;   // decomposition found nothing to do
+
+                chosen = entry.t;
+                because = entry.why + (builder.Target != null ? $" → {builder.Target}" : string.Empty)
+                                    + (builder.Truncated ? " (partial: budget)" : string.Empty);
+                return new PlanTree($"{goal.Name()}({entry.t.Id})", goal, entry.t, builder.Steps, interrupt) { Target = builder.Target };
+            }
+
+            because = "every candidate decomposed to nothing";
+            return null;
+        }
+
+        // Every candidate scored, best first. The bandit (rungs D+) learns per player; below that
+        // the authored prior alone decides, with a seeded jitter to break ties. Only the
+        // candidates it's given: the gate has already had its say.
+        public static List<(Tactic t, float s, string why)> Rank(IEnumerable<Tactic> candidates, KarenContext c)
+        {
+            var scored = new List<(Tactic t, float s, string why)>();
+            foreach (Tactic t in candidates)
+            {
+                float s;
+                string why;
+                if (c.Features.Bandit && t.Learnable)
+                {
+                    s = c.Ledger.BanditScore(t, c, out why);
+                }
+                else
+                {
+                    s = c.Ledger.PriorScore(t, c) + c.Rng.Range(0f, 0.05f);
+                    why = $"prior {t.PanicPrior:+0.00;-0.00}";
+                }
+                scored.Add((t, s, why));
+            }
+            scored.Sort((x, y) => y.s.CompareTo(x.s));
+            return scored;
+        }
+
+        // The policy's pick goes first; the rest keep the bandit's order, as the fallback if the
+        // pick decomposes to nothing. Its utility stays the bandit's score, so the numbers in the
+        // thought log remain comparable.
+        public static void PolicyFirst(List<(Tactic t, float s, string why)> scored, Tactic picked, string pickedWhy)
+        {
+            int k = scored.FindIndex(x => x.t == picked);
+            if (k < 0) return;
+            var pick = scored[k];
+            scored.RemoveAt(k);
+            scored.Insert(0, (pick.t, pick.s, $"policy: {pickedWhy} (bandit {pick.s:0.00})"));
+        }
+
+        public static string Describe(List<ThoughtOption> options)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (i > 0) sb.Append(" > ");
+                sb.Append(options[i].Name).Append('(').Append(options[i].Utility.ToString("0.00")).Append(')');
+            }
+            return sb.ToString();
+        }
+    }
+}

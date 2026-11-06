@@ -43,7 +43,7 @@ public static class SoundSettings
     {
         switch (kind)
         {
-            case SoundKind.Karen: return GameNames.Antagonist + " (her footsteps and warnings)";
+            case SoundKind.Karen: return GameNames.Antagonist + " (the sounds of her tricks)";
             case SoundKind.Music: return "Music (the radio)";
             case SoundKind.Voice: return "Announcements (the PA)";
             default: return "Sound effects (the store, you)";

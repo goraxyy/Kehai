@@ -12,11 +12,13 @@ from pathlib import Path
 SAMPLE_SECONDS = 0.5           # PlaytestSession samples position twice a second
 MOST_PATH_POINTS = 3000
 
-# The shift record's numbers worth carrying (ShiftAnalysis).
+# The shift record's numbers worth carrying (ShiftAnalysis). "Warning sounds" is the label
+# before 0.2.0, when her tricks still waited for their sound.
 NUMBERS = {
     "Walked (m)": "walked_m", "Sprinting (s)": "sprinting_s", "Crouching (s)": "crouching_s",
     "Times Karen spotted you": "spotted", "Seconds in her sight": "seen_s", "Closest she got (m)": "closest_m",
-    "Chases": "chases", "Catches": "catches", "Warning sounds": "warnings", "Customers served": "served",
+    "Chases": "chases", "Catches": "catches", "Trick sounds": "trick_sounds", "Warning sounds": "trick_sounds",
+    "Customers served": "served",
     "Directions given": "directions", "Gave up asking": "gave_up_asking", "Gave up at the till": "gave_up_till",
     "Lowest energy (%)": "lowest_energy",
 }

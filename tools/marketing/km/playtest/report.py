@@ -180,7 +180,7 @@ def session_section(folder: Path, f: dict, summary: dict | None, bugs: list) -> 
         if summary["suggestions"]:
             out.append("<h3>What to change</h3><ul>" + "".join(f"<li>{e(s)}</li>" for s in summary["suggestions"]) + "</ul>")
     else:
-        out.append("<p class='dim'>No summary: Claude runs once it's set up (docs/MARKETING.md, Setup).</p>")
+        out.append("<p class='dim'>No summary: Claude runs once it's set up (docs/marketing/MARKETING.md, Setup).</p>")
 
     first = f["first_clock_in_s"]
     out.append("<p>" + (f"First clock-in after <b>{clock(first)}</b>, walking {f['walked_before_clock_in_m']:.0f} m first."
@@ -190,10 +190,10 @@ def session_section(folder: Path, f: dict, summary: dict | None, bugs: list) -> 
     out.append(map_svg(folder, f))
 
     if f["shifts"]:
-        heads = ["Shift", "Length", "Clocked out", "Spotted", "Caught", "Warnings", "Served", "Lowest energy", "What happened"]
+        heads = ["Shift", "Length", "Clocked out", "Spotted", "Caught", "Trick sounds", "Served", "Lowest energy", "What happened"]
         rows = "".join("<tr>" + "".join(f"<td>{v}</td>" for v in [
             e(s.get("n")), clock(s.get("length_s")), "yes" if s.get("clocked_out") else "no", e(s.get("spotted", "–")),
-            e(s.get("catches", "–")), e(s.get("warnings", "–")), e(s.get("served", "–")),
+            e(s.get("catches", "–")), e(s.get("trick_sounds", "–")), e(s.get("served", "–")),
             f"{s['lowest_energy']:.0f}%" if isinstance(s.get("lowest_energy"), (int, float)) else "–",
             "<br>".join(e(x) for x in s.get("findings", [])[:3])]) + "</tr>" for s in f["shifts"])
         out.append("<div class='scroll'><table><tr>" + "".join(f"<th>{h}</th>" for h in heads) + f"</tr>{rows}</table></div>")

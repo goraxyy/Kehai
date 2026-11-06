@@ -1,3 +1,4 @@
+using Kehai.Karen;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,7 +15,7 @@ public class ControlsTests
     [Test]
     public void ControlsMd_MatchesTheInGameList()
     {
-        string md = File.ReadAllText(Path.Combine(Root, "docs", "CONTROLS.md"));
+        string md = File.ReadAllText(Path.Combine(Root, "docs", "game", "CONTROLS.md"));
         var missing = Controls.All.SelectMany(s => s.Entries)
             .Where(e => !md.Contains($"| {e.Keys} | {e.Action} |"))
             .Select(e => e.Keys).ToList();
@@ -34,7 +35,7 @@ public class ControlsTests
     [Test]
     public void EveryKeyTheGameReads_IsListed()
     {
-        string listed = string.Join("\n", Controls.All.SelectMany(s => s.Entries).Select(e => e.Keys));
+        string listed = string.Join("\n", Controls.All.Concat(Controls.Developer).SelectMany(s => s.Entries).Select(e => e.Keys));
         var used = new SortedSet<string>();
         foreach (string file in Directory.GetFiles(Path.Combine(Application.dataPath, "!_Project"), "*.cs", SearchOption.AllDirectories))
         {
@@ -48,5 +49,17 @@ public class ControlsTests
             return !Regex.IsMatch(listed, $@"(^|[^A-Za-z0-9]){Regex.Escape(name)}($|[^A-Za-z0-9])", RegexOptions.Multiline);
         }).ToList();
         Assert.IsEmpty(missing, "keys the game reads but Controls.cs doesn't list: " + string.Join(", ", missing));
+    }
+
+    // F3 is the developer's (KarenFx): off in tests and batch runs and at the start of every
+    // session, and never shown to players, so nobody but the developer hears her steps or sees
+    // her cone.
+    [Test]
+    public void TheDeveloperSwitch_IsOffByDefault_AndHiddenFromPlayers()
+    {
+        Assert.IsFalse(KarenFx.StepsAudible, "her steps are audible without the developer's switch");
+        Assert.IsFalse(KarenFx.ConeVisible, "her cone shows without the developer's switch");
+        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 is listed for players");
+        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 isn't listed as the developer's");
     }
 }

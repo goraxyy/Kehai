@@ -147,6 +147,8 @@ namespace Kehai.Karen
             if (r == null) return;
             r.Length = r.LengthAt(Time.time - shiftStartedAt);
             r.ClockedOut = clockedOut;
+            KarenBrain brain = KarenBrain.Instance;
+            if (brain != null && brain.Stats != null) r.Chains.AddRange(brain.Stats.ChainsFound);
             Finishing?.Invoke(r);
             Last = r;
             LastAnalysis = ShiftAnalysis.Of(r);

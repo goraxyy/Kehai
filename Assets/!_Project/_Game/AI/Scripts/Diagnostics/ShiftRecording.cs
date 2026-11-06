@@ -78,6 +78,7 @@ namespace Kehai.Karen
         public readonly List<ShiftFrame> Frames = new List<ShiftFrame>();
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
+        public readonly List<ChainStat> Chains = new List<ChainStat>();   // combos she found this shift (0.2.0)
 
         // Moments worth a clip: markers as they happen, the chases, and at the end the moments.
         public readonly List<ClipMarker> Markers = new List<ClipMarker>();
@@ -245,6 +246,18 @@ namespace Kehai.Karen
                 sb.Append('"').Append(pair.Key).Append("\":\"").Append(MiniJson.EscapeInner(pair.Value)).Append('"');
             }
             sb.Append('}');
+
+            // The combo room: chains found this shift, as "first", "then", uses, what the chain
+            // paid, what its second part pays alone.
+            sb.Append(",\"chains\":[");
+            for (int i = 0; i < Chains.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                ChainStat c = Chains[i];
+                sb.Append("{\"first\":\"").Append(MiniJson.EscapeInner(c.first)).Append("\",\"then\":\"").Append(MiniJson.EscapeInner(c.then))
+                  .Append("\",\"uses\":").Append(N(c.n)).Append(",\"paid\":").Append(N(c.q)).Append(",\"alone\":").Append(N(c.alone)).Append('}');
+            }
+            sb.Append(']');
 
             // Frames as arrays of numbers, to keep a ten-minute shift to a few hundred KB:
             // [t, px, pz, pyaw, motion, held, energy, karen?, kx, kz, kyaw, mood, sees, chase, gx, gz, gconf, power,

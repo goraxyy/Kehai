@@ -196,10 +196,6 @@ public sealed class SettingsMenu : MonoBehaviour
         float value = Mathf.Round(Mathf.Lerp(MinSensitivity, MaxSensitivity, picked) * 10f) / 10f;
         if (!Mathf.Approximately(value, sensitivity)) Sensitivity = value;
 
-        Heading(GameNames.Antagonist.ToUpperInvariant());
-        bool cone = Switch("Floor cone", KarenFloorCone.Enabled);
-        if (cone != KarenFloorCone.Enabled) KarenFloorCone.Enabled = cone;
-
         Heading("WEBCAM BLINKING");
         DrawWebcam();
     }
@@ -394,7 +390,7 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void Preview(SoundKind kind)
     {
-        AudioClip clip = kind == SoundKind.Karen ? ProceduralAudio.KarenStep()
+        AudioClip clip = kind == SoundKind.Karen ? ProceduralAudio.Tell(TellKind.RevealSting)
             : kind == SoundKind.Voice ? ProceduralAudio.PaChime()
             : kind == SoundKind.Effects ? ProceduralAudio.PlayerStep(0)
             : null;   // music: the radio is its own sample

@@ -15,7 +15,8 @@ namespace Kehai.Replay
         Sound = 8,       // every noise, a ring as far as it carries
         Thoughts = 16,   // her thought log, the last few lines
         Actors = 32,     // where you and she really are, as dots (for the picture-in-picture)
-        All = 63
+        Routes = 64,    // recorded route guesses, weights and arrival windows
+        All = 127
     }
 
     // "Karen's mind", drawn into the store from the recording. Everything lives on its own layer
@@ -35,11 +36,11 @@ namespace Kehai.Replay
         readonly ReplayData data;
         readonly int layer;
         readonly Transform root;
-        readonly KarenConfig config = new KarenConfig();
         readonly float y;
 
         GameObject belief, guess, guessPin, cone, thoughts, you, her;
         readonly List<GameObject> rings = new List<GameObject>();
+        readonly List<ReplayRouteDrawing> routes = new List<ReplayRouteDrawing>();
         Texture2D beliefTexture;
         Color32[] beliefPixels;
         BeliefFrame beliefShown;
@@ -77,10 +78,11 @@ namespace Kehai.Replay
                 string s = raw.Trim().ToLowerInvariant();
                 if (s.Length == 0 || s == "none") continue;
                 if (s == "all" || s == "mind") { m |= MindLayer.All; continue; }
+                if (s == "route") s = "routes";
                 if (s == "rings" || s == "sounds") s = "sound";
                 if (s == "thought" || s == "log") s = "thoughts";
                 if (s == "view" || s == "sight") s = "cone";
-                if (!System.Enum.TryParse(s, true, out MindLayer one)) throw new System.ArgumentException($"unknown layer \"{raw}\" (belief, guess, cone, sound, thoughts, actors, all, none)");
+                if (!System.Enum.TryParse(s, true, out MindLayer one)) throw new System.ArgumentException($"unknown layer \"{raw}\" (belief, guess, cone, sound, thoughts, actors, routes, all, none)");
                 m |= one;
             }
             return m;
@@ -91,7 +93,7 @@ namespace Kehai.Replay
             if (m == MindLayer.None) return "none";
             if (m == MindLayer.All) return "all";
             var names = new List<string>();
-            foreach (MindLayer one in new[] { MindLayer.Belief, MindLayer.Guess, MindLayer.Cone, MindLayer.Sound, MindLayer.Thoughts, MindLayer.Actors })
+            foreach (MindLayer one in new[] { MindLayer.Belief, MindLayer.Guess, MindLayer.Cone, MindLayer.Sound, MindLayer.Thoughts, MindLayer.Actors, MindLayer.Routes })
                 if ((m & one) != 0) names.Add(one.ToString().ToLowerInvariant());
             return string.Join(",", names);
         }
@@ -189,6 +191,7 @@ namespace Kehai.Replay
             ShowSounds(t);
             ShowThoughts(t, cam);
             ShowActors(t);
+            ShowRoutes(t, cam);
         }
 
         bool On(MindLayer m) => (Shown & m) != 0;
@@ -230,55 +233,9 @@ namespace Kehai.Replay
             Tint(guessPin, c);
         }
 
-        readonly List<Vector3> coneVerts = new List<Vector3>();
-        readonly List<Color> coneColours = new List<Color>();
-        readonly List<int> coneTris = new List<int>();
-        static readonly RaycastHit[] hits = new RaycastHit[8];
-
-        void ShowCone(float t)
-        {
-            EntitySample pose = default;
-            bool show = On(MindLayer.Cone) && stage.KarenId >= 0 && data.TryPose(stage.KarenId, t, out pose);
-            cone.SetActive(show);
-            if (!show) return;
-
-            const int rays = 40;
-            Vector3 forward = pose.Rotation * Vector3.forward;
-            forward.y = 0f;
-            forward = forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
-            float half = config.sightFov * 0.5f, range = config.sightRange;
-            bool sees = (pose.State & KrecState.KarenSees) != 0;
-            Color tint = sees ? ReplayLook.Karen : KarenFloorCone.Tint((KarenBody.Mood)(pose.State & 3));
-            Vector3 floor = new Vector3(pose.Position.x, y + 0.05f, pose.Position.z);
-            Vector3 eye = new Vector3(pose.Position.x, y + 1.3f, pose.Position.z);
-
-            coneVerts.Clear();
-            coneColours.Clear();
-            coneTris.Clear();
-            coneVerts.Add(floor);
-            coneColours.Add(ReplayLook.WithAlpha(tint, sees ? 0.5f : 0.36f));
-            for (int i = 0; i <= rays; i++)
-            {
-                Vector3 d = Quaternion.AngleAxis(Mathf.Lerp(-half, half, i / (float)rays), Vector3.up) * forward;
-                coneVerts.Add(floor + d * Reach(eye, d, range));
-                coneColours.Add(ReplayLook.WithAlpha(tint, 0.08f));
-                if (i > 0) coneTris.AddRange(new[] { 0, i, i + 1 });
-            }
-            coneMesh.Clear();
-            coneMesh.SetVertices(coneVerts);
-            coneMesh.SetColors(coneColours);
-            coneMesh.SetTriangles(coneTris, 0);
-            coneMesh.RecalculateBounds();
-        }
-
-        // How far she sees along one direction: the store stops her eyes (puppets have no colliders).
-        static float Reach(Vector3 eye, Vector3 direction, float range)
-        {
-            int n = Physics.RaycastNonAlloc(eye, direction, hits, range, ~0, QueryTriggerInteraction.Ignore);
-            float best = range;
-            for (int i = 0; i < n; i++) best = Mathf.Min(best, hits[i].distance);
-            return best;
-        }
+        // Keep the old layer flag readable in saved shots, but replays never draw the
+        // developer floor cone, even if F3 was enabled before opening the recording.
+        void ShowCone(float t) => cone.SetActive(false);
 
         void ShowSounds(float t)
         {
@@ -422,6 +379,26 @@ namespace Kehai.Replay
             if (line.Length > 0) yield return line.ToString();
         }
 
+        void ShowRoutes(float t, Camera cam)
+        {
+            // Only recorded frames: seeking backwards, clearing guesses and old recordings
+            // must never fall back to today's live predictor or retain a future route.
+            RouteFrame frame = On(MindLayer.Routes) ? data.RoutesAt(t) : null;
+            int count = frame != null ? frame.Guesses.Length : 0;
+            for (int i = 0; i < count; i++)
+            {
+                while (routes.Count <= i)
+                {
+                    var go = Child("Recorded route " + (routes.Count + 1));
+                    var drawing = go.AddComponent<ReplayRouteDrawing>();
+                    drawing.Build(routes.Count, layer);
+                    routes.Add(drawing);
+                }
+                routes[i].Show(frame, frame.Guesses[i], i, y, cam);
+            }
+            for (int i = count; i < routes.Count; i++) routes[i].gameObject.SetActive(false);
+        }
+
         void ShowActors(float t)
         {
             bool show = On(MindLayer.Actors);
@@ -435,4 +412,91 @@ namespace Kehai.Replay
             if (at.HasValue) dot.transform.position = new Vector3(at.Value.x, y + 0.07f, at.Value.z);
         }
     }
+
+    // Pooled per guess. Weight-only records share their path array, so geometry is uploaded
+    // only when a route changes; labels and line width follow the recorded weights.
+    [ExecuteAlways] // editor previews own the same materials as runtime playback
+    internal sealed class ReplayRouteDrawing : MonoBehaviour
+    {
+        LineRenderer line;
+        TextMesh label;
+        Material lineMaterial, labelMaterial;
+        Vector3[] pathShown;
+        RouteFrame frameShown;
+        Color colour;
+
+        public void Build(int index, int layer)
+        {
+            colour = MapPainter.RouteColour(index);
+            line = gameObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.numCapVertices = 4;
+            line.numCornerVertices = 2;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            lineMaterial = ReplayLook.Overlay(queue: 3104);
+            line.sharedMaterial = lineMaterial;
+            var textGo = new GameObject("Route label") { layer = layer };
+            textGo.transform.SetParent(transform, false);
+            label = textGo.AddComponent<TextMesh>();
+            label.font = ReplayLook.Font;
+            label.fontSize = 64;
+            label.anchor = TextAnchor.UpperLeft;
+            label.richText = false;
+            label.color = colour;
+            labelMaterial = ReplayLook.Overlay(label.font.material.mainTexture, onTop: true, textMode: true, queue: 3102);
+            textGo.GetComponent<MeshRenderer>().sharedMaterial = labelMaterial;
+        }
+
+        public void Show(RouteFrame frame, RouteLine guess, int index, float floor, Camera cam)
+        {
+            bool valid = guess.Path != null && guess.Path.Length > 0 && guess.Along != null && guess.Along.Length == guess.Path.Length;
+            gameObject.SetActive(valid);
+            if (!valid) return;
+            if (!ReferenceEquals(pathShown, guess.Path))
+            {
+                pathShown = guess.Path;
+                bool hiding = guess.Path.Length == 1;
+                line.loop = hiding;
+                line.positionCount = hiding ? 24 : guess.Path.Length;
+                for (int i = 0; i < line.positionCount; i++)
+                {
+                    Vector3 at = guess.Path[hiding ? 0 : i];
+                    if (hiding) at += new Vector3(Mathf.Cos(i * Mathf.PI / 12f), 0f, Mathf.Sin(i * Mathf.PI / 12f)) * 0.6f;
+                    at.y = floor + 0.12f + index * 0.012f;
+                    line.SetPosition(i, at);
+                }
+            }
+            if (!ReferenceEquals(frameShown, frame))
+            {
+                frameShown = frame;
+                float weight = Mathf.Clamp01(guess.Weight);
+                line.startWidth = line.endWidth = 0.06f + weight * 0.18f;
+                line.startColor = line.endColor = ReplayLook.WithAlpha(colour, 0.3f + weight * 0.7f);
+                var w = frame.Window(guess, guess.Path.Length - 1);
+                string name = guess.Name ?? "route";
+                if (name.Length > 48) name = name.Substring(0, 47) + "…";
+                label.text = $"{index + 1}. {name} · {weight:P0}\n" +
+                    $"Arrival {w.earliest - frame.LostAt:0.0}–{w.latest - frame.LostAt:0.0}s; likely {w.likely - frame.LostAt:0.0}s after last sighting";
+            }
+            label.gameObject.SetActive(cam != null);
+            if (cam == null) return;
+            if (labelMaterial.mainTexture != label.font.material.mainTexture) labelMaterial.mainTexture = label.font.material.mainTexture;
+            float d = Mathf.Max(cam.nearClipPlane * 2f, 0.3f);
+            float h = cam.orthographic ? cam.orthographicSize * 2f : 2f * d * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float wView = h * cam.aspect;
+            float row = Mathf.Min(h * 0.022f, wView * 0.44f / 30f);
+            Vector3 pos = cam.transform.position + cam.transform.forward * d +
+                cam.transform.right * (wView * 0.04f) + cam.transform.up * (h * 0.45f - index * row * 2.6f);
+            label.transform.SetPositionAndRotation(pos, cam.transform.rotation);
+            label.characterSize = row * 10f / label.fontSize;
+        }
+
+        void OnDestroy()
+        {
+            if (Application.isPlaying) { Destroy(lineMaterial); Destroy(labelMaterial); }
+            else { DestroyImmediate(lineMaterial); DestroyImmediate(labelMaterial); }
+        }
+    }
+
 }

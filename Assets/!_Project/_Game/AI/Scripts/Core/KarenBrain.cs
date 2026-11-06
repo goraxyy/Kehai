@@ -39,7 +39,7 @@ namespace Kehai.Karen
         public KarenRng Rng { get; private set; }
         public Sensorium Sensorium { get; private set; }
         public EnergyBelief Energy { get; } = new EnergyBelief();
-        public GoalSet Goals { get; } = new GoalSet();
+        public ActionSet Actions { get; } = new ActionSet();
         public KarenContext Ctx { get; private set; }
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
@@ -66,8 +66,13 @@ namespace Kehai.Karen
         readonly Dictionary<int, float> lastVisited = new Dictionary<int, float>();
         readonly Dictionary<int, float> closedUntil = new Dictionary<int, float>();
         readonly HashSet<int> closedNow = new HashSet<int>();
+        readonly HashSet<int> closedAll = new HashSet<int>();
         readonly List<(float t, Vector3 p)> heard = new List<(float, Vector3)>();
-        readonly List<(Tactic tactic, float t0, float p0)> pendingRewards = new List<(Tactic, float, float)>();
+        readonly List<(Tactic tactic, float t0, float p0, string after)> pendingRewards = new List<(Tactic, float, float, string)>();
+
+        // Her last trick, for the combo learner (0.2.0).
+        string lastTrick;
+        float lastTrickAt = -999f;
         readonly HashSet<ShelfUnit> sabotaged = new HashSet<ShelfUnit>();
         readonly Dictionary<TaskManager.TaskKind, float> peakOutstanding = new Dictionary<TaskManager.TaskKind, float>();
 
@@ -83,6 +88,8 @@ namespace Kehai.Karen
 
         void Start()
         {
+            // Before the map: the bake that keeps her body to her part of the building.
+            string area = KarenArea.Install();
             Map = StoreMap.Current;
             Rng = new KarenRng(config.seed);
             Ledger = new KarenLedger(config) { Persistent = config.Features.Persistent };
@@ -125,6 +132,7 @@ namespace Kehai.Karen
             }
 
             Note("SYSTEM", $"{GameNames.Antagonist} online — rung {config.rung} ({config.Features}), seed {Rng.Seed}. Map: {Map.Summary()}");
+            Note("SYSTEM", area);
         }
 
         // Routes end at a job: the Ledger learns the paths taken between them.
@@ -157,6 +165,7 @@ namespace Kehai.Karen
         {
             Sensorium?.Dispose();
             Belief = new BeliefGrid(Map);
+            Predictor = new RoutePredictor(Map);
             Sensorium = new Sensorium(Map, Energy);
             ApplyRungToSenses();
             if (Ctx != null)
@@ -174,6 +183,9 @@ namespace Kehai.Karen
             Sensorium.UseTestimony = full;
             Sensorium.UseInfrastructure = full;
             Sensorium.UseNegative = full;
+            Sensorium.SweepCellsPerTick = config.sweepCellsPerTick;
+            // Awareness D (0.2.0): her eyes are quicker where her belief already puts you.
+            if (Body != null) Body.Sight.Expectation = full ? Belief.Expectation : (System.Func<Vector3, float>)null;
         }
 
         // Swap rung mid-session (the ablation runner does this between episodes).
@@ -221,6 +233,8 @@ namespace Kehai.Karen
             closedUntil.Clear();
             closedNow.Clear();
             pendingRewards.Clear();
+            lastTrick = null;
+            lastTrickAt = -999f;
             sabotaged.Clear();
             peakOutstanding.Clear();
             OvertimeArmed = false;
@@ -248,7 +262,7 @@ namespace Kehai.Karen
             else Belief.ResetToPrior();
 
             Sensorium.ForgetShift();
-            Goals.Reset();
+            Actions.Reset();
             AbortPlan();
             Body.Sight.ResetAwareness();
             Body.Warp(StartPosition());
@@ -266,7 +280,7 @@ namespace Kehai.Karen
         // stock pallet in a level with no floor there.
         Vector3 StartPosition()
         {
-            if (NavMesh.SamplePosition(config.start, out NavMeshHit hit, 5f, NavMesh.AllAreas)) return hit.position;
+            if (NavMesh.SamplePosition(config.start, out NavMeshHit hit, 5f, KarenArea.AgentMask)) return hit.position;
             Landmark? home = Map.FindLandmark(LandmarkKind.StockCrateHome);
             return home.HasValue ? home.Value.Position : transform.position;
         }
@@ -320,6 +334,7 @@ namespace Kehai.Karen
             if (appraiseTimer >= 1f / config.appraiseHz) { Appraise(); appraiseTimer = 0f; }
 
             TickDirector(dt);
+            UpdatePredictor(dt);
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -417,7 +432,7 @@ namespace Kehai.Karen
             if (desireTimer > 2f) { desireTimer = 0f; RefreshDesire(); }
 
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
-            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Goal != GoalId.Pursue) decideNow = true;
+            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt) decideNow = true;
         }
 
         float lastSenseNote;
@@ -481,6 +496,12 @@ namespace Kehai.Karen
         {
             get
             {
+                // With the lights out, the job is the lights (0.2.0): Ambush waits on that way.
+                if (!PowerSystem.PowerOn)
+                {
+                    Landmark? box = Map.FindLandmark(LandmarkKind.BreakerBox);
+                    if (box.HasValue && box.Value.Region >= 0) return box.Value.Region;
+                }
                 float[] fromBelief = TacticHelpers.DistanceFromBelief(Ctx);
                 int best = -1;
                 float bestDistance = float.MaxValue;
@@ -580,21 +601,22 @@ namespace Kehai.Karen
         void Decide(bool forced)
         {
             Ctx.A = Appraised();
-            GoalId goal = Goals.Choose(Ctx, forced, out string because);
+            Ctx.Last = LastTrickNow();
+            ActionId goal = Actions.Choose(Ctx, forced, out string because);
 
-            bool keep = CurrentPlan != null && CurrentPlan.Goal == goal && !forced;
+            bool keep = CurrentPlan != null && CurrentPlan.Action == goal && !forced;
             if (keep) return;
 
             WriteBelief();
-            Log.Write(Record("GOAL", $"GOAL     {HtnPlanner.Describe(Goals.LastOptions)}", Goals.LastOptions, goal.ToString(), because));
+            Log.Write(Record("GOAL", $"GOAL     {HtnPlanner.Describe(Actions.LastOptions)}", Actions.LastOptions, goal.ToString(), because));
             Note("", $"  why    {because}");
 
             AbortPlan();
             PlanTree plan = HtnPlanner.Plan(goal, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why);
             if (plan == null)
             {
-                Note("PLAN", $"PLAN     {goal}: nothing workable ({why}) → patrol");
-                plan = HtnPlanner.Plan(GoalId.Patrol, Ctx, Interrupt, out tactic, out options, out why);
+                Note("PLAN", $"PLAN     {goal.Name()}: nothing workable ({why}) → roam");
+                plan = HtnPlanner.Plan(ActionId.Roam, Ctx, Interrupt, out tactic, out options, out why);
                 if (plan == null) return;
             }
 
@@ -612,11 +634,22 @@ namespace Kehai.Karen
             tactic.LastUsed = Time.time;
             tactic.UsesThisShift++;
             Ledger.MarkUsed(tactic, Time.time);
-            if (tactic.Learnable) pendingRewards.Add((tactic, Time.time, Director.Panic));
+            if (tactic.Learnable)
+            {
+                // A trick that starts while her last one is in play is a chain's second part.
+                pendingRewards.Add((tactic, Time.time, Director.Panic, Ledger.ChainedOn(tactic, Ctx)));
+                lastTrick = tactic.Id;
+                lastTrickAt = Time.time;
+            }
             Stats.Used(tactic);
 
             CurrentPlan = plan;
             planStartedAt = Time.time;
+
+            // A hunt is the Hunt action, whichever of its moves or tricks runs (0.2.0): the chase
+            // state, its cost and the recovery after follow the action, not one step of it.
+            if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
+            else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
             NarratePlan(plan);
         }
@@ -632,14 +665,17 @@ namespace Kehai.Karen
         bool Interrupt(KarenContext c)
         {
             if (CurrentPlan == null) return false;
-            GoalId g = CurrentPlan.Goal;
-            bool exempt = g == GoalId.Pursue || g == GoalId.Stalk || g == GoalId.Ambush || g == GoalId.Assist || g == GoalId.Withdraw;
-            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.GoalPermission(GoalId.Pursue, c) > 0f)
+            ActionId g = CurrentPlan.Action;
+            bool exempt = g == ActionId.Hunt || g == ActionId.Loom || g == ActionId.LieInWait || g == ActionId.Lure || g == ActionId.BackOff;
+            // Only when a hunt could actually start: with Hunt cooling down (0.2.0), a sighting
+            // would otherwise cut the plan that's already hurrying to you, every tick.
+            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f
+                && HtnPlanner.Candidates(ActionId.Hunt, c, null).Count > 0)
             {
                 Note("", "  interrupt: SeeingPlayerAtRange");
                 return true;
             }
-            if (g != GoalId.Pursue && Sensorium.LoudNoiseNearby)
+            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby)
             {
                 Note("", "  interrupt: LoudNoiseAdjacent");
                 return true;
@@ -686,14 +722,15 @@ namespace Kehai.Karen
         {
             for (int i = pendingRewards.Count - 1; i >= 0; i--)
             {
-                var (tactic, t0, p0) = pendingRewards[i];
+                var (tactic, t0, p0, after) = pendingRewards[i];
                 if (Time.time - t0 < config.rewardWindow) continue;
                 pendingRewards.RemoveAt(i);
                 float delta = Director.MeanPanic(t0, t0 + config.rewardWindow) - p0;
                 if (config.Features.Bandit)
                 {
-                    Ledger.Reward(tactic.Id, delta);
-                    Note("LEARN", $"LEARN    {tactic.Id} Δpanic {delta:+0.00;-0.00} → Q̂ {Ledger.ExpectedPanicDelta(tactic, Ctx):+0.00;-0.00}");
+                    ChainStat found = Ledger.Settle(tactic.Id, after, delta);
+                    if (after != null) NoteChain(after, tactic, delta, found);
+                    else Note("LEARN", $"LEARN    {tactic.Id} Δpanic {delta:+0.00;-0.00} → Q̂ {Ledger.Alone(tactic.Id):+0.00;-0.00}");
                     if (Mathf.Abs(delta) >= 0.08f)
                         KarenNarrator.Say(StoryKind.Learned, delta > 0f
                             ? $"{GameNames.Antagonist} noticed that {KarenNarrator.Tactic(tactic.Id).TrimEnd('!')} rattled you. She'll remember."
@@ -703,43 +740,49 @@ namespace Kehai.Karen
             }
         }
 
-        // ---- tells and effects (fairness rule 3) --------------------------------------------
+        // ---- the combo room (0.2.0) ---------------------------------------------------------
 
-        float planTellAt = -999f;
+        LastTrick LastTrickNow()
+        {
+            if (!config.comboContext || lastTrick == null) return default;
+            Tactic t = TacticLibrary.Get(lastTrick);
+            return new LastTrick { Id = lastTrick, Ago = Time.time - lastTrickAt, Running = t != null && t.EffectRunning(Ctx) };
+        }
 
-        // A PA line is its own tell (the chime); what the plan does after it has been told.
-        public void NotePlanTell() => planTellAt = Time.time;
+        void NoteChain(string first, Tactic then, float delta, ChainStat found)
+        {
+            ChainStat chain = found ?? Ledger.Room.Find(first, then.Id);
+            Note("LEARN", $"LEARN    chain {chain.Name} Δpanic {delta:+0.00;-0.00} → {chain.q:+0.00;-0.00} over {chain.n:0.#} uses (alone {Ledger.Alone(then.Id):+0.00;-0.00})");
+            if (found == null) return;
 
-        // `ofPlan`: a Tell primitive in the running plan, as opposed to a PA chime or the
-        // time clock's buzz, which carry their own effects.
-        // Told each time she gives a warning: what, where, and how long before the trick.
+            Note("COMBO", $"COMBO    found {found.Name} on shift {found.found}: {found.n:0.#} uses, paid {found.q:+0.00;-0.00} against {found.alone:+0.00;-0.00} alone");
+            Stats.ChainFound(found);
+            if (ShiftActive)
+                KarenNarrator.Say(StoryKind.Learned,
+                    $"{GameNames.Antagonist} found a combo: {KarenNarrator.Tactic(first).TrimEnd('!')}, then {KarenNarrator.Tactic(then.Id).TrimEnd('!')}.");
+        }
+
+        // ---- tells and effects -------------------------------------------------------------
+
+        // A trick's sound, logged where it played. Until 0.2.0 each had to come 0.8 s before its
+        // effect (fairness rule 3) and the audit timed the gap; the rule is gone, the log stays.
+        // Told each time a trick sounds: what, where, and how long the sound runs.
         public event System.Action<TellKind, Vector3, float> Told;
 
-        public void RecordTell(TellKind kind, Vector3 at, float lead, bool ofPlan = false)
+        public void RecordTell(TellKind kind, Vector3 at, float lead)
         {
             FairnessGuard.NoteTell(kind, lead);
             Told?.Invoke(kind, at, lead);
-            if (ofPlan) planTellAt = Time.time;
             if (ShiftActive && kind != TellKind.PaChime && kind != TellKind.Footsteps)
                 KarenNarrator.Say(StoryKind.Warning, $"Warning: {KarenNarrator.Tell(kind)} near {KarenNarrator.Place(at)} — something's about to happen.", at);
             Note("TELL", $"TELL     {kind} at {Map.Describe(at)} ({lead:0.0}s lead)");
         }
 
-        public void RecordEffect(string label)
-        {
-            if (CurrentPlan?.Tactic != null && CurrentPlan.Tactic.Tier > 0)
-                FairnessGuard.CheckEffect(CurrentPlan.Tactic.Id, planStartedAt, planTellAt, config.minTellLead);
-            Note("EFFECT", "EFFECT   " + label);
-        }
+        public void RecordEffect(string label) => Note("EFFECT", "EFFECT   " + label);
 
-        // An effect that carries its own tell — PA speech, which always follows its chime.
-        // Checked against that tell rather than against the plan that queued it, which may
-        // have finished by the time the words play.
-        void RecordToldEffect(string label, string by, float toldAt)
-        {
-            FairnessGuard.CheckToldEffect(label, Time.time - toldAt, config.minTellLead);
+        // An effect that carries its own sound before it — PA speech, after its chime.
+        void RecordToldEffect(string label, string by, float toldAt) =>
             Note("EFFECT", $"EFFECT   {label} ({by} {Time.time - toldAt:0.0}s before)");
-        }
 
         void OnPaChime(PaAnnouncement a) => RecordTell(TellKind.PaChime, Body.Position, PaSystem.ChimeSeconds);   // storewide; logged where she is
         void OnPaSpeech(PaAnnouncement a)
@@ -831,7 +874,7 @@ namespace Kehai.Karen
             // Contact is the one certain observation she ever gets.
             if (Belief != null) Belief.Apply(new Observation(SenseChannel.Touch, Body.Position, 1f, 1f, "touch"));
 
-            if (CurrentPlan != null && CurrentPlan.Goal == GoalId.Assist) { decideNow = true; return; }
+            if (CurrentPlan != null && CurrentPlan.Action == ActionId.Lure) { decideNow = true; return; }
             Kill();
         }
 
@@ -863,6 +906,13 @@ namespace Kehai.Karen
         {
             if (chasing == on) return;
             chasing = on;
+            if (on && config.Features.Goals) Director.TrySpend(config.huntTensionCost);
+            if (!on)
+            {
+                Director.NoteHuntEnded();
+                ThrewThisHunt = false;
+                replannedForSighting = -999f;
+            }
             Burnout?.SetChaseState(on);
             if (ShiftActive) KarenNarrator.Say(StoryKind.Chase, on ? GameNames.Antagonist + " is chasing you — run!" : GameNames.Antagonist + " gave up the chase.", Body.Position);
             Body.SetMood(on ? KarenBody.Mood.Hunt : KarenBody.Mood.Calm);
@@ -871,6 +921,59 @@ namespace Kehai.Karen
         }
 
         public void SuppressPursuit(float seconds) => Director.SuppressPursuit(seconds);
+
+        // ---- where you're going, once a hunt has lost you (0.2.0) ------------------------------
+
+        public RoutePredictor Predictor { get; private set; }
+        public bool ThrewThisHunt { get; set; }      // Throw: once a hunt
+        float predictorTimer, replannedForSighting = -999f;
+
+        // Four times a second: guesses built when a hunt loses you, reweighed against her belief
+        // after, and kept for half a minute so Ambush can still wait where they go once the hunt
+        // has handed over. Seeing you again drops them.
+        void UpdatePredictor(float dt)
+        {
+            if (!chasing && !(Predictor.Active && Time.time - Predictor.SeenAt < 30f))
+            {
+                if (Predictor.Active) Predictor.Clear();
+                return;
+            }
+            predictorTimer -= dt;
+            if (predictorTimer > 0f) return;
+            predictorTimer = 0.25f;
+
+            SightSensor s = Body.Sight;
+            if (s.SeesNow)
+            {
+                if (Predictor.Active) Predictor.Clear();
+                return;
+            }
+            if (chasing && (!Predictor.Active || Predictor.SeenAt != s.LastSeenTime))
+                Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals());
+            Predictor.Reweigh(Belief, Time.time);
+        }
+
+        // Where you might be going: your jobs and the time clock, the breaker box with the
+        // lights out, and her ways out of the building.
+        IEnumerable<(string name, Vector3 at)> PredictorGoals()
+        {
+            foreach (KeyValuePair<string, Vector3> t in FairnessGuardTargets()) yield return ("to " + t.Key, t.Value);
+            if (!PowerSystem.PowerOn)
+            {
+                Landmark? box = Map.FindLandmark(LandmarkKind.BreakerBox);
+                if (box.HasValue) yield return ("to the breaker box", box.Value.Position);
+            }
+            for (int k = 0; k < Belief.ExitCount; k++) yield return ("out by " + Map.NameAt(Belief.ExitPosition(k)), Belief.ExitPosition(k));
+        }
+
+        // Once per time she loses you, a hunt may stop its run to choose again with the guesses
+        // in hand (Cut, or the run). True the first time it's asked for this loss.
+        public bool MayReplanHunt(float lastSeen)
+        {
+            if (replannedForSighting == lastSeen) return false;
+            replannedForSighting = lastSeen;
+            return true;
+        }
 
         // ---- the overtime (§8.2) -------------------------------------------------------------
 
@@ -913,7 +1016,17 @@ namespace Kehai.Karen
 
         // ---- closures, visits, sabotage -------------------------------------------------------
 
-        public ICollection<int> ClosedRegions => closedNow;
+        // Timed closures, plus every door a box still blocks: those last until someone moves the box.
+        public ICollection<int> ClosedRegions
+        {
+            get
+            {
+                closedAll.Clear();
+                closedAll.UnionWith(closedNow);
+                DoorBlock.AddClosedRegions(closedAll);
+                return closedAll;
+            }
+        }
 
         public void Close(int region, float seconds)
         {
@@ -1015,7 +1128,7 @@ namespace Kehai.Karen
                 if (Dash.Lurking) return GameNames.Antagonist + " is nowhere to be seen.";
                 if (chasing) return GameNames.Antagonist + " is chasing you!";
                 if (CurrentPlan == null) return GameNames.Antagonist + " is thinking.";
-                string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.Goal(CurrentPlan.Goal);
+                string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.ActionName(CurrentPlan.Action);
                 return GameNames.Antagonist + " is " + doing.TrimEnd('!') + ".";
             }
         }
@@ -1124,6 +1237,7 @@ namespace Kehai.Karen
         public float ShiftSeconds { get; private set; }
         public readonly Dictionary<string, int> TacticCounts = new Dictionary<string, int>();
         public readonly Dictionary<string, List<float>> TacticRewards = new Dictionary<string, List<float>>();
+        public readonly List<ChainStat> ChainsFound = new List<ChainStat>();      // the combo room, this shift
         public readonly List<float> PanicTrace = new List<float>();
         public readonly List<float> SetpointTrace = new List<float>();
 
@@ -1148,6 +1262,7 @@ namespace Kehai.Karen
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
             TacticCounts.Clear();
             TacticRewards.Clear();
+            ChainsFound.Clear();
             PanicTrace.Clear();
             SetpointTrace.Clear();
         }
@@ -1168,6 +1283,9 @@ namespace Kehai.Karen
             TacticCounts.TryGetValue(t.Id, out int n);
             TacticCounts[t.Id] = n + 1;
         }
+
+        public void ChainFound(ChainStat chain) =>
+            ChainsFound.Add(new ChainStat { first = chain.first, then = chain.then, q = chain.q, n = chain.n, found = chain.found, alone = chain.alone });
 
         public void Rewarded(Tactic t, float delta)
         {

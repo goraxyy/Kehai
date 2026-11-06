@@ -34,14 +34,21 @@ public class HingeDoor : MonoBehaviour
 
     public bool IsOpen => isOpen;
     public bool IsMoving => isMoving;
-    public bool Locked { get; private set; }
+    bool locked;
+    public DoorBlock Blocker { get; private set; }
+    public bool Locked => locked || (Blocker != null && Blocker.IsBlocking);
+    public BoxCollider Panel => panel;
     public bool Propped => isOpen && Time.time - openedAt > proppedAfter;
 
     // Every door in the loaded scene, for anything that has to open one on its way through.
     static readonly System.Collections.Generic.List<HingeDoor> all = new System.Collections.Generic.List<HingeDoor>();
     public static System.Collections.Generic.IReadOnlyList<HingeDoor> All => all;
     void OnEnable() => all.Add(this);
-    void OnDisable() => all.Remove(this);
+    void OnDisable()
+    {
+        all.Remove(this);
+        if (Blocker != null) Blocker.Clear();
+    }
 
     void Start()
     {
@@ -89,10 +96,11 @@ public class HingeDoor : MonoBehaviour
     // and Karen all come through here. Returns false if it's locked or already swinging.
     public bool Use(Vector3 from, NoiseAuthor author)
     {
+        if (Blocker != null) Blocker.Refresh();
         if (isMoving) return false;
         if (Locked)
         {
-            // Rattles, and doesn't move. Somebody locked it.
+            // Rattles against the lock or the box behind it.
             OneShotAudio.PlayAt(ProceduralAudio.Tell(TellKind.Clunk), transform.position, 0.6f);
             NoiseBus.Emit(transform.position, 0.45f, NoiseKind.Door, author);
             return false;
@@ -159,12 +167,27 @@ public class HingeDoor : MonoBehaviour
         OneShotAudio.PlayAt(isOpen ? openCreak : closeCreak, transform.position, creakVolume);
     }
 
-    // Karen's door lock (Karen.md §8.4): the door swings shut and stops opening, and the
-    // NavMesh is carved so shoppers route round it too.
+    // A physical block has its own lifetime. Removing it must not cancel a separate lock.
+    public bool AttachBlock(DoorBlock block)
+    {
+        if (block == null || Locked || isOpen || isMoving || panel == null) return false;
+        Blocker = block;
+        if (openCarve != null) openCarve.enabled = true;
+        return true;
+    }
+
+    public void DetachBlock(DoorBlock block)
+    {
+        if (Blocker != block) return;
+        Blocker = null;
+        if (openCarve != null) openCarve.enabled = isOpen && !isMoving;
+    }
+
+    // Kept for legacy timed effects. Block door uses AttachBlock instead.
     public void SetLocked(bool locked)
     {
-        if (Locked == locked) return;
-        Locked = locked;
+        if (this.locked == locked) return;
+        this.locked = locked;
 
         if (locked && isOpen && !isMoving) Toggle(transform.position + transform.forward);
 

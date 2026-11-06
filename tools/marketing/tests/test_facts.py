@@ -22,7 +22,7 @@ def test_a_change_in_the_game_shows_up_as_a_stale_fact(tmp_path):
     assert any("no longer says" in p for p in facts.stale(tmp_path))
 
 
-@pytest.mark.parametrize("path", sorted(paths.HERE.glob("prompts/*.md")) + [facts.REPO / "docs/MARKETING.md"],
+@pytest.mark.parametrize("path", sorted(paths.HERE.glob("prompts/*.md")) + [facts.REPO / "docs/marketing/MARKETING.md"],
                          ids=lambda p: p.name)
 def test_no_prompt_or_marketing_doc_uses_a_banned_phrase(path):
     assert facts.banned_in(path.read_text(encoding="utf-8")) == []
