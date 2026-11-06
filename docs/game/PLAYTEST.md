@@ -5,8 +5,13 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 
 > **Status:** all four steps are built, and tested on this Mac with stand-ins (a local upload
 > server, Telegram's outbox, Claude's replayed answers, a stand-in `gh`). What's left needs you:
-> a Cloudflare account to deploy the upload service, the two keys for Telegram and Claude, the
-> itch.io page and the Google Form. See [What you set up](#what-you-set-up).
+> a Cloudflare account to deploy the upload service, the Telegram key, the itch.io page and the
+> Google Form. See [What you set up](#what-you-set-up). Claude needs no key: it runs on your
+> Claude plan.
+>
+> **Changing:** [playtest v2](../plans/playtest-v2.md), a draft from 6 November, drops the tester
+> code, the Google Form and itch.io, and keeps everything in the cloud. Until it's built, this
+> page describes what's in the code.
 
 ---
 

@@ -125,13 +125,15 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 
 ## 5. What's next, in order
 
-1. **Finish Karen 0.2.0 (PR #74):** decide how far to turn her down (the ablation found her far too deadly against the bots), the owner's playtest, then the owner's merge.
-2. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
-3. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
-4. **The capture plan,** re-read against 0.2.0 first, as one PR.
-5. **Real players.** The playtest pipeline is built and waits on:
-   - a Cloudflare account (then the `wrangler` deploy in `tools/playtest/README.md`);
-   - a Google Form, a password-protected itch.io page, and the Telegram and Claude keys.
+1. **Karen 0.2.0 is merged** (PR #74, 6 November). The ablation found her far too deadly against
+   the bots; the owner has set turning her down aside.
+2. **Real players: playtest v2** ([`plans/playtest-v2.md`](../plans/playtest-v2.md), a draft
+   from 6 November): one link, no codes, everything kept in Cloudflare. It waits on the owner's
+   approval, a Cloudflare account and a Telegram bot.
+3. **Karen learns from everyone, and adapts to you** ([`plans/karen-learning.md`](../plans/karen-learning.md),
+   a draft from 6 November, one PR). It would replace the capture plan, and needs playtest v2's data.
+4. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
+5. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
 6. **The release plan:** setup accounts, the vertical slice, the Steam page, playtests, demo and Next Fest, marketing, beta, the redesign ([`RELEASE_PLAN.md`](RELEASE_PLAN.md)).
 
 **Known gaps:**
