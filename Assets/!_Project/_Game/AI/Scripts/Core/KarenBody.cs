@@ -43,6 +43,19 @@ namespace Kehai.Karen
         Vector3 burstFrom;
         float burstMax;
 
+        // Her eye's numbers (0.2.0, phase 4). The walk-by set (AwarenessTests) builds its eye
+        // with this too, so it times exactly hers.
+        public static void ConfigureEye(SightSensor eye, KarenConfig config)
+        {
+            eye.range = config.sightRange;
+            eye.fieldOfView = config.sightFov;
+            eye.halfStrengthAt = config.sightHalfStrength;
+            eye.gain = config.sightGain;
+            eye.scoreFloor = config.sightFloor;
+            eye.grace = config.sightGrace;
+            eye.expectedBoost = config.sightExpectedBoost;
+        }
+
         public static KarenBody Build(Transform parent, KarenConfig config, Vector3 at)
         {
             var root = new GameObject("KAREN_Body");
@@ -66,8 +79,7 @@ namespace Kehai.Karen
             body.eyeRenderer = eyeRenderer;
             body.eyeLight = gaze;
             body.Sight = gaze.gameObject.AddComponent<SightSensor>();
-            body.Sight.range = config.sightRange;
-            body.Sight.fieldOfView = config.sightFov;
+            ConfigureEye(body.Sight, config);
             body.Sight.ignoreRoot = root.transform;
 
             // Touch: a trigger around her. The only way she ever "knows" where you are for

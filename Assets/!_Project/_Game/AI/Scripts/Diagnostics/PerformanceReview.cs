@@ -86,7 +86,7 @@ namespace Kehai.Karen
         IEnumerable<string> Excerpts(int n)
         {
             var picks = brain.Log.Records
-                .Where(r => r.Kind == "GOAL" || r.Kind == "PLAN" || r.Kind == "CHECK" || r.Kind == "LEARN")
+                .Where(r => r.Kind == "GOAL" || r.Kind == "PLAN" || r.Kind == "CHECK" || r.Kind == "LEARN" || r.Kind == "COMBO")
                 .ToList();
             if (picks.Count == 0) yield break;
 

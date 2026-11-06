@@ -81,7 +81,7 @@ namespace Kehai.Karen
             root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
-        static string rungArg, seedArg, shieldArg, policyArg;
+        static string rungArg, seedArg, shieldArg, policyArg, comboArg;
 
         static void ReadCommandLine()
         {
@@ -93,6 +93,7 @@ namespace Kehai.Karen
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
                 if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
                 if (args[i] == "-karen-policy" && i + 1 < args.Length) policyArg = args[i + 1];
+                if (args[i] == "-karen-combo" && i + 1 < args.Length) comboArg = args[i + 1];   // the combo learner, on or off (0.2.0)
                 if (args[i] == "-kehai-no-records") NoRecords = true;
             }
         }
@@ -127,6 +128,7 @@ namespace Kehai.Karen
             if (!string.IsNullOrEmpty(seedArg) && int.TryParse(seedArg, out int seed)) config.seed = seed;
             if (!string.IsNullOrEmpty(shieldArg)) config.shield = ParseSwitch(shieldArg, config.shield);
             if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
+            if (!string.IsNullOrEmpty(comboArg)) config.comboContext = ParseSwitch(comboArg, config.comboContext);
         }
 
         // "on", "off", "true", "false", "1", "0".

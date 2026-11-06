@@ -64,7 +64,9 @@ namespace Kehai.Karen
         public ITacticPolicy Policy;   // rung G only (Policy/TacticPolicy.cs)
         public Appraisal A;
 
-        public float Now => Time.time;
+        public float Now => NowOverride ?? Time.time;
+        public float? NowOverride;     // a simulation's clock (ComboTests), instead of the game's
+        public LastTrick Last;         // her last trick, for the combo learner (KarenBrain.Decide sets it)
         public float ShiftTime => Brain != null ? Brain.ShiftTime : 0f;
         public int ShiftNumber => Shift != null ? Mathf.Max(1, Shift.ShiftNumber) : 1;
         public RungFeatures Features => Config.Features;

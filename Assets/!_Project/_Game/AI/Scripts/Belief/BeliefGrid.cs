@@ -425,6 +425,26 @@ namespace Kehai.Karen
             return Normalise();
         }
 
+        // How much she expects you at a spot (0.2.0, awareness D): her belief on its cell and the
+        // cells next to it, against an even spread over her cells. 0 where it's no more than
+        // even, 1 at four times that or more. Outside, 0: she never hunts you there.
+        public float Expectation(Vector3 position)
+        {
+            int cell = map.CellAt(position);
+            if (cell < 0 || !hers[cell]) return 0f;
+            float mass = b[cell];
+            int n = 1;
+            for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
+            {
+                int next = map.EdgeTo[e];
+                if (!hers[next]) continue;
+                mass += b[next];
+                n++;
+            }
+            float even = n / (float)Mathf.Max(1, hers.Length - outsideCells);
+            return Mathf.Clamp01((mass / even - 1f) / 3f);
+        }
+
         // Whether a point is outside her part of the building.
         public bool IsOutside(Vector3 position)
         {

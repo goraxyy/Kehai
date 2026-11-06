@@ -275,25 +275,7 @@ namespace Kehai.Karen
                 return null;
             }
 
-            // Score every candidate. The bandit (rungs D+) learns per player; below that the
-            // authored prior alone decides, with a seeded jitter to break ties.
-            var scored = new List<(Tactic t, float s, string why)>();
-            foreach (Tactic t in candidates)
-            {
-                float s;
-                string why;
-                if (c.Features.Bandit && t.Learnable)
-                {
-                    s = c.Ledger.BanditScore(t, c, out why);
-                }
-                else
-                {
-                    s = c.Ledger.PriorScore(t, c) + c.Rng.Range(0f, 0.05f);
-                    why = $"prior {t.PanicPrior:+0.00;-0.00}";
-                }
-                scored.Add((t, s, why));
-            }
-            scored.Sort((x, y) => y.s.CompareTo(x.s));
+            List<(Tactic t, float s, string why)> scored = Rank(candidates, c);
 
             // On rung F the policy picks (Policy/TacticPolicy.cs), told what the bandit would
             // have: rung E's choice, exactly. Movement-only goals aren't its business, as they
@@ -320,6 +302,31 @@ namespace Kehai.Karen
 
             because = "every candidate decomposed to nothing";
             return null;
+        }
+
+        // Every candidate scored, best first. The bandit (rungs D+) learns per player; below that
+        // the authored prior alone decides, with a seeded jitter to break ties. Only the
+        // candidates it's given: the gate has already had its say.
+        public static List<(Tactic t, float s, string why)> Rank(IEnumerable<Tactic> candidates, KarenContext c)
+        {
+            var scored = new List<(Tactic t, float s, string why)>();
+            foreach (Tactic t in candidates)
+            {
+                float s;
+                string why;
+                if (c.Features.Bandit && t.Learnable)
+                {
+                    s = c.Ledger.BanditScore(t, c, out why);
+                }
+                else
+                {
+                    s = c.Ledger.PriorScore(t, c) + c.Rng.Range(0f, 0.05f);
+                    why = $"prior {t.PanicPrior:+0.00;-0.00}";
+                }
+                scored.Add((t, s, why));
+            }
+            scored.Sort((x, y) => y.s.CompareTo(x.s));
+            return scored;
         }
 
         // The policy's pick goes first; the rest keep the bandit's order, as the fallback if the

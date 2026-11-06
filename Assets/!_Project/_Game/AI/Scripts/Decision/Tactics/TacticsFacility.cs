@@ -31,6 +31,10 @@ namespace Kehai.Karen
             return PowerSystem.PowerOn;
         }
 
+        // The lights she put out are still out: the whole store, or a wing's circuit.
+        public override bool EffectRunning(KarenContext c) =>
+            !PowerSystem.PowerOn || BreakerPanel.Instance != null && !BreakerPanel.Instance.AllOn;
+
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Escalation by career: one wing first, the whole store later.

@@ -67,7 +67,11 @@ namespace Kehai.Karen
         readonly Dictionary<int, float> closedUntil = new Dictionary<int, float>();
         readonly HashSet<int> closedNow = new HashSet<int>();
         readonly List<(float t, Vector3 p)> heard = new List<(float, Vector3)>();
-        readonly List<(Tactic tactic, float t0, float p0)> pendingRewards = new List<(Tactic, float, float)>();
+        readonly List<(Tactic tactic, float t0, float p0, string after)> pendingRewards = new List<(Tactic, float, float, string)>();
+
+        // Her last trick, for the combo learner (0.2.0).
+        string lastTrick;
+        float lastTrickAt = -999f;
         readonly HashSet<ShelfUnit> sabotaged = new HashSet<ShelfUnit>();
         readonly Dictionary<TaskManager.TaskKind, float> peakOutstanding = new Dictionary<TaskManager.TaskKind, float>();
 
@@ -178,6 +182,9 @@ namespace Kehai.Karen
             Sensorium.UseTestimony = full;
             Sensorium.UseInfrastructure = full;
             Sensorium.UseNegative = full;
+            Sensorium.SweepCellsPerTick = config.sweepCellsPerTick;
+            // Awareness D (0.2.0): her eyes are quicker where her belief already puts you.
+            if (Body != null) Body.Sight.Expectation = full ? Belief.Expectation : (System.Func<Vector3, float>)null;
         }
 
         // Swap rung mid-session (the ablation runner does this between episodes).
@@ -225,6 +232,8 @@ namespace Kehai.Karen
             closedUntil.Clear();
             closedNow.Clear();
             pendingRewards.Clear();
+            lastTrick = null;
+            lastTrickAt = -999f;
             sabotaged.Clear();
             peakOutstanding.Clear();
             OvertimeArmed = false;
@@ -591,6 +600,7 @@ namespace Kehai.Karen
         void Decide(bool forced)
         {
             Ctx.A = Appraised();
+            Ctx.Last = LastTrickNow();
             ActionId goal = Actions.Choose(Ctx, forced, out string because);
 
             bool keep = CurrentPlan != null && CurrentPlan.Action == goal && !forced;
@@ -623,7 +633,13 @@ namespace Kehai.Karen
             tactic.LastUsed = Time.time;
             tactic.UsesThisShift++;
             Ledger.MarkUsed(tactic, Time.time);
-            if (tactic.Learnable) pendingRewards.Add((tactic, Time.time, Director.Panic));
+            if (tactic.Learnable)
+            {
+                // A trick that starts while her last one is in play is a chain's second part.
+                pendingRewards.Add((tactic, Time.time, Director.Panic, Ledger.ChainedOn(tactic, Ctx)));
+                lastTrick = tactic.Id;
+                lastTrickAt = Time.time;
+            }
             Stats.Used(tactic);
 
             CurrentPlan = plan;
@@ -705,14 +721,15 @@ namespace Kehai.Karen
         {
             for (int i = pendingRewards.Count - 1; i >= 0; i--)
             {
-                var (tactic, t0, p0) = pendingRewards[i];
+                var (tactic, t0, p0, after) = pendingRewards[i];
                 if (Time.time - t0 < config.rewardWindow) continue;
                 pendingRewards.RemoveAt(i);
                 float delta = Director.MeanPanic(t0, t0 + config.rewardWindow) - p0;
                 if (config.Features.Bandit)
                 {
-                    Ledger.Reward(tactic.Id, delta);
-                    Note("LEARN", $"LEARN    {tactic.Id} Δpanic {delta:+0.00;-0.00} → Q̂ {Ledger.ExpectedPanicDelta(tactic, Ctx):+0.00;-0.00}");
+                    ChainStat found = Ledger.Settle(tactic.Id, after, delta);
+                    if (after != null) NoteChain(after, tactic, delta, found);
+                    else Note("LEARN", $"LEARN    {tactic.Id} Δpanic {delta:+0.00;-0.00} → Q̂ {Ledger.Alone(tactic.Id):+0.00;-0.00}");
                     if (Mathf.Abs(delta) >= 0.08f)
                         KarenNarrator.Say(StoryKind.Learned, delta > 0f
                             ? $"{GameNames.Antagonist} noticed that {KarenNarrator.Tactic(tactic.Id).TrimEnd('!')} rattled you. She'll remember."
@@ -720,6 +737,28 @@ namespace Kehai.Karen
                 }
                 Stats.Rewarded(tactic, delta);
             }
+        }
+
+        // ---- the combo room (0.2.0) ---------------------------------------------------------
+
+        LastTrick LastTrickNow()
+        {
+            if (!config.comboContext || lastTrick == null) return default;
+            Tactic t = TacticLibrary.Get(lastTrick);
+            return new LastTrick { Id = lastTrick, Ago = Time.time - lastTrickAt, Running = t != null && t.EffectRunning(Ctx) };
+        }
+
+        void NoteChain(string first, Tactic then, float delta, ChainStat found)
+        {
+            ChainStat chain = found ?? Ledger.Room.Find(first, then.Id);
+            Note("LEARN", $"LEARN    chain {chain.Name} Δpanic {delta:+0.00;-0.00} → {chain.q:+0.00;-0.00} over {chain.n:0.#} uses (alone {Ledger.Alone(then.Id):+0.00;-0.00})");
+            if (found == null) return;
+
+            Note("COMBO", $"COMBO    found {found.Name} on shift {found.found}: {found.n:0.#} uses, paid {found.q:+0.00;-0.00} against {found.alone:+0.00;-0.00} alone");
+            Stats.ChainFound(found);
+            if (ShiftActive)
+                KarenNarrator.Say(StoryKind.Learned,
+                    $"{GameNames.Antagonist} found a combo: {KarenNarrator.Tactic(first).TrimEnd('!')}, then {KarenNarrator.Tactic(then.Id).TrimEnd('!')}.");
         }
 
         // ---- tells and effects -------------------------------------------------------------
@@ -1187,6 +1226,7 @@ namespace Kehai.Karen
         public float ShiftSeconds { get; private set; }
         public readonly Dictionary<string, int> TacticCounts = new Dictionary<string, int>();
         public readonly Dictionary<string, List<float>> TacticRewards = new Dictionary<string, List<float>>();
+        public readonly List<ChainStat> ChainsFound = new List<ChainStat>();      // the combo room, this shift
         public readonly List<float> PanicTrace = new List<float>();
         public readonly List<float> SetpointTrace = new List<float>();
 
@@ -1211,6 +1251,7 @@ namespace Kehai.Karen
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
             TacticCounts.Clear();
             TacticRewards.Clear();
+            ChainsFound.Clear();
             PanicTrace.Clear();
             SetpointTrace.Clear();
         }
@@ -1231,6 +1272,9 @@ namespace Kehai.Karen
             TacticCounts.TryGetValue(t.Id, out int n);
             TacticCounts[t.Id] = n + 1;
         }
+
+        public void ChainFound(ChainStat chain) =>
+            ChainsFound.Add(new ChainStat { first = chain.first, then = chain.then, q = chain.q, n = chain.n, found = chain.found, alone = chain.alone });
 
         public void Rewarded(Tactic t, float delta)
         {
