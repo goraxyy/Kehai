@@ -131,9 +131,8 @@ Sorted by topic under `docs/`. Start with the handover, then the 0.2.0 plan.
 | | [`DECISIONS.md`](docs/project/DECISIONS.md) | The big technical choices and why |
 | | [`IDEAS.md`](docs/project/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
 | | [`CHANGELOG.md`](docs/project/CHANGELOG.md) | Changes players will notice |
-| `plans/` | [`0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md) | Karen 0.2.0, task by task: who builds what, with boxes to tick (built; the ablation ran) |
+| `plans/` | [`0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md) | Karen 0.2.0, task by task: who builds what, with boxes to tick (approved, not built) |
 | | [`0.2.0-design-notes.md`](docs/plans/0.2.0-design-notes.md) | Why 0.2.0 is built that way: today's code, the options, the sources, your answers |
-| | [`0.2.0-tuning-plan.md`](docs/plans/0.2.0-tuning-plan.md) | Turning 0.2.0 down: why she catches you, the levers, and the test (a draft for approval) |
 | | [`learned-motion-model.md`](docs/plans/learned-motion-model.md) | The learned motion model, draft PR #68 |
 | | [`karen-capture.md`](docs/plans/karen-capture.md) | What catches you, and new fair ways to kill (approved, not started) |
 | | [`marketing-agents.md`](docs/plans/marketing-agents.md) | Hands-off video publishing |
