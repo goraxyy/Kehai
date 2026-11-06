@@ -175,8 +175,9 @@ public class KarenAreaTests
         var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
         var ledger = new KarenLedger(config);
         var c = new KarenContext { Config = config, Map = map, Belief = Grid(), Director = new KarenDirector(config, ledger) };
-        Assert.AreEqual(1f, c.Director.ActionPermission(ActionId.Hunt, c), "inside, the Director lets a hunt start");
+        Assert.Less(c.Belief.OutsideMass, 0.5f);
         c.Belief.Apply(new Observation(SenseChannel.Sight, ParkingLot, 0.95f, 1.5f, "seen in the parking lot"));
+        Assert.IsFalse(KarenDirector.HuntAllowed(true, false, false, 999f, 1f, c.Belief.OutsideMass, config, out string why), "she'd hunt you in the parking lot");
         Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "she'd hunt you in the parking lot");
     }
 
@@ -197,6 +198,194 @@ public class KarenAreaTests
         Assert.Greater(moved.magnitude, 3f, "she'd run to where she lost you, not on");
         Assert.LessOrEqual(moved.magnitude, 12.5f, "further than 3 s at 4 m/s");
         Assert.Greater(Vector3.Dot(moved.normalized, Vector3.right), 0.3f, "the forecast isn't the way you were going");
+    }
+
+    // ---- phase 3: guesses about your route, and cutting you off -----------------------------
+
+    (string, Vector3)[] Goals(BeliefGrid grid)
+    {
+        var goals = new List<(string, Vector3)>();
+        Landmark? clock = map.FindLandmark(LandmarkKind.TimeClock);
+        if (clock.HasValue) goals.Add(("to the time clock", clock.Value.Position));
+        Landmark? box = map.FindLandmark(LandmarkKind.BreakerBox);
+        if (box.HasValue) goals.Add(("to the breaker box", box.Value.Position));
+        goals.Add(("out the front", grid.ExitPosition(NearestExit(grid, Pavement))));
+        goals.Add(("out the back", grid.ExitPosition(NearestExit(grid, BackstreetMouth))));
+        return goals.ToArray();
+    }
+
+    // A runner on the sales floor, `near`–`far` metres' walk from `goal`, heading there at a
+    // sprint, and her guesses from the moment she lost them.
+    RouteGuess Runner(BeliefGrid grid, RoutePredictor p, out Vector3 start, string goal = "to the time clock", float near = 22f, float far = 28f)
+    {
+        var goals = Goals(grid);
+        Assume.That(goals.Any(g => g.Item1 == goal), $"no '{goal}' in this scene");
+        Vector3 at = goals.First(g => g.Item1 == goal).Item2;
+        float[] d = map.Distances(map.CellAt(at), float.MaxValue, null, TacticHelpers.NotHers(map));
+        int cell = Enumerable.Range(0, map.CellCount)
+            .First(c => StoreMap.AreaAt(map.CellPosition[c]) == "Sales floor" && d[c] > near && d[c] < far);
+        start = map.CellPosition[cell];
+
+        p.Build(start, Vector3.zero, 0f, goals);
+        RouteGuess route = p.Guesses.First(g => g.Name == goal);
+        int i = 1;
+        while (i < route.Path.Length - 1 && route.Along[i] < 6f) i++;
+        Vector3 heading = map.CellPosition[route.Path[i]] - start;
+        heading.y = 0f;
+        p.Build(start, heading.normalized * RoutePredictor.Sprint, 0f, goals);
+        grid.ResetTo(start, 2f);
+        return p.Guesses.First(g => g.Name == goal);
+    }
+
+    // She hears your steps along `route`, once a second, and reweighs her guesses.
+    static void Follow(BeliefGrid grid, RoutePredictor p, RouteGuess route, float speed, int seconds)
+    {
+        for (int t = 1; t <= seconds; t++)
+        {
+            for (int k = 0; k < 10; k++) grid.Predict(0.1f, 4f);
+            grid.Apply(new Observation(SenseChannel.Hearing, p.PositionOn(route, t, speed), 0.5f, 3f, "your steps"));
+            p.Reweigh(grid, t);
+        }
+    }
+
+    [Test]
+    public void Guesses_KeepGoing_AndTheRightOneComesOnTop()
+    {
+        BeliefGrid grid = Grid();
+        var p = new RoutePredictor(map);
+        RouteGuess right = Runner(grid, p, out _);
+        Assert.That(p.Guesses.Count, Is.InRange(3, 6), "3–6 guesses");
+        Follow(grid, p, right, RoutePredictor.Sprint, 3);
+        Assert.AreSame(right, p.Best, $"heard all the way to the clock, she guesses {p.Best.Name} ({p.Best.Weight:P0})");
+    }
+
+    [Test]
+    public void Guesses_TurnBack_AndTheTurnBackGuessRises()
+    {
+        BeliefGrid grid = Grid();
+        var p = new RoutePredictor(map);
+        Runner(grid, p, out _);
+        RouteGuess back = p.Guesses.FirstOrDefault(g => g.Kind == GuessKind.TurnedBack);
+        Assert.IsNotNull(back, "no turn-back guess");
+        float before = back.Weight;
+        Follow(grid, p, back, RoutePredictor.Walk, 3);
+        Assert.Greater(back.Weight, before, "heard going back the way you came, the turn-back guess didn't rise");
+        Assert.AreSame(back, p.Best, $"she guesses {p.Best.Name} ({p.Best.Weight:P0})");
+    }
+
+    [Test]
+    public void Guesses_SheLookedAndYouWerentThere_AndThatGuessFalls()
+    {
+        BeliefGrid grid = Grid();
+        var p = new RoutePredictor(map);
+        RouteGuess right = Runner(grid, p, out _);
+        for (int k = 0; k < 20; k++) grid.Predict(0.1f, 4f);
+        p.Reweigh(grid, 2f);
+        float before = right.Weight;
+        // She sees the stretch of that route where you'd be by now, and the floor either side of
+        // it, as her eyes would: nobody.
+        var seen = new HashSet<int>();
+        for (int i = 0; i < right.Path.Length; i++)
+        {
+            if (right.Along[i] < RoutePredictor.Crouch * 2f - 1.5f || right.Along[i] > RoutePredictor.Sprint * 2f + 1.5f) continue;
+            int c = right.Path[i];
+            seen.Add(c);
+            for (int e = map.EdgeStart[c]; e < map.EdgeStart[c + 1]; e++) seen.Add(map.EdgeTo[e]);
+        }
+        var cells = seen.ToList();
+        grid.ApplySweep(cells, cells.Select(_ => 0.95f).ToList());
+        p.Reweigh(grid, 2f);
+        Assert.Less(right.Weight, before * 0.5f, "she looked where that guess put you and found nobody, and still believes it");
+    }
+
+    // A scripted runner sprints 45–60 m across the store to the breaker box; she starts 12–25 m
+    // away, having lost them. Running at her best guess against cutting them off, over eight
+    // starts: Cut is never worse than the sprint by more than a cell, and gets clearly closer in
+    // some. (On a short dash — 25 m to the time clock from 10–18 m — there's nowhere she can be a
+    // second first, and Cut never fires: the first run of this test showed it.)
+    [Test]
+    public void Cut_GetsCloserThanTheSprint_AndKeepsToHerPart()
+    {
+        BeliefGrid probe = Grid();
+        var probeP = new RoutePredictor(map);
+        Runner(probe, probeP, out Vector3 start, LongGoal, LongNear, LongFar);
+        var rng = new System.Random(11);
+        var starts = Enumerable.Range(0, map.CellCount)
+            .Where(c => map.IsKarens(c) && StoreMap.AreaAt(map.CellPosition[c]) == "Sales floor")
+            .Where(c => { Vector3 d = map.CellPosition[c] - start; d.y = 0f; return d.magnitude > 12f && d.magnitude < 25f; })
+            .OrderBy(_ => rng.Next()).Take(8).ToList();
+        Assume.That(starts.Count, Is.EqualTo(8));
+
+        float cut = 0f, sprint = 0f;
+        int better = 0;
+        var lines = new List<string>();
+        foreach (int her in starts)
+        {
+            float c = Chase(her, useCut: true), r = Chase(her, useCut: false);
+            cut += c;
+            sprint += r;
+            if (c < r - 1.5f) better++;
+            lines.Add($"{c:0.0} vs {r:0.0}");
+            Assert.LessOrEqual(c, r + 1.5f, $"from {map.CellPosition[her]}, Cut ended {c:0.0} m off, the sprint {r:0.0} m");
+        }
+        string summary = $"closest approach, Cut vs sprint: {string.Join(", ", lines)}; means {cut / starts.Count:0.0} vs {sprint / starts.Count:0.0} m";
+        Debug.Log(summary);
+        Assert.Greater(better, 0, "Cut never got clearly closer: " + summary);
+        Assert.Less(cut, sprint, summary);
+    }
+
+    const string LongGoal = "to the breaker box";
+    const float LongNear = 45f, LongFar = 60f;
+
+    // The closest she comes to the runner, moving on her own cells at 7.5 m/s.
+    float Chase(int her, bool useCut)
+    {
+        BeliefGrid grid = Grid();
+        var p = new RoutePredictor(map);
+        RouteGuess route = Runner(grid, p, out _, LongGoal, LongNear, LongFar);
+        var fields = new Dictionary<int, float[]>();
+        float herCarry = 0f, runAt = 0f, closest = float.MaxValue;
+        for (int step = 0; step < 150; step++)
+        {
+            float now = (step + 1) * 0.1f;
+            runAt = Mathf.Min(route.Length, runAt + RoutePredictor.Sprint * 0.1f);
+            Vector3 you = p.PositionOn(route, runAt / RoutePredictor.Sprint, RoutePredictor.Sprint);
+            grid.Predict(0.1f, 4f);
+            if (step % 10 == 9) grid.Apply(new Observation(SenseChannel.Hearing, you, 0.4f, 3f, "your steps"));
+            if (step % 3 == 0) p.Reweigh(grid, now);
+
+            int target = useCut && CutTactic.ChooseSpot(map, p, map.CellPosition[her], 7.5f, now, out CutTactic.CutSpot spot)
+                ? spot.Cell
+                : map.CellAt(p.Expected(now, 2f, RoutePredictor.Sprint));
+            if (target >= 0) her = StepToward(her, target, ref herCarry, 7.5f * 0.1f, fields);
+            Assert.IsTrue(map.IsKarens(her), $"she left her part of the building, at {map.CellPosition[her]}");
+
+            Vector3 gap = map.CellPosition[her] - you;
+            gap.y = 0f;
+            closest = Mathf.Min(closest, gap.magnitude);
+            if (runAt >= route.Length) break;
+        }
+        return closest;
+    }
+
+    int StepToward(int from, int target, ref float carry, float metres, Dictionary<int, float[]> fields)
+    {
+        if (!fields.TryGetValue(target, out float[] d))
+            fields[target] = d = map.Distances(target, float.MaxValue, null, TacticHelpers.NotHers(map));
+        carry += metres;
+        int cell = from;
+        while (cell != target)
+        {
+            int next = -1;
+            float best = d[cell], length = 0f;
+            for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
+                if (d[map.EdgeTo[e]] < best) { best = d[map.EdgeTo[e]]; next = map.EdgeTo[e]; length = map.EdgeLength[e]; }
+            if (next < 0 || carry < length) break;
+            carry -= length;
+            cell = next;
+        }
+        if (cell == target) carry = 0f;
+        return cell;
     }
 
     // The NavMesh marks that keep her in, baked into the open scene, then the scene reloaded.

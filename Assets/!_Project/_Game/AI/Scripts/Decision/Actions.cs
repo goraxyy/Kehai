@@ -153,10 +153,13 @@ namespace Kehai.Karen
                     return 0.2f + 0.5f * a.Confidence;
 
                 case ActionId.LieInWait:
-                    float route = c.Ledger.BestRouteConfidence(c, out string routeWhy);
-                    if (route < 0.35f) { why = "no confident route prior"; return 0f; }
-                    why = routeWhy;
-                    return 0.15f + 0.65f * route;
+                    if (!AmbushTactic.Spot(c, out _, out float sure, out string spotWhy) || sure < 0.35f)
+                    {
+                        why = "nowhere she's sure you'll pass";
+                        return 0f;
+                    }
+                    why = spotWhy;
+                    return 0.15f + 0.65f * sure;
 
                 case ActionId.Loom:
                     if (a.Confidence < 0.12f) { why = "don't know where to be seen"; return 0f; }

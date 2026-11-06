@@ -26,17 +26,28 @@ namespace Kehai.Karen
         {
             velocity.y = 0f;
             float speed = Mathf.Min(velocity.magnitude, 7f);
-            int cell = map.CellAt(seen);
-            if (cell < 0 || speed < 0.3f) return seen;          // standing still: where she saw you
+            if (speed < 0.3f) return seen;                        // standing still: where she saw you
+            return WalkAlong(map, seen, velocity / velocity.magnitude, Mathf.Min(speed * seconds, 20f), belief);
+        }
 
-            Vector3 heading = velocity / velocity.magnitude;
-            float left = Mathf.Min(speed * seconds, 20f);
+        // From a point, `metres` along her part of the floor the way `heading` points, following
+        // it round bends; with a belief grid, taking at each fork the way with more of her belief.
+        public static Vector3 WalkAlong(StoreMap map, Vector3 from, Vector3 heading, float metres, BeliefGrid belief = null)
+        {
+            int cell = map.CellAt(from);
+            if (cell < 0) return from;
+            heading.y = 0f;
+            if (heading.sqrMagnitude < 1e-6f) return map.CellPosition[cell];
+            heading.Normalize();
+
+            float left = metres;
             var visited = new HashSet<int> { cell };
             while (left > 0f)
             {
                 float most = 0f;
-                for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
-                    most = Mathf.Max(most, Around(map, belief, map.EdgeTo[e]));
+                if (belief != null)
+                    for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++)
+                        most = Mathf.Max(most, Around(map, belief, map.EdgeTo[e]));
 
                 int next = -1;
                 float bestScore = float.MinValue, step = 0f;
@@ -55,7 +66,7 @@ namespace Kehai.Karen
                     float score = along + (most > 0f ? 0.5f * Around(map, belief, n) / most : 0f);
                     if (score > bestScore) { bestScore = score; next = n; step = map.EdgeLength[e]; dir = d; }
                 }
-                if (next < 0) break;                              // a dead end: you're here somewhere
+                if (next < 0) break;                              // a dead end
                 visited.Add(next);
                 left -= step;
                 heading = (heading + dir * 0.35f).normalized;     // follow the floor round a bend
@@ -70,6 +81,21 @@ namespace Kehai.Karen
             float sum = belief[cell];
             for (int e = map.EdgeStart[cell]; e < map.EdgeStart[cell + 1]; e++) sum += belief[map.EdgeTo[e]];
             return sum;
+        }
+
+        // The cells that aren't hers, for distance fields that keep to her part of the building.
+        static bool[] notHers;
+        static StoreMap notHersFor;
+
+        public static bool[] NotHers(StoreMap map)
+        {
+            if (notHersFor != map || notHers == null || notHers.Length != map.CellCount)
+            {
+                notHers = new bool[map.CellCount];
+                for (int c = 0; c < notHers.Length; c++) notHers[c] = !map.IsKarens(c);
+                notHersFor = map;
+            }
+            return notHers;
         }
 
         // Whether a region is in her part of the building (StoreMap.KarenWorksIn).

@@ -73,6 +73,9 @@ namespace Kehai.Karen
         public float sprintsFasterThanPlayer = 7.5f / 6.5f;
         [Tooltip("How long a hunt keeps running on her belief after she loses you, with nothing new.")]
         public float huntMemorySeconds = 6f;
+        [Tooltip("What a hunt costs from the Director's tension budget, and how long after one before the next: the Hunt action's pacing, whatever trick it runs.")]
+        public float huntTensionCost = 0.6f;
+        public float huntCooldownSeconds = 90f;
         [Tooltip("Unless she's running (a chase), she stops this far from you: her touch kills, and she doesn't walk into you by accident.")]
         public float personalSpace = 2.2f;
         [Tooltip("Her touch: contact within this of her centre (plus your own radius) gets you — her body's radius and a hand's breadth, so passing her in an aisle isn't contact.")]

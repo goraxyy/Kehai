@@ -53,6 +53,7 @@ namespace Kehai.Karen
 
         public void BeginShift(int shift, float length)
         {
+            huntEndedAt = -999f;
             shiftNumber = Mathf.Max(1, shift);
             shiftLength = Mathf.Max(60f, length);
             shiftStarted = Time.time;
@@ -193,10 +194,10 @@ namespace Kehai.Karen
             switch (goal)
             {
                 case ActionId.Hunt:
-                    // Paced (0.2.0): never while you're settling in or recovering. Never outside
-                    // either: her body can't follow you there.
-                    if (InRecovery || CurrentPhase == Phase.Settle || Time.time < suppressPursuitUntil) return 0f;
-                    return c != null && c.Belief != null && c.Belief.OutsideMass > 0.5f ? 0f : 1f;
+                    if (Time.time < suppressPursuitUntil) return 0f;
+                    bool hunting = c != null && c.Brain != null && c.Brain.IsChasing;
+                    float outside = c != null && c.Belief != null ? c.Belief.OutsideMass : 0f;
+                    return HuntAllowed(hunting, InRecovery, CurrentPhase == Phase.Settle, Time.time - huntEndedAt, Tension, outside, config, out _) ? 1f : 0f;
                 case ActionId.LieInWait:
                 case ActionId.Corner:
                     return InRecovery ? 0f : 1f;
@@ -209,6 +210,28 @@ namespace Kehai.Karen
                 default:
                     return CurrentPhase == Phase.OffShift ? 0f : 1f;
             }
+        }
+
+        // ---- the hunt's pacing (0.2.0) ------------------------------------------------------
+
+        float huntEndedAt = -999f;
+
+        public void NoteHuntEnded() => huntEndedAt = Time.time;
+
+        // Whether a hunt may start, or go on: the Hunt action's pacing, whichever of its moves or
+        // tricks runs. Never while you settle in or in a recovery, never with you outside (her body
+        // can't follow you there); to start one, the cooldown since the last must be over and the
+        // budget must hold its cost. Pure, so the rules can be tested.
+        public static bool HuntAllowed(bool hunting, bool recovery, bool settling, float sinceLastHunt, float tension,
+                                       float outsideMass, KarenConfig config, out string why)
+        {
+            why = null;
+            if (recovery) why = "a recovery";
+            else if (settling) why = "you're settling in";
+            else if (outsideMass > 0.5f) why = "you're outside";
+            else if (!hunting && sinceLastHunt < config.huntCooldownSeconds) why = $"cooling down, {config.huntCooldownSeconds - sinceLastHunt:0}s left";
+            else if (!hunting && tension + 1e-4f < config.huntTensionCost) why = $"tension {tension:0.00}, a hunt costs {config.huntTensionCost:0.00}";
+            return why == null;
         }
 
         public void SuppressPursuit(float seconds) => suppressPursuitUntil = Mathf.Max(suppressPursuitUntil, Time.time + seconds);

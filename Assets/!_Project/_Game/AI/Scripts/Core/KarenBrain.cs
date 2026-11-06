@@ -160,6 +160,7 @@ namespace Kehai.Karen
         {
             Sensorium?.Dispose();
             Belief = new BeliefGrid(Map);
+            Predictor = new RoutePredictor(Map);
             Sensorium = new Sensorium(Map, Energy);
             ApplyRungToSenses();
             if (Ctx != null)
@@ -323,6 +324,7 @@ namespace Kehai.Karen
             if (appraiseTimer >= 1f / config.appraiseHz) { Appraise(); appraiseTimer = 0f; }
 
             TickDirector(dt);
+            UpdatePredictor(dt);
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -484,6 +486,12 @@ namespace Kehai.Karen
         {
             get
             {
+                // With the lights out, the job is the lights (0.2.0): Ambush waits on that way.
+                if (!PowerSystem.PowerOn)
+                {
+                    Landmark? box = Map.FindLandmark(LandmarkKind.BreakerBox);
+                    if (box.HasValue && box.Value.Region >= 0) return box.Value.Region;
+                }
                 float[] fromBelief = TacticHelpers.DistanceFromBelief(Ctx);
                 int best = -1;
                 float bestDistance = float.MaxValue;
@@ -620,6 +628,11 @@ namespace Kehai.Karen
 
             CurrentPlan = plan;
             planStartedAt = Time.time;
+
+            // A hunt is the Hunt action, whichever of its moves or tricks runs (0.2.0): the chase
+            // state, its cost and the recovery after follow the action, not one step of it.
+            if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
+            else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
             NarratePlan(plan);
         }
@@ -853,6 +866,13 @@ namespace Kehai.Karen
         {
             if (chasing == on) return;
             chasing = on;
+            if (on && config.Features.Goals) Director.TrySpend(config.huntTensionCost);
+            if (!on)
+            {
+                Director.NoteHuntEnded();
+                ThrewThisHunt = false;
+                replannedForSighting = -999f;
+            }
             Burnout?.SetChaseState(on);
             if (ShiftActive) KarenNarrator.Say(StoryKind.Chase, on ? GameNames.Antagonist + " is chasing you — run!" : GameNames.Antagonist + " gave up the chase.", Body.Position);
             Body.SetMood(on ? KarenBody.Mood.Hunt : KarenBody.Mood.Calm);
@@ -861,6 +881,59 @@ namespace Kehai.Karen
         }
 
         public void SuppressPursuit(float seconds) => Director.SuppressPursuit(seconds);
+
+        // ---- where you're going, once a hunt has lost you (0.2.0) ------------------------------
+
+        public RoutePredictor Predictor { get; private set; }
+        public bool ThrewThisHunt { get; set; }      // Throw: once a hunt
+        float predictorTimer, replannedForSighting = -999f;
+
+        // Four times a second: guesses built when a hunt loses you, reweighed against her belief
+        // after, and kept for half a minute so Ambush can still wait where they go once the hunt
+        // has handed over. Seeing you again drops them.
+        void UpdatePredictor(float dt)
+        {
+            if (!chasing && !(Predictor.Active && Time.time - Predictor.SeenAt < 30f))
+            {
+                if (Predictor.Active) Predictor.Clear();
+                return;
+            }
+            predictorTimer -= dt;
+            if (predictorTimer > 0f) return;
+            predictorTimer = 0.25f;
+
+            SightSensor s = Body.Sight;
+            if (s.SeesNow)
+            {
+                if (Predictor.Active) Predictor.Clear();
+                return;
+            }
+            if (chasing && (!Predictor.Active || Predictor.SeenAt != s.LastSeenTime))
+                Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals());
+            Predictor.Reweigh(Belief, Time.time);
+        }
+
+        // Where you might be going: your jobs and the time clock, the breaker box with the
+        // lights out, and her ways out of the building.
+        IEnumerable<(string name, Vector3 at)> PredictorGoals()
+        {
+            foreach (KeyValuePair<string, Vector3> t in FairnessGuardTargets()) yield return ("to " + t.Key, t.Value);
+            if (!PowerSystem.PowerOn)
+            {
+                Landmark? box = Map.FindLandmark(LandmarkKind.BreakerBox);
+                if (box.HasValue) yield return ("to the breaker box", box.Value.Position);
+            }
+            for (int k = 0; k < Belief.ExitCount; k++) yield return ("out by " + Map.NameAt(Belief.ExitPosition(k)), Belief.ExitPosition(k));
+        }
+
+        // Once per time she loses you, a hunt may stop its run to choose again with the guesses
+        // in hand (Cut, or the run). True the first time it's asked for this loss.
+        public bool MayReplanHunt(float lastSeen)
+        {
+            if (replannedForSighting == lastSeen) return false;
+            replannedForSighting = lastSeen;
+            return true;
+        }
 
         // ---- the overtime (§8.2) -------------------------------------------------------------
 

@@ -32,10 +32,10 @@ public class KarenActionsTests
     }
 
     [Test]
-    public void TheLiveTricks_AreTheFourThePlanKeeps()
+    public void TheLiveTricks_AreTheOnesThePlanKeeps()
     {
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
-        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "poll_witnesses" }, live);
+        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
     }
 
     // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush and Disrupt
@@ -68,12 +68,27 @@ public class KarenActionsTests
 
     // ---- phase 2: Hunt -----------------------------------------------------------------------
 
+    // The pacing is the Hunt action's, whichever of its moves or tricks runs (phase 3).
     [Test]
-    public void Hunt_CostsAndCoolsLikeTheChaseDid()
+    public void Hunt_CostsAndCoolsAsAnAction_NotPerTrick()
     {
-        Tactic hunt = TacticLibrary.Get("hunt");
-        Assert.AreEqual(0.6f, hunt.TensionCost, 1e-4f);
-        Assert.AreEqual(90f, hunt.Cooldown, 1e-4f);
+        var config = new KarenConfig();
+        Assert.AreEqual(0.6f, config.huntTensionCost, 1e-4f);
+        Assert.AreEqual(90f, config.huntCooldownSeconds, 1e-4f);
+        Assert.AreEqual(0f, TacticLibrary.Get("hunt").TensionCost, "the own move costs nothing more");
+        Assert.AreEqual(0f, TacticLibrary.Get("cut").TensionCost, "Cut costs nothing more");
+    }
+
+    [TestCase(false, false, false, 120f, 0.7f, 0f, true, TestName = "Rested and paid for: a hunt may start")]
+    [TestCase(false, false, false, 30f, 0.7f, 0f, false, TestName = "Thirty seconds after the last: cooling down")]
+    [TestCase(false, false, false, 120f, 0.4f, 0f, false, TestName = "Too little tension to pay for it")]
+    [TestCase(true, false, false, 30f, 0.1f, 0f, true, TestName = "A hunt already running goes on")]
+    [TestCase(true, true, false, 120f, 0.7f, 0f, false, TestName = "Never in a recovery")]
+    [TestCase(false, false, true, 120f, 0.7f, 0f, false, TestName = "Never while you settle in")]
+    [TestCase(true, false, false, 120f, 0.7f, 0.9f, false, TestName = "Never with you outside")]
+    public void Hunt_IsPacedByTheRules(bool hunting, bool recovery, bool settling, float sinceLast, float tension, float outside, bool expected)
+    {
+        Assert.AreEqual(expected, KarenDirector.HuntAllowed(hunting, recovery, settling, sinceLast, tension, outside, new KarenConfig(), out string why), why);
     }
 
     static KarenContext DirectedContext()
@@ -87,7 +102,6 @@ public class KarenActionsTests
     public void Hunt_IsHeldBack_WhileYouSettleIn_AndInARecovery()
     {
         KarenContext c = DirectedContext();
-        Assert.AreEqual(1f, c.Director.ActionPermission(ActionId.Hunt, c), "off shift and outside nothing, the Director doesn't stop a hunt");
         c.Director.BeginShift(1, 300f);
         Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt while you settle in");
         c.Director.StartRecovery(45f, c, "test");
@@ -104,6 +118,47 @@ public class KarenActionsTests
     public void Hunt_HandsOver_ByTheRules(bool sees, float lostFor, float toGoal, float staleness, bool recovery, float outside, bool expected)
     {
         Assert.AreEqual(expected, Pursue.HandOver(sees, lostFor, toGoal, staleness, recovery, outside, 6f, out string why), why);
+    }
+
+    // ---- phase 3: Throw ----------------------------------------------------------------------
+
+    // An item alone never makes a catch certain: sprinting on after its effect, you're still
+    // SafeGap metres ahead of her, from the closest she may throw it.
+    [Test]
+    public void NoThrow_MakesACatchCertain()
+    {
+        var config = new KarenConfig();
+        var motor = new UnityEngine.GameObject("player").AddComponent<PlayerMotor>();
+        try
+        {
+            foreach (ThrownItem item in System.Enum.GetValues(typeof(ThrownItem)))
+            {
+                float gap = ThrownItems.GapAfter(item, ThrownItems.MinRange(item), config.runSpeed, motor.sprintSpeed);
+                Assert.GreaterOrEqual(gap, ThrownItems.SafeGap, $"{item} from {ThrownItems.MinRange(item)} m leaves you {gap:0.0} m ahead");
+                Assert.Less(ThrownItems.MinRange(item), ThrownItems.MaxRange(item), item.ToString());
+            }
+            Assert.GreaterOrEqual(ThrownItems.MinRange(ThrownItem.Tin), 15f, "a stun only from 15 m or more");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(motor.gameObject); }
+    }
+
+    [Test]
+    public void Effects_SlowAndStunYou_AndWearOff()
+    {
+        var go = new UnityEngine.GameObject("player");
+        try
+        {
+            var fx = go.AddComponent<PlayerEffects>();
+            Assert.AreEqual(1f, fx.SpeedFactor);
+            fx.Slow(0.25f, 2f);
+            Assert.AreEqual(0.75f, fx.SpeedFactor, 1e-4f);
+            fx.Stun(1f);
+            Assert.AreEqual(0f, fx.SpeedFactor, "stunned, you don't move");
+            fx.Clear();
+            Assert.AreEqual(1f, fx.SpeedFactor);
+            Assert.IsFalse(fx.Blurred || fx.Slowed || fx.Stunned);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
     }
 
     [Test]

@@ -126,7 +126,9 @@ namespace Kehai.Karen
                 // §8.5 social
                 new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
                 // §8.6 you
-                new StalkTactic(), new AmbushTactic(), new FavourTactic()
+                new StalkTactic(), new AmbushTactic(), new FavourTactic(),
+                // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
+                new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic()
             };
         }
 

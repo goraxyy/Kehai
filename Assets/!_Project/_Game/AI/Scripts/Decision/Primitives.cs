@@ -329,12 +329,7 @@ namespace Kehai.Karen
             Label = "pursue";
         }
 
-        protected override void Begin(KarenContext c)
-        {
-            c.Body.SetMood(KarenBody.Mood.Hunt);
-            c.Brain.SetChasing(true);
-            goal = c.Body.Sight.LastSeenPosition;
-        }
+        protected override void Begin(KarenContext c) => goal = c.Body.Sight.LastSeenPosition;
 
         protected override Status Tick(KarenContext c, float dt)
         {
@@ -347,13 +342,23 @@ namespace Kehai.Karen
             if (retarget <= 0f)
             {
                 retarget = 0.25f;
-                // Seen: lead you a little along the way you were moving. Lost: on to where
-                // you'd be two seconds from now, by her reckoning.
-                goal = sees || sight.Time_SinceSeen() < 0.5f
-                    ? sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f)
-                    : TacticHelpers.Forecast(c, 2f);
+                // Seen: lead you a little along the way you were moving. Lost: on to where you'd
+                // be two seconds from now — by her best guess of your route (RoutePredictor), or
+                // until she has one, by walking on the way you went.
+                if (sees || sight.Time_SinceSeen() < 0.5f)
+                    goal = sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f);
+                else if (c.Brain.Predictor != null && c.Brain.Predictor.Active)
+                    goal = c.Brain.Predictor.Expected(Time.time, 2f, sight.LastSeenVelocity.magnitude);
+                else
+                    goal = TacticHelpers.Forecast(c, 2f);
                 c.Body.MoveTo(goal, KarenBody.Pace.Run);
             }
+
+            // Once she has guesses about your route, the hunt stops its run once to choose again:
+            // cutting you off (Cut) may now beat running on.
+            if (!sees && lostFor > 0.75f && c.Brain.Predictor != null && c.Brain.Predictor.Active
+                && c.Brain.MayReplanHunt(sight.LastSeenTime))
+                return Status.Success;
 
             Vector3 d = c.Body.Position - goal;
             d.y = 0f;
@@ -378,11 +383,6 @@ namespace Kehai.Karen
             return why != null;
         }
 
-        protected override void End(KarenContext c, bool aborted)
-        {
-            c.Brain.SetChasing(false);
-            c.Body.SetMood(KarenBody.Mood.Calm);
-        }
     }
 
     public static class SightExtensions
