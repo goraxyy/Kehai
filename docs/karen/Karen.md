@@ -1315,8 +1315,9 @@ suite is 262 tests in 26 files; 0.2.0's own are listed in §16.7.
 What the 0.2.0 redesign changed, where each change lives, and how it's checked. The decisions
 are in the [build plan](../plans/0.2.0-build-plan.md), and the reasoning and sources in the
 [design notes](../plans/0.2.0-design-notes.md). Measured results are in
-[`KAREN_RESULTS.md`](KAREN_RESULTS.md). **The ablation against `main` hasn't been run yet**, so
-how these changes play out over whole shifts is still open ([§16.7](#167-tests-and-whats-not-measured-yet)).
+[`KAREN_RESULTS.md`](KAREN_RESULTS.md). **The ablation against `main` (6 November) found her far
+deadlier than before:** she catches the simulated player in 97–100% of shifts, against about half,
+and sees it within about 9 s instead of 31–36 s. A summary is in [§16.7](#167-tests-the-ablation-and-whats-not-measured-yet).
 
 | Area | Before | 0.2.0 |
 |---|---|---|
@@ -1529,7 +1530,7 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
   the projectile, and `Players_NeverReadKaren` still passes.
 - **Throw can't make a catch certain** (§16.4, tested).
 
-### 16.7 Tests, and what's not measured yet
+### 16.7 Tests, the ablation, and what's not measured yet
 
 **The EditMode suite: 290 tests, all passing** (6 November, on an APFS clone, with everything
 both builders made).
@@ -1548,15 +1549,30 @@ both builders made).
 | `KrecTests` | plus her route guesses: written, read back and found by time |
 | `RouteLayerTests` (new, the second builder's) | the replay's routes layer: seeking, weights and windows from the recording, hiding guesses, plain-text names, old files, no cone, materials freed |
 
-**Not measured yet** (the ablation, C5.3, waits for the owner's go; the plan has the runs):
-- the gap between her and you 5 s after she loses you, against `main` (primary);
-- seconds to "moving at you" in play;
-- seconds she spends outside her area, which must be 0;
-- how often Cut and Throw fire in real shifts, how often Cut's spot is right, and catches within
-  5 s of a throw;
-- whether the bots' turning back and dodging happen in play, not just at their decision points;
-- whether the combo learner finds real chains in the store;
-- the sweep's cost during play.
+**The ablation against `main`** (6 November; the full tables, caveats included, are in
+[`KAREN_RESULTS.md`](KAREN_RESULTS.md#the-ablation-results-6-november)):
+
+| | Result |
+|---|---|
+| Catches per shift | 0.98–1.00, against 0.47–0.48 on `main`; a bot finished its shift once in 144 |
+| First detection | 8–9 s, against 31–36 s |
+| Seconds outside her area | 0 on every shift |
+| Fairness violations | 0 in all 307 shifts |
+| Catches you never saw coming | more of them, but the same share of catches (32% against 30%) |
+| Setpoint error | lower, but explained by shorter shifts: not shown to be better pacing |
+| Cut | never fired in 144 shifts |
+| Throw | 20 throws, 5 hits; the bots saw 7 and dodged 2 |
+| The bots turning back | 183 times in 144 shifts: they react in play |
+| The combo learner | no combo found; no effect on setpoint error shown |
+
+**Still not measured:**
+- **the gap 5 s after she loses you** (primary): 0 pairs, because she almost never loses you
+  before she catches you;
+- **seconds to "moving at you" in play:** `HuntMetrics` doesn't record it;
+- **the held-out player against `main`:** `main`'s run stopped at its time limit before the
+  cautious player (and after 19 of the reckless player's 36 shifts);
+- **whether real chains exist in the store,** with shifts long enough to chain two tricks;
+- **the sweep's cost during play.**
 
 **Her guesses, drawn** (the second builder's B3.3): F1 has a "Routes — her guesses" button that
 draws each live guess on the floor plan, numbered, with its weight and when you could reach its

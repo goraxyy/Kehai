@@ -108,7 +108,8 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
   - **Built [C]:** phases 0–5's code: her area and grid, actions and drafts, Hunt at 7.5 m/s on her guesses, no warnings, the route guesses, Cut, Throw and their effects, her eyes, the combo room, bots that turn back and dodge, and the ablation's measurements. At syncs 2–4 (6 November) the second builder's work was merged in, Block door went live, and replays record her route guesses (`.krec` version 2). All 290 EditMode tests pass.
-  - **Left [C]:** the ablation against `main` (C5.3: about an hour with the editor closed, set up and waiting for the owner's go), then its results (C5.4).
+  - **The ablation against `main`** ran on 6 November ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-ablation-results-6-november)). She's far deadlier: a catch in 97–100% of shifts, against about half. `main`'s run stopped at its time limit after 91 of 144 shifts, before the held-out player.
+  - **Left [C]:** `main`'s missing reckless and cautious shifts if the owner wants them (about 2 hours with the editor closed), and the How Karen Learns guide.
   - **Built [B]:** the map legend, the developer switch (F3), replays without her steps, Block door rebuilt round a restock box, the thrown items seen, the effects felt, the combo list in the shift report, and the claims (B1.1–B5.1). B3.3, her guesses drawn on the F1 map and in replays, too; merged 6 November. **Nothing is left for [B].**
   - **Left for the owner:** playtest a shift (Y5.1; the second builder re-exported the maps, Y1.1, at your request), then review and merge (Y5.2). Before pulling the merge into the main folder, move its untracked `AGENTS.md` aside: the branch tracks its own.
 - **Draft PR #68, the learned motion model** (`feat/learned-motion`). About 70% done, paused before training.
@@ -124,7 +125,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 
 ## 5. What's next, in order
 
-1. **Finish Karen 0.2.0 (PR #74):** the ablation on the owner's go, the results, [B]'s tasks, the owner's playtest, then the owner's merge.
+1. **Finish Karen 0.2.0 (PR #74):** decide how far to turn her down (the ablation found her far too deadly against the bots), the owner's playtest, then the owner's merge.
 2. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
 3. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
 4. **The capture plan,** re-read against 0.2.0 first, as one PR.
@@ -136,8 +137,8 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 **Known gaps:**
 - Karen can stand on a stuck player without catching them.
 - The Director nudges her belief toward the player's true region after 45 s without a sighting (`KarenDirector.MaybeBias`). Published out-of-view belief numbers include this hint.
-- On 0.2.0, the shift report still counts "warning sounds" and tells you to listen for them before her tricks, though no trick waits for its sound any more (a request to [B]).
-- On 0.2.0, Cut rarely fires: never on a 25 m dash, and sometimes on a 45–60 m run (Karen.md §16.4).
+- On 0.2.0, Cut rarely fires: never on a 25 m dash, sometimes on a 45–60 m run (Karen.md §16.4), and never in the ablation's 144 shifts.
+- On 0.2.0, `main` runs about 4.6 times slower per simulated second than the branch in batch mode, for a reason not yet found; its log repeats a particle-system warning tens of thousands of times. Allow for it when timing a run against `main`.
 
 ## 6. How to work on it
 

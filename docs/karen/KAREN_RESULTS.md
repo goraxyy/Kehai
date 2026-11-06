@@ -7,8 +7,8 @@ she is slightly faster than the player, and the Director's blink dash is part of
 
 > **Karen 0.2.0** changes her eyes, where she works, the Hunt, her tricks and her learning
 > ([Karen.md §16](Karen.md#16-karen-020)). Everything above [Karen 0.2.0, so far](#karen-020-so-far)
-> is about the Karen before it. 0.2.0's own ablation hasn't run yet; its test results, and the
-> metrics fixed for the ablation before it runs, are in that section.
+> is about the Karen before it. 0.2.0's test results and its ablation against `main` (6 November)
+> are in that section.
 
 | rung | Karen | learns |
 |---|---|---|
@@ -365,9 +365,10 @@ knows least about, and the one where the grid's prediction gains most over the l
 
 ## Karen 0.2.0, so far
 
-**The ablation against the old Karen hasn't run yet** (the build plan's C5.3). What's here comes
-from the EditMode tests: her own code, run on scripted situations, not whole shifts. All 290
-tests pass (6 November, with everything both builders made).
+Two kinds of result. The first four parts come from the EditMode tests: her own code, run on
+scripted situations, not whole shifts. All 290 tests pass (6 November, with everything both
+builders made). The last two are the ablation against `main`, run on 6 November: whole shifts
+against the simulated players, paired by seed.
 
 ### Her eyes: the walk-by set
 
@@ -428,7 +429,7 @@ Scripted runners that keep going after she loses sight (`KarenActionsTests`):
 - **The first version did worse than the sprint** (11.0 m against 8.0 m): it picked spots on routes
   she doubted. Cut now waits until her best guess holds 30% of the weight.
 
-### The ablation: planned, not run
+### The ablation: what was fixed before it ran
 
 **Primary metrics, fixed before any run** (the build plan's §5):
 1. Seconds from first being visible to her moving at you, over the walk-by set (above, worked out
@@ -458,7 +459,97 @@ how often the bots turned back and dodged.
 - **A known difference:** on `main`, "outside her area" counts the pavement too, because `main` has
   no Pavement area.
 
-The results go here when it's run, negative ones included.
+### The ablation: results (6 November)
+
+**How it actually ran:**
+
+| Run | Code | Shifts | Real time |
+|---|---|---|---|
+| 0.2.0 | `a5d822e` (Block door live, from shift 7) | 144 of 144 | 22 min |
+| `main` | `origin/main`'s scripts, plus only the measuring code | **91 of 144** | 150 min, its time limit |
+| 0.2.0, combo learner off | `a5d822e`, rung E, `-karen-combo off` | 72 of 72 | 12 min |
+
+**`main`'s run stopped short.** It hit its 150-minute limit with efficient and skittish complete,
+reckless at 19 of 36 shifts, and **no cautious shifts**. So against `main` there are 91 pairs, all
+training players, and **no held-out comparison**. Two things made it slow:
+- its bots live longer, so its shifts run 298 s on average against 0.2.0's 103 s (a shift runs on
+  until the bot clocks out, is caught, or is 240 s past closing);
+- it runs about 4.6 times slower per simulated second (0.32 s of real time against 0.07), for a
+  reason not yet found. Its log repeats a Unity warning, "Particle Velocity curves must all be in
+  the same mode", 49,034 times; 0.2.0's never does. Both step at the same fixed frame rate, so this
+  changes how long a run takes, not what happens in it.
+
+**The primary metrics:**
+
+| # | Metric | Result |
+|---|---|---|
+| 1 | Seconds from first visible to moving at you | **Not timed in play.** `HuntMetrics` doesn't record it: a gap in the measuring code. Only the walk-by set's worked-out times stand (0.90 s at 10 m, dead centre) |
+| 2 | Metres to you 5 s after she loses sight in a hunt | **Can't be answered: 0 pairs.** She lost sight of a bot during a hunt 13 times in 144 shifts on 0.2.0 (8.5 m on average) and 4 times in 91 on `main` (13.7 m), never in the same shift. She rarely loses you, because she catches you first |
+| 3 | Fairness violations | **0** in all 307 shifts |
+| 4 | The combo learner's setpoint error, with minus without | −0.01 ± 0.01 (training players, 54 pairs); −0.02 ± 0.01 (held out, 18 pairs). **She found no combo in any shift**, so this isn't the combo room at work: no effect shown |
+
+**0.2.0 against `main`,** training players, differences ± one standard error:
+
+| | Rung C (48 pairs) | | Rung E (43 pairs) | |
+|---|---|---|---|---|
+| | `main` → 0.2.0 | difference | `main` → 0.2.0 | difference |
+| Catches per shift | 0.48 → 0.98 | +0.50 ± 0.07 | 0.47 → 1.00 | +0.53 ± 0.08 |
+| First detection (s) | 31.3 → 9.1 | −22.2 ± 3.8 | 35.7 → 8.4 | −27.4 ± 4.7 |
+| Detections | 7.9 → 5.8 | −2.1 ± 1.1 | 8.0 → 4.4 | −3.6 ± 0.7 |
+| Hunts | 0.17 → 1.73 | +1.56 ± 0.27 | 0.28 → 1.49 | +1.21 ± 0.21 |
+| Seconds sprinting | 0.31 → 1.23 | +0.92 ± 0.30 | 0.36 → 2.02 | +1.67 ± 0.40 |
+| Seconds outside her area | 11.1 → 0 | −11.1 ± 3.0 | 6.6 → 0 | −6.6 ± 2.8 |
+| Sightings from beyond 18 m | 0 → 0.81 | +0.81 ± 0.13 | 0 → 0.84 | +0.84 ± 0.13 |
+| Catches you never saw coming | 0.10 → 0.33 | +0.23 ± 0.09 | 0.19 → 0.33 | +0.14 ± 0.09 |
+| Belief error out of view (m) | 21.6 → 10.4 | −11.2 ± 1.4 | 22.6 → 11.4 | −11.2 ± 1.3 |
+| Setpoint error | 0.30 → 0.22 | −0.08 ± 0.02 | 0.29 → 0.20 | −0.09 ± 0.02 |
+
+**By player** (rungs C and E together):
+
+| Player | Pairs | Catches per shift | Shift length (s) | Clocked out |
+|---|---|---|---|---|
+| efficient | 36 | 0.42 → 1.00 | 305 → 103 | 31% → 0% |
+| skittish | 36 | 0.33 → 0.97 | 330 → 136 | 3% → 0% |
+| reckless | 19 | 0.84 → 1.00 | 225 → 77 | 5% → 0% |
+| cautious (held out) | 0 | 0.2.0 alone: 0.97 | 0.2.0 alone: 94 | 0.2.0 alone: 0% |
+
+**What it shows:**
+- **She's far deadlier.** She catches the bot in 97–100% of shifts, against about half on `main`.
+  A bot finished its shift in 1 of 144 shifts on 0.2.0; on `main` the efficient bot clocked out in
+  31% of its shifts. A 0.2.0 shift ends about 100 s in.
+- **She sees you sooner:** about 9 s to first detection instead of 31–36 s. This is the bigger
+  cone and the expectation boost, as designed, but over whole shifts it adds up to a catch almost
+  every time.
+- **She stays inside:** 0 s outside her area, on every rung and player.
+- **Catches you never saw coming rose with the catches, not as a share:** 32% of 0.2.0's catches
+  against 30% of `main`'s. More catches, not sneakier ones.
+- **Her belief error out of view halves,** but it isn't like for like: her area is about half the
+  size, and the outside is one cell.
+- **The better setpoint error isn't shown to be better pacing.** Setpoint error rises with shift
+  length (correlation 0.31 on `main`, 0.47 on 0.2.0), and 0.2.0's shifts are a third as long.
+  Over the 12 pairs where both shifts lasted under 150 s, the difference is −0.04 ± 0.03, within
+  noise.
+- **Cut never fired** in 144 shifts (once in the 72 with the combo learner off). Chases end in a
+  catch before there's a route worth cutting.
+- **Throw is rare:** 20 throws in 144 shifts, 19 of them on rung E, and 5 hits. The bots saw 7
+  and dodged 2.
+- **Her tricks:** 1.3 a shift on 0.2.0 (Bin tamper most, then Ambush, Blackout, the throws, and
+  Block door 7 times on shifts 7–8), against 33 on `main`, whose most used was Follow (933 times
+  in 91 shifts).
+- **The bots react in play:** they turned back from her 183 times in 144 shifts. That was built
+  in C5.1 and unit-tested; this is the first time it's seen in whole shifts.
+- **The combo learner found nothing** in 144 rung-E shifts. With a catch about 100 s in and 1.3
+  tricks a shift, two tricks rarely come within 20 s of each other.
+
+**What it means for 0.2.0:** against these bots she's too strong. Almost every shift ends in a
+catch within two minutes, so the Hunt's later parts (losing you, Cut, combos) hardly get a chance
+to run, and primary metric 2 can't be measured. How far to turn her down, and with what (her
+reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
+(Y5.1) would show whether people fare better than the bots.
+
+**Still missing:** `main`'s reckless and cautious shifts. Its seeds come from the player and the
+career, so a run of `main` with only those two players gives exactly the missing pairs, including
+the held-out comparison.
 
 ## Earlier runs
 

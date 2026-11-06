@@ -215,8 +215,8 @@ its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](../store/
 A redesign of how Karen sees, where she works, how she hunts and how she learns. The plan is
 [`0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md), the reasoning
 [`0.2.0-design-notes.md`](../plans/0.2.0-design-notes.md), and what changed in the code
-[Karen.md §16](../karen/Karen.md#16-karen-020). **The ablation against the old Karen hasn't been
-run yet**, so the "what it gave" column is what the tests show, not whole shifts.
+[Karen.md §16](../karen/Karen.md#16-karen-020). The "what it gave" column is what the tests show;
+the ablation over whole shifts is below the table.
 
 | Decision | Why | The cost | What it gave so far |
 |---|---|---|---|
@@ -224,18 +224,28 @@ run yet**, so the "what it gave" column is what the tests show, not whole shifts
 | **Guesses at your route, not a second grid** (D1) | Cut, Throw, Ambush and Hunt need a spot and a time. A grid run forward blurs into no spot to race to | Only during a hunt, and only 3–6 guesses | Tests: the right guess comes out on top, turning back raises "turned back", ruled-out guesses fall |
 | **Hunt sprints at 7.5 m/s**, keeps running on her guesses, and the chase and Follow merge into it | At 1.05 × your sprint a chase in the open barely closed, and she stopped where she last saw you | A corner or a door has to save you. Hunt is paced harder: 0.6 tension, a 90 s cooldown, never while you settle in or in a recovery | Tests cover each pacing and hand-over rule |
 | **Cut and Throw**, two new tricks inside Hunt | Hunting on guesses needs a way to use them: get ahead of you, or slow you | Throw had to be capped so an item alone never makes a catch certain; its ranges come from that rule | Cut rarely fires: never on a 25 m dash, and on 45–60 m runs it's closer in 1 of 8 starts, never worse. A first version did worse than the plain sprint |
-| **A wider, longer cone, with a lower gain** | Awareness felt slow; the targets are seen within 0.7 s at 10 m and 1.5 s at 15 m off-centre, and never crouched in the dim | Long aisles stop being safe, and her "nothing here" sweep had to grow: 1.3 ms and 108 rays a sweep in the editor | Every target met: 0.67 s, 1.40 s, never |
+| **A wider, longer cone, with a lower gain** | Awareness felt slow; the targets are seen within 0.7 s at 10 m and 1.5 s at 15 m off-centre, and never crouched in the dim | Long aisles stop being safe, and her "nothing here" sweep had to grow: 1.3 ms and 108 rays a sweep in the editor | Every target met: 0.67 s, 1.40 s, never. Over whole shifts she sees the bot within about 9 s, against 31–36 s before |
 | **No warnings** (Q17) | The owner chose surprise over the promise. A warning's 1 s was a 6.5 m head start | Fairer games warn before what can kill you, which was the recommended option; with none, a catch can come from nowhere. The ablation counts catches you never saw coming | The sounds stay as atmosphere |
 | **Most tricks become drafts:** kept in the code, off in play | The owner's short list of tricks to rework or remove. Kept in the library, so ids, Ledger records and rung F's numbering don't move | The learner has little to choose from until they return; Corner, Loom and Lure have no live trick, and tier 4 is empty | 13 of 36 live, 14 since Block door went live at sync 2 (6 November). Ambush now unlocks on shift 3 (was 8), so it runs in tests for the first time |
 | **Combos learned, not built in** | Combos welded into tricks (Blackout's wait, Funnel) can't be judged apart from their parts | The combo room starts empty and has to earn every chain | In a planted test world she finds the planted chain in every seed by shift 3–5, finds none where none pays, and earns more than without it (+0.23 a shift, SE 0.017). Not yet shown in the store |
 | **Her footsteps and floor cone for the developer only** | The bots heard her steps within 12 m, so the tests measured an easier game than players get | Players have little left to notice her by: seeing her, and the sounds of her tricks | The bots hear what players hear |
 
+**What the ablation found** (6 November, against `main`, paired by seed;
+[KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-ablation-results-6-november)):
+- **Together, the changes make her far deadlier:** a catch in 97–100% of shifts against about
+  half, and a bot finished its shift once in 144. She sees it within about 9 s, against 31–36 s.
+- **What holds:** 0 fairness violations in 307 shifts, and 0 s outside her area.
+- **What hardly runs:** Cut never fired, Throw is rare (20 in 144 shifts), and the combo learner
+  found no combo. Shifts end in a catch about 100 s in, before those get a chance.
+- **What couldn't be measured:** the gap 5 s after she loses you, because she almost never does;
+  and the held-out player against `main`, whose run stopped at its time limit.
+
 ---
 
 ## 11. Still open
 
-- **Karen 0.2.0 isn't measured over whole shifts yet.** The ablation against the old Karen is set
-  up and waits ([§10](#10-karen-020)).
+- **Karen 0.2.0 is too deadly against the simulated players.** How far to turn her down, and how,
+  is open ([§10](#10-karen-020)); a playtest would show how people fare.
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
   the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).
