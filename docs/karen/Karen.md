@@ -1316,8 +1316,8 @@ What the 0.2.0 redesign changed, where each change lives, and how it's checked. 
 are in the [build plan](../plans/0.2.0-build-plan.md), and the reasoning and sources in the
 [design notes](../plans/0.2.0-design-notes.md). Measured results are in
 [`KAREN_RESULTS.md`](KAREN_RESULTS.md). **The ablation against `main` (6 November) found her far
-deadlier than before:** she catches the simulated player in 97–100% of shifts, against about half,
-and sees it within about 9 s instead of 31–36 s. A summary is in [§16.7](#167-tests-the-ablation-and-whats-not-measured-yet).
+deadlier than before:** she catches the simulated player in 94–100% of shifts, against 28–54%,
+and sees it within about 9 s instead of 32–61 s, the held-out player included. A summary is in [§16.7](#167-tests-the-ablation-and-whats-not-measured-yet).
 
 | Area | Before | 0.2.0 |
 |---|---|---|
@@ -1554,11 +1554,11 @@ both builders made).
 
 | | Result |
 |---|---|
-| Catches per shift | 0.98–1.00, against 0.47–0.48 on `main`; a bot finished its shift once in 144 |
-| First detection | 8–9 s, against 31–36 s |
+| Catches per shift | 0.94–1.00, against 0.28–0.54 on `main`, for every player, the held-out one included; a bot finished its shift in 1 of 144 shifts, against 18 on `main` |
+| First detection | 8–9 s, against 32–61 s |
 | Seconds outside her area | 0 on every shift |
-| Fairness violations | 0 in all 307 shifts |
-| Catches you never saw coming | more of them, but the same share of catches (32% against 30%) |
+| Fairness violations | 0 in all 379 shifts run |
+| Catches you never saw coming | more of them, but about the same share of catches (32% against 28%) |
 | Setpoint error | lower, but explained by shorter shifts: not shown to be better pacing |
 | Cut | never fired in 144 shifts |
 | Throw | 20 throws, 5 hits; the bots saw 7 and dodged 2 |
@@ -1569,8 +1569,6 @@ both builders made).
 - **the gap 5 s after she loses you** (primary): 0 pairs, because she almost never loses you
   before she catches you;
 - **seconds to "moving at you" in play:** `HuntMetrics` doesn't record it;
-- **the held-out player against `main`:** `main`'s run stopped at its time limit before the
-  cautious player (and after 19 of the reckless player's 36 shifts);
 - **whether real chains exist in the store,** with shifts long enough to chain two tricks;
 - **the sweep's cost during play.**
 

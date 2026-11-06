@@ -461,81 +461,86 @@ how often the bots turned back and dodged.
 
 ### The ablation: results (6 November)
 
-**How it actually ran:**
+**How it ran:**
 
 | Run | Code | Shifts | Real time |
 |---|---|---|---|
-| 0.2.0 | `a5d822e` (Block door live, from shift 7) | 144 of 144 | 22 min |
-| `main` | `origin/main`'s scripts, plus only the measuring code | **91 of 144** | 150 min, its time limit |
-| 0.2.0, combo learner off | `a5d822e`, rung E, `-karen-combo off` | 72 of 72 | 12 min |
+| 0.2.0 | `a5d822e` (Block door live, from shift 7) | 144 | 22 min |
+| `main`, first run | `origin/main`'s scripts, plus only the measuring code | 91 of 144: it stopped at its 150-minute limit | 150 min |
+| `main`, the rest | the same clone: the reckless and cautious players only, same seeds | 72 | 53 min |
+| 0.2.0, combo learner off | `a5d822e`, rung E, `-karen-combo off` | 72 | 12 min |
 
-**`main`'s run stopped short.** It hit its 150-minute limit with efficient and skittish complete,
-reckless at 19 of 36 shifts, and **no cautious shifts**. So against `main` there are 91 pairs, all
-training players, and **no held-out comparison**. Two things made it slow:
-- its bots live longer, so its shifts run 298 s on average against 0.2.0's 103 s (a shift runs on
-  until the bot clocks out, is caught, or is 240 s past closing);
-- it runs about 4.6 times slower per simulated second (0.32 s of real time against 0.07), for a
-  reason not yet found. Its log repeats a Unity warning, "Particle Velocity curves must all be in
-  the same mode", 49,034 times; 0.2.0's never does. Both step at the same fixed frame rate, so this
-  changes how long a run takes, not what happens in it.
+- **`main` is joined from its two runs:** efficient and skittish from the first, reckless and
+  cautious (whole careers) from the second. That gives 143 pairs with 0.2.0, the held-out cautious
+  player included.
+- **`main` is slow.** Its bots live longer: its shifts run 292 s on average, against 0.2.0's 103 s.
+  A shift runs on until the bot clocks out, is caught, or is 240 s past closing. It's also 2 to 4.6
+  times slower per simulated second (0.16–0.32 s of real time, against 0.07), for a reason not yet
+  found. Its log repeats a Unity warning, "Particle Velocity curves must all be in the same mode",
+  49,034 times; 0.2.0's never does. Both step at the same fixed frame rate, so this changes how long
+  a run takes, not what happens in it.
+- **The same seed doesn't give the same shift.** The 18 reckless shifts that both `main` runs played
+  all came out different. The first shift of each career matched to within a few thousandths of a
+  second; later ones drifted apart, by whole catches. Tiny timing differences grow over a career.
+  Pairing still controls the layout and the bot's dice, and the standard errors come from the paired
+  differences, so they include this noise. But "paired" means "same start", not "same shift".
 
 **The primary metrics:**
 
 | # | Metric | Result |
 |---|---|---|
 | 1 | Seconds from first visible to moving at you | **Not timed in play.** `HuntMetrics` doesn't record it: a gap in the measuring code. Only the walk-by set's worked-out times stand (0.90 s at 10 m, dead centre) |
-| 2 | Metres to you 5 s after she loses sight in a hunt | **Can't be answered: 0 pairs.** She lost sight of a bot during a hunt 13 times in 144 shifts on 0.2.0 (8.5 m on average) and 4 times in 91 on `main` (13.7 m), never in the same shift. She rarely loses you, because she catches you first |
-| 3 | Fairness violations | **0** in all 307 shifts |
+| 2 | Metres to you 5 s after she loses sight in a hunt | **Can't be answered: 0 pairs.** She lost sight of a bot during a hunt in 13 of 144 shifts on 0.2.0 (8.5 m on average) and in 5 of 144 on `main` (13.5 m), never in the same pair. She rarely loses you, because she catches you first |
+| 3 | Fairness violations | **0** in all 379 shifts run |
 | 4 | The combo learner's setpoint error, with minus without | −0.01 ± 0.01 (training players, 54 pairs); −0.02 ± 0.01 (held out, 18 pairs). **She found no combo in any shift**, so this isn't the combo room at work: no effect shown |
 
-**0.2.0 against `main`,** training players, differences ± one standard error:
+**0.2.0 against `main`,** `main` → 0.2.0, with the paired difference ± one standard error:
 
-| | Rung C (48 pairs) | | Rung E (43 pairs) | |
+| | Rung C, training (53) | Rung E, training (54) | Rung C, held out (18) | Rung E, held out (18) |
 |---|---|---|---|---|
-| | `main` → 0.2.0 | difference | `main` → 0.2.0 | difference |
-| Catches per shift | 0.48 → 0.98 | +0.50 ± 0.07 | 0.47 → 1.00 | +0.53 ± 0.08 |
-| First detection (s) | 31.3 → 9.1 | −22.2 ± 3.8 | 35.7 → 8.4 | −27.4 ± 4.7 |
-| Detections | 7.9 → 5.8 | −2.1 ± 1.1 | 8.0 → 4.4 | −3.6 ± 0.7 |
-| Hunts | 0.17 → 1.73 | +1.56 ± 0.27 | 0.28 → 1.49 | +1.21 ± 0.21 |
-| Seconds sprinting | 0.31 → 1.23 | +0.92 ± 0.30 | 0.36 → 2.02 | +1.67 ± 0.40 |
-| Seconds outside her area | 11.1 → 0 | −11.1 ± 3.0 | 6.6 → 0 | −6.6 ± 2.8 |
-| Sightings from beyond 18 m | 0 → 0.81 | +0.81 ± 0.13 | 0 → 0.84 | +0.84 ± 0.13 |
-| Catches you never saw coming | 0.10 → 0.33 | +0.23 ± 0.09 | 0.19 → 0.33 | +0.14 ± 0.09 |
-| Belief error out of view (m) | 21.6 → 10.4 | −11.2 ± 1.4 | 22.6 → 11.4 | −11.2 ± 1.3 |
-| Setpoint error | 0.30 → 0.22 | −0.08 ± 0.02 | 0.29 → 0.20 | −0.09 ± 0.02 |
+| Catches per shift | 0.45 → 0.98 (+0.53 ± 0.07) | 0.54 → 1.00 (+0.46 ± 0.07) | 0.28 → 1.00 (+0.72 ± 0.11) | 0.50 → 0.94 (+0.44 ± 0.12) |
+| First detection (s) | 31.9 → 8.8 (−23.2 ± 3.6) | 35.8 → 8.6 (−27.2 ± 4.5) | 38.3 → 9.1 (−29.2 ± 7.8) | 61.1 → 8.4 (−52.7 ± 12.1) |
+| Detections | 7.6 → 5.7 (−1.9 ± 1.0) | 8.6 → 4.3 (−4.3 ± 0.6) | 7.3 → 3.6 (−3.7 ± 1.1) | 6.2 → 2.9 (−3.3 ± 1.0) |
+| Hunts | 0.21 → 1.79 (+1.58 ± 0.26) | 0.37 → 1.50 (+1.13 ± 0.18) | 0 → 1.17 (+1.17 ± 0.35) | 0.17 → 1.22 (+1.06 ± 0.34) |
+| Seconds sprinting | 0.30 → 1.29 (+0.99 ± 0.29) | 0.37 → 2.02 (+1.65 ± 0.37) | 0.05 → 1.28 (+1.23 ± 0.48) | 0.16 → 0.84 (+0.69 ± 0.35) |
+| Seconds outside her area | 9.1 → 0 (−9.1 ± 2.6) | 7.3 → 0 (−7.3 ± 2.4) | 9.3 → 0 (−9.3 ± 3.7) | 0 → 0 |
+| Sightings from beyond 18 m | 0 → 0.81 | 0 → 0.83 | 0 → 0.89 | 0 → 0.78 |
+| Catches you never saw coming | 0.08 → 0.30 (+0.23 ± 0.07) | 0.22 → 0.31 (+0.09 ± 0.08) | 0.06 → 0.39 (+0.33 ± 0.14) | 0.11 → 0.28 (+0.17 ± 0.15) |
+| Belief error out of view (m) | 21.2 → 10.9 (−10.3 ± 1.5) | 21.1 → 10.9 (−10.3 ± 1.2) | 24.4 → 11.4 (−13.0 ± 2.9) | 26.3 → 15.4 (−10.8 ± 3.9) |
+| Setpoint error | 0.29 → 0.23 (−0.06 ± 0.02) | 0.29 → 0.20 (−0.09 ± 0.02) | 0.26 → 0.23 (−0.03 ± 0.03) | 0.29 → 0.20 (−0.09 ± 0.03) |
 
 **By player** (rungs C and E together):
 
-| Player | Pairs | Catches per shift | Shift length (s) | Clocked out |
+| Player | Pairs | Catches per shift | Shift length (s) | Finished the shift |
 |---|---|---|---|---|
 | efficient | 36 | 0.42 → 1.00 | 305 → 103 | 31% → 0% |
 | skittish | 36 | 0.33 → 0.97 | 330 → 136 | 3% → 0% |
-| reckless | 19 | 0.84 → 1.00 | 225 → 77 | 5% → 0% |
-| cautious (held out) | 0 | 0.2.0 alone: 0.97 | 0.2.0 alone: 94 | 0.2.0 alone: 0% |
+| reckless | 35 | 0.74 → 1.00 | 232 → 82 | 11% → 0% |
+| cautious (held out) | 36 | 0.39 → 0.97 | 296 → 94 | 6% → 3% |
 
 **What it shows:**
-- **She's far deadlier.** She catches the bot in 97–100% of shifts, against about half on `main`.
-  A bot finished its shift in 1 of 144 shifts on 0.2.0; on `main` the efficient bot clocked out in
-  31% of its shifts. A 0.2.0 shift ends about 100 s in.
-- **She sees you sooner:** about 9 s to first detection instead of 31–36 s. This is the bigger
-  cone and the expectation boost, as designed, but over whole shifts it adds up to a catch almost
-  every time.
+- **She's far deadlier,** for every player, the held-out one included. She catches the bot in
+  94–100% of shifts, against 28–54% on `main`. A bot finished its shift in 1 of 144 shifts on
+  0.2.0, against 18 of 144 on `main`. A 0.2.0 shift ends about 100 s in.
+- **She sees you sooner:** about 9 s to first detection, against 32–61 s. This is the bigger cone
+  and the expectation boost, as designed, but over whole shifts it adds up to a catch almost every
+  time.
 - **She stays inside:** 0 s outside her area, on every rung and player.
-- **Catches you never saw coming rose with the catches, not as a share:** 32% of 0.2.0's catches
-  against 30% of `main`'s. More catches, not sneakier ones.
+- **Catches you never saw coming rose with the catches, not as a share:** 32% of 0.2.0's catches,
+  against 28% of `main`'s. More catches, not sneakier ones.
 - **Her belief error out of view halves,** but it isn't like for like: her area is about half the
   size, and the outside is one cell.
 - **The better setpoint error isn't shown to be better pacing.** Setpoint error rises with shift
-  length (correlation 0.31 on `main`, 0.47 on 0.2.0), and 0.2.0's shifts are a third as long.
-  Over the 12 pairs where both shifts lasted under 150 s, the difference is −0.04 ± 0.03, within
-  noise.
+  length (a correlation of 0.47 on 0.2.0, 0.12 on `main`), and 0.2.0's shifts are a third as long.
+  Where both shifts of a pair lasted under 150 s, the difference is −0.02 ± 0.04 for the training
+  players (16 pairs) and −0.10 ± 0.06 held out (8 pairs): within noise.
 - **Cut never fired** in 144 shifts (once in the 72 with the combo learner off). Chases end in a
   catch before there's a route worth cutting.
 - **Throw is rare:** 20 throws in 144 shifts, 19 of them on rung E, and 5 hits. The bots saw 7
   and dodged 2.
 - **Her tricks:** 1.3 a shift on 0.2.0 (Bin tamper most, then Ambush, Blackout, the throws, and
   Block door 7 times on shifts 7–8), against 33 on `main`, whose most used was Follow (933 times
-  in 91 shifts).
+  in its first run's 91 shifts).
 - **The bots react in play:** they turned back from her 183 times in 144 shifts. That was built
   in C5.1 and unit-tested; this is the first time it's seen in whole shifts.
 - **The combo learner found nothing** in 144 rung-E shifts. With a catch about 100 s in and 1.3
@@ -546,10 +551,6 @@ catch within two minutes, so the Hunt's later parts (losing you, Cut, combos) ha
 to run, and primary metric 2 can't be measured. How far to turn her down, and with what (her
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
-
-**Still missing:** `main`'s reckless and cautious shifts. Its seeds come from the player and the
-career, so a run of `main` with only those two players gives exactly the missing pairs, including
-the held-out comparison.
 
 ## Earlier runs
 

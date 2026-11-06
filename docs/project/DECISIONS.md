@@ -232,13 +232,13 @@ the ablation over whole shifts is below the table.
 
 **What the ablation found** (6 November, against `main`, paired by seed;
 [KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-ablation-results-6-november)):
-- **Together, the changes make her far deadlier:** a catch in 97–100% of shifts against about
-  half, and a bot finished its shift once in 144. She sees it within about 9 s, against 31–36 s.
-- **What holds:** 0 fairness violations in 307 shifts, and 0 s outside her area.
+- **Together, the changes make her far deadlier:** a catch in 94–100% of shifts against 28–54%,
+  for every simulated player, the held-out one included. A bot finished its shift in 1 of 144
+  shifts, against 18 on `main`. She sees it within about 9 s, against 32–61 s.
+- **What holds:** 0 fairness violations in 379 shifts, and 0 s outside her area.
 - **What hardly runs:** Cut never fired, Throw is rare (20 in 144 shifts), and the combo learner
   found no combo. Shifts end in a catch about 100 s in, before those get a chance.
-- **What couldn't be measured:** the gap 5 s after she loses you, because she almost never does;
-  and the held-out player against `main`, whose run stopped at its time limit.
+- **What couldn't be measured:** the gap 5 s after she loses you, because she almost never does.
 
 ---
 
