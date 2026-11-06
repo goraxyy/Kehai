@@ -20,6 +20,13 @@ namespace Kehai.Karen
         public override string Chore => "move the box away from the door";
         public override string Attacks => "space";
 
+        public override bool EffectRunning(KarenContext c)
+        {
+            foreach (HingeDoor d in HingeDoor.All)
+                if (d != null && d.Blocker != null && d.Blocker.IsBlocking) return true;
+            return false;
+        }
+
         HingeDoor door;
         ProductBox box;
         int doorRegion = -1;
