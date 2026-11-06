@@ -12,7 +12,8 @@ are from the dev Mac (M2, 8 GB), in the editor, at 1080p.
 7. [Quality without rebuilding the pipeline](#7-quality-without-rebuilding-the-pipeline)
 8. [The pipelines](#8-the-pipelines)
 9. [Reproducible interior models and safe room circulation](#9-reproducible-interior-models-and-safe-room-circulation)
-10. [Still open](#10-still-open)
+10. [Karen 0.2.0](#10-karen-020)
+11. [Still open](#11-still-open)
 
 ---
 
@@ -141,16 +142,20 @@ shoppers, Karen and tasks in it; aisle signs; a floating origin for very long wa
 - **She knows only what she perceives:** sight, sound, traces, what customers tell her, the
   building's sensors, and places she looked and found nothing. Her guess of where you are is a
   probability map. **A test fails if her code reads the player's real position.**
-- **Every trick has a warning** at least 0.8 s before it.
-- **She's slightly faster than you in a chase** (changed 2026-10-16): her hurry and run are 1.05 ×
-  your walk and sprint, so breaking her line of sight is how you get away.
+- **She works only inside** (0.2.0): the building, the backstreet and the pavement. She never
+  hunts you outside.
+- **No trick warns you first any more** (0.2.0). Until then, every trick played a warning at
+  least 0.8 s before it acted. Why it went: [§10](#10-karen-020).
+- **She's faster than you in a hunt:** 7.5 m/s against your 6.5 since 0.2.0 (it was 1.05 ×, 6.8
+  m/s, from 2026-10-16). She gains a metre a second, so breaking her line of sight is how you get
+  away.
 - **Her touch kills** (changed 2026-10-16), and the shift starts again, so she can't catch you
   again straight away.
 
 **Why:** the game is about being sensed, not seen through walls. It also makes the AI tests
 honest: an agent that beats her beats a fair opponent.
 
-**Tested on the real game.** An agent plays through 17 actions using the real player body; a
+**Tested on the real game.** An agent plays through 18 actions using the real player body; a
 150 s shift runs headless in 5–15 s. That's what the ablation runs on ([IDEAS.md](IDEAS.md)).
 
 ---
@@ -205,8 +210,32 @@ its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](../store/
 
 ---
 
-## 10. Still open
+## 10. Karen 0.2.0
 
+A redesign of how Karen sees, where she works, how she hunts and how she learns. The plan is
+[`0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md), the reasoning
+[`0.2.0-design-notes.md`](../plans/0.2.0-design-notes.md), and what changed in the code
+[Karen.md §16](../karen/Karen.md#16-karen-020). **The ablation against the old Karen hasn't been
+run yet**, so the "what it gave" column is what the tests show, not whole shifts.
+
+| Decision | Why | The cost | What it gave so far |
+|---|---|---|---|
+| **She works only inside**, and outside is one cell of her belief that remembers which exit you used | Over half her map (56% of 4,708 cells) was the street, parking lot and alleys. She could sweep the parking lot while you worked inside | She can't follow you out; she sets up for your return instead | Her grid shrinks to about 2,000–2,700 cells. Tests: she never picks a spot outside, and her body can't walk round the building |
+| **Guesses at your route, not a second grid** (D1) | Cut, Throw, Ambush and Hunt need a spot and a time. A grid run forward blurs into no spot to race to | Only during a hunt, and only 3–6 guesses | Tests: the right guess comes out on top, turning back raises "turned back", ruled-out guesses fall |
+| **Hunt sprints at 7.5 m/s**, keeps running on her guesses, and the chase and Follow merge into it | At 1.05 × your sprint a chase in the open barely closed, and she stopped where she last saw you | A corner or a door has to save you. Hunt is paced harder: 0.6 tension, a 90 s cooldown, never while you settle in or in a recovery | Tests cover each pacing and hand-over rule |
+| **Cut and Throw**, two new tricks inside Hunt | Hunting on guesses needs a way to use them: get ahead of you, or slow you | Throw had to be capped so an item alone never makes a catch certain; its ranges come from that rule | Cut rarely fires: never on a 25 m dash, and on 45–60 m runs it's closer in 1 of 8 starts, never worse. A first version did worse than the plain sprint |
+| **A wider, longer cone, with a lower gain** | Awareness felt slow; the targets are seen within 0.7 s at 10 m and 1.5 s at 15 m off-centre, and never crouched in the dim | Long aisles stop being safe, and her "nothing here" sweep had to grow: 1.3 ms and 108 rays a sweep in the editor | Every target met: 0.67 s, 1.40 s, never |
+| **No warnings** (Q17) | The owner chose surprise over the promise. A warning's 1 s was a 6.5 m head start | Fairer games warn before what can kill you, which was the recommended option; with none, a catch can come from nowhere. The ablation counts catches you never saw coming | The sounds stay as atmosphere |
+| **Most tricks become drafts:** kept in the code, off in play | The owner's short list of tricks to rework or remove. Kept in the library, so ids, Ledger records and rung F's numbering don't move | The learner has little to choose from until they return; Corner, Loom and Lure have no live trick, and tier 4 is empty | 13 of 36 live. Ambush now unlocks on shift 3 (was 8), so it runs in tests for the first time |
+| **Combos learned, not built in** | Combos welded into tricks (Blackout's wait, Funnel) can't be judged apart from their parts | The combo room starts empty and has to earn every chain | In a planted test world she finds the planted chain in every seed by shift 3–5, finds none where none pays, and earns more than without it (+0.23 a shift, SE 0.017). Not yet shown in the store |
+| **Her footsteps and floor cone for the developer only** | The bots heard her steps within 12 m, so the tests measured an easier game than players get | Players have little left to notice her by: seeing her, and the sounds of her tricks | The bots hear what players hear |
+
+---
+
+## 11. Still open
+
+- **Karen 0.2.0 isn't measured over whole shifts yet.** The ablation against the old Karen is set
+  up and waits ([§10](#10-karen-020)).
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
   the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).

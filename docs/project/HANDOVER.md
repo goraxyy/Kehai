@@ -1,6 +1,7 @@
 # Handover: picking Kehai up
 
-Written on 2026-10-31, when the work moved to a new account on the **same Mac**. Read this first,
+Written on 2026-10-31, when the work moved to a new account on the **same Mac**, and updated on
+2026-11-05 for Karen 0.2.0. Read this first,
 then [`CLAUDE.md`](../../CLAUDE.md) (the working rules) and the
 [0.2.0 build plan](../plans/0.2.0-build-plan.md), which is what's next for Karen. The older
 [`notmerged.md`](../archive/notmerged.md) (archived on 2026-11-05) still explains how Karen adapts,
@@ -17,9 +18,10 @@ with diagrams, but its to-do list is out of date.
 - **Old names.** The game was Karoshi until 2026-09-29, and Karen was briefly Aiko (09-30 to 10-10). Those names survive only in `KehaiMigration.cs` and in readers of old save files. Never bring them back.
 - **The showpiece is Karen's AI.** It's described in [`Karen.md`](../karen/Karen.md), measured in [`KAREN_RESULTS.md`](../karen/KAREN_RESULTS.md), and explained simply in [`notmerged.md`](../archive/notmerged.md). The pieces:
   - a Bayes-filter belief grid;
-  - utility goals and HTN plans over 34 tactics;
+  - utility actions and HTN plans over 36 tricks, 13 of them live in 0.2.0 (before it: utility goals and HTN plans over 34 tactics, all in play);
+  - guesses at your route while she hunts, which her Cut and Ambush race to (0.2.0);
   - a PI-controlled Director that paces tension in waves;
-  - a UCB bandit and a per-player Ledger;
+  - a UCB bandit and a per-player Ledger, which since 0.2.0 also learns which pairs of tricks pay (the combo room);
   - a PPO policy at rung F (built, not trained);
   - an ablation harness with simulated players that react to her.
 - **Where it's heading.** Vertical slice → Steam page ("Coming Soon") → playtests → demo → release ([`RELEASE_PLAN.md`](RELEASE_PLAN.md)).
@@ -83,7 +85,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 - **Coordinates:** world metres. The street is north (high Z), the store runs south along −Z to the stockroom, and east is +X.
 - **If the editor opens an empty Untitled scene,** `OpenStoreOnLaunch.cs` opens the store. Otherwise open `SampleScene.unity` by hand.
 
-## 4. State of the work (2026-10-31)
+## 4. State of the work (updated 2026-11-05)
 
 **Merged to main** (highlights; the full history is in git and [`CHANGELOG.md`](CHANGELOG.md)):
 
@@ -102,28 +104,40 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | #65 | [`notmerged.md`](../archive/notmerged.md) |
 
 **Open:**
+- **PR #74, Karen 0.2.0** (`0.2.0` → `main`). **The owner merges it once everything is built; don't merge it.**
+  - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
+  - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
+  - **Built [C]:** phases 0–5's code: her area and grid, actions and drafts, Hunt at 7.5 m/s on her guesses, no warnings, the route guesses, Cut, Throw and their effects, her eyes, the combo room, bots that turn back and dodge, and the ablation's measurements. All 262 EditMode tests pass.
+  - **Left [C]:** the ablation against `main` (C5.3: about an hour with the editor closed, set up and waiting for the owner's go), then its results (C5.4).
+  - **Left [B]:** Block door rebuilt (B2.1, committed on `0.2.0-b`, not merged in yet), the thrown items seen (B3.1), the effects felt (B3.2), her guesses drawn (B3.3), the combo list in the shift report (B4.1), the claims (B5.1), and closing B1.2.
+  - **Left for the owner:** re-export the maps (Y1.1), playtest a shift (Y5.1), then review and merge (Y5.2). Before pulling the merge into the main folder, move its untracked `AGENTS.md` aside: the branch tracks its own.
 - **Draft PR #68, the learned motion model** (`feat/learned-motion`). About 70% done, paused before training.
   - Built: the code, the tests, the Python training tools, and the dataset (288 shifts, parity-checked).
   - Left: training (about 5 h), the held-out test (144 shifts) and closed loop (48), and the results.
   - Exact steps: `tools/belief/HANDOVER.md` on that branch. Design: [`plans/learned-motion-model.md`](../plans/learned-motion-model.md).
+  - After 0.2.0 its dataset has to be re-recorded on the new grid (her cells and one outside cell). Train only on the owner's go.
 - **The "capture" plan,** approved and not started: [`plans/karen-capture.md`](../plans/karen-capture.md).
   - A two-headed contextual bandit that learns both Δpanic and the chance of a kill.
   - Three fair kill moves: cut you off, wait on your path, a deadly step-out.
   - 7 test arms × 400 shifts. It starts after PR #68 is merged.
+  - Not in 0.2.0. Cut, and Ambush on her guessed routes, now cover part of its first two kill moves, so re-read it against 0.2.0 before building it.
 
 ## 5. What's next, in order
 
-1. **Finish PR #68:** train, test, write up, merge.
-2. **Build the capture plan** as one PR.
-3. **Train rung F** (PPO; about 10 Mac nights, or the university's Windows PCs). It's judged against rung E on the same seeds.
-4. **Real players.** The playtest pipeline is built and waits on:
+1. **Finish Karen 0.2.0 (PR #74):** the ablation on the owner's go, the results, [B]'s tasks, the owner's playtest, then the owner's merge.
+2. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
+3. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
+4. **The capture plan,** re-read against 0.2.0 first, as one PR.
+5. **Real players.** The playtest pipeline is built and waits on:
    - a Cloudflare account (then the `wrangler` deploy in `tools/playtest/README.md`);
    - a Google Form, a password-protected itch.io page, and the Telegram and Claude keys.
-5. **The release plan:** setup accounts, the vertical slice, the Steam page, playtests, demo and Next Fest, marketing, beta, the redesign ([`RELEASE_PLAN.md`](RELEASE_PLAN.md)).
+6. **The release plan:** setup accounts, the vertical slice, the Steam page, playtests, demo and Next Fest, marketing, beta, the redesign ([`RELEASE_PLAN.md`](RELEASE_PLAN.md)).
 
 **Known gaps:**
 - Karen can stand on a stuck player without catching them.
 - The Director nudges her belief toward the player's true region after 45 s without a sighting (`KarenDirector.MaybeBias`). Published out-of-view belief numbers include this hint.
+- On 0.2.0, the shift report still counts "warning sounds" and tells you to listen for them before her tricks, though no trick waits for its sound any more (a request to [B]).
+- On 0.2.0, Cut rarely fires: never on a 25 m dash, and sometimes on a 45–60 m run (Karen.md §16.4).
 
 ## 6. How to work on it
 
@@ -144,6 +158,12 @@ The short rules are in [`CLAUDE.md`](../../CLAUDE.md). The longer how-to:
      - delete the clone, `~/Library/Application Support/TokenLimit/Kehai-verify` and the `unity.TokenLimit.Kehai-verify` prefs.
 
   Only ask before running Unity at all if the owner's editor is open: this 8 GB Mac can't run two.
+- **Comparing a branch with `main`** (as 0.2.0's ablation does):
+  1. Check the main folder matches `origin/main`, then clone it the same way, with `productName` `Kehai-verify-main`.
+  2. Add only the measuring code. For 0.2.0 that's `HuntMetrics.cs`, with its parts between `// -- 0.2.0 only --` and `// -- end --` taken out, and its hooks in `EpisodeMetrics.cs`.
+  3. Run both clones one after the other on the same seeds, rungs and players.
+  4. Pair the runs with `tools/eval/compare_builds.py main.jsonl branch.jsonl` ([`tools/eval/README.md`](../../tools/eval/README.md)).
+  5. Clean up both clones, their data folders and prefs, and the editor prefs, as above.
 - **Offline compile check.** Copy the `Assembly-CSharp(.Editor).rsp` files from `Library/Bee/artifacts/200b0aE.dag/`, point `-out` at a scratch folder, add the new sources (each on its own line), and run Unity's bundled Roslyn `csc.dll` through its `dotnet`.
 - **Audio.** Batch runs are silent (`SoundSettings.Audible()` returns 0 in batch mode). In the GUI editor, set `EditorUtility.audioMasterMute = true` before entering Play or running tests that do. Never change the Mac's volume.
 - **The Unity bridges.**
