@@ -27,16 +27,21 @@ public class ShiftManager : MonoBehaviour
     public CustomerSpawner customerSpawner;
     public BurnoutSystem burnoutSystem;
 
-    // Asked when the employee tries to clock out with everything done. Returning true
-    // refuses — Karen's overtime (Karen.md §8.2). Null means nobody objects.
-    public System.Func<bool> ClockOutGuard;
-
     public bool IsShiftActive { get; private set; }
     public bool CustomersAllowed { get; private set; }
     public float TimeRemaining { get; private set; }
     public int ShiftNumber { get; private set; }
 
+    // Karen's overtime (0.3.0): she stops the time clock, and the shift's countdown stops with
+    // it. Customers keep coming, and the task list gains "Restart the time clock", until
+    // someone restarts it at the clock. Cleared when a shift starts or ends.
+    public bool IsFrozen { get; private set; }
+
+    // Seconds the clock has stood stopped this shift: the eval's time-out allows for them.
+    public float FrozenSeconds { get; private set; }
+
     public event Action ShiftStateChanged;
+    public event Action FreezeChanged;
 
     void Awake()
     {
@@ -53,7 +58,8 @@ public class ShiftManager : MonoBehaviour
 
     void Update()
     {
-        if (!IsShiftActive || !CustomersAllowed) return;
+        if (IsShiftActive && IsFrozen) FrozenSeconds += Time.deltaTime;
+        if (!IsShiftActive || !CustomersAllowed || IsFrozen) return;
 
         TimeRemaining -= Time.deltaTime;
         if (TimeRemaining <= 0f)
@@ -79,12 +85,6 @@ public class ShiftManager : MonoBehaviour
             return;
         }
 
-        if (ClockOutGuard != null && ClockOutGuard())
-        {
-            GameEvents.RaisePunchAttempted(false);
-            return;
-        }
-
         GameEvents.RaisePunchAttempted(true);
         EndShift();
     }
@@ -95,6 +95,8 @@ public class ShiftManager : MonoBehaviour
 
         ShiftNumber++;
         IsShiftActive = true;
+        SetFrozen(false);
+        FrozenSeconds = 0f;
         TimeRemaining = shiftDurationSeconds;
         SetCustomersAllowed(true);
 
@@ -120,13 +122,28 @@ public class ShiftManager : MonoBehaviour
         ShiftNumber = Mathf.Max(0, completed);
     }
 
-    // More shift: the doors stay open longer and customers keep coming. Used by Karen's
-    // overtime.
-    public void AddOvertime(float seconds)
+    // Stop the clock. Only during a shift that's still counting down.
+    public bool Freeze()
     {
-        if (!IsShiftActive || seconds <= 0f) return;
-        TimeRemaining += seconds;
-        if (!CustomersAllowed) SetCustomersAllowed(true);
+        if (!IsShiftActive || IsFrozen || TimeRemaining <= 0f) return false;
+        SetFrozen(true);
+        return true;
+    }
+
+    // Start it again, from where it stopped.
+    public bool Unfreeze()
+    {
+        if (!IsFrozen) return false;
+        SetFrozen(false);
+        return true;
+    }
+
+    void SetFrozen(bool frozen)
+    {
+        if (IsFrozen == frozen) return;
+        IsFrozen = frozen;
+        FreezeChanged?.Invoke();
+        if (taskManager != null) taskManager.NotifyChanged();
         ShiftStateChanged?.Invoke();
     }
 
@@ -135,6 +152,7 @@ public class ShiftManager : MonoBehaviour
         if (!IsShiftActive) return;
 
         IsShiftActive = false;
+        SetFrozen(false);
         TimeRemaining = 0f;
         SetCustomersAllowed(false);
 

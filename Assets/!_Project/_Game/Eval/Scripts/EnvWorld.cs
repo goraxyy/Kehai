@@ -76,8 +76,7 @@ namespace Kehai.Eval
         public const float TellFar = 60f;   // as KarenWorld plays a tell
 
         public static bool Storewide(TellKind kind) =>
-            kind == TellKind.PaChime || kind == TellKind.SpeakerCrackle || kind == TellKind.HoldMusic ||
-            kind == TellKind.CrtTick || kind == TellKind.BallastWhine;
+            kind == TellKind.PaChime || kind == TellKind.HoldMusic || kind == TellKind.BallastWhine;
 
         // What kind of warning it is, as a person would class it.
         public static string TellCategory(TellKind kind)
@@ -85,13 +84,10 @@ namespace Kehai.Eval
             switch (kind)
             {
                 case TellKind.BallastWhine:
-                case TellKind.Flicker:
                     return "light";
                 case TellKind.PaChime:
-                case TellKind.SpeakerCrackle:
                 case TellKind.HoldMusic:
                     return "pa";
-                case TellKind.CrtTick:
                 case TellKind.PunchBuzz:
                     return "hud";
                 case TellKind.CustomerFreeze:
@@ -315,10 +311,10 @@ namespace Kehai.Eval
                 ["held_by_karen"] = Consequences.PlayerHeld
             };
 
-            // The HUD, exactly as the player sees it — lies included.
+            // The task list, as the player sees it.
             var tasks = new List<object>();
             if (env.Tasks != null && env.Tasks.HasTasks)
-                foreach (TaskManager.ShiftTask t in HudFeed.Shown(env.Tasks.Tasks))
+                foreach (TaskManager.ShiftTask t in env.Tasks.Tasks)
                     tasks.Add(new Dictionary<string, object> { ["kind"] = t.Kind.ToString(), ["label"] = t.Label, ["done"] = t.IsComplete, ["detail"] = t.Detail });
             o["hud_tasks"] = tasks;
 
@@ -389,8 +385,9 @@ namespace Kehai.Eval
                 {
                     ["id"] = "breaker_" + i, ["on"] = panel.SwitchOn(i), ["hum_pitch_rank"] = panel.PitchOf(i)
                 }).ToList();
-                power["pa_jammed"] = panel.PaJammed;
             }
+            // The PA's power (0.3.0: the PA box), under its old name for the agents' readers.
+            power["pa_jammed"] = KarenWorld.Instance != null && !KarenWorld.Instance.Pa.Powered;
             o["power"] = power;
 
             o["karen"] = KarenAsSeen(me);

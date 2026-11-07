@@ -15,6 +15,9 @@ namespace Kehai.Karen
     // that works at half strength 16 m away, a higher floor so the best hiding still works,
     // more gain where her belief already expects you, and a short grace before the meter
     // drains. The cameras and shoppers keep the old ones.
+    //
+    // 0.3.0: fog blinds every eye the same (FogState). In a fogged room, or looking into one, an
+    // eye sees no further than the fog's visibility — hers, a camera's, Kenji's, and yours.
     public class SightSensor : MonoBehaviour
     {
         public const float CloseRange = 2.2f;
@@ -68,6 +71,9 @@ namespace Kehai.Karen
         public Vector3 Eye => transform.position;
         public Vector3 Forward => transform.forward;
         public float HalfAngle => fieldOfView * 0.5f;
+
+        // How far this eye can see a point right now: its range, or less in fog.
+        public float ReachTo(Vector3 point) => FogState.Active ? Mathf.Min(range, FogState.SightLimit(Eye, point)) : range;
 
         static readonly RaycastHit[] hits = new RaycastHit[8];
         Vector3 previousSeen;
@@ -124,7 +130,7 @@ namespace Kehai.Karen
             float distance = toPlayer.magnitude;
             IsWatched = false;
             Exposure = 0f;
-            if (distance > range || distance < 0.01f) return 0f;
+            if (distance > ReachTo(player.Chest) || distance < 0.01f) return 0f;
 
             float angle = Vector3.Angle(Forward, toPlayer);
             bool close = distance < CloseRange;
@@ -199,6 +205,7 @@ namespace Kehai.Karen
             float distance = d.magnitude;
             if (distance > range) return false;
             if (Vector3.Angle(Forward, d) > HalfAngle) return false;
+            if (FogState.Active && distance > FogState.SightLimit(Eye, point)) return false;
             if (distance < 0.01f) return true;
 
             int count = Physics.RaycastNonAlloc(Eye, d / distance, hits, distance, ~0, QueryTriggerInteraction.Ignore);

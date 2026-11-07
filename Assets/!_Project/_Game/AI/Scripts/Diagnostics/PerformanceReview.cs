@@ -47,7 +47,7 @@ namespace Kehai.Karen
             if (hiding != null) sb.AppendLine($"Employee's preferred concealment: {hiding}. Noted.");
             if (l.Data.sprintFraction > 0.25f) sb.AppendLine($"Employee runs {l.Data.sprintFraction:P0} of the time. Running on the shop floor is a hazard.");
             if (s.Catches > 0) sb.AppendLine($"Written warnings issued this shift: {s.Catches}.");
-            if (s.Overtimes > 0) sb.AppendLine("Employee kindly agreed to extend their shift.");
+            if (s.Overtimes > 0) sb.AppendLine("The time clock stopped, and the employee kindly kept working.");
 
             var counter = l.Data.counterplay.Where(c => c.lastShift == s.Shift).ToList();
             foreach (CounterStat c in counter)

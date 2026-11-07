@@ -589,8 +589,9 @@ namespace Kehai.Replay
             if (panel != null)
             {
                 for (int i = 0; i < 3; i++) if (panel.IsOn((LightCircuit)i)) bits |= 2 << i;
-                if (panel.PaJammed) bits |= 16;
             }
+            // Bit 16: the PA is off (the breaker box's jammer until 0.3.0; the PA box since).
+            if (KarenWorld.Instance != null && !KarenWorld.Instance.Pa.Powered) bits |= 16;
             if (bits == circuits) return;
             circuits = bits;
             writer.Circuits(t, bits);

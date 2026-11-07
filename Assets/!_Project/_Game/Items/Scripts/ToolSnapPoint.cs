@@ -24,6 +24,43 @@ public class ToolSnapPoint : HighlightInteractable
         }
     }
 
+    // Karen took the tool and hid it (0.3.0, Tool theft). Until it's carried back by hand the
+    // rack won't recall it, and the task list says "Return the …". Cleared once it's home.
+    public bool Taken { get; private set; }
+
+    static readonly System.Collections.Generic.List<ToolSnapPoint> taken = new System.Collections.Generic.List<ToolSnapPoint>();
+    public static int TakenCount { get { Prune(); return taken.Count; } }
+    public static System.Collections.Generic.IReadOnlyList<ToolSnapPoint> TakenRacks { get { Prune(); return taken; } }
+
+    // A rack destroyed without OnDestroy (in the editor, never woken) leaves a dead entry.
+    static void Prune() => taken.RemoveAll(r => r == null);
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => taken.Clear();
+
+    public string ToolName
+    {
+        get
+        {
+            if (tool == null) return "tool";
+            if (tool.TryGetComponent(out ProductBox box)) return box.ProductName + " box";
+            string section = ProductCatalog.SectionName(tool.type);
+            return string.IsNullOrEmpty(place) ? section.ToLowerInvariant() : place + " " + section.ToLowerInvariant();
+        }
+    }
+
+    [Tooltip("Where this rack is, for the task list: \"WC\" makes the job read \"Return the WC mop\".")]
+    public string place = string.Empty;
+
+    public void MarkTaken(bool isTaken)
+    {
+        if (Taken == isTaken) return;
+        Taken = isTaken;
+        if (isTaken) { if (!taken.Contains(this)) taken.Add(this); }
+        else taken.Remove(this);
+        TaskManager.NotifyWorldChanged();
+    }
+
     Collider zone;
 
     protected override void Awake()
@@ -32,10 +69,13 @@ public class ToolSnapPoint : HighlightInteractable
         zone = GetComponent<Collider>();
     }
 
+    void OnDestroy() => taken.Remove(this);
+
     void Update()
     {
         // Two of these exist in the level, so a per-frame check costs nothing.
         bool home = IsToolHome;
+        if (home && Taken && (tool == null || !tool.isCarried)) MarkTaken(false);
 
         if (emptyMarker != null && emptyMarker.activeSelf == home)
             emptyMarker.SetActive(!home);
@@ -52,6 +92,10 @@ public class ToolSnapPoint : HighlightInteractable
         if (tool == null) return;
         if (IsToolHome) return;
 
+        // She hid it: no recall. Carried back by hand, it goes home as normal.
+        bool inHand = player.carrySlot != null && player.carrySlot.Contains(tool);
+        if (Taken && !inHand) return;
+
         // If it's in the inventory, take it out of the slot first.
         if (player.carrySlot != null && player.carrySlot.Contains(tool))
             player.carrySlot.Remove(tool);
@@ -65,6 +109,7 @@ public class ToolSnapPoint : HighlightInteractable
     {
         if (tool == null) return string.Empty;
         if (IsToolHome) return string.Empty;
+        if (Taken && !tool.isCarried) return "She moved it. Find it.";
         string what = tool.TryGetComponent(out ProductBox box) ? box.ProductName + " box" : ProductCatalog.SectionName(tool.type);
         return $"Put the {what} back";
     }

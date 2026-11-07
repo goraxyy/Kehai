@@ -9,6 +9,7 @@ namespace Kehai.Karen
     public sealed class DoorLockTactic : Tactic
     {
         public override string Id => "door_lock";
+        public override bool IsHandsOn => true;
         public override string Title => "Block door";
         public override ActionId[] Actions => new[] { ActionId.Corner };
         public override int Tier => 2;
@@ -24,6 +25,19 @@ namespace Kehai.Karen
         {
             foreach (HingeDoor d in HingeDoor.All)
                 if (d != null && d.Blocker != null && d.Blocker.IsBlocking) return true;
+            return false;
+        }
+
+        // You fix it at the box: on its side of the door, where it sits.
+        public override bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = default;
+            foreach (HingeDoor d in HingeDoor.All)
+                if (d != null && d.Blocker != null && d.Blocker.IsBlocking && d.Blocker.Box != null)
+                {
+                    at = d.Blocker.Box.transform.position;
+                    return true;
+                }
             return false;
         }
 

@@ -202,40 +202,6 @@ namespace Kehai.Karen
         }
     }
 
-    public sealed class WitnessTactic : Tactic
-    {
-        public override string Id => "witness";
-        public override string Title => "The witness";
-        public override ActionId[] Actions => new[] { ActionId.Flush, ActionId.Corner };
-        public override int Tier => 2;
-        public override int IntroducedShift => 6;
-        public override float TensionCost => 0.12f;
-        public override float Cooldown => 90f;
-        public override float PanicPrior => 0.1f;
-        public override TellKind Tell => TellKind.CustomerFreeze;
-        public override float TellLead => 0.8f;
-        public override string Chore => "you can't tell a shopper to leave";
-        public override string Attacks => "social";
-
-        CustomerNPC shopper;
-
-        public override bool Available(KarenContext c, out string why)
-        {
-            shopper = TacticHelpers.CustomerNear(c, TacticHelpers.Believed(c), 40f);
-            why = shopper == null ? "no shopper to send" : null;
-            return shopper != null;
-        }
-
-        public override void Plan(KarenContext c, PlanBuilder plan)
-        {
-            CustomerNPC target = shopper;
-            Vector3 believed = TacticHelpers.Believed(c);
-            plan.Target = $"{target.name} → {c.RegionName(c.Belief.PeakRegion)}";
-            plan.Add(new Tell(TellKind.CustomerFreeze, _ => target.transform.position, TellLead));
-            plan.Add(new Effect("send " + target.name + " to look", k => target.SendToLook(believed, 12f)));
-        }
-    }
-
     public sealed class UnderstudyTactic : PaTactic
     {
         public override string Id => "understudy";
@@ -322,39 +288,44 @@ namespace Kehai.Karen
 
         int spot = -1;
         string reason;
-        bool forTheLights;
+        Tactic forChore;
 
         public override bool Available(KarenContext c, out string why)
         {
             why = null;
-            if (!Spot(c, out spot, out _, out reason)) { why = "nowhere she's sure you'll pass"; return false; }
-            forTheLights = !PowerSystem.PowerOn;
+            if (!Spot(c, out spot, out _, out reason, out forChore)) { why = "nowhere she's sure you'll pass"; return false; }
             return true;
         }
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
             Vector3 at = c.Map.CellPosition[spot];
-            bool lights = forTheLights;
+            Tactic chore = forChore;
             plan.Target = c.Map.NameAt(at) + " — " + reason;
             plan.Add(new SetSilent(true));
             plan.Go(at, KarenBody.Pace.Hurry, "pre-position at " + c.Map.NameAt(at), 1.5f);
             plan.Add(new Tell(TellKind.SilenceFalls, k => k.Body.Position, 1f));
             plan.Add(new Hold(c.Config.ambushMaxWait,
-                k => k.A.Panic > k.Config.ambushAbortPanic || k.A.Awareness >= k.Body.Sight.confirmAt || lights && PowerSystem.PowerOn,
+                k => k.A.Panic > k.Config.ambushAbortPanic || k.A.Awareness >= k.Body.Sight.confirmAt ||
+                     chore != null && !chore.EffectRunning(k),
                 "wait, silent (abort if panic > 0.85)"));
             plan.Add(new SetSilent(false));
         }
 
         // Where to lie in wait, and how sure she is it's on your way (0.2.0): where most of her
-        // guesses about your route pass, while she has them; with the lights out, on your way to
-        // the breaker box (so Blackout then Ambush rebuilds the old Blackout's wait); else the
-        // Ledger's usual route to your next job.
-        public static bool Spot(KarenContext c, out int cell, out float sure, out string reason)
+        // guesses about your route pass, while she has them; while a trick of hers still leaves
+        // you a chore in one place (0.3.0, FixAt), on your way there — so Blackout then Ambush
+        // waits by the breaker box, and Tool theft then Ambush by the mop; else the Ledger's
+        // usual route to your next job.
+        public static bool Spot(KarenContext c, out int cell, out float sure, out string reason) =>
+            Spot(c, out cell, out sure, out reason, out _);
+
+        public static bool Spot(KarenContext c, out int cell, out float sure, out string reason, out Tactic chore)
         {
             cell = -1;
             sure = 0f;
             reason = null;
+            chore = null;
             RoutePredictor p = c.Brain != null ? c.Brain.Predictor : null;
             if (p != null && p.Active && !c.Body.Sight.SeesNow &&
                 CutTactic.ChooseSpot(c.Map, p, c.Body.Position, c.Config.hurrySpeed, Time.time, out CutTactic.CutSpot s))
@@ -364,16 +335,17 @@ namespace Kehai.Karen
                 reason = $"most of her guesses pass here ({s.Name}, {s.Weight:P0})";
                 return true;
             }
-            if (!PowerSystem.PowerOn)
+            if (ChoreWaiting(c, out Tactic by, out Vector3 fix))
             {
-                Landmark? box = c.Map.FindLandmark(LandmarkKind.BreakerBox);
-                if (box.HasValue && box.Value.Cell >= 0)
+                int goal = c.Map.CellAt(fix);
+                if (goal >= 0)
                 {
-                    cell = OnTheWay(c, box.Value.Cell, 8f);
+                    cell = OnTheWay(c, goal, 8f);
                     if (cell >= 0)
                     {
                         sure = 0.6f;
-                        reason = "the lights are out: on your way to the breaker box";
+                        chore = by;
+                        reason = $"{by.Title} left you a chore: on your way to {c.Map.NameAt(fix)}";
                         return true;
                     }
                 }
@@ -383,6 +355,19 @@ namespace Kehai.Karen
             cell = c.Map.CellAt(c.Map.Regions[region].Centroid);
             sure = c.Ledger.BestRouteConfidence(c, out _);
             return cell >= 0;
+        }
+
+        // A chore one of her tricks left you, still waiting in one place: her last trick's first,
+        // then any other of hers still in play.
+        public static bool ChoreWaiting(KarenContext c, out Tactic by, out Vector3 at)
+        {
+            at = default;
+            Tactic last = c.Last.Id != null ? TacticLibrary.Get(c.Last.Id) : null;
+            if (last != null && !last.Draft && last.EffectRunning(c) && last.FixAt(c, out at)) { by = last; return true; }
+            foreach (Tactic t in TacticLibrary.Live)
+                if (t != last && t.EffectRunning(c) && t.FixAt(c, out at)) { by = t; return true; }
+            by = null;
+            return false;
         }
 
         // A cell `before` metres short of `goal` on the shortest walk to it from where she

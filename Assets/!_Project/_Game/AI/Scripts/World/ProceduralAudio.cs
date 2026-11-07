@@ -4,16 +4,17 @@ using UnityEngine;
 namespace Kehai.Karen
 {
     // Every warning a tactic gives (Karen.md §9.3). Each is a distinct sound, so a player
-    // who learns them can read what is about to happen.
+    // who learns them can read what is about to happen. Replays store these by number, so a
+    // retired one keeps its place (and its sound, for old replays); nothing in play makes it.
     public enum TellKind
     {
         BallastWhine,     // blackout: a rising whine and a flicker
-        Flicker,          // a single light about to die
+        Flicker,          // retired in 0.3.0 with Mirror-black: a single light about to die
         ShelfRattle,      // a bay about to be stripped
         BucketClank,      // a spill about to be kicked over
         LidClatter,       // a bin being tampered with
         MopRattle,        // the mop being lifted off its rack
-        CrtTick,          // the HUD about to lie
+        CrtTick,          // retired in 0.3.0 with Task falsification: the HUD about to lie
         Drilling,         // a camera being bolted on
         Scrape,           // crates being dragged
         Clunk,            // a door lock engaging
@@ -21,11 +22,11 @@ namespace Kehai.Karen
         CustomerFreeze,   // a shopper stopping dead
         Screech,          // the chase
         SilenceFalls,     // her footsteps stopping
-        PunchBuzz,        // the time clock refusing
+        PunchBuzz,        // the time clock stopping
         HoldMusic,        // withdrawal
         EyeFlicker,       // she has started watching your blinks
         Grinding,         // shelving on castors
-        SpeakerCrackle,   // the PA about to play something that isn't speech
+        SpeakerCrackle,   // retired in 0.3.0 with PA: her footsteps: the PA about to play something that isn't speech
         DoorMotor,        // automatic doors about to cycle
         PaChime,          // an announcement
         Footsteps,        // her own steps, from somewhere else
@@ -157,6 +158,17 @@ namespace Kehai.Karen
         public static AudioClip BreakerThrow() => Make("breaker", 0.4f, t => 0.8f * Mathf.Exp(-t * 25f) * (White(t) * 0.6f + Sine(140f, t)));
         public static AudioClip ErrorBuzz() => Make("error", 0.6f, t => 0.35f * Env(t, 0.01f, 0.05f, 0.6f) * Mathf.Sign(Sine(95f, t)));
         public static AudioClip Unplug() => Make("unplug", 0.35f, t => 0.6f * Mathf.Exp(-t * 18f) * (Sine(300f, t) + White(t) * 0.3f));
+        // 0.3.0. A camera of hers that can see you: one short, high pip, once a second.
+        public static AudioClip CameraBeep() => Make("cambeep", 0.16f, t => 0.5f * Env(t, 0.004f, 0.04f, 0.16f) * Sine(2600f, t));
+        // The time clock stopping: a relay clack and a falling buzz that dies out.
+        public static AudioClip ClockStop() => Make("clockstop", 1.1f, t =>
+            0.8f * Mathf.Exp(-t * 30f) * White(t) +
+            0.35f * Env(t, 0.02f, 0.4f, 1.1f) * Mathf.Sign(Sine(Mathf.Lerp(120f, 55f, t / 1.1f), t)));
+        // The time clock starting again: two rising pips.
+        public static AudioClip ClockStart() => Make("clockstart", 0.5f, t =>
+            0.4f * (t < 0.2f ? Env(t, 0.005f, 0.05f, 0.2f) * Sine(880f, t)
+                             : Env(t - 0.25f, 0.005f, 0.08f, 0.25f) * Sine(1320f, t)));
+
         public static AudioClip Pour() => Make("pour", 1.2f, t => 0.25f * Env(t, 0.1f, 0.3f, 1.2f) * White(t) * (0.5f + 0.5f * Sine(4f, t)));
 
         static AudioClip HoldMusic() => Make("hold", 8f, t =>

@@ -26,7 +26,7 @@ public class ClipMarkerTests
         {
             { "blink_move", 10 }, { "catch", 10 }, { "near_miss", 9 }, { "escape", 8 }, { "found_blind", 8 },
             { "blackout", 8 }, { "possessed", 8 }, { "learned", 7 }, { "undone_work", 7 }, { "pa_call", 6 },
-            { "prop_trick", 6 }, { "clock_refused", 6 }, { "loud_mistake", 6 }, { "tell_then_trick", 5 },
+            { "prop_trick", 6 }, { "clock_refused", 6 }, { "clock_stopped", 6 }, { "loud_mistake", 6 }, { "tell_then_trick", 5 },
             { "shift_review", 5 }, { "karen_stuck", 4 }, { "customer_chaos", 3 }
         };
         foreach (var pair in expected)
@@ -366,11 +366,12 @@ public class ClipMarkerTests
         w.Pa(30f, "Thank you for your flexibility.");
         w.Pa(35f, "Five.");   // a countdown is one call
         w.PunchRefused(40f, Vector2.zero);
-        w.Record(41f, "EFFECT", null, "[00:41] EFFECT   clock-out refused; +2:00 of shift", Vector2.zero);   // the same refusal
+        w.Record(41f, "EFFECT", null, "[00:41] EFFECT   stop the time clock", Vector2.zero);   // the overtime (0.3.0)
+        w.Record(45f, "EFFECT", null, "[00:45] EFFECT   stop the time clock", Vector2.zero);   // cooling down
         w.CustomerGaveUp(50f, Vector2.zero);
         w.Manual(60f, false, Vector2.zero);
         w.Manual(61f, true, Vector2.zero);
         w.Finish(100f, false, Vector2.zero);   // didn't clock out: no review
-        CollectionAssert.AreEqual(new[] { "blink_move", "learned", "pa_call", "clock_refused", "customer_chaos", "manual_good", "manual_bug" }, Ids(markers));
+        CollectionAssert.AreEqual(new[] { "blink_move", "learned", "pa_call", "clock_refused", "clock_stopped", "customer_chaos", "manual_good", "manual_bug" }, Ids(markers));
     }
 }

@@ -64,7 +64,7 @@
       "id": "overtime",
       "status": "do_not_claim",
       "say": "Overtime is a disabled draft. It is not a live trick in 0.2.0. Don't lead with it or call it her signature.",
-      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactics/TacticsFacility.cs", "contains": "new Effect(\"arm the overtime\"" }],
+      "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactics/TacticsFacility.cs", "contains": "new HandsOn(\"stop the time clock\"" }],
       "avoid": ["gives you overtime", "signature move"]
     },
     {

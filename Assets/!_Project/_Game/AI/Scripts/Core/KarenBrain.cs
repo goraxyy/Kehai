@@ -127,7 +127,6 @@ namespace Kehai.Karen
             if (Shift != null)
             {
                 Shift.ShiftStateChanged += OnShiftStateChanged;
-                Shift.ClockOutGuard = ShouldRefuseClockOut;
                 if (Shift.IsShiftActive) BeginShift();
             }
 
@@ -229,7 +228,6 @@ namespace Kehai.Karen
             Stats.BeginShift(number);
             TacticLibrary.ResetShift();
             TraceRegistry.Clear();
-            HudFeed.Clear();
             closedUntil.Clear();
             closedNow.Clear();
             pendingRewards.Clear();
@@ -237,7 +235,6 @@ namespace Kehai.Karen
             lastTrickAt = -999f;
             sabotaged.Clear();
             peakOutstanding.Clear();
-            OvertimeArmed = false;
             KilledThisShift = false;
             Dash.BeginShift();
 
@@ -600,6 +597,10 @@ namespace Kehai.Karen
 
         void Decide(bool forced)
         {
+            // A trick started from the developer overlay runs to its end.
+            if (forcedPlan && CurrentPlan != null) return;
+            forcedPlan = false;
+
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
             ActionId goal = Actions.Choose(Ctx, forced, out string because);
@@ -703,6 +704,48 @@ namespace Kehai.Karen
         // The dash takes over after a vanish, and hands back when she steps out or gives up.
         public void HandOverToDash() => AbortPlan();
         public void ResumeDeciding() => decideNow = true;
+
+        // ---- the developer overlay: force a trick (0.3.0) ----------------------------------
+
+        bool forcedPlan;
+        public bool ForcedPlanRunning => forcedPlan && CurrentPlan != null;
+
+        // Start a trick now, past the Director's gate (tier, cooldown, budget, unlock shift) and
+        // the drafts list, but not past its own preconditions: a trick with nothing to work on
+        // says why. It isn't learned from, but it does count as her last trick, so a forced
+        // Tool theft then a forced Ambush tries the combo. Developer builds and the editor only.
+        public bool Force(string tacticId, out string why)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Tactic t = TacticLibrary.Get(tacticId);
+            if (t == null) { why = "no trick called " + tacticId; return false; }
+            if (!ShiftActive) { why = "no shift running"; return false; }
+            Ctx.A = Appraised();
+            Ctx.Last = LastTrickNow();
+            if (!t.Available(Ctx, out why)) { why = why ?? "not available"; return false; }
+
+            var builder = new PlanBuilder(0f);
+            t.Plan(Ctx, builder);
+            if (builder.Steps.Count == 0) { why = "it found nothing to do"; return false; }
+
+            AbortPlan();
+            ActionId goal = t.Actions.Length > 0 ? t.Actions[0] : ActionId.Roam;
+            CurrentPlan = new PlanTree($"{goal.Name()}({t.Id})", goal, t, builder.Steps, _ => false) { Target = builder.Target };
+            forcedPlan = true;
+            planStartedAt = Time.time;
+            t.LastUsed = Time.time;
+            t.UsesThisShift++;
+            if (t.Learnable) { lastTrick = t.Id; lastTrickAt = Time.time; }
+            Stats.Used(t);
+            Note("PLAN", $"PLAN     {t.Id} forced from the developer overlay → {builder.Target}");
+            NarratePlan(CurrentPlan);
+            why = null;
+            return true;
+#else
+            why = "developer builds only";
+            return false;
+#endif
+        }
 
         void AbortPlan()
         {
@@ -975,32 +1018,13 @@ namespace Kehai.Karen
             return true;
         }
 
-        // ---- the overtime (§8.2) -------------------------------------------------------------
+        // ---- the overtime (0.3.0) --------------------------------------------------------------
 
-        public bool OvertimeArmed { get; private set; }
-
-        public void ArmOvertime() => OvertimeArmed = true;
-
-        // Asked by the time clock when the employee tries to leave with everything done.
-        bool ShouldRefuseClockOut()
+        // She stopped the time clock (OvertimeTactic): counted for the shift report and the eval.
+        public void ClockStopped(Vector3 at)
         {
-            if (!OvertimeArmed || !ShiftActive || !config.Features.Goals) return false;
-            OvertimeArmed = false;
-            StartCoroutine(Overtime());
-            return true;
-        }
-
-        System.Collections.IEnumerator Overtime()
-        {
-            Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
-            Vector3 at = clock.HasValue ? clock.Value.Position : Body.Position;
-            World.PlayTell(TellKind.PunchBuzz, at, 0.9f);
-            RecordTell(TellKind.PunchBuzz, at, 0.9f);
-            yield return new WaitForSeconds(0.9f);
-            Consequences.AddOvertime(120f);
-            World.Pa.Announce($"Thank you for your flexibility, {Ledger.PlayerName}. Your shift has been extended.");
-            Note("EFFECT", "EFFECT   clock-out refused; +2:00 of shift");
-            Stats.OvertimeApplied();
+            Note("EFFECT", "EFFECT   the time clock stopped; the shift's countdown with it");
+            Stats.ClockStopped();
         }
 
         // ---- the endgame (§10.3) ---------------------------------------------------------------
@@ -1275,7 +1299,7 @@ namespace Kehai.Karen
 
         public void Caught() => Catches++;
         public void Chased() => Chases++;
-        public void OvertimeApplied() => Overtimes++;
+        public void ClockStopped() => Overtimes++;   // the overtime: times she stopped the clock
         public void BlinkSeen() => BlinksSeen++;
 
         public void Used(Tactic t)

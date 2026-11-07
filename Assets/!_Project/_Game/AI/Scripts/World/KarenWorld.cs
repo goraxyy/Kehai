@@ -62,8 +62,13 @@ namespace Kehai.Karen
 
         // ---- tells ------------------------------------------------------------------
 
-        public void PlayTell(TellKind kind, Vector3 at, float lead)
+        // Whether a tell goes through the PA, and so can't play while it's switched off (0.3.0).
+        public static bool ThroughThePa(TellKind kind) => kind == TellKind.PaChime || kind == TellKind.HoldMusic;
+
+        // False when it couldn't play: a PA sound with the PA switched off.
+        public bool PlayTell(TellKind kind, Vector3 at, float lead)
         {
+            if (ThroughThePa(kind) && !Pa.Powered) return false;
             // A warning only counts if it can be heard (fairness rule 3), so tells carry much
             // further than ordinary sounds and are only partly positional: you can tell which
             // way it came from without having to be in the same aisle.
@@ -76,25 +81,16 @@ namespace Kehai.Karen
                     OneShotAudio.PlayAt(clip, ListenerPosition(), 0.6f, 5f, 40f, 0.3f, SoundKind.Karen);
                     Lights.FlickerAll(lead);
                     break;
-                case TellKind.Flicker:
-                    Light near = LightProbe.NearestOn(at);
-                    if (near != null) StartCoroutine(Lights.Flicker(near, lead));
-                    OneShotAudio.PlayAt(clip, near != null ? near.transform.position : at, 0.8f, TellNear, TellFar, TellSpatial, SoundKind.Karen);
-                    break;
                 case TellKind.PaChime:
-                case TellKind.SpeakerCrackle:
                 case TellKind.HoldMusic:
                     Pa.PlayNear(ListenerPosition(), clip, 0.9f);
-                    break;
-                case TellKind.CrtTick:
-                    // The HUD tell has to reach you wherever you are.
-                    OneShotAudio.PlayAt(clip, ListenerPosition(), 0.7f, 5f, 40f, 0f, SoundKind.Karen);
                     break;
                 default:
                     OneShotAudio.PlayAt(clip, at, 1f, TellNear, TellFar, TellSpatial, SoundKind.Karen);
                     break;
             }
             NoiseBus.Emit(at, 0.4f, NoiseKind.Tell, NoiseAuthor.Karen);
+            return true;
         }
 
         const float TellNear = 6f, TellFar = 60f, TellSpatial = 0.8f;
@@ -115,15 +111,53 @@ namespace Kehai.Karen
 
         public void TripCircuit(LightCircuit circuit) => Breakers.Trip(circuit);
 
-        public bool MirrorBlack(Vector3 near)
+        // ---- fog (0.3.0) --------------------------------------------------------------
+
+        // The rooms with fridges she can flood (build plan D4).
+        public static readonly string[] FogRooms = { "Sales floor", "Cold storage", "Staff room" };
+
+        Dictionary<string, List<Transform>> fridges;
+        static readonly List<Transform> none = new List<Transform>();
+
+        // The fridges, chillers and freezers in a room, where the fog pours out from. Found in
+        // the scene once, by name, under the store (not the authoring shelf off to one side).
+        public IReadOnlyList<Transform> FridgesIn(string room)
         {
-            Light light = LightProbe.NearestOn(near, 6f);
-            if (light == null) return false;
-            Lights.Kill(light);
-            return true;
+            if (fridges == null) FindFridges();
+            return room != null && fridges.TryGetValue(room, out List<Transform> list) ? list : none;
         }
 
-        public void Fog(Vector3 at, float radius, float seconds) => Track(FogCloud.Spawn(at, radius, seconds).gameObject);
+        public static bool IsFridge(string name)
+        {
+            string n = name.ToLowerInvariant();
+            return (n.Contains("chiller") || n.Contains("fridge") || n.Contains("freezer")) && !n.Contains("label");
+        }
+
+        void FindFridges()
+        {
+            fridges = new Dictionary<string, List<Transform>>();
+            foreach (Transform t in FindObjectsByType<Transform>())
+            {
+                if (!IsFridge(t.name) || !UnderTheStore(t)) continue;
+                string room = StoreMap.AreaAt(t.position);
+                if (System.Array.IndexOf(FogRooms, room) < 0) continue;
+                if (!fridges.TryGetValue(room, out List<Transform> list)) fridges[room] = list = new List<Transform>();
+                // One per fridge: its parts (doors, shelves) sit within a metre of it.
+                bool known = false;
+                foreach (Transform f in list) if (FairnessGuard.Flat(f.position, t.position) < 1f) { known = true; break; }
+                if (!known) list.Add(t);
+            }
+        }
+
+        static bool UnderTheStore(Transform t)
+        {
+            for (Transform p = t; p != null; p = p.parent) if (p.name == "Supermarket") return true;
+            return false;
+        }
+
+        // Flood a room: the fog rolls out of its fridges (FogVisuals draws it) and everyone in it
+        // sees `visibility` metres, her included.
+        public void FogRoom(string room, float visibility) => FogState.Fill(room, visibility);
 
         public CctvCamera BoltOnCamera(Vector3 overSpot)
         {
@@ -136,9 +170,13 @@ namespace Kehai.Karen
 
         // ---- work ---------------------------------------------------------------------
 
+        // Her hands, for the rule 9 audit: where her body stands, if she has one.
+        static KarenBody Hands => KarenBrain.Instance != null ? KarenBrain.Instance.Body : null;
+
         public Dirt Spill(Vector3 at)
         {
             if (DirtPrefab == null) return null;
+            FairnessGuard.CheckHandsOn("spill", Hands, at);
             Vector3 p = NavMesh.SamplePosition(at, out NavMeshHit hit, 2f, NavMesh.AllAreas) ? hit.position : at;
             GameObject go = Instantiate(DirtPrefab, p + Vector3.up * 0.02f, Quaternion.Euler(90f, Random.Range(0f, 360f), 0f));
             go.name = "Spill (" + GameNames.Antagonist + ")";
@@ -153,9 +191,49 @@ namespace Kehai.Karen
             return cup;
         }
 
-        public void PhantomChime(AutoDoubleDoor door)
+        // ---- phantom chime (0.3.0) ------------------------------------------------------
+
+        public const float PhantomSeconds = 20f;   // the owner's 20 s
+        public const float PhantomPeriod = 3.2f;    // open, held, shut, again (build plan D3)
+
+        Coroutine phantom;
+        public AutoDoubleDoor PhantomDoor { get; private set; }
+        public float PhantomUntil { get; private set; } = -1f;
+        public bool PhantomRunning => PhantomDoor != null && Time.time < PhantomUntil;
+
+        // The front doors open and shut by themselves, chiming each time, with nobody there.
+        // A real person walking in takes over as normal: the doors just stay open for them.
+        // Her own ears know it's her (the noise is hers); a shopper's, a bot's and yours don't.
+        public void PhantomChime(AutoDoubleDoor door, float seconds = PhantomSeconds)
         {
-            if (door != null) door.PhantomCycle();
+            if (door == null) return;
+            StopPhantom();
+            PhantomDoor = door;
+            PhantomUntil = Time.time + seconds;
+            phantom = StartCoroutine(Phantom(door));
+        }
+
+        IEnumerator Phantom(AutoDoubleDoor door)
+        {
+            while (door != null && Time.time < PhantomUntil)
+            {
+                if (!door.IsOpen)
+                {
+                    door.PhantomCycle();
+                    NoiseBus.Emit(door.transform.position, 0.55f, NoiseKind.AutoDoor, NoiseAuthor.Karen);
+                }
+                yield return new WaitForSeconds(PhantomPeriod);
+            }
+            phantom = null;
+            PhantomDoor = null;
+        }
+
+        void StopPhantom()
+        {
+            if (phantom != null) StopCoroutine(phantom);
+            phantom = null;
+            PhantomDoor = null;
+            PhantomUntil = -1f;
         }
 
         // ---- space --------------------------------------------------------------------
@@ -244,8 +322,9 @@ namespace Kehai.Karen
             foreach (HingeDoor door in lockedUntil.Keys) if (door != null) door.SetLocked(false);
             lockedUntil.Clear();
             DoorBlock.ClearAll();
+            FogState.Reset();
+            StopPhantom();
             Pa.Clear();
-            HudFeed.Clear();
             Breakers.ResetForShift();
             if (!PowerSystem.PowerOn) PowerSystem.Instance?.RestorePower();
             Lights.ApplyCircuits();

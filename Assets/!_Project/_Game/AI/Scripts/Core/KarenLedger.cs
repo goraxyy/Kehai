@@ -72,6 +72,7 @@ namespace Kehai.Karen
         public List<RouteStat> routes = new List<RouteStat>();
         public List<CounterStat> counterplay = new List<CounterStat>();
         public List<ChainStat> chains = new List<ChainStat>();     // the combo room (0.2.0)
+        public List<PlaceStat> places = new List<PlaceStat>();     // placement memory (0.3.0)
     }
 
     // The Ledger (Karen.md §2.3, §7). It does not decide what happens; it decides what Karen
@@ -90,6 +91,8 @@ namespace Kehai.Karen
         public bool Persistent { get; set; }
         public string PlayerName => Data.playerName;
         public ComboRoom Room { get; } = new ComboRoom();
+        public PlacementMemory Places { get; } = new PlacementMemory();
+        public int Shift => shift;
 
         readonly KarenConfig config;
         readonly Dictionary<string, ArmStat> arms = new Dictionary<string, ArmStat>();
@@ -137,6 +140,7 @@ namespace Kehai.Karen
             Data.arms = arms.Values.ToList();
             Data.regions = regions.Values.ToList();
             Data.chains = Room.All.ToList();
+            Data.places = Places.All.ToList();
             string dir = Path.GetDirectoryName(SavePath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(SavePath, JsonUtility.ToJson(Data, true));
@@ -153,10 +157,11 @@ namespace Kehai.Karen
         {
             arms.Clear();
             foreach (ArmStat a in Data.arms)
-                if (TacticLibrary.Get(a.id) != null) arms[a.id] = a;   // not the tricks 0.2.0 removed: the chase, Follow, Funnel
+                if (TacticLibrary.Get(a.id) != null) arms[a.id] = a;   // not the tricks 0.2.0 and 0.3.0 removed (the chase, Funnel, the PA tricks…)
             regions.Clear();
             foreach (RegionStat r in Data.regions) regions[r.key] = r;
             Room.Load(Data.chains);
+            Places.Load(Data.places);
         }
 
         // ---- shift boundaries -----------------------------------------------------------
@@ -176,6 +181,7 @@ namespace Kehai.Karen
                 regions.Clear();
                 Data.routes.Clear();
                 Room.Clear();
+                Places.Clear();
             }
 
             foreach (ArmStat a in arms.Values) a.lastUsed = -9999f;
@@ -205,9 +211,35 @@ namespace Kehai.Karen
                 a.n *= 0.8f;
             }
             Room.Fade(Alone);
+            Places.Fade(shift);
 
             if (energyAtEnd <= 0.01f) Data.burnouts++;
             Save();
+        }
+
+        // ---- placement memory (0.3.0) ----------------------------------------------------
+
+        // Where to do a trick: her best known place among the candidates, now and then a new
+        // one. Without the bandit (rungs A–C) she goes by her guesses alone.
+        public int PickPlace(KarenContext c, Tactic trick, IReadOnlyList<PlaceCandidate> candidates)
+        {
+            bool learn = c.Features.Bandit;
+            int i = Places.Pick(trick.Id, candidates, c.Rng, learn);
+            if (i >= 0 && c.Brain != null)
+            {
+                PlaceStat known = Places.Find(trick.Id, candidates[i].Key);
+                c.Think("PLAN", known != null && learn
+                    ? $"PLACE    {trick.Id} at {candidates[i].Key}: paid {known.q:0.00} over {known.n:0.#} uses there"
+                    : $"PLACE    {trick.Id} at {candidates[i].Key}: a guess ({candidates[i].Prior:0.00}), of {candidates.Count}");
+            }
+            return i;
+        }
+
+        // What a place paid, 0..1, once the trick's done (the reward each trick defines).
+        public void SettlePlace(KarenContext c, Tactic trick, string key, float reward)
+        {
+            if (!c.Features.Bandit) return;
+            Places.Settle(trick.Id, key, reward, shift);
         }
 
         // ---- the bandit (§7.2) ------------------------------------------------------------
@@ -438,6 +470,16 @@ namespace Kehai.Karen
                 if (!byKey.TryGetValue(region.Key, out float w)) continue;
                 foreach (int cell in region.Cells) cells[cell] = w;
             }
+        }
+
+        // How long this employee tends to spend in a region, against the most they spend anywhere:
+        // 0 (never there) to 1 (their favourite). For placement guesses (0.3.0).
+        public float Habit(Region r)
+        {
+            if (r == null || regions.Count == 0) return 0f;
+            float max = 0.001f;
+            foreach (RegionStat s in regions.Values) max = Mathf.Max(max, s.dwell + s.concealment * 3f);
+            return regions.TryGetValue(r.Key, out RegionStat mine) ? Mathf.Clamp01((mine.dwell + mine.concealment * 3f) / max) : 0f;
         }
 
         public int LeastVisitedRegion(KarenContext c)

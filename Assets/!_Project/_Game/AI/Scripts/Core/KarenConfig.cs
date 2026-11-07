@@ -141,6 +141,11 @@ namespace Kehai.Karen
         public float ambushMaxWait = 90f;
         public float ambushAbortPanic = 0.85f;
 
+        [Header("Her tricks (0.3.0)")]
+        [Tooltip("How far anyone can see inside her fog, in metres: you, her, her cameras, Kenji. " +
+                 "The F1 developer overlay has a slider for it.")]
+        [Range(0.5f, 10f)] public float fogVisibility = 2f;
+
         [Header("Being caught (§8.6)")]
         [Tooltip("Seconds of the death screen before the shift starts again.")]
         public float deathScreenSeconds = 3.5f;

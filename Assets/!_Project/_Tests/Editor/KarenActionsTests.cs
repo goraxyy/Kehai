@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Kehai.Karen;
 using NUnit.Framework;
+using UnityEngine;
 
 // Karen 0.2.0, phase 1: goals became actions, tricks are the ways to do them, and the drafts
 // are off in play. These pin the shape the build plan settled on, so a change to it is a
@@ -58,6 +60,47 @@ public class KarenActionsTests
         Assert.IsNotNull(hunt);
         Assert.IsTrue(hunt.OwnMove);
         CollectionAssert.AreEqual(new[] { ActionId.Hunt }, hunt.Actions);
+    }
+
+    // ---- 0.3.0: nine tricks removed for good (build plan C1.1) -------------------------------
+
+    static readonly string[] RemovedIn030 =
+    {
+        "mirror_black", "task_falsification", "pa_decoy", "pa_announce_position", "pa_task_readback",
+        "pa_countdown", "pa_footsteps", "silence", "witness",
+    };
+
+    [Test]
+    public void TheNineRemovedIn030_AreGone_AndTheLibraryHolds27()
+    {
+        foreach (string id in RemovedIn030)
+            Assert.IsNull(TacticLibrary.Get(id), $"{id} is still in the library");
+        Assert.AreEqual(27, TacticLibrary.All.Count);
+    }
+
+    // An old save that learned about the removed tricks still loads; it just forgets them.
+    [Test]
+    public void ALedgerThatKnewTheRemovedTricks_StillLoads_AndDropsThem()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "kehai_removed_" + System.Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var old = new LedgerData();
+            foreach (string id in RemovedIn030) old.arms.Add(new ArmStat { id = id, q = 0.5f, n = 3f });
+            old.arms.Add(new ArmStat { id = "blackout", q = 0.4f, n = 2f });
+            old.chains.Add(new ChainStat { first = "silence", then = "ambush", q = 0.3f, n = 4f });
+            old.chains.Add(new ChainStat { first = "blackout", then = "ambush", q = 0.3f, n = 4f });
+            File.WriteAllText(path, JsonUtility.ToJson(old));
+
+            var ledger = new KarenLedger(new KarenConfig { ledgerPath = path }) { Persistent = true };
+            ledger.Load();
+            ledger.Save();
+
+            LedgerData now = JsonUtility.FromJson<LedgerData>(File.ReadAllText(path));
+            CollectionAssert.AreEqual(new[] { "blackout" }, now.arms.Select(a => a.id).ToArray());
+            CollectionAssert.AreEqual(new[] { "blackout" }, now.chains.Select(c => c.first).ToArray());
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
     }
 
     [Test]

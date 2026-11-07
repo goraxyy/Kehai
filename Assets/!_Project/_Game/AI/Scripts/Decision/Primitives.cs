@@ -231,7 +231,11 @@ namespace Kehai.Karen
         protected override void Begin(KarenContext c)
         {
             Vector3 where = at(c);
-            c.World.PlayTell(kind, where, lead);
+            if (!c.World.PlayTell(kind, where, lead))
+            {
+                c.Think("CHECK", $"the PA is switched off: no {kind}");   // 0.3.0, the PA box
+                return;
+            }
             c.Brain.RecordTell(kind, where, lead);
         }
 
@@ -251,6 +255,43 @@ namespace Kehai.Karen
         protected override Status Tick(KarenContext c, float dt)
         {
             c.Brain.RecordEffect(Label);
+            act(c);
+            return Status.Success;
+        }
+    }
+
+    // Rule 9 (0.3.0): a hands-on trick happens at her hands. The effect lands only while her
+    // body is within reach of the spot it touches; further away the step fails, nothing
+    // happens, and the thought log says why. The plan walks her there first.
+    public sealed class HandsOn : Primitive
+    {
+        readonly Func<KarenContext, Vector3> spot;
+        readonly Action<KarenContext> act;
+        readonly float reach;
+
+        // Where her hands are. Her body, unless a test says otherwise.
+        public Func<KarenContext, Vector3> Hands = k => k.Body.Position;
+
+        public HandsOn(string label, Func<KarenContext, Vector3> spot, Action<KarenContext> act,
+                       float reach = FairnessGuard.HandsOnReach)
+        {
+            Label = label;
+            this.spot = spot;
+            this.act = act;
+            this.reach = reach;
+        }
+
+        public float Distance(KarenContext c) => FairnessGuard.Flat(Hands(c), spot(c));
+
+        protected override Status Tick(KarenContext c, float dt)
+        {
+            float d = Distance(c);
+            if (d > reach)
+            {
+                c.Think("CHECK", $"rule 9: {Label} is {d:0.0} m from her hands, out of reach");
+                return Status.Failure;
+            }
+            if (c.Brain != null) c.Brain.RecordEffect(Label);
             act(c);
             return Status.Success;
         }
@@ -300,6 +341,7 @@ namespace Kehai.Karen
             // The PA system chimes before it speaks; KarenBrain logs the chime as the tell and
             // the words as the effect when they actually play.
             string text = line(c);
+            if (!c.World.Pa.Powered) c.Think("CHECK", "the PA is switched off: she can't say \"" + text + "\"");
             announcement = c.World.Pa.Announce(text);
         }
 

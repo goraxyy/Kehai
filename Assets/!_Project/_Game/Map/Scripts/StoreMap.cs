@@ -1196,7 +1196,7 @@ namespace Kehai.Store
 
         // Minimum cut on the region graph between a source region and a set of sinks, with
         // link widths as capacities (Edmonds-Karp). Returns the links to close to separate
-        // them, cheapest total width first — Karen's shopping list for a funnel.
+        // them, cheapest total width first — the doors and necks that would close it off.
         public List<(int from, int to, Vector3 at)> MinCut(int source, ICollection<int> sinks, ICollection<int> closed = null)
         {
             var result = new List<(int, int, Vector3)>();

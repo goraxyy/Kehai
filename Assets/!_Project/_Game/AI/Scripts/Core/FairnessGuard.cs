@@ -6,7 +6,8 @@ using UnityEngine.AI;
 namespace Kehai.Karen
 {
     // The fairness contract (Karen.md §9), enforced in code. Rule 3, "every trick warns you",
-    // was removed in 0.2.0: its timing checks are gone, and the audit keeps the pacing.
+    // was removed in 0.2.0: its timing checks are gone, and the audit keeps the pacing. Rule 9,
+    // "hands-on tricks happen at her hands", came in 0.3.0.
     //
     // Some of the checks need the truth — whether the employee could still finish the
     // shift, whether they can see her path — and this is the one place outside the Director
@@ -56,6 +57,28 @@ namespace Kehai.Karen
             if (Violations <= 10 || Violations % 50 == 0)
                 Debug.LogWarning($"{GameNames.Antagonist} fairness violation #{Violations}: {what}");
             return false;
+        }
+
+        // Rule 9: how far a hands-on trick may land from her body. Measured across the floor, so
+        // a shelf's top slot or a bin's lid counts from where she stands.
+        public const float HandsOnReach = 2f;
+
+        public static float Flat(Vector3 a, Vector3 b)
+        {
+            a.y = 0f;
+            b.y = 0f;
+            return Vector3.Distance(a, b);
+        }
+
+        // The audit for rule 9. The HandsOn step already refuses an effect out of reach; this
+        // catches anything that would land one some other way. True when it's fair; a
+        // violation, logged, when it isn't. No body (a test, the replay) has nothing to check.
+        public static bool CheckHandsOn(string what, KarenBody body, Vector3 spot)
+        {
+            if (body == null) return true;
+            float d = Flat(body.Position, spot);
+            if (d <= HandsOnReach + 0.05f) return true;
+            return Fail($"{what}: landed {d:0.0} m from her (rule 9, hands-on, allows {HandsOnReach:0} m)");
         }
 
         // Rule 2: the hint is withheld while the employee can see the path she's walking.
@@ -147,6 +170,14 @@ namespace Kehai.Karen
                 Landmark? skip = map.FindLandmark(LandmarkKind.TrashSkip);
                 if (skip.HasValue) yield return new KeyValuePair<string, Vector3>("the skip", skip.Value.Position);
             }
+
+            // A tool she hid has to be carried back to its rack (0.3.0).
+            foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
+                if (rack != null && rack.tool != null)
+                {
+                    yield return new KeyValuePair<string, Vector3>("the " + rack.ToolName, rack.tool.transform.position);
+                    yield return new KeyValuePair<string, Vector3>("the " + rack.ToolName + "'s rack", rack.transform.position);
+                }
 
             if (CustomerNPC.WaitingCount > 0)
                 foreach (Landmark l in map.Landmarks)

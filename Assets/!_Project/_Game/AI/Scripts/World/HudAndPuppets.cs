@@ -6,64 +6,6 @@ using UnityEngine.AI;
 
 namespace Kehai.Karen
 {
-    // ---- task falsification (§8.2) ------------------------------------------------------
-
-    public enum Falsification { None, FakeTask, ShowDoneAsUndone, ShowUndoneAsDone, RealTaskEarly }
-
-    // The layer between the task list and your HUD. Normally a pass-through; while Karen is
-    // falsifying it, the checklist on screen and the truth disagree. The tell is mandatory:
-    // a CRT tick first, then the list blinks out for a single frame when a line changes.
-    public static class HudFeed
-    {
-        static Falsification mode;
-        static TaskManager.TaskKind target;
-        static string fakeLabel;
-        static float until;
-
-        public static Falsification Mode => Time.time < until ? mode : Falsification.None;
-        public static bool FlickerThisFrame { get; private set; }
-        public static int FlickerFrame = -1;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => Clear();
-
-        public static void Clear()
-        {
-            mode = Falsification.None;
-            until = -1f;
-        }
-
-        public static void Falsify(Falsification how, TaskManager.TaskKind kind, string label, float seconds)
-        {
-            mode = how;
-            target = kind;
-            fakeLabel = label;
-            until = Time.time + seconds;
-            FlickerFrame = Time.frameCount + 1;
-            TaskManager.NotifyWorldChanged();
-        }
-
-        // What the HUD shows. The real list goes in; what Karen wants you to see comes out.
-        public static IEnumerable<TaskManager.ShiftTask> Shown(IEnumerable<TaskManager.ShiftTask> real)
-        {
-            Falsification m = Mode;
-            foreach (TaskManager.ShiftTask t in real)
-            {
-                if (m == Falsification.ShowDoneAsUndone && t.Kind == target && t.IsComplete)
-                    yield return new TaskManager.ShiftTask(t.Kind, t.Label, t.Detail, false);
-                else if (m == Falsification.ShowUndoneAsDone && t.Kind == target && !t.IsComplete)
-                    yield return new TaskManager.ShiftTask(t.Kind, t.Label, string.Empty, true);
-                else
-                    yield return t;
-            }
-
-            if (m == Falsification.FakeTask || m == Falsification.RealTaskEarly)
-                yield return new TaskManager.ShiftTask(target, fakeLabel, string.Empty, false);
-        }
-
-        public static bool HideForTell => Time.frameCount == FlickerFrame;
-    }
-
     // ---- mimicry (§8.5) -----------------------------------------------------------------
 
     // Karen takes a shopper over. It stops shopping and never queues; it walks at your pace

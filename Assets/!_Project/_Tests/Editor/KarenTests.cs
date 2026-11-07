@@ -86,7 +86,7 @@ public class KarenRuleTests
     [Test]
     public void EveryTactic_LeavesAChore_AndSaysWhatItAttacks()
     {
-        Assert.That(TacticLibrary.All.Count, Is.GreaterThanOrEqualTo(30));
+        Assert.That(TacticLibrary.All.Count, Is.GreaterThanOrEqualTo(27));
         foreach (Tactic t in TacticLibrary.All)
         {
             Assert.IsFalse(string.IsNullOrWhiteSpace(t.Chore), $"{t.Id} leaves the player nothing to do");

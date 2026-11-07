@@ -29,7 +29,7 @@
     "markerId": {
       "enum": [
         "blink_move", "catch", "near_miss", "escape", "found_blind", "blackout", "possessed", "learned",
-        "undone_work", "pa_call", "prop_trick", "clock_refused", "loud_mistake", "tell_then_trick",
+        "undone_work", "pa_call", "prop_trick", "clock_refused", "clock_stopped", "loud_mistake", "tell_then_trick",
         "shift_review", "karen_stuck", "customer_chaos", "manual_good", "manual_bug"
       ]
     },

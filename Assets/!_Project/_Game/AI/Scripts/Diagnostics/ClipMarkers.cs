@@ -57,6 +57,7 @@ namespace Kehai.Karen
         public const float PaCooldown = 15f;               // a PA countdown is one call, not six
         public const float LoudMistakeCooldown = 10f;
         public const float ClockRefusedCooldown = 10f;
+        public const float ClockStoppedCooldown = 10f;
 
         // The tricks that build something in the store or take someone over.
         public static readonly HashSet<string> PropTricks = new HashSet<string>
@@ -79,6 +80,7 @@ namespace Kehai.Karen
             K("pa_call",             6,     2f,  6f,   S("karen"),                 T("pa", "voice")),
             K("prop_trick",          6,     2f,  6f,   S("karen"),                 T("trick", "prop")),
             K("clock_refused",       6,     3f,  4f,   S("karen", "player"),       T("overtime", "work")),
+            K("clock_stopped",       6,     3f,  4f,   S("karen", "player"),       T("overtime", "work")),
             K("loud_mistake",        6,     2f,  5f,   S("player", "karen"),       T("noise", "stealth")),
             K("tell_then_trick",     5,     2f,  4f,   S("karen"),                 T("tell", "trick", "fair play")),
             K("shift_review",        5,     4f,  0f,   S("player"),               T("review", "end of shift")),

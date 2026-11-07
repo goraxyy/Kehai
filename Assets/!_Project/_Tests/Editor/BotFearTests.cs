@@ -80,7 +80,7 @@ public class BotFearTests
     [Test]
     public void HeardCategories_MapToStimuli()
     {
-        Assert.AreEqual("light", EnvWorld.TellCategory(TellKind.Flicker));
+        Assert.AreEqual("light", EnvWorld.TellCategory(TellKind.BallastWhine));
         Assert.AreEqual("pa", EnvWorld.TellCategory(TellKind.PaChime));
         Assert.AreEqual("her", EnvWorld.TellCategory(TellKind.Screech));
         Assert.AreEqual("sound", EnvWorld.TellCategory(TellKind.ShelfRattle));

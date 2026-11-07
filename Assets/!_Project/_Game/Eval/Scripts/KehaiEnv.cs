@@ -285,8 +285,10 @@ namespace Kehai.Eval
             // If she got you, the shift is over but nobody clocked out.
             bool killed = KarenBrain.Instance != null && KarenBrain.Instance.KilledThisShift;
             bool clockedOut = !killed && !Shift.IsShiftActive && ShiftSeconds > 1f;
+            // The time the clock stood stopped (the overtime) is allowed for, up to three minutes:
+            // a bot that never restarts it still ends.
             bool timedOut = Shift.IsShiftActive && ShiftSeconds > Config.shiftSeconds + Config.overtimeCap
-                            + (KarenBrain.Instance != null ? KarenBrain.Instance.Stats.Overtimes * 120f : 0f);
+                            + Mathf.Min(Shift.FrozenSeconds, 180f);
             if (!clockedOut && !timedOut && !killed) return false;
 
             Done = true;
