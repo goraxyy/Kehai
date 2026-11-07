@@ -758,6 +758,7 @@ namespace Kehai.Karen
         public void Answered(string kind, float seconds, string what)
         {
             Ledger.RecordCounterplay(kind, seconds);
+            Stats.Answers.Add((kind, seconds));
             Note("LEARN", seconds >= 0f ? $"LEARN    answer: {what} after {seconds:0} s" : $"LEARN    answer: {what}");
         }
 
@@ -992,6 +993,8 @@ namespace Kehai.Karen
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
+            if (FogState.Any) Stats.CaughtInFog();
+            if (CurrentPlan != null && CurrentPlan.Tactic is AmbushTactic ambush && ambush.AtChore) Stats.CaughtAtChore();
             Ledger.Data.caughtCount++;
             Dash.Cancel(Ctx);
             AbortPlan();
@@ -1328,6 +1331,15 @@ namespace Kehai.Karen
         public readonly List<float> PanicTrace = new List<float>();
         public readonly List<float> SetpointTrace = new List<float>();
 
+        // 0.3.0's measurements (build plan §7): catches in her fog, catches at a chore she left
+        // (Ambush waiting on your way to it), your answers and how long they took, and what her
+        // tricks' places paid.
+        public int CatchesInFog { get; private set; }
+        public int CatchesAtChore { get; private set; }
+        public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
+        public void CaughtInFog() => CatchesInFog++;
+        public void CaughtAtChore() => CatchesAtChore++;
+
         float pacingSquaredError;
         int pacingSamples;
 
@@ -1347,6 +1359,9 @@ namespace Kehai.Karen
             pacingSamples = 0;
             FirstDetection = -1f;
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
+            CatchesInFog = CatchesAtChore = 0;
+            Answers.Clear();
+            CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
             TacticRewards.Clear();
             ChainsFound.Clear();

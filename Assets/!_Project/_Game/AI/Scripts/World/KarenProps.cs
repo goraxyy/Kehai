@@ -248,6 +248,9 @@ namespace Kehai.Karen
 
         public const float BeepEvery = 1f;   // a pip a second while it sees you (build plan D8)
 
+        // Seconds any camera of hers saw you this shift, for the eval (KarenStats resets it).
+        public static float SeenByHers;
+
         // A camera of hers standing in a shelf slot like a product. A product already there drops
         // to the floor to make room; the slot is hers while the camera stands in it.
         public static CctvCamera Mount(ShelfSlot slot, float yaw, float pitch)
@@ -330,7 +333,11 @@ namespace Kehai.Karen
         {
             if (Dead) return;
             eye.Tick(Time.deltaTime);
-            if (eye.SeesNow) SecondsSeen += Time.deltaTime;
+            if (eye.SeesNow)
+            {
+                SecondsSeen += Time.deltaTime;
+                if (BoltedOn) SeenByHers += Time.deltaTime;
+            }
 
             // Hers beep while they see you, and their red light goes solid; otherwise it blinks.
             if (BoltedOn)

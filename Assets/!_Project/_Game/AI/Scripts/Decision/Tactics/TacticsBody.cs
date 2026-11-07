@@ -310,6 +310,9 @@ namespace Kehai.Karen
         string reason;
         Tactic forChore;
 
+        // This plan waits on the way to a chore one of her tricks left (0.3.0), for the eval.
+        public bool AtChore { get; private set; }
+
         public override bool Available(KarenContext c, out string why)
         {
             why = null;
@@ -321,6 +324,7 @@ namespace Kehai.Karen
         {
             Vector3 at = c.Map.CellPosition[spot];
             Tactic chore = forChore;
+            AtChore = chore != null;
             plan.Target = c.Map.NameAt(at) + " — " + reason;
             plan.Add(new SetSilent(true));
             plan.Go(at, KarenBody.Pace.Hurry, "pre-position at " + c.Map.NameAt(at), 1.5f);

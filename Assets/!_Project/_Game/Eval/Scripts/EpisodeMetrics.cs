@@ -57,6 +57,11 @@ namespace Kehai.Eval
         public readonly HuntMetrics Hunt = new HuntMetrics();       // 0.2.0's measurements (build plan §5)
         public bool ComboLearner;                                   // her bandit saw her last trick
         public int ChainsFound;
+        // 0.3.0 (build plan §7): the secondary measurements, reported for 0.3.0 alone.
+        public int CatchesInFog, CatchesAtChore;
+        public float CameraSeenSeconds, PlaceRewardMean = -1f;
+        public readonly Dictionary<string, int> TrickUses = new Dictionary<string, int>();
+        public readonly Dictionary<string, float> AnswerSeconds = new Dictionary<string, float>();
 
         // The trace: what the agent tried, when, and at what.
         public struct Step { public float T; public string Verb; public string Kind; public bool Ok; }
@@ -208,6 +213,17 @@ namespace Kehai.Eval
                 PanicSetpointRmse = brain.Stats.SetpointRmse;
                 ComboLearner = brain.config.comboContext;
                 ChainsFound = s.ChainsFound.Count;
+                CatchesInFog = s.CatchesInFog;
+                CatchesAtChore = s.CatchesAtChore;
+                CameraSeenSeconds = CctvCamera.SeenByHers;
+                var paid = brain.PlaceWatch.Settled;
+                PlaceRewardMean = paid.Count > 0 ? paid.Average(p => p.reward) : -1f;
+                TrickUses.Clear();
+                foreach (Tactic t in TacticLibrary.Live)
+                    if (!t.OwnMove) TrickUses[t.Id] = s.TacticCounts.TryGetValue(t.Id, out int n) ? n : 0;
+                AnswerSeconds.Clear();
+                foreach (var g in s.Answers.Where(a => a.seconds >= 0f).GroupBy(a => a.kind))
+                    AnswerSeconds[g.Key] = g.Average(a => a.seconds);
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
@@ -243,6 +259,12 @@ namespace Kehai.Eval
             };
             Belief.AddTo(d);
             Hunt.AddTo(d);
+            d["catches_in_fog"] = CatchesInFog;
+            d["catches_at_chore"] = CatchesAtChore;
+            d["camera_seen_s"] = CameraSeenSeconds;
+            d["place_reward_mean"] = PlaceRewardMean;
+            foreach (KeyValuePair<string, int> u in TrickUses) d["uses_" + u.Key] = u.Value;
+            foreach (KeyValuePair<string, float> a in AnswerSeconds) d["answer_" + a.Key + "_s"] = a.Value;
             return d;
         }
     }
