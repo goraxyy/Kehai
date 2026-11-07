@@ -26,7 +26,8 @@ namespace Kehai.Karen
         public override string Attacks => "space";
 
         public const float MinWalk = 5f, MaxWalk = 40f;
-        public const float StandBack = 1.3f;   // where she stands to put the box down: clear of the box
+        public const float StandBack = 1.5f;   // where she stands to put the box down: clear of the box
+        public const float StandArrive = 0.35f; // and how close to that spot she stops: not on the box's floor
 
         // The door and side this plan blocked, for the placement memory's reward.
         public string LastKey { get; private set; }
@@ -137,13 +138,17 @@ namespace Kehai.Karen
             HingeDoor target = o.Door;
             plan.Target = c.RegionName(o.Region) + (o.Side > 0 ? ", far side +" : ", far side -");
             // Going round can be a long walk: allow it twice a plain walk's time.
-            plan.Add(new MoveTo(_ => o.Stand, KarenBody.Pace.Hurry, "go round to the far side of " + c.RegionName(o.Region), 1f, timeout: 90f));
-            // If her way round was through this very door, it's standing open behind her: shut it.
-            plan.Add(new Effect("shut " + c.RegionName(o.Region) + " behind her", k =>
+            plan.Add(new MoveTo(_ => o.Stand, KarenBody.Pace.Hurry, "go round to the far side of " + c.RegionName(o.Region), StandArrive, timeout: 90f));
+            // If her way round was through this very door, it's standing open behind her: she stops
+            // (walking, her body opens doors in her way) and shuts it, and waits until it's shut.
+            plan.Add(new Process("shut " + c.RegionName(o.Region) + " behind her", (k, dt) =>
             {
-                if (target != null && target.IsOpen && !target.IsMoving) target.Use(k.Body.Position, NoiseAuthor.Karen);
-            }));
-            plan.Add(new WaitUntil(k => target == null || !target.IsMoving && !target.IsOpen, 3f, "wait for it to close"));
+                k.Body.Stop();
+                if (target == null) return true;
+                if (target.IsMoving) return false;
+                if (target.IsOpen) { target.Use(k.Body.Position, NoiseAuthor.Karen); return false; }
+                return true;
+            }, 6f));
             plan.Add(new Tell(TellKind.Clunk, _ => target != null ? target.DoorCentre : Vector3.zero, 0.9f));
             plan.Add(new PlaceBox(target, stock, o.Region, o.Side, o.BoxAt, "block " + plan.Target, o.Key, this));
         }
@@ -183,7 +188,14 @@ namespace Kehai.Karen
                 }
                 if (!Winnable(c, region)) { c.Think("CHECK", "blocking it now would seal a job off"); return Status.Failure; }
                 DoorBlock block = DoorBlock.Spawn(target, stock, region, side);
-                if (block == null) return Status.Failure;
+                if (block == null)
+                {
+                    string why = target == null ? "the door's gone" : target.IsOpen || target.IsMoving ? "the door's open"
+                               : !DoorBlock.TryPlacement(target, stock, side, out _, out _) ? "something's in the box's way, or the box isn't home"
+                               : "the door wouldn't take it";
+                    c.Think("CHECK", $"{Label}: {why}");
+                    return Status.Failure;
+                }
                 FairnessGuard.CheckHandsOn("block door", c.Body, block.transform.position);
                 owner.LastKey = key;
                 // Paid by how long it held you up: moved at once, 0; a minute and a half, 1.

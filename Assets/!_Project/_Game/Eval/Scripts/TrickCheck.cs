@@ -46,6 +46,7 @@ namespace Kehai.Eval
         }
 
         readonly List<Row> rows = new List<Row>();
+        string[] tricks = Tricks;
         readonly HashSet<string> retried = new HashSet<string>();
         Coroutine botRun;
         readonly List<string> botFailures = new List<string>();
@@ -53,10 +54,13 @@ namespace Kehai.Eval
         public bool Finished { get; private set; }
         public System.Action<TrickCheck> Completed;
 
-        public static TrickCheck Run(int seed)
+        // `only`: a comma-separated list of trick ids to check, instead of all of them.
+        public static TrickCheck Run(int seed, string only = null)
         {
             KehaiEnv env = KehaiEnv.Ensure();
             var check = env.gameObject.AddComponent<TrickCheck>();
+            if (!string.IsNullOrEmpty(only))
+                check.tricks = only.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
             check.StartCoroutine(check.Execute(env, seed));
             return check;
         }
@@ -72,9 +76,9 @@ namespace Kehai.Eval
             KarenBrain brain = null;
             bool botDone = true;
             int restarts = -1;
-            for (int n = 0; n < Tricks.Length; n++)
+            for (int n = 0; n < tricks.Length; n++)
             {
-                string id = Tricks[n];
+                string id = tricks[n];
                 // The overtime needs the shift's last two minutes: a short shift of its own.
                 if (id == "overtime" && config.shiftSeconds > 300f)
                 {
