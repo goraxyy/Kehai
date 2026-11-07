@@ -202,7 +202,11 @@ namespace Kehai.Karen
         }
     }
 
-    public sealed class UnderstudyTactic : PaTactic
+    // The understudy (0.3.0): Kenji, "the new hire", comes in through the front doors and
+    // shadows you at 10–20 m. While he can see you he stands still and watches, and she knows
+    // where you are. Walk up to him and tell him she needs him on the tills, and he leaves.
+    // Once a shift. The PA welcomes him only if it's on.
+    public sealed class UnderstudyTactic : Tactic
     {
         public override string Id => "understudy";
         public override string Title => "The understudy";
@@ -212,14 +216,27 @@ namespace Kehai.Karen
         public override float TensionCost => 0.25f;
         public override float Cooldown => 99999f;
         public override float PanicPrior => 0.15f;
-        public override string Chore => "lose him, politely";
+        public override TellKind Tell => TellKind.PaChime;
+        public override string Chore => "walk up to Kenji and send him to the tills";
         public override string Attacks => "social";
 
         public override bool Available(KarenContext c, out string why)
         {
             if (UsesThisShift > 0) { why = "already hired this shift"; return false; }
-            if (c.World.CustomerPrefab == null) { why = "no one to hire"; return false; }
+            if (Understudy.Current != null) { why = "Kenji's already in"; return false; }
+            if (c.World == null || c.World.CustomerPrefab == null) { why = "no one to hire"; return false; }
             why = null;
+            return true;
+        }
+
+        public override bool EffectRunning(KarenContext c) => Understudy.Current != null && !Understudy.Current.Leaving;
+
+        // You deal with it at Kenji.
+        public override bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = default;
+            if (!EffectRunning(c)) return false;
+            at = Understudy.Current.transform.position;
             return true;
         }
 
@@ -228,7 +245,10 @@ namespace Kehai.Karen
             Landmark? door = c.Map.FindLandmark(LandmarkKind.AutoDoor);
             Vector3 at = door.HasValue ? door.Value.Position : c.Body.Position;
             plan.Target = "Kenji";
-            plan.Add(Speak.Line($"Please welcome our new hire, Kenji! Kenji will be shadowing {TacticHelpers.PlayerName(c)} today."));
+            if (c.World.Pa.Powered)
+                plan.Add(new Speak(k => $"Please welcome our new hire, Kenji! Kenji will be shadowing {TacticHelpers.PlayerName(k)} today.", false));
+            else
+                c.Think("CHECK", "the PA is switched off: Kenji comes in unannounced");
             plan.Add(new Effect("hire the understudy", k => k.World.HireUnderstudy(TacticHelpers.OnFloor(at))));
         }
     }

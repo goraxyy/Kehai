@@ -37,7 +37,11 @@ public class KarenActionsTests
     public void TheLiveTricks_AreTheOnesThePlanKeeps()
     {
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
-        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "door_lock", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
+        CollectionAssert.AreEqual(new[]
+        {
+            "ambush", "bin_tamper", "blackout", "cut", "door_lock", "phantom_chime", "poll_witnesses", "shelf_sweep",
+            "spill", "throw_flour", "throw_oil", "throw_tin",
+        }, live);
     }
 
     // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush, Disrupt and

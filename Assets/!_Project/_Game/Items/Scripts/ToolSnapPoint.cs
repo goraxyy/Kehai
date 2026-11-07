@@ -92,8 +92,10 @@ public class ToolSnapPoint : HighlightInteractable
         if (tool == null) return;
         if (IsToolHome) return;
 
-        // She hid it: no recall. Carried back by hand, it goes home as normal.
-        bool inHand = player.carrySlot != null && player.carrySlot.Contains(tool);
+        // She hid it: no recall. Carried back by hand (held, or in the inventory), it goes home
+        // as normal.
+        bool inHand = player.carrySlot != null && player.carrySlot.Contains(tool)
+                   || player.tools != null && player.tools.HeldTool == tool.gameObject;
         if (Taken && !inHand) return;
 
         // If it's in the inventory, take it out of the slot first.
@@ -105,11 +107,19 @@ public class ToolSnapPoint : HighlightInteractable
         else tool.transform.SetPositionAndRotation(transform.position, transform.rotation);
     }
 
+    bool PlayerHolds()
+    {
+        PlayerInteract player = PlayerInteract.Local;
+        if (player == null || tool == null) return false;
+        return player.carrySlot != null && player.carrySlot.Contains(tool)
+            || player.tools != null && player.tools.HeldTool == tool.gameObject;
+    }
+
     public override string GetPrompt()
     {
         if (tool == null) return string.Empty;
         if (IsToolHome) return string.Empty;
-        if (Taken && !tool.isCarried) return "She moved it. Find it.";
+        if (Taken && !PlayerHolds()) return "She moved it. Find it.";
         string what = tool.TryGetComponent(out ProductBox box) ? box.ProductName + " box" : ProductCatalog.SectionName(tool.type);
         return $"Put the {what} back";
     }

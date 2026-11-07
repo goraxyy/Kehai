@@ -380,6 +380,12 @@ namespace Kehai.Eval
                 case "help": return "Directions";
                 case "drink_coffee": return "Coffee";
                 case "flip_breaker": return "Breakers";
+                case "reset_fog": return "Fog";
+                case "restart_clock": return "Clock";
+                case "find_tool": return "LostTool";
+                case "unblock_door": return "Door";
+                case "send_kenji": return "Kenji";
+                case "unplug_camera": return "Camera";
                 default: return string.Empty;
             }
         }
@@ -415,6 +421,12 @@ namespace Kehai.Eval
                 case "drop": return DropHeld(a, r);
                 case "wait": return Wait(a, r);
                 case "sidestep": return Sidestep(a, r);
+                case "reset_fog": return ResetFog(a, r);
+                case "restart_clock": return RestartClock(a, r);
+                case "find_tool": return FindTool(a, r);
+                case "unblock_door": return UnblockDoor(a, r);
+                case "send_kenji": return SendKenji(a, r);
+                case "unplug_camera": return UnplugCamera(a, r);
                 default: return null;
             }
         }
@@ -733,6 +745,123 @@ namespace Kehai.Eval
             torch.Toggle();
             yield return null;
             r.Pass(torch.IsOn ? "torch on" : "torch off");
+        }
+
+        // ---- her chores (0.3.0) -------------------------------------------------------------
+        // Each one as a player does it: walk there, then press or hold E on the thing. Where the
+        // thing hasn't been built yet (the fog box, the clock's restart, Kenji's talk), the same
+        // outcome after the same time, so a test shift still ends.
+
+        IEnumerator HoldOn(IInteractable target, Vector3 at, float max, System.Func<bool> done)
+        {
+            yield return Face(at);
+            Driver.Hold(target, true);
+            float until = Time.time + max;
+            while (Time.time < until && !done()) yield return null;
+            Driver.Hold(null, false);
+        }
+
+        IEnumerator ResetFog(EnvAction a, ActionResult r)
+        {
+            if (!FogState.Any) { r.Pass("no fog"); yield break; }
+            Transform box = FogState.ResetBox;
+            Vector3 at = box != null ? box.position : World.Map.FindLandmark(LandmarkKind.BreakerBox)?.Position ?? Driver.transform.position;
+            yield return Approach(at, 1.5f, a, r);
+            if (r.Finished) yield break;
+            IHoldInteractable hold = box != null ? box.GetComponentInParent<IHoldInteractable>() : null;
+            if (hold is IInteractable use) yield return HoldOn(use, at, hold.HoldDuration + 2f, () => !FogState.Any);
+            else
+            {
+                yield return new WaitForSeconds(3f);
+                FogState.Clear();
+            }
+            if (FogState.Any) r.Fail("the fog's still on"); else r.Pass("fog reset");
+        }
+
+        IEnumerator RestartClock(EnvAction a, ActionResult r)
+        {
+            if (Shift == null || !Shift.IsFrozen) { r.Pass("the clock's running"); yield break; }
+            Landmark? clock = World.Map.FindLandmark(LandmarkKind.TimeClock);
+            if (!clock.HasValue) { r.Fail("no time clock"); yield break; }
+            yield return Approach(StandPoint(clock.Value), 0.6f, a, r);
+            if (r.Finished) yield break;
+            if (clock.Value.Source is IHoldInteractable hold && hold.CanHold(Driver.Hands) && hold is IInteractable use)
+                yield return HoldOn(use, clock.Value.Position, hold.HoldDuration + 2f, () => !Shift.IsFrozen);
+            else
+            {
+                yield return new WaitForSeconds(3f);
+                Shift.Unfreeze();
+            }
+            if (Shift.IsFrozen) r.Fail("the clock's still stopped"); else r.Pass("clock restarted");
+        }
+
+        IEnumerator FindTool(EnvAction a, ActionResult r)
+        {
+            Item tool = World.Resolve<Item>(a.target);
+            ToolSnapPoint home = tool != null ? FindObjectsByType<ToolSnapPoint>().FirstOrDefault(s => s.tool == tool) : null;
+            if (tool == null || home == null) { r.Fail($"no lost tool '{a.target}'"); yield break; }
+            if (!home.Taken) { r.Pass("already back"); yield break; }
+            yield return Approach(tool.transform.position, 1.3f, a, r);
+            if (r.Finished) yield break;
+            if (tool.TryGetComponent(out IInteractable pick)) yield return Tap(pick, tool.transform.position);
+            yield return Approach(home.transform.position, 1.7f, a, r);
+            if (r.Finished) yield break;
+            yield return Tap(home, home.transform.position);
+            yield return null;
+            if (home.Taken)
+            {
+                // Picked up some other way (the tool holder): carried back by hand all the same.
+                ItemHome back = tool.GetComponent<ItemHome>();
+                if (Vector3.Distance(Driver.transform.position, home.transform.position) < 2.5f && back != null) back.ReturnHome();
+            }
+            if (home.Taken) r.Fail("couldn't get it back on its rack"); else r.Pass("returned");
+        }
+
+        IEnumerator UnblockDoor(EnvAction a, ActionResult r)
+        {
+            HingeDoor door = World.Resolve<HingeDoor>(a.target);
+            DoorBlock block = door != null ? door.Blocker : null;
+            if (block == null || !block.IsBlocking) { r.Pass("not blocked"); yield break; }
+            Vector3 at = block.Box.transform.position;
+            yield return Approach(at, 1.4f, a, r);
+            if (r.Finished) yield break;
+            yield return Tap(block, at);
+            yield return null;
+            if (block != null && block.IsBlocking) { r.Fail("the box is still there"); yield break; }
+            yield return DropHeld(new EnvAction { verb = "drop" }, new ActionResult());
+            r.Pass("door unblocked");
+        }
+
+        IEnumerator SendKenji(EnvAction a, ActionResult r)
+        {
+            for (int tries = 0; tries < 4; tries++)
+            {
+                Understudy kenji = Understudy.Current;
+                if (kenji == null || kenji.Leaving) { r.Pass("he's gone"); yield break; }
+                var step = new ActionResult();
+                yield return Approach(kenji.transform.position, 2f, a, step);
+                if (step.Finished && !step.Ok) continue;   // he moved: go again
+                kenji = Understudy.Current;
+                if (kenji == null) { r.Pass("he's gone"); yield break; }
+                if (Vector3.Distance(Driver.transform.position, kenji.transform.position) > 2.6f) continue;
+                yield return Face(kenji.transform.position);
+                if (kenji.TryGetComponent(out IInteractable talk)) yield return Tap(talk, kenji.transform.position);
+                yield return new WaitForSeconds(1f);
+                if (Understudy.Current == kenji && !kenji.Leaving) kenji.SendAway();   // "Karen needs you on the tills"
+                r.Pass("sent to the tills");
+                yield break;
+            }
+            r.Fail("couldn't catch him");
+        }
+
+        IEnumerator UnplugCamera(EnvAction a, ActionResult r)
+        {
+            CctvCamera cam = World.Resolve<CctvCamera>(a.target);
+            if (cam == null || cam.Dead) { r.Pass("not running"); yield break; }
+            yield return Approach(cam.transform.position, 1.5f, a, r);
+            if (r.Finished) yield break;
+            yield return HoldOn(cam, cam.transform.position, cam.HoldDuration + 2f, () => cam == null || cam.Dead);
+            if (cam != null && !cam.Dead) r.Fail("stopped before it went dark"); else r.Pass("unplugged");
         }
 
         IEnumerator ReturnTool(EnvAction a, ActionResult r)

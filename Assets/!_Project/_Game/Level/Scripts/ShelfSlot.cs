@@ -105,10 +105,33 @@ public sealed class ShelfSlot : IInteractable
         }
     }
 
+    // ---------------------------------------------------------------- held by Karen
+
+    // Something of Karen's standing in the slot (0.3.0: her camera). While it's there nothing
+    // can be stocked here and the bay doesn't count it as a gap; once it goes, the gap is back.
+    public object BlockedBy { get; private set; }
+    public bool IsBlocked => BlockedBy != null;
+
+    public bool Block(object by)
+    {
+        if (by == null || IsBlocked || isFilled) return false;
+        BlockedBy = by;
+        if (owner != null) owner.OnSlotFilled();
+        return true;
+    }
+
+    public void Unblock(object by)
+    {
+        if (BlockedBy == null || !ReferenceEquals(BlockedBy, by)) return;
+        BlockedBy = null;
+        if (owner != null) owner.OnSlotEmptied();
+    }
+
     // ---------------------------------------------------------------- the player
 
     public void Interact(PlayerInteract player)
     {
+        if (IsBlocked) return;
         // Holding a product's box restocks that product on this bay; the stock crate restocks
         // the whole shelf in one go.
         if (player.carrySlot != null && player.carrySlot.IsCarrying)
@@ -163,6 +186,7 @@ public sealed class ShelfSlot : IInteractable
 
     public string GetPrompt()
     {
+        if (IsBlocked) return string.Empty;
         ProductBox box = PlayerInteract.HeldBox;
         if (box != null) return box.PromptFor(this);
         return isFilled ? "Pick up " + ProductCatalog.Label(requiredType, StockedId) : "Place " + Label;
@@ -184,7 +208,7 @@ public sealed class ShelfSlot : IInteractable
     // Puts an item on the slot. It stops being a GameObject: the slot records what it was.
     public bool Put(Item item)
     {
-        if (isFilled || item == null) return false;
+        if (isFilled || IsBlocked || item == null) return false;
         string id = string.IsNullOrEmpty(item.productId) ? productId : item.productId;
         if (Application.isPlaying) Object.Destroy(item.gameObject);
         else Object.DestroyImmediate(item.gameObject);
@@ -195,7 +219,7 @@ public sealed class ShelfSlot : IInteractable
     // Restocks it with the planogram's product, from the crate.
     public bool Fill()
     {
-        if (isFilled) return false;
+        if (isFilled || IsBlocked) return false;
         Set(true, productId);
         return true;
     }

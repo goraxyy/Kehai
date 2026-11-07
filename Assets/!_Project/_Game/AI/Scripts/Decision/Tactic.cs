@@ -153,12 +153,16 @@ namespace Kehai.Karen
 
         public static IEnumerable<Tactic> For(ActionId goal) => All.Where(t => t.Actions.Contains(goal));
 
-        // The drafts (0.2.0 build plan §6): off in play until reworked or removed. Live today are
-        // the own moves, Ask the customers, Bin tamper, Cut, Ambush, the three throws, Block door and Blackout.
+        // The drafts: off in play until reworked or removed. 0.3.0 brings the owner's tricks back
+        // one by one, each when it works end to end (build plan C1.2); the five the owner didn't
+        // ask about stay (D9). Live: the own moves, Ask the customers, Bin tamper, Cut, Ambush,
+        // the three throws, Block door, Blackout, Shelf sweep, Spill and Phantom chime.
         static readonly HashSet<string> Drafts = new HashSet<string>
         {
-            "fog", "camera_bolt_on", "shelf_sweep", "spill", "tool_theft", "overtime", "phantom_chime",
-            "crate_wall", "shelf_relocation", "mimicry", "understudy", "stalk", "favour",
+            // back once the second builder's part is in (0.3.0 build plan phases 2–4)
+            "fog", "camera_bolt_on", "tool_theft", "overtime", "understudy",
+            // staying drafts (D9)
+            "crate_wall", "shelf_relocation", "mimicry", "stalk", "favour",
         };
 
         public static bool IsDraft(string id) => Drafts.Contains(id);

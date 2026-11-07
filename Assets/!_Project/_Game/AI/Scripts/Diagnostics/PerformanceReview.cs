@@ -51,7 +51,17 @@ namespace Kehai.Karen
 
             var counter = l.Data.counterplay.Where(c => c.lastShift == s.Shift).ToList();
             foreach (CounterStat c in counter)
-                sb.AppendLine($"Counter-productive behaviour logged: {c.kind.Replace('_', ' ')} ({c.count}).");
+                sb.AppendLine(c.seconds >= 0f
+                    ? $"Counter-productive behaviour logged: {c.kind.Replace('_', ' ')} ({c.count}), {c.seconds:0} s on average."
+                    : $"Counter-productive behaviour logged: {c.kind.Replace('_', ' ')} ({c.count}).");
+
+            // Where her tricks worked best this shift (0.3.0, placement memory). Redacted, like the log.
+            foreach (var trick in brain.PlaceWatch.Settled.GroupBy(x => x.trick))
+            {
+                var top = trick.OrderByDescending(x => x.reward).First();
+                string title = TacticLibrary.Get(trick.Key)?.Title ?? trick.Key;
+                sb.AppendLine(Redact($"Most effective placement, {title}: {top.key} ({top.reward:0.00})."));
+            }
 
             // What landed.
             var best = s.TacticRewards

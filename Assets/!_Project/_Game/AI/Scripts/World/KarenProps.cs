@@ -233,6 +233,37 @@ namespace Kehai.Karen
         void OnEnable() => all.Add(this);
         void OnDisable() => all.Remove(this);
 
+        // 0.3.0, Camera bolt-on: the slot it stands in, how it's turned from the slot's front
+        // (yaw, degrees) and tilted (pitch, degrees, down is negative), and how long it has seen
+        // you — the placement memory's reward.
+        public ShelfSlot Slot { get; private set; }
+        public float Yaw { get; private set; }
+        public float Pitch { get; private set; }
+        public float SecondsSeen { get; private set; }
+        public bool SeesYou => !Dead && eye != null && eye.SeesNow;
+        public SightSensor Eye => eye;
+
+        // A camera of hers standing in a shelf slot like a product. A product already there drops
+        // to the floor to make room; the slot is hers while the camera stands in it.
+        public static CctvCamera Mount(ShelfSlot slot, float yaw, float pitch)
+        {
+            if (slot == null) return null;
+            if (slot.isFilled) slot.Eject();
+            Quaternion facing = Quaternion.LookRotation(slot.Outward, Vector3.up) * Quaternion.Euler(-pitch, yaw, 0f);
+            CctvCamera cam = Spawn(slot.Position + Vector3.up * 0.09f, facing * Vector3.forward, true);
+            cam.transform.localScale = Vector3.one * 0.6f;   // product-sized: B3.2 swaps in the model
+            cam.Slot = slot;
+            cam.Yaw = yaw;
+            cam.Pitch = pitch;
+            slot.Block(cam);
+            return cam;
+        }
+
+        void OnDestroy()
+        {
+            if (Slot != null) Slot.Unblock(this);
+        }
+
         public static CctvCamera Spawn(Vector3 position, Vector3 look, bool boltedOn)
         {
             var root = new GameObject(boltedOn ? "KAREN_Camera_BoltedOn" : "KAREN_Camera");
@@ -275,6 +306,7 @@ namespace Kehai.Karen
         {
             if (Dead) return;
             eye.Tick(Time.deltaTime);
+            if (eye.SeesNow) SecondsSeen += Time.deltaTime;
             if (eye.Awareness < eye.glimpseAt || Time.time < nextReport) return;
 
             nextReport = Time.time + 1f;

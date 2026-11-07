@@ -102,6 +102,42 @@ namespace Kehai.Karen
     // A mobile sensor with a name badge, unfailingly polite.
     public sealed class Understudy : MonoBehaviour
     {
+        // 0.3.0, the API the trick and the talk build on (build plan C4.2; B4.2 gives him his
+        // own file, his 10–20 m follow and the talk):
+        //   Current   — Kenji, while he's in the store (one at a time);
+        //   Leaving   — he's been sent away and is walking out;
+        //   SendAway  — "Karen needs you on the tills": he leaves by the front doors;
+        //   SentAway  — raised once with how many seconds he was in, for her Ledger.
+        public static Understudy Current { get; private set; }
+        public static event System.Action<float> SentAway;
+        public bool Leaving { get; private set; }
+        public float HiredAt { get; private set; }
+        public SightSensor Eye => eye;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() { Current = null; SentAway = null; }
+
+        void OnDestroy() { if (Current == this) Current = null; }
+
+        public void SendAway()
+        {
+            if (Leaving) return;
+            Leaving = true;
+            SentAway?.Invoke(Time.time - HiredAt);
+            Vector3 exit = transform.position;
+            AutoDoubleDoor door = FindAnyObjectByType<AutoDoubleDoor>();
+            if (door != null) exit = door.transform.position + door.transform.forward * 4f;
+            if (agent != null && agent.isOnNavMesh) { agent.stoppingDistance = 0.5f; agent.SetDestination(exit); }
+            StartCoroutine(GoneWhenOut(exit));
+        }
+
+        IEnumerator GoneWhenOut(Vector3 exit)
+        {
+            float until = Time.time + 40f;
+            while (Time.time < until && Vector3.Distance(transform.position, exit) > 1.5f) yield return null;
+            Destroy(gameObject);
+        }
+
         SightSensor eye;
         NavMeshAgent agent;
         SpeechBubble bubble;
@@ -132,11 +168,14 @@ namespace Kehai.Karen
             u.eye.fieldOfView = 160f;
             u.eye.ignoreRoot = go.transform;
             u.bubble = SpeechBubble.Create(go.transform, 2.1f, 0.3f);
+            u.HiredAt = Time.time;
+            Current = u;
             return u;
         }
 
         void Update()
         {
+            if (Leaving) return;
             eye.transform.rotation = transform.rotation;
             eye.Tick(Time.deltaTime);
             if (eye.Awareness >= eye.glimpseAt)

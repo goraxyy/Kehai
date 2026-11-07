@@ -44,6 +44,8 @@ namespace Kehai.Karen
         {
             rooms.Clear();
             ResetBox = null;
+            Filled = null;
+            Cleared = null;
             RoomOf = DefaultRoomOf;
             Clock = () => Time.time;
         }
@@ -106,6 +108,10 @@ namespace Kehai.Karen
             rooms.Clear();
             foreach (string r in had) Cleared?.Invoke(r);
         }
+
+        // When a room filled (the clock's time), or -1.
+        public static float FilledAt(string room) =>
+            room != null && rooms.TryGetValue(room, out Room r) ? r.startedAt : -1f;
 
         // Fogged: filled and not yet reset (it may still be thinning or rolling in).
         public static bool IsFogged(string room) =>

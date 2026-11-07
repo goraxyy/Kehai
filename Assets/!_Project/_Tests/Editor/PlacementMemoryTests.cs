@@ -137,4 +137,70 @@ public class PlacementMemoryTests
         Assert.AreEqual(PlacementMemory.MaxPerTrick, m.All.Count(p => p.trick == "camera_bolt_on"));
         Assert.IsNotNull(m.Find("camera_bolt_on", "keep"));
     }
+
+    // ---- what a place paid (C5.1) ------------------------------------------------------------
+
+    static KarenContext Learning(out KarenLedger ledger)
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        ledger = new KarenLedger(config);
+        ledger.Load();
+        ledger.BeginShift(1);
+        return new KarenContext { Config = config, Rng = new KarenRng(7), Ledger = ledger };
+    }
+
+    [Test]
+    public void AWatch_PaysThePlace_WhenItsAnswered()
+    {
+        KarenContext c = Learning(out KarenLedger ledger);
+        var rewards = new PlaceRewards();
+        bool restocked = false;
+        rewards.Watch(TacticLibrary.Get("shelf_sweep"), "Aisle 4 · bay 2", 10f,
+                      t => restocked ? PlaceRewards.ByTime(t, 120f) : (float?)null, _ => 1f);
+        rewards.Tick(c, 30f);
+        Assert.AreEqual(1, rewards.Count, "not restocked yet");
+        restocked = true;
+        rewards.Tick(c, 70f);
+        Assert.AreEqual(0, rewards.Count);
+        Assert.AreEqual(0.5f, rewards.Settled.Single().reward, 1e-4f, "restocked after a minute of two");
+        Assert.AreEqual(0.5f, ledger.Places.Find("shelf_sweep", "Aisle 4 · bay 2").q, 1e-4f);
+    }
+
+    [Test]
+    public void TheShiftsEnd_AnswersEveryWatchStillOpen()
+    {
+        KarenContext c = Learning(out KarenLedger ledger);
+        var rewards = new PlaceRewards();
+        rewards.Watch(TacticLibrary.Get("tool_theft"), "Dairy", 0f, _ => null, _ => 1f);
+        rewards.EndShift(c, 100f);
+        Assert.AreEqual(0, rewards.Count);
+        Assert.AreEqual(1f, ledger.Places.Find("tool_theft", "Dairy").q, 1e-4f, "never found: full marks");
+    }
+
+    [Test]
+    public void ByTime_GoesFromNothingToFullMarks()
+    {
+        Assert.AreEqual(0f, PlaceRewards.ByTime(0f, 90f), 1e-5f);
+        Assert.AreEqual(0.5f, PlaceRewards.ByTime(45f, 90f), 1e-5f);
+        Assert.AreEqual(1f, PlaceRewards.ByTime(500f, 90f), 1e-5f);
+    }
+
+    // ---- your answers (C5.2) -----------------------------------------------------------------
+
+    [Test]
+    public void AnAnswer_IsCounted_WithHowLongItTook()
+    {
+        var ledger = new KarenLedger(new KarenConfig());
+        ledger.Load();
+        ledger.BeginShift(3);
+        ledger.RecordCounterplay("fog_reset", 40f);
+        ledger.RecordCounterplay("fog_reset", 20f);
+        CounterStat fog = ledger.Counterplay("fog_reset");
+        Assert.AreEqual(2, fog.count);
+        Assert.AreEqual(3, fog.lastShift);
+        Assert.That(fog.seconds, Is.InRange(20f, 40f), "an average, the latest weighted most");
+        Assert.Less(fog.seconds, 30.01f);
+        ledger.RecordCounterplay("pa_off");
+        Assert.AreEqual(-1f, ledger.Counterplay("pa_off").seconds, 1e-5f, "switching the PA off isn't timed");
+    }
 }

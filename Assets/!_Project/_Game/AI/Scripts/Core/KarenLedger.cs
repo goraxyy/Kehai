@@ -39,6 +39,8 @@ namespace Kehai.Karen
         public string kind;
         public int count;
         public int lastShift;
+        public float seconds = -1f;    // how long the answer took, on average (0.3.0); -1 not timed
+        public int timed;              // answers that had a time
     }
 
     // The player model (Karen.md §7.1), serialised. Roughly forty numbers and a few
@@ -430,13 +432,23 @@ namespace Kehai.Karen
             return common >= Mathf.Max(2, Mathf.Min(sa.Count, sb.Count) * 0.6f);
         }
 
-        public void RecordCounterplay(string kind)
+        // An answer to one of her tricks: fog_reset, clock_restarted, mop_returned, box_moved,
+        // understudy_sent_away, pa_off, camera_unplugged… and, when it's known, how many seconds
+        // it took (0.3.0). Recent answers count most.
+        public void RecordCounterplay(string kind, float seconds = -1f)
         {
             CounterStat c = Data.counterplay.FirstOrDefault(x => x.kind == kind);
             if (c == null) Data.counterplay.Add(c = new CounterStat { kind = kind });
             c.count++;
             c.lastShift = shift;
+            if (seconds >= 0f)
+            {
+                c.timed++;
+                c.seconds = c.seconds < 0f ? seconds : Mathf.Lerp(c.seconds, seconds, Mathf.Max(0.3f, 1f / c.timed));
+            }
         }
+
+        public CounterStat Counterplay(string kind) => Data.counterplay.FirstOrDefault(x => x.kind == kind);
 
         public int CounterplayKindsThisShift => Data.counterplay.Count(x => x.lastShift == shift);
 

@@ -21,7 +21,6 @@ namespace Kehai.Karen
         public GameObject CustomerPrefab { get; private set; }
         public GameObject DirtPrefab { get; private set; }
 
-        readonly Dictionary<HingeDoor, float> lockedUntil = new Dictionary<HingeDoor, float>();
         readonly List<GameObject> placed = new List<GameObject>();
 
         void Awake()
@@ -44,20 +43,6 @@ namespace Kehai.Karen
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
-        }
-
-        void Update()
-        {
-            // Unlock doors whose time is up.
-            if (lockedUntil.Count == 0) return;
-            var done = new List<HingeDoor>();
-            foreach (KeyValuePair<HingeDoor, float> pair in lockedUntil)
-                if (pair.Key == null || Time.time > pair.Value) done.Add(pair.Key);
-            foreach (HingeDoor door in done)
-            {
-                lockedUntil.Remove(door);
-                if (door != null) door.SetLocked(false);
-            }
         }
 
         // ---- tells ------------------------------------------------------------------
@@ -159,12 +144,25 @@ namespace Kehai.Karen
         // sees `visibility` metres, her included.
         public void FogRoom(string room, float visibility) => FogState.Fill(room, visibility);
 
-        public CctvCamera BoltOnCamera(Vector3 overSpot)
+        // Camera bolt-on (0.3.0): a camera standing in a shelf slot, turned and tilted. Hands-on.
+        public const int MaxCameras = 2;   // of hers at once (build plan D7)
+
+        public static int HerCameras
         {
-            // Mount it on the nearest shelf top or wall, looking down at the spot.
-            Vector3 mount = overSpot + Vector3.up * 2.6f + Vector3.forward * 0.1f;
-            CctvCamera cam = CctvCamera.Spawn(mount, (overSpot - mount).normalized + Vector3.down * 0.2f, true);
-            Track(cam.gameObject);
+            get
+            {
+                int n = 0;
+                foreach (CctvCamera cam in CctvCamera.All) if (cam != null && cam.BoltedOn && !cam.Dead) n++;
+                return n;
+            }
+        }
+
+        public CctvCamera MountCamera(ShelfSlot slot, float yaw, float pitch)
+        {
+            if (slot == null) return null;
+            FairnessGuard.CheckHandsOn("camera bolt-on", Hands, slot.Position);
+            CctvCamera cam = CctvCamera.Mount(slot, yaw, pitch);
+            if (cam != null) Track(cam.gameObject);
             return cam;
         }
 
@@ -246,15 +244,8 @@ namespace Kehai.Karen
             return wall;
         }
 
-        public bool LockDoor(HingeDoor door, float seconds)
-        {
-            if (door == null) return false;
-            door.SetLocked(true);
-            lockedUntil[door] = Time.time + seconds;
-            return true;
-        }
-
-        public bool IsLocked(HingeDoor door) => door != null && lockedUntil.ContainsKey(door);
+        // Block door has no timer since 0.3.0: a door stays blocked until someone moves the box
+        // (DoorBlock), so there's no lock of hers to time out here.
 
         // Slide a bay along the floor. The NavMesh catches up by carving the new position
         // now; the old footprint is re-baked between shifts (see MazeMutation).
@@ -317,10 +308,24 @@ namespace Kehai.Karen
         // reset for the next one — the maze mutation aside, which is meant to persist.
         public void ClearShift()
         {
+            // A tool she hid goes back on its rack for the next shift (Tool theft).
+            KarenBody body = Hands;
+            if (body != null) body.DropCarried();
+            var racks = new List<ToolSnapPoint>(ToolSnapPoint.TakenRacks);
+            foreach (ToolSnapPoint rack in racks)
+            {
+                if (rack == null) continue;
+                if (rack.tool != null)
+                {
+                    ItemHome home = rack.tool.GetComponent<ItemHome>();
+                    if (home != null) home.ReturnHome();
+                    else rack.tool.transform.SetPositionAndRotation(rack.transform.position, rack.transform.rotation);
+                }
+                rack.MarkTaken(false);
+            }
+
             foreach (GameObject go in placed) if (go != null) Destroy(go);
             placed.Clear();
-            foreach (HingeDoor door in lockedUntil.Keys) if (door != null) door.SetLocked(false);
-            lockedUntil.Clear();
             DoorBlock.ClearAll();
             FogState.Reset();
             StopPhantom();

@@ -151,10 +151,20 @@ namespace Kehai.Karen
 
             plan.Target = room;
             plan.Add(new Tell(TellKind.FreezerHiss, _ => hiss, 1f));
-            plan.Add(new Effect("flood " + room + " from its fridges", k => k.World.FogRoom(room, k.Config.fogVisibility)));
+            plan.Add(new Effect("flood " + room + " from its fridges", k =>
+            {
+                k.World.FogRoom(room, k.Config.fogVisibility);
+                // Paid by how much it rattled you over the next 25 s, as she reads you.
+                float before = k.Director != null ? k.Director.Panic : 0f;
+                System.Func<float> paid = () => Mathf.Clamp01(0.5f + ((k.Director != null ? k.Director.Panic : before) - before) * 2f);
+                k.Brain?.PlaceWatch.Watch(this, room, k.Now, t => t >= 25f ? paid() : (float?)null, _ => paid());
+            }));
         }
     }
 
+    // Camera bolt-on (0.3.0): she stands a small camera in a shelf slot, aimed where you usually
+    // are (CameraPlacement), and every sighting reaches her wherever she is. It beeps while it
+    // sees you. Hands-on: she fits it at the shelf. At most two of hers at once.
     public sealed class CameraBoltOnTactic : Tactic
     {
         public override string Id => "camera_bolt_on";
@@ -168,33 +178,81 @@ namespace Kehai.Karen
         public override float PanicPrior => 0.1f;
         public override TellKind Tell => TellKind.Drilling;
         public override float TellLead => 1.5f;
-        public override string Chore => "stop hiding there, or unplug it and announce yourself";
+        public override string Chore => "unplug it (hold E), or keep out of its view";
         public override string Attacks => "sight";
 
-        int spot = -1;
+        // The camera this plan fitted, and its place, for the placement memory's reward.
+        public CctvCamera LastCamera { get; private set; }
+        public string LastKey { get; private set; }
+
+        List<CameraPlacement.Option> cached;
+        float cachedAt = -999f;
+
+        List<CameraPlacement.Option> Options(KarenContext c)
+        {
+            // Rays are dear: one look a second is plenty for where a camera should go.
+            if (cached == null || Mathf.Abs(c.Now - cachedAt) > 1f) { cached = CameraPlacement.Options(c); cachedAt = c.Now; }
+            return cached;
+        }
 
         public override bool Available(KarenContext c, out string why)
         {
-            spot = -1;
-            foreach (int region in c.Ledger.ConcealmentRegions(c, 3))
+            if (c.World == null) { why = "no building"; return false; }
+            if (KarenWorld.HerCameras >= KarenWorld.MaxCameras) { why = "two of her cameras are already up"; return false; }
+            bool any = Options(c).Count > 0;
+            why = any ? null : "no shelf slot that would see where you go";
+            return any;
+        }
+
+        public override bool EffectRunning(KarenContext c) => KarenWorld.HerCameras > 0;
+
+        // You deal with it at the camera: the one of hers nearest where she thinks you are.
+        public override bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = default;
+            float best = float.MaxValue;
+            Vector3 from = c.Belief != null && c.Map != null ? TacticHelpers.Believed(c) : Vector3.zero;
+            foreach (CctvCamera cam in CctvCamera.All)
             {
-                Vector3 p = c.Map.Regions[region].Centroid;
-                if (CctvCamera.All.Any(cam => cam != null && cam.BoltedOn && Vector3.Distance(cam.transform.position, p) < 6f)) continue;
-                spot = region;
-                break;
+                if (cam == null || !cam.BoltedOn || cam.Dead) continue;
+                float d = Vector3.Distance(cam.transform.position, from);
+                if (d < best) { best = d; at = cam.transform.position; }
             }
-            why = spot < 0 ? "no habitual hiding spot without a camera" : null;
-            return spot >= 0;
+            return best < float.MaxValue;
         }
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
-            if (spot < 0) return;
-            Vector3 at = c.Map.Regions[spot].Centroid;
-            plan.Target = c.RegionName(spot);
-            plan.Go(at, KarenBody.Pace.Walk, "go to your hiding place", 2f);
+            List<CameraPlacement.Option> options = Options(c);
+            var candidates = new List<PlaceCandidate>();
+            foreach (CameraPlacement.Option o in options) candidates.Add(new PlaceCandidate(o.Key, o.Heat));
+            int pick = c.Ledger != null ? c.Ledger.PickPlace(c, this, candidates) : (options.Count > 0 ? 0 : -1);
+            if (pick < 0) return;
+            CameraPlacement.Option chosen = options[pick];
+            ShelfSlot slot = chosen.Slot;
+            Vector3 front = slot.Outward;
+            front.y = 0f;
+            Vector3 stand = TacticHelpers.OnFloor(slot.Position + (front.sqrMagnitude > 1e-4f ? front.normalized : Vector3.forward) * 0.7f);
+
+            plan.Target = c.Where(slot.Position) + $" ({chosen.Heat:P0} of your usual spots)";
+            plan.Go(stand, KarenBody.Pace.Walk, "walk to the shelf at " + c.Where(slot.Position), 1f);
             plan.Add(new Tell(TellKind.Drilling, k => k.Body.Position, TellLead));
-            plan.Add(new Effect("bolt a camera over " + plan.Target, k => k.World.BoltOnCamera(at)));
+            plan.Add(new HandsOn("fit a camera at " + c.Where(slot.Position), _ => slot.Position, k =>
+            {
+                if (slot.IsBlocked) { k.Think("CHECK", "the slot is taken"); return; }
+                CctvCamera cam = k.World.MountCamera(slot, chosen.Yaw, chosen.Pitch);
+                LastCamera = cam;
+                LastKey = chosen.Key;
+                if (cam == null) return;
+                // Paid by how long it saw you before it went dark: half a minute is full marks.
+                float seen = 0f;
+                k.Brain?.PlaceWatch.Watch(this, chosen.Key, k.Now, t =>
+                {
+                    if (cam != null) seen = cam.SecondsSeen;
+                    return cam == null || cam.Dead ? PlaceRewards.ByTime(seen, 30f) : (float?)null;
+                }, _ => PlaceRewards.ByTime(cam != null ? cam.SecondsSeen : seen, 30f));
+            }));
+            plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "leave", 2.5f);
         }
     }
 
@@ -331,6 +389,9 @@ namespace Kehai.Karen
                 Swept = target;
                 SweptKey = key;
                 k.Tasks?.Hint(TaskManager.TaskKind.Stock, aisle);
+                // Paid by how long the bay stayed short: restocked at once, 0; two minutes, 1.
+                k.Brain?.PlaceWatch.Watch(this, key, k.Now,
+                    t => target == null || target.IsFull ? PlaceRewards.ByTime(t, 120f) : (float?)null, _ => 1f);
             }));
             plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "retreat", 2.5f);
         }
@@ -410,8 +471,22 @@ namespace Kehai.Karen
             plan.Add(new Tell(TellKind.BucketClank, k => k.Body.Position, 1f));
             plan.Add(new HandsOn("kick over a bucket at " + plan.Target, _ => at, k =>
             {
-                Left = k.World.Spill(k.Body.Position);
+                Dirt dirt = k.World.Spill(k.Body.Position);
+                Left = dirt;
                 LeftKey = key;
+                if (dirt == null) return;
+                // Paid by whether you walked through it (wet footprints from it) or went round.
+                Vector3 spot = dirt.transform.position;
+                float since = Time.time;
+                System.Func<bool> walked = () =>
+                {
+                    foreach (Trace tr in TraceRegistry.All)
+                        if (tr.Kind == TraceKind.WetFootprint && tr.Created >= since && FairnessGuard.Flat(tr.Position, spot) < 3f) return true;
+                    return false;
+                };
+                k.Brain?.PlaceWatch.Watch(this, key, k.Now,
+                    t => walked() ? 1f : dirt == null ? 0.3f + 0.4f * PlaceRewards.ByTime(t, 90f) : (float?)null,
+                    _ => walked() ? 1f : 0.7f);
             }));
             plan.Go(TacticHelpers.Retreat(c), KarenBody.Pace.Walk, "retreat", 2.5f);
         }
@@ -461,6 +536,9 @@ namespace Kehai.Karen
         }
     }
 
+    // Tool theft (0.3.0): she walks to the WC, takes the WC mop off its rack, carries it off and
+    // leaves it somewhere you don't go. The rack won't recall it, and the task list says "Return
+    // the WC mop" until it's back. She never touches the staff room's mop. Hands-on at both ends.
     public sealed class ToolTheftTactic : Tactic
     {
         public override string Id => "tool_theft";
@@ -473,35 +551,100 @@ namespace Kehai.Karen
         public override float Cooldown => 180f;
         public override float PanicPrior => 0.08f;
         public override TellKind Tell => TellKind.MopRattle;
-        public override string Chore => "find the mop";
+        public override string Chore => "find the WC mop and carry it back to its rack";
         public override string Attacks => "work";
 
-        ToolSnapPoint rack;
+        public const string Rack = "WC";                 // the only rack she takes from
+        public const float MinCarry = 15f, MaxCarry = 70f;
+
+        // Where she left it, for the placement memory's reward.
+        public string LastKey { get; private set; }
+
+        public static ToolSnapPoint WcRack()
+        {
+            foreach (ToolSnapPoint s in Object.FindObjectsByType<ToolSnapPoint>())
+                if (s != null && s.place == Rack && s.tool != null && s.tool.type == ItemType.Mop) return s;
+            return null;
+        }
 
         public override bool Available(KarenContext c, out string why)
         {
-            rack = Object.FindObjectsByType<ToolSnapPoint>()
-                         .FirstOrDefault(s => s.tool != null && s.tool.type == ItemType.Mop && s.IsToolHome);
-            why = rack == null ? "the mop isn't on its rack" : null;
-            if (rack != null && TacticHelpers.WalkFromBelief(c, rack.transform.position) < 12f) { why = "the employee is near the rack"; return false; }
-            return rack != null;
+            ToolSnapPoint rack = WcRack();
+            if (rack == null) { why = "no WC mop rack"; return false; }
+            if (rack.Taken) { why = "she already has it hidden"; return false; }
+            if (!rack.IsToolHome) { why = "the WC mop isn't on its rack"; return false; }
+            if (c.Belief != null && TacticHelpers.WalkFromBelief(c, rack.transform.position) < 12f) { why = "the employee is near the rack"; return false; }
+            bool any = Drops(c, rack.transform.position, out _).Count > 0;
+            why = any ? null : "nowhere to leave it";
+            return any;
+        }
+
+        public override bool EffectRunning(KarenContext c) => ToolSnapPoint.TakenCount > 0;
+
+        // You fix it at the mop, wherever she left it.
+        public override bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = default;
+            foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
+                if (rack != null && rack.tool != null) { at = rack.tool.transform.position; return true; }
+            return false;
+        }
+
+        // Parts of the sales floor and the stockroom 15–70 m from the rack, guessed best where you
+        // spend least time and far from where she thinks you are.
+        public static List<Region> Drops(KarenContext c, Vector3 rack, out List<PlaceCandidate> candidates)
+        {
+            var regions = new List<Region>();
+            candidates = new List<PlaceCandidate>();
+            if (c.Map == null) return regions;
+            foreach (Region r in c.Map.Regions)
+            {
+                if (r.IsDoor || r.Cells.Count < 4 || !TacticHelpers.Hers(c.Map, r)) continue;
+                if (r.Area != "Sales floor" && r.Area != "Stockroom") continue;
+                float carry = Vector3.Distance(r.Centroid, rack);
+                if (carry < MinCarry || carry > MaxCarry) continue;
+                float unvisited = 1f - (c.Ledger != null ? c.Ledger.Habit(r) : 0f);
+                float away = c.Belief != null ? Mathf.Clamp01(TacticHelpers.WalkFromBelief(c, r.Centroid) / 40f) : 0.5f;
+                regions.Add(r);
+                candidates.Add(new PlaceCandidate(r.Name, Mathf.Clamp01(0.6f * unvisited + 0.4f * away)));
+            }
+            return regions;
         }
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
-            if (rack == null) return;
-            ToolSnapPoint home = rack;
+            ToolSnapPoint home = WcRack();
+            if (home == null) return;
             Item mop = home.tool;
-            int hideRegion = c.Ledger.LeastVisitedRegion(c);
-            Vector3 hide = c.Map.Regions[hideRegion].Centroid;
-            plan.Target = "hide the mop in " + c.RegionName(hideRegion);
+            List<Region> drops = Drops(c, home.transform.position, out List<PlaceCandidate> candidates);
+            int pick = c.Ledger != null ? c.Ledger.PickPlace(c, this, candidates) : (drops.Count > 0 ? 0 : -1);
+            if (pick < 0) return;
+            Region drop = drops[pick];
+            string key = candidates[pick].Key;
+            Vector3 dropAt = TacticHelpers.OnFloor(drop.Centroid);
+            Vector3 rackAt = home.transform.position;
+            plan.Target = "the WC mop → " + drop.Name;
 
-            plan.Go(TacticHelpers.OnFloor(home.transform.position), KarenBody.Pace.Walk, "go to the mop rack", 1.5f);
-            plan.Add(new Tell(TellKind.MopRattle, _ => home.transform.position, 0.9f));
-            plan.Add(new Effect("take the mop", k => k.Body.Carry(mop)));
-            plan.Go(hide, KarenBody.Pace.Walk, plan.Target, 1.5f);
-            plan.Add(new Effect("leave the mop in " + c.RegionName(hideRegion), k =>
+            plan.Go(TacticHelpers.OnFloor(rackAt), KarenBody.Pace.Walk, "go to the WC mop rack", 1.2f);
+            plan.Add(new Tell(TellKind.MopRattle, _ => rackAt, 0.9f));
+            plan.Add(new HandsOn("take the WC mop", _ => rackAt, k =>
             {
+                if (!home.IsToolHome) { k.Think("CHECK", "the WC mop is gone already"); return; }
+                k.Body.Carry(mop);
+                home.MarkTaken(true);
+                LastKey = key;
+                // Paid by how long it took you to bring it back: at once, 0; two and a half minutes, 1.
+                k.Brain?.PlaceWatch.Watch(this, key, k.Now, t =>
+                {
+                    if (home != null && home.Taken) return null;
+                    k.Brain?.Answered("mop_returned", t, "the WC mop back on its rack");
+                    return PlaceRewards.ByTime(t, 150f);
+                }, _ => 1f);
+            }));
+            plan.Go(dropAt, KarenBody.Pace.Walk, "carry it to " + drop.Name, 1.2f);
+            plan.Add(new HandsOn("leave the WC mop in " + drop.Name, _ => dropAt, k =>
+            {
+                if (k.Body.Carried != mop) return;
                 k.Body.PutDown(mop);
                 TraceRegistry.Add(TraceKind.MopAway, mop.transform.position, float.PositiveInfinity, default, mop, mop.transform);
             }));
@@ -576,22 +719,6 @@ namespace Kehai.Karen
 
     // ================================================================ §8.3 sound
 
-    // A trick that opens with an announcement: the PA has to be free to make it.
-    public abstract class PaTactic : Tactic
-    {
-        public override TellKind Tell => TellKind.PaChime;
-        public override float TellLead => 1.3f;
-        public override string Attacks => "trust";
-
-        public override bool Available(KarenContext c, out string why)
-        {
-            if (!c.World.Pa.Powered) { why = "the PA is switched off"; return false; }
-            if (c.World.Pa.Busy) { why = "PA busy"; return false; }
-            why = null;
-            return true;
-        }
-    }
-
     // Phantom chime (0.3.0): the front doors near where she thinks you are slide open and shut,
     // chiming, for 20 s, with nobody there.
     public sealed class PhantomChimeTactic : Tactic
@@ -655,8 +782,15 @@ namespace Kehai.Karen
             LastDoor = door;
             plan.Target = candidates[pick].Key;
             plan.Add(new Tell(TellKind.DoorMotor, _ => door.transform.position, TellLead));
-            plan.Add(new Effect("cycle " + plan.Target + " for 20 s with nobody there",
-                                k => k.World.PhantomChime(door, KarenWorld.PhantomSeconds)));
+            string key = candidates[pick].Key;
+            plan.Add(new Effect("cycle " + plan.Target + " for 20 s with nobody there", k =>
+            {
+                k.World.PhantomChime(door, KarenWorld.PhantomSeconds);
+                // Paid by whether you went to look: does she think you're by the doors 30 s on?
+                System.Func<float> paid = () => door != null && k.Belief != null &&
+                    Vector3.Distance(TacticHelpers.Believed(k), door.transform.position) < 12f ? 1f : 0f;
+                k.Brain?.PlaceWatch.Watch(this, key, k.Now, t => t >= 30f ? paid() : (float?)null, _ => paid());
+            }));
         }
     }
 }

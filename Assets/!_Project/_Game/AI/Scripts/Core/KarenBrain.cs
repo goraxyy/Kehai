@@ -124,9 +124,16 @@ namespace Kehai.Karen
             GameEvents.PunchAttempted += OnClockRoute;
             GameEvents.DoorUsed += OnDoorSensor;
 
+            // Your answers to her tricks (0.3.0): what you did, and how long it took.
+            FogState.Filled += OnFogFilled;
+            FogState.Cleared += OnFogCleared;
+            Understudy.SentAway += OnUnderstudySentAway;
+            if (World != null) World.Pa.PowerChanged += OnPaPower;
+
             if (Shift != null)
             {
                 Shift.ShiftStateChanged += OnShiftStateChanged;
+                Shift.FreezeChanged += OnFreezeChanged;
                 if (Shift.IsShiftActive) BeginShift();
             }
 
@@ -154,6 +161,11 @@ namespace Kehai.Karen
             GameEvents.PunchAttempted -= OnClockRoute;
             GameEvents.CustomerServed -= OnServed;
             GameEvents.DoorUsed -= OnDoorSensor;
+            FogState.Filled -= OnFogFilled;
+            FogState.Cleared -= OnFogCleared;
+            Understudy.SentAway -= OnUnderstudySentAway;
+            if (World != null && World.Pa != null) World.Pa.PowerChanged -= OnPaPower;
+            if (Shift != null) Shift.FreezeChanged -= OnFreezeChanged;
             Director?.Dispose();
             if (Shift != null) Shift.ShiftStateChanged -= OnShiftStateChanged;
             Sensorium?.Dispose();
@@ -231,6 +243,7 @@ namespace Kehai.Karen
             closedUntil.Clear();
             closedNow.Clear();
             pendingRewards.Clear();
+            PlaceWatch.Clear();
             lastTrick = null;
             lastTrickAt = -999f;
             sabotaged.Clear();
@@ -291,6 +304,7 @@ namespace Kehai.Karen
             Director.EndShift();
             Policy?.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
+            PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
             Ledger.EndShift(ShiftTime, energy, clockedOut);
             Stats.EndShift(this);
             if (config.writeJsonl)
@@ -332,6 +346,10 @@ namespace Kehai.Karen
 
             TickDirector(dt);
             UpdatePredictor(dt);
+
+            // What her tricks' places paid, once a second (0.3.0).
+            placeTimer += dt;
+            if (placeTimer >= 1f) { placeTimer = 0f; PlaceWatch.Tick(Ctx, Time.time); }
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -705,6 +723,50 @@ namespace Kehai.Karen
         public void HandOverToDash() => AbortPlan();
         public void ResumeDeciding() => decideNow = true;
 
+        // ---- your answers (0.3.0) -------------------------------------------------------------
+
+        readonly Dictionary<string, float> fogFilled = new Dictionary<string, float>();
+        float clockStoppedAt = -1f;
+
+        void OnFogFilled(string room) => fogFilled[room] = Time.time;
+
+        void OnFogCleared(string room)
+        {
+            if (!ShiftActive) return;   // the shift's end clears it, not you
+            float since = fogFilled.TryGetValue(room, out float at) ? Time.time - at : -1f;
+            fogFilled.Remove(room);
+            Answered("fog_reset", since, $"the fog in {room} reset");
+        }
+
+        void OnFreezeChanged()
+        {
+            if (Shift == null || !ShiftActive) return;
+            if (Shift.IsFrozen) { clockStoppedAt = Time.time; return; }
+            Answered("clock_restarted", clockStoppedAt >= 0f ? Time.time - clockStoppedAt : -1f, "the time clock restarted");
+            clockStoppedAt = -1f;
+        }
+
+        void OnUnderstudySentAway(float seconds) => Answered("understudy_sent_away", seconds, "Kenji sent to the tills");
+
+        void OnPaPower(bool on)
+        {
+            if (!on && ShiftActive) Answered("pa_off", -1f, "the PA switched off");
+        }
+
+        // Written to the Ledger and the thought log. The tricks' own places hear the same answer
+        // through their watches (PlaceRewards); this is the record of what you did.
+        public void Answered(string kind, float seconds, string what)
+        {
+            Ledger.RecordCounterplay(kind, seconds);
+            Note("LEARN", seconds >= 0f ? $"LEARN    answer: {what} after {seconds:0} s" : $"LEARN    answer: {what}");
+        }
+
+        // ---- placement memory's rewards (0.3.0) ---------------------------------------------
+
+        // Each trick leaves a watch on the place it used; this asks them once a second.
+        public PlaceRewards PlaceWatch { get; } = new PlaceRewards();
+        float placeTimer;
+
         // ---- the developer overlay: force a trick (0.3.0) ----------------------------------
 
         bool forcedPlan;
@@ -753,6 +815,7 @@ namespace Kehai.Karen
             CurrentPlan.Abort(Ctx);
             CurrentPlan = null;
             if (chasing) SetChasing(false);
+            Body.DropCarried();   // a theft cut short leaves the mop where she stood (0.3.0)
             Body.Silent = false;
             Body.SweepHead(0f);
             Body.Stop();
