@@ -438,7 +438,9 @@ namespace Kehai.Karen
 
         // Necks and chokepoints you're likely to cross next, 6–30 m off: best around 14 m, and
         // where you've walked before.
-        public static List<Region> Spots(KarenContext c, out List<PlaceCandidate> candidates)
+        // `reach` also asks the NavMesh that she can walk to each (the plan does; the gate, every
+        // decision, doesn't need to).
+        public static List<Region> Spots(KarenContext c, out List<PlaceCandidate> candidates, bool reach = false)
         {
             var spots = new List<Region>();
             candidates = new List<PlaceCandidate>();
@@ -448,6 +450,7 @@ namespace Kehai.Karen
                 if (!r.IsChokepoint || r.IsDoor || !TacticHelpers.Hers(c.Map, r)) continue;
                 float walk = TacticHelpers.WalkFromBelief(c, r.Centroid);
                 if (walk < MinWalk || walk > MaxWalk) continue;
+                if (reach && !TacticHelpers.CanReach(c, TacticHelpers.OnFloor(r.Centroid), 1f)) continue;
                 float onYourWay = 1f - Mathf.Abs(walk - 14f) / 16f;
                 float habit = c.Ledger != null ? c.Ledger.Habit(r) : 0f;
                 spots.Add(r);
@@ -458,7 +461,7 @@ namespace Kehai.Karen
 
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
-            List<Region> spots = Spots(c, out List<PlaceCandidate> candidates);
+            List<Region> spots = Spots(c, out List<PlaceCandidate> candidates, reach: true);
             int pick = c.Ledger != null ? c.Ledger.PickPlace(c, this, candidates) : (spots.Count > 0 ? 0 : -1);
             if (pick < 0) return;
             Region spot = spots[pick];
@@ -509,6 +512,17 @@ namespace Kehai.Karen
 
         Trashcan bin;
 
+        // The bin she refilled, while it still needs emptying.
+        public Trashcan Refilled { get; private set; }
+
+        public override bool EffectRunning(KarenContext c) => Refilled != null && Refilled.UsageCount > 0;
+
+        public override bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = Refilled != null ? Refilled.transform.position : default;
+            return EffectRunning(c);
+        }
+
         public override bool Available(KarenContext c, out string why)
         {
             bin = null;
@@ -531,8 +545,11 @@ namespace Kehai.Karen
             if (TacticHelpers.DenyVetoed(c, TaskManager.TaskKind.Trash, target.transform.position, out string check)) { c.Think("CHECK", check); return; }
             plan.Go(TacticHelpers.OnFloor(target.transform.position), KarenBody.Pace.Walk, "go to the bin", 1.2f);
             plan.Add(new Tell(TellKind.LidClatter, _ => target.transform.position, 0.9f));
-            plan.Add(new HandsOn("refill " + plan.Target, _ => target.transform.position,
-                                 k => { for (int i = 0; i < 3; i++) target.RegisterUse(); }));
+            plan.Add(new HandsOn("refill " + plan.Target, _ => target.transform.position, k =>
+            {
+                for (int i = 0; i < 3; i++) target.RegisterUse();
+                Refilled = target;
+            }));
         }
     }
 

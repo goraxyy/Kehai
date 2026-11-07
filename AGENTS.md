@@ -6,7 +6,7 @@ showpiece.
 
 **Start here:**
 - [`docs/project/HANDOVER.md`](docs/project/HANDOVER.md): where everything is on this Mac, the state of the work, and what's next.
-- [`docs/plans/0.3.0-build-plan.md`](docs/plans/0.3.0-build-plan.md): Karen 0.3.0, the tricks rebuilt end to end. **The plan you're building.**
+- [`docs/plans/0.3.0-build-plan.md`](docs/plans/0.3.0-build-plan.md): Karen 0.3.0, the tricks rebuilt end to end (one builder: Claude).
 - [`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md): Karen 0.2.0, merged; how the tricks work today.
 - Docs are sorted by topic under `docs/` (`project/`, `plans/`, `karen/`, `store/`, `game/`, `marketing/`, `research/`); finished or stale ones go to `docs/archive/`. The README lists them all.
 - [`docs/store/SCENE_MAP.md`](docs/store/SCENE_MAP.md) and [`docs/store/STORE_MAP.md`](docs/store/STORE_MAP.md): the scene layout and Karen's map. Neither the scene nor the art is in git.
@@ -59,19 +59,3 @@ python3 tools/eval/analyze_ablation.py <kehai_eval>/ablation_<time>.jsonl
 # Regenerate the scene map after changing the scene
 python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/store/SCENE_MAP.md
 ```
-
-## If you're the second builder, [B]
-
-Two AI builders work on Karen 0.3.0 at the same time. You are **[B]** in
-[`docs/plans/0.3.0-build-plan.md`](docs/plans/0.3.0-build-plan.md); Claude is [C].
-
-- **Your tasks:** only the ones tagged [B], phase by phase: B2.1–B2.4, B3.1–B3.2, B4.1–B4.2, B6.1, B7.1–B7.2. Tick each box (`- [ ]` → `- [x]`), its step boxes as they land, and the progress table at the top, in the same commit as the work.
-- **When to start:** after **Sync 1**, when [C]'s Phase 1 APIs (task C1.6) are on `0.3.0`. Merge `0.3.0` into `0.3.0-b` first.
-- **Your place:** the worktree `.claude/worktrees/tricks-b`, on branch `0.3.0-b`. Never commit to `0.3.0` yourself: at each sync point [C] merges `0.3.0-b` into `0.3.0`, and you then merge `0.3.0` back into `0.3.0-b`.
-- **Your files:** only the ones your task lists. If you need a file that isn't on the list, add a row to the plan's §9 "Requests between builders" and move on to something else.
-- **The APIs between you:** use [C]'s APIs from C1.6 (`ShiftManager.Freeze`, `FogState`, `PaSystem.SetPowered`, `ProceduralAudio.CameraBeep`, the new task-list jobs, `KarenBrain.Force`). Don't change them; ask in §9.
-- **Tests:** leave any test you write inside the repo (an `Editor/Tests` folder), never in `/tmp`.
-- **Labels:** if you rename text the game writes to a file (a shift-record field, a clip marker), grep `tools/` too: the Python readers match labels by text.
-- **Unity:** never start one while the owner's editor is open (see the rules above). Ask the owner first.
-- **Commits** read as the owner's own: no AI credit and no `Co-Authored-By` lines.
-- **New props:** the owner wants materials for the new ones (the camera, the fridge control box, the PA box). [C] makes the models (C6.1); you import them (B6.1) and keep a geometry fallback.

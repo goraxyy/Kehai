@@ -65,6 +65,7 @@ namespace Kehai.Karen
             public int Side;
             public int Region;
             public Vector3 Stand;
+            public Vector3 BoxAt;
             public string Key;
         }
 
@@ -73,7 +74,11 @@ namespace Kehai.Karen
 
         // Closed doors 5–40 m from you that she can block and keep the shift winnable, on the far
         // side from you; guessed best on the routes you take and nearer you.
-        public static List<DoorOption> Doors(KarenContext c, ProductBox box, out List<PlaceCandidate> candidates)
+        public static List<DoorOption> Doors(KarenContext c, ProductBox box, out List<PlaceCandidate> candidates) =>
+            Doors(c, box, out candidates, null);
+
+        // `refused`, when given, collects why each door was passed over, for the thought log.
+        public static List<DoorOption> Doors(KarenContext c, ProductBox box, out List<PlaceCandidate> candidates, List<string> refused)
         {
             var result = new List<DoorOption>();
             candidates = new List<PlaceCandidate>();
@@ -82,15 +87,22 @@ namespace Kehai.Karen
             float routeTotal = c.Ledger != null ? c.Ledger.Data.routes.Sum(r => r.count) : 0f;
             foreach (HingeDoor d in Object.FindObjectsByType<HingeDoor>())
             {
-                if (d == null || d.Locked || d.IsOpen || d.IsMoving) continue;
+                if (d == null) continue;
+                string name = d.name;
+                if (d.Locked || d.IsOpen || d.IsMoving) { refused?.Add(name + ": open, moving or locked"); continue; }
                 int region = c.Map.RegionAt(d.transform.position);
-                if (region < 0) continue;
+                if (region < 0) { refused?.Add(name + ": off her map"); continue; }
+                name = c.RegionName(region);
                 float walk = TacticHelpers.WalkFromBelief(c, d.DoorCentre);
-                if (walk < MinWalk || walk > MaxWalk) continue;
-                if (!DoorBlock.SideNormal(d, out Vector3 normal)) continue;
+                if (walk < MinWalk || walk > MaxWalk) { refused?.Add($"{name}: {walk:0} m from you"); continue; }
+                if (!DoorBlock.SideNormal(d, out Vector3 normal)) { refused?.Add(name + ": no sides"); continue; }
                 int side = FarSide(d.DoorCentre, normal, you);
-                if (!DoorBlock.TryPlacement(d, box, side, out _, out _)) continue;
-                if (!Winnable(c, region)) continue;
+                if (!DoorBlock.TryPlacement(d, box, side, out Vector3 boxAt, out _)) { refused?.Add(name + ": no floor for the box on the far side"); continue; }
+                // Where she stands to put it down: just beyond the box, on her floor, within reach of it.
+                Vector3 stand = TacticHelpers.OnHerFloor(boxAt + normal * side * StandBack);
+                if (FairnessGuard.Flat(stand, boxAt) > FairnessGuard.HandsOnReach - 0.2f || !TacticHelpers.CanReach(c, stand, 1.2f))
+                { refused?.Add(name + ": she can't get round to the far side"); continue; }
+                if (!Winnable(c, region)) { refused?.Add(name + ": would seal a job off (rule 6)"); continue; }
 
                 string key = c.Map.Regions[region].Key;
                 float onRoutes = 0f;
@@ -99,12 +111,7 @@ namespace Kehai.Karen
                         if (r.path.Contains(key)) onRoutes += r.count;
                 float prior = 0.6f * (routeTotal > 0f ? onRoutes / routeTotal : 0f) + 0.4f * (1f - walk / MaxWalk);
 
-                result.Add(new DoorOption
-                {
-                    Door = d, Side = side, Region = region,
-                    Stand = TacticHelpers.OnFloor(d.DoorCentre + normal * side * StandBack),
-                    Key = Key(c, d, side),
-                });
+                result.Add(new DoorOption { Door = d, Side = side, Region = region, Stand = stand, BoxAt = boxAt, Key = Key(c, d, side) });
                 candidates.Add(new PlaceCandidate(result[result.Count - 1].Key, Mathf.Clamp01(prior)));
             }
             return result;
@@ -114,8 +121,9 @@ namespace Kehai.Karen
         {
             ProductBox box = DoorBlock.FindBox();
             if (box == null) { why = "no resting stock box available"; return false; }
-            bool any = Doors(c, box, out _).Count > 0;
-            why = any ? null : "no clear door she can block and keep the shift winnable";
+            var refused = new List<string>();
+            bool any = Doors(c, box, out _, refused).Count > 0;
+            why = any ? null : "no door she can block: " + (refused.Count > 0 ? string.Join("; ", refused.Take(4)) : "none in the store");
             return any;
         }
 
@@ -128,9 +136,16 @@ namespace Kehai.Karen
             DoorOption o = doors[pick];
             HingeDoor target = o.Door;
             plan.Target = c.RegionName(o.Region) + (o.Side > 0 ? ", far side +" : ", far side -");
-            plan.Go(o.Stand, KarenBody.Pace.Walk, "go round to the far side of " + c.RegionName(o.Region), 1f);
+            // Going round can be a long walk: allow it twice a plain walk's time.
+            plan.Add(new MoveTo(_ => o.Stand, KarenBody.Pace.Hurry, "go round to the far side of " + c.RegionName(o.Region), 1f, timeout: 90f));
+            // If her way round was through this very door, it's standing open behind her: shut it.
+            plan.Add(new Effect("shut " + c.RegionName(o.Region) + " behind her", k =>
+            {
+                if (target != null && target.IsOpen && !target.IsMoving) target.Use(k.Body.Position, NoiseAuthor.Karen);
+            }));
+            plan.Add(new WaitUntil(k => target == null || !target.IsMoving && !target.IsOpen, 3f, "wait for it to close"));
             plan.Add(new Tell(TellKind.Clunk, _ => target != null ? target.DoorCentre : Vector3.zero, 0.9f));
-            plan.Add(new PlaceBox(target, stock, o.Region, o.Side, o.Stand, "block " + plan.Target, o.Key, this));
+            plan.Add(new PlaceBox(target, stock, o.Region, o.Side, o.BoxAt, "block " + plan.Target, o.Key, this));
         }
 
         static bool Winnable(KarenContext c, int region)
@@ -148,19 +163,19 @@ namespace Kehai.Karen
             readonly HingeDoor target;
             readonly ProductBox stock;
             readonly int region, side;
-            readonly Vector3 stand;
+            readonly Vector3 boxAt;
             readonly string key;
             readonly DoorLockTactic owner;
 
-            public PlaceBox(HingeDoor target, ProductBox stock, int region, int side, Vector3 stand, string label, string key, DoorLockTactic owner)
+            public PlaceBox(HingeDoor target, ProductBox stock, int region, int side, Vector3 boxAt, string label, string key, DoorLockTactic owner)
             {
                 this.target = target; this.stock = stock; this.region = region; this.side = side;
-                this.stand = stand; this.key = key; this.owner = owner; Label = label;
+                this.boxAt = boxAt; this.key = key; this.owner = owner; Label = label;
             }
 
             protected override Status Tick(KarenContext c, float dt)
             {
-                float reach = FairnessGuard.Flat(c.Body.Position, stand);
+                float reach = FairnessGuard.Flat(c.Body.Position, boxAt);
                 if (reach > FairnessGuard.HandsOnReach)
                 {
                     c.Think("CHECK", $"rule 9: {Label} is {reach:0.0} m from her hands, out of reach");

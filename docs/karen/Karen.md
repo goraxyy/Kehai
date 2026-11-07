@@ -14,6 +14,9 @@ all of that maps onto the systems that already exist in this project.
 > learner that finds combos. [§16](#16-karen-020) lists every change and where it lives in the
 > code. The sections below keep the original design, with a short **0.2.0** note wherever it no
 > longer matches.
+>
+> **Karen 0.3.0** (the `0.3.0` branch) brings the owner's tricks back, rebuilt end to end, and
+> removes nine for good. [§17](#17-karen-030-the-tricks-come-back) lists what each one does now.
 
 ---
 
@@ -721,6 +724,10 @@ that holds the whole design together.
 
 Every entry is a ScriptableObject: preconditions, tension cost, cooldown, expected-panic prior,
 the tell it must emit, and the *chore it generates*. Grouped by which sense it attacks.
+
+**In 0.3.0** this list is the original design. What each trick does now, which are live, and
+the nine removed (Mirror-black, Task falsification, the five PA tricks, Silence, The witness) are
+in [§17](#17-karen-030-the-tricks-come-back).
 
 **In 0.2.0** most of this library is now **drafts**, kept in the code but off in play until
 they're reworked or removed. Live are Ask the customers, Bin tamper, Ambush, Blackout (lights
@@ -1576,3 +1583,91 @@ both builders made).
 draws each live guess on the floor plan, numbered, with its weight and when you could reach its
 end. Replays have a `routes` layer drawn only from the recording, so seeking back shows what she
 guessed then. Recordings from before version 2 show none.
+
+---
+
+## 17. Karen 0.3.0: the tricks come back
+
+The owner's 21 items of 7 November, built from
+[`docs/plans/0.3.0-build-plan.md`](../plans/0.3.0-build-plan.md), by one builder (Claude).
+
+### 17.1 The list
+
+| | Count |
+|---|---|
+| Tactics in the library | 27 (nine removed) |
+| Live tricks | 15, 17 choices for the learner (Throw has three): Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy, the overtime |
+| Drafts that stay | 5: Crate wall, Shelf relocation, Mimicry, Stalk-and-withdraw, Peace offering |
+
+**What's put into the store at load** (`KarenFixtures`, data in C# since the scene isn't in git):
+the WC mop's rack, the fridge control box beside the breaker box, the PA box beside the time
+clock, two-way doors, the fog's look and wall clocks whose hands run and stop. The props use the
+Blender models once they're imported (**Kehai → Props → Import Karen's Props**), and their own
+boxes until then.
+
+**Removed:** Mirror-black, Task falsification, PA decoy, PA: your position, PA: your task list,
+PA: countdown, PA: her footsteps, Silence, The witness. Old Ledgers that learned about them load
+and forget them. Their warning sounds keep their numbers in `TellKind`, because replays store
+sounds by number.
+
+### 17.2 Each trick
+
+| Trick | What she does | Your chore |
+|---|---|---|
+| Fog | Floods the room she thinks you're in (if it has fridges) from its fridges. Everyone in it sees 2 m (`KarenConfig.fogVisibility`): you, her, her cameras, Kenji, shoppers | Reset the fridge control box in the backstreet |
+| Camera bolt-on | Stands a camera in a shelf slot, turned and tilted to see where you usually are (`CameraPlacement`). At most two. It beeps while it sees you | Unplug it (hold E), or keep out of its view |
+| Shelf sweep | Stands at a full bay on your way and knocks 5–15 products off. The task list names the aisle | Restock the bay |
+| Spill | Drops the shoppers' dirt at her feet, on a neck you're likely to cross | Mop it, or leave wet footprints |
+| Bin tamper | Refills a bin she's standing at, in her part of the building | Bag it, take it out back |
+| Tool theft | Takes the WC mop (never the staff room's), carries it off, leaves it where you go least | Find it, carry it back to its rack |
+| The overtime | In the shift's last 2 minutes, stops the time clock: the countdown freezes | Restart the clock at the staff room |
+| Phantom chime | The front doors near you open and shut, chiming, for 20 s, with nobody there. Her own ears ignore it | Check them, or don't |
+| Block door | A box on a floor frame behind a door, on the far side from you. No timer. Every door swings both ways | Go round, pick the box up |
+| The understudy | Kenji, the new hire, shadows you at 10–20 m and tells her where you are. Welcomed over the PA only if it's on | Walk up and send him to the tills |
+
+The **PA box** in the staff room switches the PA off: no announcements and no sounds through it.
+
+### 17.3 Two new fairness rules
+
+- **Rule 9, hands-on tricks happen at her hands.** Spill, Bin tamper, Shelf sweep, Tool theft,
+  Camera bolt-on, Block door and the overtime land only while her body is within 2 m of the spot,
+  across the floor (`HandsOn` step). `FairnessGuard.CheckHandsOn` counts anything that lands
+  further as a violation. The building's tricks (Blackout, Fog, Phantom chime) stay remote.
+- **Every chore says where it is** (`Tactic.FixAt`): the breaker box, the fridge box, the clock,
+  the mop, the box's side of a door, Kenji, the camera. Ambush waits on your way to it, so Tool
+  theft then Ambush is a combo she can learn.
+
+### 17.4 How she learns, after 0.3.0
+
+**Placement memory**, a new term:
+- *What it is:* for each trick, a score per place: how well doing it *there* paid before. She
+  mostly picks the best place she knows, and sometimes tries the one she knows least.
+- *How Kehai uses it:* each trick lists candidate places (from your habits and the map) with a
+  guess for each; the memory sorts them (`PlacementMemory`, in the Ledger). When a trick lands, it
+  leaves a watch on its place (`PlaceRewards`), and the answer pays the place: how long the bay
+  stayed short, the mop stayed lost, the camera saw you, the door held you; whether you walked
+  through the spill; how much the fog rattled you; whether you went to look at the doors.
+- *Elsewhere:* Google Maps preferring the route you actually take, or YouTube mixing a new kind of
+  video in with the ones you've liked.
+
+It fades over shifts like everything else she learns (rule 7), and it is saved per player in the
+Ledger. Learning from all players comes with the learning plan (PR #76).
+
+**Your answers:** every chore you fix is recorded with how long it took (`fog_reset`,
+`clock_restarted`, `mop_returned`, `box_moved`, `understudy_sent_away`, `pa_off`, and
+`camera_unplugged`). The shift report lists them and her best places.
+
+### 17.5 The test players and the checks
+
+- The bots see her chores (`karen_chores`) and answer each one: `reset_fog`, `restart_clock`,
+  `find_tool`, `unblock_door`, `send_kenji`, `unplug_camera`. They're blinded by fog too.
+- `-kehai-trick-check` (`TrickCheck`) plays a long shift on the real store, forces each trick in
+  turn and writes down whether it started, landed, showed its chore, and was fixed, and whether
+  the shift still ended.
+- Replays (version 3) record fogged rooms and the stopped clock, and show the fog on playback.
+
+### 17.6 Not in 0.3.0
+
+The five drafts above; learning from all players and Panic's calibration (PR #76); the two
+Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
+

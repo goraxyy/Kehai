@@ -42,16 +42,23 @@ hear.
   have it.
 - **Her own moves:** roam, check a noise, search, hunt (she sprints at you, then runs on her
   guesses of your route) and back off.
-- **Her live tricks:** ask the customers (shoppers tell her where they saw you) · bin tamper ·
-  cut (she races to where you'll be by a shorter way) · ambush (from shift 3: waiting, silent,
-  where your guessed routes pass) · throw (powder that blurs your view, detergent that slows you,
-  a tin that stuns you for a second) · block door (she pushes a restock box against a door; pick
-  it up to free the door) · blackout (the breakers trip; you fetch the flashlight and reset them in
-  the dark).
-- **Drafts, off in play:** mirror-black, fog, camera bolt-on, shelf sweep, spill, task
-  falsification, tool theft, overtime, the PA tricks, phantom chime, silence, crate wall, shelf
-  relocation, mimicry, the witness, the understudy, stalk and the peace offering. Don't show or
-  promise them.
+- **Her live tricks** (0.3.0 branch): ask the customers (shoppers tell her where they saw you) ·
+  shelf sweep (she stands at a bay and knocks 5–15 products off) · cut (she races to where you'll
+  be by a shorter way) · phantom chime (the front doors open and shut for 20 s with nobody there)
+  · spill (dirt dropped at her feet on your way) · bin tamper (she refills a bin she stands at) ·
+  ambush (from shift 3: waiting, silent, where you'll pass, or on your way to a chore she left) ·
+  throw (powder that blurs your view, detergent that slows you, a tin that stuns you for a second)
+  · tool theft (she hides the WC mop; carry it back) · fog (the fridges flood your room: nobody
+  sees past 2 m, her included; reset the fridge box in the backstreet) · block door (a restock box
+  behind a door, on the far side from you; go round and pick it up) · camera bolt-on (a small
+  camera in a shelf slot, aimed where you go; it beeps while it sees you; unplug it) · blackout
+  (the breakers trip; you fetch the flashlight and reset them in the dark) · the understudy
+  (Kenji, the new hire, shadows you and reports you; send him to the tills) · the overtime (in the
+  last two minutes she stops the time clock; restart it).
+- **The PA box** in the staff room switches the PA off: then she has no voice.
+- **Drafts, off in play:** crate wall, shelf relocation, mimicry, stalk and the peace offering.
+  Don't show or promise them. (Removed in 0.3.0: mirror-black, task falsification, the PA
+  tricks, silence and the witness.)
 
 ## The blink channel
 

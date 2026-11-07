@@ -62,16 +62,16 @@
     },
     {
       "id": "overtime",
-      "status": "do_not_claim",
-      "say": "Overtime is a disabled draft. It is not a live trick in 0.2.0. Don't lead with it or call it her signature.",
+      "status": "qualified",
+      "say": "On the 0.3.0 branch, in a shift's last two minutes she can walk to the time clock and stop it: the countdown freezes, customers keep coming, and the shift can't end until you restart the clock. Once a shift. Don't call it her signature move.",
       "evidence": [{ "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactics/TacticsFacility.cs", "contains": "new HandsOn(\"stop the time clock\"" }],
       "avoid": ["gives you overtime", "signature move"]
     },
     {
       "id": "tactics",
       "status": "qualified",
-      "say": "The 0.2.0 branch has seven live tricks: Ask the customers, Bin tamper, Cut, Ambush, Throw, Block door and Blackout. Throw has three item choices, making nine live choices for the learner. Other tricks are disabled drafts.",
-      "evidence": [{ "file": "README.md", "contains": "seven live tricks (nine choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
+      "say": "The 0.3.0 branch has fifteen live tricks: Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy and the overtime. Throw has three item choices, making seventeen live choices for the learner. Five other tricks are disabled drafts.",
+      "evidence": [{ "file": "README.md", "contains": "fifteen live tricks (seventeen choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
       "avoid": ["35 tactics", "34 tactics"],
       "why": "Count tricks separately from their item choices and from actions such as Hunt. Do not present disabled drafts as playable tricks."
     },

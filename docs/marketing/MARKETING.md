@@ -31,6 +31,10 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 What we may claim is in [`facts.json`](../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
 
+**0.3.0 wording (branch, not released):** fifteen live tricks, with three Throw choices
+(seventeen learner choices in all). Five drafts are not playable features. The overtime is live:
+in a shift's last two minutes she can stop the time clock; don't call it her signature.
+
 **0.2.0 wording:** seven live tricks, with three Throw choices (nine learner choices in all).
 Drafts are not playable features. Tricks and blink dashes no longer
 promise an advance warning. The old bot results describe the earlier build; the 0.2.0 paired

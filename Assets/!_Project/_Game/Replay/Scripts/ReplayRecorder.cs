@@ -667,7 +667,25 @@ namespace Kehai.Replay
                 pa.ChimeStarted += OnPaChime;
                 pa.SpeechStarted += OnPaSpeech;
             }
+            if (!fogHooked)
+            {
+                fogHooked = true;
+                FogState.Filled += OnFogFilled;
+                FogState.Cleared += OnFogCleared;
+            }
+            if (clock == null)
+            {
+                clock = FindAnyObjectByType<ShiftManager>();
+                if (clock != null) clock.FreezeChanged += OnClock;
+            }
         }
+
+        // 0.3.0: fog and the stopped clock.
+        bool fogHooked;
+        ShiftManager clock;
+        void OnFogFilled(string room) { if (writer != null) writer.Fog(Now, room, FogState.VisibilityOf(room)); }
+        void OnFogCleared(string room) { if (writer != null) writer.Fog(Now, room, 0f); }
+        void OnClock() { if (writer != null && clock != null) writer.Clock(Now, clock.IsFrozen); }
 
         void Unhook()
         {
@@ -683,6 +701,17 @@ namespace Kehai.Replay
                 pa.ChimeStarted -= OnPaChime;
                 pa.SpeechStarted -= OnPaSpeech;
                 pa = null;
+            }
+            if (fogHooked)
+            {
+                fogHooked = false;
+                FogState.Filled -= OnFogFilled;
+                FogState.Cleared -= OnFogCleared;
+            }
+            if (clock != null)
+            {
+                clock.FreezeChanged -= OnClock;
+                clock = null;
             }
         }
 

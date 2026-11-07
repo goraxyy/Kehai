@@ -36,11 +36,13 @@ by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
   thousands of shelf slots, power cuts, a radio and automatic doors.
 - **Karen:** three minds (a body that only knows what it senses, a director that paces the
   tension, a ledger that remembers you across shifts), a map of where she thinks you are, and
-  seven live tricks (nine choices for the learner): Ask the customers, Bin tamper, Cut, Ambush,
-  Throw (powder, detergent or tin), Block door and Blackout; other tricks remain disabled drafts.
-  Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15% faster. Tricks no longer promise
-  advance warnings. The 0.2.0 comparison with the previous build is still pending. Design:
-  [`docs/karen/Karen.md`](docs/karen/Karen.md).
+  fifteen live tricks (seventeen choices for the learner) on the 0.3.0 branch: Ask the customers,
+  Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw (powder, detergent or tin),
+  Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy and the overtime; five
+  others remain disabled drafts. Hands-on tricks only happen where she stands, and she learns
+  where each one works on you. Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15%
+  faster. Tricks don't promise advance warnings. Design:
+  [`docs/karen/Karen.md`](docs/karen/Karen.md) (0.3.0: §17).
 - **The blink:** opt-in webcam tracking lets Karen act while your eyes are shut. Nothing is
   recorded, and nothing leaves your computer ([`tools/blink`](tools/blink/README.md)).
 - **Seeing what happened:** a live map (**F1**), a replay of the shift (**F2**), an HTML report

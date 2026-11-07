@@ -127,9 +127,9 @@ namespace Kehai.Karen
         public event System.Action<PaAnnouncement> ChimeStarted;    // the tell
         public event System.Action<PaAnnouncement> SpeechStarted;   // the effect
 
-        // On, unless someone has switched it off at the PA box. (Until the box is built, the
-        // breaker box's old jammer switch still counts as off.) Back on at each shift's end.
-        public bool Powered => powered && !(BreakerPanel.Instance != null && BreakerPanel.Instance.PaJammed);
+        // On, unless someone has switched it off at the PA box in the staff room (PaBox). Back
+        // on at each shift's end.
+        public bool Powered => powered;
         bool powered = true;
         public event System.Action<bool> PowerChanged;
 

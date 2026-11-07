@@ -124,6 +124,22 @@ namespace Kehai.Karen
         public static Vector3 OnFloor(Vector3 p, float radius = 3f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, NavMesh.AllAreas) ? hit.position : p;
 
+        // The nearest spot on her part of the building's floor (KarenArea), or the point itself.
+        public static Vector3 OnHerFloor(Vector3 p, float radius = 1.5f) =>
+            NavMesh.SamplePosition(p, out NavMeshHit hit, radius, KarenArea.AgentMask) ? hit.position : p;
+
+        // Whether her body can walk from where it is to within `within` metres of a point, on her
+        // part of the building (0.3.0: a hands-on trick only picks spots she can reach).
+        static readonly NavMeshPath reachPath = new NavMeshPath();
+        public static bool CanReach(KarenContext c, Vector3 p, float within = 1.5f)
+        {
+            if (c.Body == null || c.Body.Agent == null || !c.Body.Agent.isOnNavMesh) return true;   // no body: a test
+            if (!NavMesh.SamplePosition(p, out NavMeshHit to, within + 1f, KarenArea.AgentMask)) return false;
+            if (FairnessGuard.Flat(to.position, p) > within) return false;
+            return NavMesh.CalculatePath(c.Body.Position, to.position, KarenArea.AgentMask, reachPath)
+                && reachPath.status == NavMeshPathStatus.PathComplete;
+        }
+
         // Walking distance field from the believed position — "how far is this from where
         // she thinks you are". Cached per decision.
         static float[] fromBelief;

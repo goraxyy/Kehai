@@ -79,6 +79,9 @@ namespace Kehai.Karen
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
         public readonly List<ChainStat> Chains = new List<ChainStat>();   // combos she found this shift (0.2.0)
+        // 0.3.0: what each place her tricks used paid, and your answers to them this shift.
+        public readonly List<(string trick, string key, float reward)> Places = new List<(string, string, float)>();
+        public readonly List<CounterStat> Answers = new List<CounterStat>();
 
         // Moments worth a clip: markers as they happen, the chases, and at the end the moments.
         public readonly List<ClipMarker> Markers = new List<ClipMarker>();
@@ -256,6 +259,24 @@ namespace Kehai.Karen
                 ChainStat c = Chains[i];
                 sb.Append("{\"first\":\"").Append(MiniJson.EscapeInner(c.first)).Append("\",\"then\":\"").Append(MiniJson.EscapeInner(c.then))
                   .Append("\",\"uses\":").Append(N(c.n)).Append(",\"paid\":").Append(N(c.q)).Append(",\"alone\":").Append(N(c.alone)).Append('}');
+            }
+            sb.Append(']');
+
+            // 0.3.0: her tricks' places and what they paid; your answers and how long they took.
+            sb.Append(",\"places\":[");
+            for (int i = 0; i < Places.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"trick\":\"").Append(MiniJson.EscapeInner(Places[i].trick)).Append("\",\"place\":\"")
+                  .Append(MiniJson.EscapeInner(Places[i].key)).Append("\",\"paid\":").Append(N(Places[i].reward)).Append('}');
+            }
+            sb.Append("],\"counterplay\":[");
+            for (int i = 0; i < Answers.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                CounterStat a = Answers[i];
+                sb.Append("{\"kind\":\"").Append(MiniJson.EscapeInner(a.kind)).Append("\",\"count\":").Append(a.count)
+                  .Append(",\"seconds\":").Append(N(a.seconds)).Append('}');
             }
             sb.Append(']');
 

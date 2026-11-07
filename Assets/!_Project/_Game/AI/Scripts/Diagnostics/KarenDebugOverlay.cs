@@ -26,6 +26,8 @@ namespace Kehai.Karen
         public bool showHeat;
         public bool showRoutes;
         public bool showTechnical;
+        public bool showTricks;     // 0.3.0: force a trick, and the fog's thickness
+        string lastForce;
 
         KarenBrain brain;
         MapPainter painter;
@@ -170,10 +172,40 @@ namespace Kehai.Karen
             routeScroll = GUILayout.BeginScrollView(routeScroll);
             showRoutes = GUILayout.Toggle(showRoutes, "Routes — her guesses", GUI.skin.button);
             if (showRoutes) RouteList();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            showTricks = GUILayout.Toggle(showTricks, "Tricks — force one", GUI.skin.button);
+            if (showTricks) TrickList();
+#endif
             if (showTechnical) Technical();
             else Story(live);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        // 0.3.0 (build plan B7.2): start any trick now, past the Director's gate but not past its
+        // own preconditions, for playtesting each one; and how thick her fog is (D5).
+        void TrickList()
+        {
+            KarenConfig config = brain.config;
+            GUILayout.Label($"Fog: you see {config.fogVisibility:0.0} m in it", small);
+            float vis = GUILayout.HorizontalSlider(config.fogVisibility, 0.5f, 10f);
+            if (!Mathf.Approximately(vis, config.fogVisibility))
+            {
+                config.fogVisibility = Mathf.Round(vis * 2f) / 2f;
+                foreach (string room in KarenWorld.FogRooms)
+                    if (FogState.IsFogged(room)) FogState.Fill(room, config.fogVisibility);
+            }
+            GUILayout.Space(FontSize * 0.3f);
+            GUILayout.Label("Force a trick (it still needs something to work on):", small);
+            foreach (Tactic t in TacticLibrary.All)
+            {
+                if (t.OwnMove || !t.Learnable && t.Id != "poll_witnesses") continue;
+                string label = t.Title + (t.Draft ? "  (draft)" : string.Empty);
+                if (GUILayout.Button(label))
+                    lastForce = brain.Force(t.Id, out string why) ? $"{t.Title}: started" : $"{t.Title}: {why}";
+            }
+            if (!string.IsNullOrEmpty(lastForce)) GUILayout.Label(lastForce.Replace("<", "‹"), small);
+            GUILayout.Space(FontSize * 0.4f);
         }
 
         void RouteList()

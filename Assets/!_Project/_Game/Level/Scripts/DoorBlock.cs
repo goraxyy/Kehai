@@ -193,7 +193,19 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
     }
 
     public void Interact(PlayerInteract player) { if (IsBlocking) pickup.Interact(player); }
-    public string GetPrompt() => IsBlocking ? "Move box to unblock door" : string.Empty;
+    public string GetPrompt() => IsBlocking ? PickUpPrompt : string.Empty;
+
+    // What the door says (0.3.0): from the box's side, how to clear it; from the other, that it's
+    // held from beyond (and it rattles, HingeDoor.Use), so you know to go round.
+    public const string PickUpPrompt = "Pick up the box to unblock the door";
+    public const string OtherSidePrompt = "Blocked from the other side";
+
+    public string PromptFor(PlayerInteract player)
+    {
+        if (!IsBlocking) return string.Empty;
+        if (player == null || Door == null) return PickUpPrompt;
+        return SideOf(Door, player.transform.position) == Side ? PickUpPrompt : OtherSidePrompt;
+    }
     public void OnHoverEnter() { hovered = true; Highlight(true); }
     public void OnHoverExit() { hovered = false; Highlight(false); }
 

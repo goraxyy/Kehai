@@ -242,6 +242,11 @@ namespace Kehai.Karen
         public float SecondsSeen { get; private set; }
         public bool SeesYou => !Dead && eye != null && eye.SeesNow;
         public SightSensor Eye => eye;
+        public bool HasModel { get; private set; }
+        OutlineHighlight outline;
+        float nextBeep;
+
+        public const float BeepEvery = 1f;   // a pip a second while it sees you (build plan D8)
 
         // A camera of hers standing in a shelf slot like a product. A product already there drops
         // to the floor to make room; the slot is hers while the camera stands in it.
@@ -250,8 +255,9 @@ namespace Kehai.Karen
             if (slot == null) return null;
             if (slot.isFilled) slot.Eject();
             Quaternion facing = Quaternion.LookRotation(slot.Outward, Vector3.up) * Quaternion.Euler(-pitch, yaw, 0f);
-            CctvCamera cam = Spawn(slot.Position + Vector3.up * 0.09f, facing * Vector3.forward, true);
-            cam.transform.localScale = Vector3.one * 0.6f;   // product-sized: B3.2 swaps in the model
+            CctvCamera cam = Spawn(slot.Position + Vector3.up * 0.05f, facing * Vector3.forward, true);
+            // Product-sized: the model is made so (about 10 × 17 × 10 cm); its own boxes shrink to fit.
+            if (!cam.HasModel) cam.transform.localScale = Vector3.one * 0.6f;
             cam.Slot = slot;
             cam.Yaw = yaw;
             cam.Pitch = pitch;
@@ -271,15 +277,33 @@ namespace Kehai.Karen
             root.transform.position = position;
             root.transform.rotation = Quaternion.LookRotation(look.sqrMagnitude > 0.01f ? look : Vector3.forward);
 
-            GameObject body = KarenProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
-            body.transform.localPosition = Vector3.zero;
-            body.transform.localRotation = Quaternion.identity;
-            body.layer = root.layer;
-            GameObject lens = KarenProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
-            lens.transform.localPosition = new Vector3(0f, 0f, 0.18f);
+            // Hers stand in a slot as the Blender model when it's imported (0.3.0, PropModels).
+            GameObject model = boltedOn ? PropModels.Place(PropModels.Camera, root.transform) : null;
+            if (model != null)
+            {
+                var hit = root.AddComponent<BoxCollider>();
+                hit.size = new Vector3(0.1f, 0.1f, 0.17f);
+            }
+            else
+            {
+                GameObject body = KarenProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
+                body.transform.localPosition = Vector3.zero;
+                body.transform.localRotation = Quaternion.identity;
+                body.layer = root.layer;
+                GameObject lens = KarenProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
+                lens.transform.localPosition = new Vector3(0f, 0f, 0.18f);
+            }
 
             var cam = root.AddComponent<CctvCamera>();
             cam.BoltedOn = boltedOn;
+            cam.HasModel = model != null;
+
+            // Looking at it lights it up, like the store's own things (0.3.0).
+            var outline = root.AddComponent<OutlineHighlight>();
+            foreach (OutlineHighlight o in FindObjectsByType<OutlineHighlight>())
+                if (o != null && o != outline && o.outlineMaterial != null) { outline.outlineMaterial = o.outlineMaterial; break; }
+            outline.shape = OutlineHighlight.OutlineShape.BoundingBox;
+            cam.outline = outline;
 
             var eyeGo = new GameObject("Eye");
             eyeGo.transform.SetParent(root.transform, false);
@@ -307,6 +331,18 @@ namespace Kehai.Karen
             if (Dead) return;
             eye.Tick(Time.deltaTime);
             if (eye.SeesNow) SecondsSeen += Time.deltaTime;
+
+            // Hers beep while they see you, and their red light goes solid; otherwise it blinks.
+            if (BoltedOn)
+            {
+                bool sees = eye.SeesNow;
+                if (sees && Time.time >= nextBeep)
+                {
+                    nextBeep = Time.time + BeepEvery;
+                    OneShotAudio.PlayAt(ProceduralAudio.CameraBeep(), transform.position, 0.8f, SoundKind.Karen);
+                }
+                if (led != null) led.enabled = sees || Mathf.Repeat(Time.time, 2f) < 0.15f;
+            }
             if (eye.Awareness < eye.glimpseAt || Time.time < nextReport) return;
 
             nextReport = Time.time + 1f;
@@ -337,8 +373,8 @@ namespace Kehai.Karen
             KarenBrain.Instance?.Ledger.RecordCounterplay("camera_unplugged");
         }
 
-        public void OnHoverEnter() { }
-        public void OnHoverExit() { }
+        public void OnHoverEnter() { if (outline != null) outline.SetHighlighted(true); }
+        public void OnHoverExit() { if (outline != null) outline.SetHighlighted(false); }
     }
 
     // ---- the coffee (§8.6, §10.3) -------------------------------------------------------

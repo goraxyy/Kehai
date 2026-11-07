@@ -81,7 +81,11 @@ namespace Kehai.Karen
         protected override Status Tick(KarenContext c, float dt)
         {
             elapsed += dt;
-            if (elapsed > timeout) return Status.Failure;
+            if (elapsed > timeout)
+            {
+                c.Think("CHECK", $"walk '{Label}' gave up after {timeout:0} s, {c.Body.Agent.remainingDistance:0.0} m short");
+                return Status.Failure;
+            }
 
             if (follow)
             {
@@ -93,7 +97,7 @@ namespace Kehai.Karen
                 }
             }
 
-            if (c.Body.PathFailed) return Status.Failure;
+            if (c.Body.PathFailed) { c.Think("CHECK", $"walk '{Label}': no path"); return Status.Failure; }
             return c.Body.Arrived(arrive) ? Status.Success : Status.Running;
         }
     }

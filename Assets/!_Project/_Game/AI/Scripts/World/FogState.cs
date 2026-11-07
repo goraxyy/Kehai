@@ -56,18 +56,19 @@ namespace Kehai.Karen
         // Anything at all to check: false keeps every sight check as cheap as before fog existed.
         public static bool Active => rooms.Count > 0;
 
+        // A room fogged and not yet reset, rolling in or thick (a reset one still thinning isn't).
         public static bool Any
         {
             get
             {
-                foreach (KeyValuePair<string, Room> pair in rooms) if (Thick(pair.Value) > 0f) return true;
+                foreach (KeyValuePair<string, Room> pair in rooms) if (pair.Value.clearedAt < 0f) return true;
                 return false;
             }
         }
 
         public static IEnumerable<string> Rooms
         {
-            get { foreach (KeyValuePair<string, Room> pair in rooms) if (Thick(pair.Value) > 0f) yield return pair.Key; }
+            get { foreach (KeyValuePair<string, Room> pair in rooms) if (pair.Value.clearedAt < 0f) yield return pair.Key; }
         }
 
         // Flood a room. Refilling one that's already fogged only changes its thickness.
@@ -108,6 +109,10 @@ namespace Kehai.Karen
             rooms.Clear();
             foreach (string r in had) Cleared?.Invoke(r);
         }
+
+        // How thick it is once it's in: the visibility in metres, or 0 for a clear room.
+        public static float VisibilityOf(string room) =>
+            room != null && rooms.TryGetValue(room, out Room r) && r.clearedAt < 0f ? r.visibility : 0f;
 
         // When a room filled (the clock's time), or -1.
         public static float FilledAt(string room) =>

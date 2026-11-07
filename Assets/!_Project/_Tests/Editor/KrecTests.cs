@@ -182,6 +182,32 @@ public class KrecTests
         Assert.IsEmpty(d.RoutesAt(1.8f).Guesses, "she dropped them");
     }
 
+    // 0.3.0: her fog and the stopped clock are in the recording (version 3).
+    [Test]
+    public void FogAndTheStoppedClock_ReadBackAsWritten()
+    {
+        using (var w = new KrecWriter(path))
+        {
+            w.Header(new KrecHeader { Stem = "shift_10_fog", Shift = 10 });
+            w.Tick(0f);
+            w.Fog(2f, "Sales floor", 2f);
+            w.Clock(3f, true);
+            w.Fog(40f, "Sales floor", 0f);
+            w.Clock(55f, false);
+            w.End(60f, true);
+        }
+        ReplayData d = KrecReader.Load(path);
+        Assert.AreEqual(Krec.Version, d.Version);
+        Assert.AreEqual(3, Krec.Version);
+        var fog = d.Events.Where(e => e.Type == KrecEvent.Fog).ToList();
+        Assert.AreEqual(2, fog.Count);
+        Assert.AreEqual("Sales floor", fog[0].Text);
+        Assert.AreEqual(2f, fog[0].Value, 1e-5f);
+        Assert.AreEqual(0f, fog[1].Value, 1e-5f, "cleared");
+        var clock = d.Events.Where(e => e.Type == KrecEvent.Clock).ToList();
+        CollectionAssert.AreEqual(new[] { true, false }, clock.Select(e => e.Flag).ToArray());
+    }
+
     [Test]
     public void SomethingThatHeldStillDoesntDrift()
     {

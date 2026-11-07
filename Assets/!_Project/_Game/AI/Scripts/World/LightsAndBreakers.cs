@@ -112,9 +112,8 @@ namespace Kehai.Karen
     // they have to go back on in rising pitch — low, middle, high — in the dark, by ear.
     // Get it wrong and everything you'd already thrown trips again.
     //
-    // A fourth switch jams the PA. The panel can only carry two of the three light
-    // circuits while the jammer is drawing power, so silencing Karen costs you a wing of
-    // the store.
+    // Until 0.3.0 a fourth switch jammed the PA at the cost of a light circuit. The PA has its
+    // own off switch in the staff room now (PaBox), and it costs nothing.
     public sealed class BreakerPanel : MonoBehaviour
     {
         public static BreakerPanel Instance { get; private set; }
@@ -123,9 +122,7 @@ namespace Kehai.Karen
         readonly bool[] on = { true, true, true };
         readonly int[] pitch = { 0, 1, 2 };
         readonly List<BreakerSwitch> switches = new List<BreakerSwitch>();
-        BreakerSwitch jammerSwitch;
 
-        public bool PaJammed { get; private set; }
         public bool AllOn => on[0] && on[1] && on[2];
         public int TrippedCount => (on[0] ? 0 : 1) + (on[1] ? 0 : 1) + (on[2] ? 0 : 1);
         public float LastFullReset { get; private set; } = -1f;
@@ -148,7 +145,10 @@ namespace Kehai.Karen
             if (Instance == this) Instance = null;
         }
 
-        void BuildSwitches()
+        // The front of the breaker box at floor level, the way it faces (back into the building),
+        // the direction along its face, and how far it reaches either side of its middle. The
+        // fridge control box (0.3.0) is hung beside it with the same numbers.
+        public static void FaceOf(ElectricBox box, out Vector3 face, out Vector3 facing, out Vector3 across, out float halfWidth)
         {
             // Mount the switches on the face of the box that looks back into the building.
             Bounds bounds = new Bounds(box.transform.position + Vector3.up, Vector3.one);
@@ -158,9 +158,9 @@ namespace Kehai.Karen
 
             // Face whichever side of the box you can actually stand on.
             Vector3 centre = new Vector3(bounds.center.x, 0f, bounds.center.z);
-            Vector3 facing = box.transform.forward;
+            facing = box.transform.forward;
             var map = Kehai.Store.StoreMap.Current;
-            int cell = map.CellAt(centre, 4f);
+            int cell = map != null ? map.CellAt(centre, 4f) : -1;
             if (cell >= 0)
             {
                 Vector3 toFloor = map.CellPosition[cell] - centre;
@@ -173,18 +173,23 @@ namespace Kehai.Karen
             facing.y = 0f;
             facing.Normalize();
             if(box.controlFace!=null)facing=box.controlFace.forward;
-            Vector3 across = Vector3.Cross(Vector3.up, facing).normalized;
+            across = Vector3.Cross(Vector3.up, facing).normalized;
             float depth = Mathf.Abs(Vector3.Dot(bounds.extents, new Vector3(Mathf.Abs(facing.x), 0f, Mathf.Abs(facing.z))));
-            Vector3 face = centre + facing * (depth + 0.05f);
+            halfWidth = Mathf.Abs(Vector3.Dot(bounds.extents, new Vector3(Mathf.Abs(across.x), 0f, Mathf.Abs(across.z))));
+            face = centre + facing * (depth + 0.05f);
             if(box.controlFace!=null){face=box.controlFace.position;face.y=0;}
+        }
 
+        void BuildSwitches()
+        {
+            FaceOf(box, out Vector3 face, out Vector3 facing, out Vector3 across, out _);
+            // Three switches, one per light circuit. (Until 0.3.0 a fourth jammed the PA; the PA
+            // has its own box in the staff room now, PaBox, and it costs no light.)
             for (int i = 0; i < 3; i++)
             {
-                Vector3 p = face + Vector3.up * 1.35f + across * ((i - 1.5f) * 0.28f);
+                Vector3 p = face + Vector3.up * 1.35f + across * ((i - 1f) * 0.28f);
                 switches.Add(BreakerSwitch.Create(this, i, p, facing, new Color(0.9f, 0.75f, 0.2f)));
             }
-            Vector3 jp = face + Vector3.up * 1.35f + across * (1.5f * 0.28f);
-            jammerSwitch = BreakerSwitch.Create(this, 3, jp, facing, new Color(0.9f, 0.25f, 0.2f));
             RefreshVisuals();
         }
 
@@ -218,23 +223,17 @@ namespace Kehai.Karen
 
         // ---- the player's side ---------------------------------------------------
 
-        public int PitchOf(int index) => index < 3 ? pitch[index] : 3;
-        public bool SwitchOn(int index) => index < 3 ? on[index] : PaJammed;
+        public int PitchOf(int index) => pitch[index];
+        public bool SwitchOn(int index) => on[index];
 
         public void Flip(int index, Vector3 at)
         {
-            if (index == 3) { FlipJammer(at); return; }
 
             if (on[index])
             {
                 // Throwing a live breaker off is allowed — it's your store too.
                 on[index] = false;
                 OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), at);
-            }
-            else if (!CanCarryAnother())
-            {
-                OneShotAudio.PlayAt(ProceduralAudio.ErrorBuzz(), at);
-                return;
             }
             else if (IsNextInOrder(index))
             {
@@ -261,35 +260,10 @@ namespace Kehai.Karen
             return true;
         }
 
-        bool CanCarryAnother()
-        {
-            int live = (on[0] ? 1 : 0) + (on[1] ? 1 : 0) + (on[2] ? 1 : 0);
-            return !PaJammed || live < 2;
-        }
-
-        void FlipJammer(Vector3 at)
-        {
-            PaJammed = !PaJammed;
-            if (PaJammed)
-            {
-                // The load limit: switching the jammer in drops a light circuit.
-                int live = (on[0] ? 1 : 0) + (on[1] ? 1 : 0) + (on[2] ? 1 : 0);
-                if (live > 2)
-                    for (int i = 2; i >= 0; i--)
-                        if (on[i]) { on[i] = false; break; }
-                KarenWorld.Instance?.Pa.Clear();
-                KarenBrain.Instance?.Ledger.RecordCounterplay("pa_jammed");
-            }
-            OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), at);
-            Settle();
-        }
-
-        // The panel carries three light circuits, or two while the jammer draws power. Once
-        // it is carrying all it can, the mains come back.
+        // Once all three light circuits are back, the mains come back.
         void Settle()
         {
-            int needed = PaJammed ? 2 : 3;
-            bool resolved = CountOn() >= needed;
+            bool resolved = CountOn() >= 3;
             if (resolved && !PowerSystem.PowerOn) PowerSystem.Instance?.RestorePower();
 
             LightControl.Instance?.ApplyCircuits();
@@ -308,13 +282,11 @@ namespace Kehai.Karen
         void RefreshVisuals()
         {
             foreach (BreakerSwitch s in switches) if (s != null) s.Refresh();
-            if (jammerSwitch != null) jammerSwitch.Refresh();
         }
 
         public void ResetForShift()
         {
             for (int i = 0; i < 3; i++) on[i] = true;
-            PaJammed = false;
             BlackoutStarted = -1f;
             Mistakes = 0;
             LightControl.Instance?.ApplyCircuits();
@@ -323,7 +295,6 @@ namespace Kehai.Karen
 
         public string Prompt(int index)
         {
-            if (index == 3) return PaJammed ? "Un-jam the PA" : "Jam the PA (costs a light circuit)";
             string name = ((LightCircuit)index).ToString().ToLowerInvariant();
             return on[index] ? $"Throw the {name} lights off" : $"Throw the {name} lights on";
         }
@@ -341,7 +312,7 @@ namespace Kehai.Karen
         public static BreakerSwitch Create(BreakerPanel panel, int index, Vector3 position, Vector3 facing, Color colour)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = index < 3 ? $"Breaker_{(LightCircuit)index}" : "Breaker_PAJammer";
+            go.name = $"Breaker_{(LightCircuit)index}";
             go.layer = LayerMask.NameToLayer("Interactable");
             go.transform.position = position;
             go.transform.rotation = Quaternion.LookRotation(facing);

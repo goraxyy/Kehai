@@ -39,9 +39,17 @@ public class KarenActionsTests
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
         CollectionAssert.AreEqual(new[]
         {
-            "ambush", "bin_tamper", "blackout", "cut", "door_lock", "phantom_chime", "poll_witnesses", "shelf_sweep",
-            "spill", "throw_flour", "throw_oil", "throw_tin",
+            "ambush", "bin_tamper", "blackout", "camera_bolt_on", "cut", "door_lock", "fog", "overtime", "phantom_chime",
+            "poll_witnesses", "shelf_sweep", "spill", "throw_flour", "throw_oil", "throw_tin", "tool_theft", "understudy",
         }, live);
+    }
+
+    // 0.3.0: the five the owner didn't ask about stay drafts (build plan D9); nothing else does.
+    [Test]
+    public void TheDrafts_AreTheFiveLeft()
+    {
+        var drafts = TacticLibrary.All.Where(t => t.Draft).Select(t => t.Id).OrderBy(id => id).ToArray();
+        CollectionAssert.AreEqual(new[] { "crate_wall", "favour", "mimicry", "shelf_relocation", "stalk" }, drafts);
     }
 
     // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush, Disrupt and

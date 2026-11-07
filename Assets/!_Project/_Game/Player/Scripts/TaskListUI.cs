@@ -80,7 +80,11 @@ public class TaskListUI : MonoBehaviour
         {
             int remaining = Mathf.Max(0, Mathf.CeilToInt(shiftManager.TimeRemaining));
             builder.AppendLine($"<b>SHIFT {shiftManager.ShiftNumber}</b>");
-            builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>");
+            // Karen's overtime (0.3.0): the time clock stopped, and the countdown with it.
+            if (shiftManager.IsFrozen)
+                builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>  <color=#FF6F61>Clock stopped</color>");
+            else
+                builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>");
             if (!shiftManager.CustomersAllowed)
                 builder.AppendLine("<i>Store closed - clock out</i>");
         }

@@ -104,11 +104,11 @@ public class KarenRuleTests
         foreach (string id in ids) Assert.AreSame(TacticLibrary.All.First(t => t.Id == id), TacticLibrary.Get(id));
     }
 
-    // Tiers 0-3 each keep something live (0.2.0); tier 4 waits for a trick back from draft.
+    // Every tier keeps something live; tier 4 again since 0.3.0 (the overtime).
     [Test]
     public void EveryTier_IsPopulated()
     {
-        for (int tier = 0; tier <= 3; tier++)
+        for (int tier = 0; tier <= 4; tier++)
             Assert.IsTrue(TacticLibrary.Live.Any(t => t.Tier == tier), $"no live tactic at tier {tier}");
     }
 

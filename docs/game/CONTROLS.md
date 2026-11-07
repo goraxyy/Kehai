@@ -26,8 +26,8 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| E | Use what you're looking at: pick up, stock a shelf, open a door, serve, talk, switch the radio |
-| E (hold) | Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints |
+| E | Use what you're looking at: pick up, stock a shelf, open a door, serve, talk, switch the radio, switch the PA off or on (the PA box in the staff room), talk to Kenji, pick up a box blocking a door |
+| E (hold) | Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints, reset the fridge control box (3 s), restart a stopped time clock (3 s) |
 | E (nothing in view) | Use what's in your hand, such as switching the torch on or off |
 | Q | Put down what you're holding |
 | Q (hold, then let go) | Throw it; hold longer to throw harder |
