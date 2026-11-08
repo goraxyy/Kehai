@@ -46,7 +46,7 @@ hear.
   shelf sweep (she stands at a bay and knocks 5–15 products off) · cut (she races to where you'll
   be by a shorter way) · phantom chime (the front doors open and shut for 20 s with nobody there)
   · spill (dirt dropped at her feet on your way) · bin tamper (she refills a bin she stands at) ·
-  ambush (from shift 3: waiting, silent, where you'll pass, or on your way to a chore she left) ·
+  ambush (waiting, silent, where you'll pass, or on your way to a chore she left) ·
   throw (powder that blurs your view, detergent that slows you, a tin that stuns you for a second)
   · tool theft (she hides the WC mop; carry it back) · fog (the fridges flood your room: nobody
   sees past 2 m, her included; reset the fridge box in the backstreet) · block door (a restock box

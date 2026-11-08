@@ -121,6 +121,35 @@ public class KarenActionsTests
         Assert.AreEqual(3, TacticLibrary.Get("ambush").IntroducedShift);
     }
 
+    // The owner, 8 November: every trick from shift 1 while they're tested. The career table
+    // stays in the code (each trick's IntroducedShift), behind KarenConfig.careerTable.
+    [Test]
+    public void EveryTrick_ComesOnShiftOne_UntilTheCareerTableIsBack()
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        Assert.IsFalse(config.careerTable, "the lock is off by default");
+        var ledger = new KarenLedger(config);
+        var director = new KarenDirector(config, ledger);
+        director.BeginShift(1, 300f);
+        var c = new KarenContext { Config = config, Rng = new KarenRng(7), Ledger = ledger, Director = director, A = new Appraisal { Tension = 1f } };
+        Assert.AreEqual(1, c.ShiftNumber);
+
+        var later = TacticLibrary.Live.Where(t => !t.Draft && t.IntroducedShift > 1).ToList();
+        Assert.IsNotEmpty(later);
+        foreach (Tactic t in later)
+        {
+            HtnPlanner.Gated(t, c, out string why);
+            Assert.AreNotEqual($"introduced on shift {t.IntroducedShift}", why, $"{t.Id} is still locked on shift 1");
+        }
+
+        config.careerTable = true;
+        foreach (Tactic t in later)
+        {
+            Assert.IsFalse(HtnPlanner.Gated(t, c, out string why), $"{t.Id} got through on shift 1 with the table on");
+            Assert.AreEqual($"introduced on shift {t.IntroducedShift}", why);
+        }
+    }
+
     // ---- phase 2: Hunt -----------------------------------------------------------------------
 
     // The pacing is the Hunt action's, whichever of its moves or tricks runs (phase 3).

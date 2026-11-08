@@ -59,6 +59,13 @@ namespace Kehai.Karen
             return false;
         }
 
+        // Rule 10 (0.3.0, the owner's call of 8 November): no new chore once the doors close. A
+        // trick that leaves a chore (Tactic.LeavesChore) isn't chosen after closing, and one that
+        // hasn't landed anything by then stops (PlanTree). One that already landed finishes, so
+        // she never walks off holding the WC mop. The shift stays finishable.
+        public const string ClosedWhy = "the doors have closed: no new chores";
+        public static bool DoorsClosed(KarenContext c) => c != null && c.Shift != null && c.Shift.DoorsClosed;
+
         // Rule 9: how far a hands-on trick may land from her body. Measured across the floor, so
         // a shelf's top slot or a bin's lid counts from where she stands.
         public const float HandsOnReach = 2f;

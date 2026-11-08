@@ -252,8 +252,10 @@ the ablation over whole shifts is below the table.
 - **Karen 0.3.0 can make the shift unfinishable:** after the doors close she keeps making chores
   (spills, shelf sweeps, bins, Tool theft) faster than they can be cleared, and the clock-out
   waits for every one. 13 of 240 test shifts got stuck, against 2 on `main`
-  ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). The proposed
-  rule: no new chore after closing. The owner's call.
+  ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). **Decided
+  8 November (the owner):** no new chore once the doors close, rule 10
+  ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)). Built; the ablation runs
+  again to check it.
 - **A body can fall through the floor in Aisle 4/B** (the test player did, once in 83 shifts), and
   **0.3.0 runs 3.6 times slower** than `main` in the tests, for reasons not yet found.
 - **Karen can stand on a stuck player** without catching them.

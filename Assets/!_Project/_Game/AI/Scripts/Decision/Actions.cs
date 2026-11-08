@@ -221,6 +221,8 @@ namespace Kehai.Karen
         public static bool Gated(Tactic t, KarenContext c, out string why)
         {
             if (t.Draft) { why = "draft"; return false; }
+            // Not a pacing gate, so it holds on every rung, the shield or no shield.
+            if (t.LeavesChore && FairnessGuard.DoorsClosed(c)) { why = FairnessGuard.ClosedWhy; return false; }
             why = null;
             return Introduced(t, c, ref why) &&
                    (!Shielded(c) || Permitted(t, c, ref why) && OffCooldown(t, c, ref why) && Affordable(t, c, ref why));
@@ -234,7 +236,8 @@ namespace Kehai.Karen
         static bool Introduced(Tactic t, KarenContext c, ref string why)
         {
             if (!c.Features.Goals && t.Tier > 0) { why = "rung has no tactics"; return false; }
-            if ((c.Brain != null && c.Brain.CareerOverride) || t.IntroducedShift <= c.ShiftNumber) return true;
+            // The career table is off for now (KarenConfig.careerTable): every trick from shift 1.
+            if (!c.Config.careerTable || (c.Brain != null && c.Brain.CareerOverride) || t.IntroducedShift <= c.ShiftNumber) return true;
             why = $"introduced on shift {t.IntroducedShift}";
             return false;
         }

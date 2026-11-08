@@ -258,7 +258,7 @@ namespace Kehai.Karen
 
         protected override Status Tick(KarenContext c, float dt)
         {
-            c.Brain.RecordEffect(Label);
+            c.Brain?.RecordEffect(Label);   // a test's context has no brain
             act(c);
             return Status.Success;
         }
@@ -318,7 +318,7 @@ namespace Kehai.Karen
 
         protected override Status Tick(KarenContext c, float dt)
         {
-            if (!logged) { c.Brain.RecordEffect(Label); logged = true; }
+            if (!logged) { c.Brain?.RecordEffect(Label); logged = true; }
             t += dt;
             if (step(c, dt)) return Status.Success;
             return t >= max ? Status.Failure : Status.Running;
@@ -465,6 +465,18 @@ namespace Kehai.Karen
         public int Count => steps.Count;
         public string ViolatedGuard { get; private set; }
 
+        // Whether any step that changes the world (an effect, a hands-on effect, a process) has
+        // begun: from then on the plan has left its mark.
+        public bool Landed
+        {
+            get
+            {
+                foreach (Primitive s in steps)
+                    if (s.Started && (s is Effect || s is HandsOn || s is Process)) return true;
+                return false;
+            }
+        }
+
         public override Status Tick(KarenContext c, float dt)
         {
             while (index < steps.Count)
@@ -499,6 +511,7 @@ namespace Kehai.Karen
         public Tactic Tactic;
         public string Target;       // what it's aimed at, in words (a place, a shelf, "close distance")
         public bool Interrupted { get; private set; }
+        public bool StoppedAtClosing { get; private set; }
 
         public PlanTree(string name, ActionId goal, Tactic tactic, List<Primitive> steps, Func<KarenContext, bool> interrupt)
         {
@@ -514,6 +527,14 @@ namespace Kehai.Karen
             if (interrupt.Tick(c, dt) == Status.Success)
             {
                 Interrupted = true;
+                Plan.Abort(c);
+                return Status.Failure;
+            }
+            // Rule 10: the doors closed before this trick left its chore. It stops here.
+            if (Tactic != null && Tactic.LeavesChore && !Plan.Landed && FairnessGuard.DoorsClosed(c))
+            {
+                StoppedAtClosing = true;
+                c.Think("CHECK", $"rule 10: {Tactic.Id} stopped, {FairnessGuard.ClosedWhy}");
                 Plan.Abort(c);
                 return Status.Failure;
             }

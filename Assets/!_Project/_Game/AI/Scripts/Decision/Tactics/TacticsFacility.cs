@@ -13,6 +13,7 @@ namespace Kehai.Karen
     public sealed class BlackoutTactic : Tactic
     {
         public override string Id => "blackout";
+        public override bool LeavesChore => true;
         public override string Title => "Blackout";
         public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 3;
@@ -72,6 +73,7 @@ namespace Kehai.Karen
     public sealed class FogTactic : Tactic
     {
         public override string Id => "fog";
+        public override bool LeavesChore => true;
         public override string Title => "Fog";
         public override ActionId[] Actions => new[] { ActionId.Flush, ActionId.Corner };
         public override int Tier => 2;
@@ -168,6 +170,7 @@ namespace Kehai.Karen
     public sealed class CameraBoltOnTactic : Tactic
     {
         public override string Id => "camera_bolt_on";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Camera bolt-on";
         public override ActionId[] Actions => new[] { ActionId.Corner, ActionId.Disrupt };
@@ -264,6 +267,7 @@ namespace Kehai.Karen
     public sealed class ShelfSweepTactic : Tactic
     {
         public override string Id => "shelf_sweep";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Shelf sweep";
         public override ActionId[] Actions => new[] { ActionId.Disrupt, ActionId.Flush };
@@ -402,6 +406,7 @@ namespace Kehai.Karen
     public sealed class SpillTactic : Tactic
     {
         public override string Id => "spill";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Spill";
         public override ActionId[] Actions => new[] { ActionId.Disrupt, ActionId.Corner };
@@ -498,6 +503,7 @@ namespace Kehai.Karen
     public sealed class BinTamperTactic : Tactic
     {
         public override string Id => "bin_tamper";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Bin tamper";
         public override ActionId[] Actions => new[] { ActionId.Disrupt };
@@ -559,6 +565,7 @@ namespace Kehai.Karen
     public sealed class ToolTheftTactic : Tactic
     {
         public override string Id => "tool_theft";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Tool theft";
         public override ActionId[] Actions => new[] { ActionId.Disrupt };
@@ -591,12 +598,22 @@ namespace Kehai.Karen
             if (rack.Taken) { why = "she already has it hidden"; return false; }
             if (!rack.IsToolHome) { why = "the WC mop isn't on its rack"; return false; }
             if (c.Belief != null && TacticHelpers.WalkFromBelief(c, rack.transform.position) < 12f) { why = "the employee is near the rack"; return false; }
+            if (!InReach(rack)) { why = "she can't stand within reach of the rack"; return false; }
             bool any = Drops(c, rack.transform.position, out _).Count > 0;
             why = any ? null : "nowhere to leave it";
             return any;
         }
 
         public override bool EffectRunning(KarenContext c) => ToolSnapPoint.TakenCount > 0;
+
+        // Where she stands to take it: the nearest spot on her floor to the rack, which hangs on
+        // a wall. Walking to "the floor under the rack" left her 2.2 m off on some approaches, just
+        // out of rule 9's reach, and the take failed (the trick check, 8 November).
+        public const float StandArrive = 0.35f;
+        public static Vector3 StandAt(ToolSnapPoint rack) => TacticHelpers.OnHerFloor(rack.transform.position, 2.5f);
+
+        public static bool InReach(ToolSnapPoint rack) =>
+            FairnessGuard.Flat(StandAt(rack), rack.transform.position) + StandArrive <= FairnessGuard.HandsOnReach - 0.1f;
 
         // You fix it at the mop, wherever she left it.
         public override bool FixAt(KarenContext c, out Vector3 at)
@@ -642,7 +659,7 @@ namespace Kehai.Karen
             Vector3 rackAt = home.transform.position;
             plan.Target = "the WC mop → " + drop.Name;
 
-            plan.Go(TacticHelpers.OnFloor(rackAt), KarenBody.Pace.Walk, "go to the WC mop rack", 1.2f);
+            plan.Go(StandAt(home), KarenBody.Pace.Walk, "go to the WC mop rack", StandArrive);
             plan.Add(new Tell(TellKind.MopRattle, _ => rackAt, 0.9f));
             plan.Add(new HandsOn("take the WC mop", _ => rackAt, k =>
             {
@@ -674,6 +691,7 @@ namespace Kehai.Karen
     public sealed class OvertimeTactic : Tactic
     {
         public override string Id => "overtime";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "The overtime";
         public override ActionId[] Actions => new[] { ActionId.Disrupt };
@@ -741,6 +759,7 @@ namespace Kehai.Karen
     public sealed class PhantomChimeTactic : Tactic
     {
         public override string Id => "phantom_chime";
+        public override bool LeavesChore => true;
         public override string Title => "Phantom chime";
         public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 1;

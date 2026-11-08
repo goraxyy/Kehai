@@ -108,13 +108,16 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - Plan with tick boxes and a progress table: [`plans/0.3.0-build-plan.md`](../plans/0.3.0-build-plan.md). What each trick does now: [Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back).
   - **One builder** (the owner's call, 7 November): Claude built every task, the old [B] ones too.
   - **Built (7 November):** phases 0–4, most of 5, the props' Blender models (`~/Desktop/KehaiRelated/Props`) and their importer, the claims, and the trick check (`-kehai-trick-check`). All 15 of the owner's live tricks are live; five drafts stay.
-  - **The trick check** passes: all 12 forced tricks start, land, show their chore and are fixed, with 0 fairness violations.
+  - **The trick check** passes: every forced trick starts and lands, with 0 fairness violations. The test player fixes every chore but Spill's and Shelf sweep's, which the shift sometimes ends before it gets to.
   - **The ablation against `main`** ran on 7 November ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
     - fairness 0, and she uses 3.6 tricks a shift against 1.1;
     - **13 of 240 shifts got stuck**, against 2 on `main`: mostly because she keeps making chores after the doors close, and the clock-out waits for all of them;
     - also found: the bot falling through Aisle 4/B's floor, the bot wedging on the staff-room furniture, 0.3.0 running 3.6 times slower, and the fog's log flood (fixed);
     - the understudy, the overtime and Cut never ran.
-  - **Left:** the owner's call on chores after closing, then the ablation again; the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
+  - **Rule 10 (8 November, the owner's call):** no new chore once the doors close. It's built and tested.
+  - **Every trick from shift 1 (8 November, the owner's call),** for testing: the career table is off behind `KarenConfig.careerTable`, to come back later.
+  - **Tool theft fixed:** she stopped 2.2 m from the WC rack, out of rule 9's reach, so the take failed; she now stands at the nearest spot on her floor.
+  - **Left:** the ablation again (on the owner's go); the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
 - **PR #74, Karen 0.2.0** (`0.2.0` → `main`): **merged** (`d5d14f3`). What follows is how it was built, kept for reference.
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
@@ -136,7 +139,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 
 ## 5. What's next, in order
 
-1. **Finish Karen 0.3.0 (PR #78):** decide whether she may make chores after the doors close, fix the stuck shifts and run the ablation again, then the owner's playtest and merge. 0.2.0 is merged; how far to turn her down is still open.
+1. **Finish Karen 0.3.0 (PR #78):** run the ablation again with rule 10 (no new chore after closing), then the owner's playtest and merge. 0.2.0 is merged; how far to turn her down is still open.
 2. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
 3. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
 4. **The capture plan,** re-read against 0.2.0 first, as one PR.

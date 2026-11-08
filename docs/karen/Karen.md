@@ -876,6 +876,10 @@ constraints, enforced in code, asserted in tests.
    behaviour must visibly work within two shifts, or the learning is a punishment ratchet.
 8. **Determinism on demand.** Seeded RNG and a replayable decision log, so any "that was
    bullshit" moment can be replayed and adjudicated. This is a QA feature and a trust feature.
+9. **Hands-on tricks happen at her hands** (0.3.0, [§17.3](#173-the-new-fairness-rules)).
+10. **No new chore once the doors close** (0.3.0, the owner's call of 8 November;
+    [§17.3](#173-the-new-fairness-rules)). Rule 6 for closing time: the clock-out waits for every
+    chore, so a chore made after closing can keep a shift from ever ending.
 
 ---
 
@@ -1627,7 +1631,11 @@ sounds by number.
 
 The **PA box** in the staff room switches the PA off: no announcements and no sounds through it.
 
-### 17.3 Two new fairness rules
+**Every trick from shift 1, for now** (the owner, 8 November): the career table is off while the
+tricks are tested. Each trick keeps its unlock shift in the code, and `KarenConfig.careerTable`
+(or `-karen-career-table on`) brings the lock back.
+
+### 17.3 The new fairness rules
 
 - **Rule 9, hands-on tricks happen at her hands.** Spill, Bin tamper, Shelf sweep, Tool theft,
   Camera bolt-on, Block door and the overtime land only while her body is within 2 m of the spot,
@@ -1636,6 +1644,15 @@ The **PA box** in the staff room switches the PA off: no announcements and no so
 - **Every chore says where it is** (`Tactic.FixAt`): the breaker box, the fridge box, the clock,
   the mop, the box's side of a door, Kenji, the camera. Ambush waits on your way to it, so Tool
   theft then Ambush is a combo she can learn.
+- **Rule 10, no new chore once the doors close** (the owner's call, 8 November, after the
+  ablation found shifts that couldn't end).
+  - From closing on, the gate refuses every trick that leaves a chore (`Tactic.LeavesChore`). It
+    refuses on every rung, rung F's shield or not.
+  - The 11 tricks: Shelf sweep, Spill, Bin tamper, Tool theft, the overtime, Fog, Camera bolt-on,
+    Phantom chime, Block door, the understudy and Blackout.
+  - A chore trick that hasn't landed anything by closing stops (`PlanTree`). One that has landed
+    finishes, so she never walks off holding the WC mop.
+  - She can still hunt, Cut, throw and wait in ambush by a chore that's already open.
 
 ### 17.4 How she learns, after 0.3.0
 
@@ -1677,8 +1694,9 @@ Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
 - **Fair:** 0 violations.
 - **Her tricks run:** 3.6 a shift against 1.1, Spill and Shelf sweep most.
 - **No stronger:** catches 0.02–0.10 a shift lower, fewer hunts, setpoint error 0.01–0.04 worse.
-- **13 stuck shifts against 2.** Mostly, she makes chores after the doors close faster than they
-  can be cleared, and nobody clocks out with a chore open. The owner decides whether to stop that.
+- **13 stuck shifts against 2.** Mostly, she made chores after the doors closed faster than they
+  could be cleared, and nobody clocks out with a chore open. Rule 10 now stops that (§17.3; the
+  owner's call, 8 November).
 - **Never ran:** the understudy, the overtime and Cut.
 - **Also found:**
   - the test player falling through Aisle 4/B's floor;

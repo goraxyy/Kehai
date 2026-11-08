@@ -301,10 +301,12 @@ namespace Kehai.Karen
             return Room.Reward(after, tacticId, delta, Alone(tacticId), shift);
         }
 
-        // The authored escalation curve: a tactic just introduced this shift gets a push.
+        // The authored escalation curve: a tactic just introduced this shift gets a push. Only
+        // with the career table on: without it nothing is "just introduced".
         public float PriorScore(Tactic t, KarenContext c)
         {
-            float fresh = t.IntroducedShift == c.ShiftNumber ? 0.1f : 0f;
+            bool table = c.Config != null && c.Config.careerTable;
+            float fresh = table && t.IntroducedShift == c.ShiftNumber ? 0.1f : 0f;
             return t.PanicPrior + fresh;
         }
 

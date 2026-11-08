@@ -13,6 +13,7 @@ namespace Kehai.Karen
     public sealed class DoorLockTactic : Tactic
     {
         public override string Id => "door_lock";
+        public override bool LeavesChore => true;
         public override bool IsHandsOn => true;
         public override string Title => "Block door";
         public override ActionId[] Actions => new[] { ActionId.Corner };

@@ -709,7 +709,9 @@ namespace Kehai.Karen
             Status s = CurrentPlan.Tick(Ctx, dt);
             if (s == Status.Running) return;
 
-            if (s == Status.Failure && !CurrentPlan.Interrupted && CurrentPlan.Plan.ViolatedGuard != null)
+            if (s == Status.Failure && CurrentPlan.StoppedAtClosing)
+                Note("PLAN", $"PLAN     {CurrentPlan.Name} stopped: {FairnessGuard.ClosedWhy}");
+            else if (s == Status.Failure && !CurrentPlan.Interrupted && CurrentPlan.Plan.ViolatedGuard != null)
                 Note("PLAN", $"PLAN     {CurrentPlan.Name} aborted — precondition violated: {CurrentPlan.Plan.ViolatedGuard}");
             else if (s == Status.Failure && !CurrentPlan.Interrupted)
                 Note("PLAN", $"PLAN     {CurrentPlan.Name} failed at step {CurrentPlan.Plan.Index + 1}/{CurrentPlan.Plan.Count}");

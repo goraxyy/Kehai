@@ -12,6 +12,7 @@ namespace Kehai.Karen
     //   -karen-rung <A..F>    choose the ablation rung
     //   -karen-seed <n>       seed every decision (0 = clock)
     //   -karen-shield on|off  rung F: keep the policy inside the Director's gates (default on)
+    //   -karen-career-table on|off  tricks unlock shift by shift (default off since 8 November)
     //   -karen-policy <name>  rung F: the model under Resources/KarenPolicy/ to run
     //   -kehai-no-records     write no shift records, replays or clip markers (RL training runs
     //                         thousands of shifts)
@@ -81,7 +82,7 @@ namespace Kehai.Karen
             root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
-        static string rungArg, seedArg, shieldArg, policyArg, comboArg;
+        static string rungArg, seedArg, shieldArg, policyArg, comboArg, careerArg;
 
         static void ReadCommandLine()
         {
@@ -92,6 +93,7 @@ namespace Kehai.Karen
                 if (args[i] == "-karen-rung" && i + 1 < args.Length) rungArg = args[i + 1];
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
                 if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
+                if (args[i] == "-karen-career-table" && i + 1 < args.Length) careerArg = args[i + 1];
                 if (args[i] == "-karen-policy" && i + 1 < args.Length) policyArg = args[i + 1];
                 if (args[i] == "-karen-combo" && i + 1 < args.Length) comboArg = args[i + 1];   // the combo learner, on or off (0.2.0)
                 if (args[i] == "-kehai-no-records") NoRecords = true;
@@ -129,6 +131,7 @@ namespace Kehai.Karen
             if (!string.IsNullOrEmpty(shieldArg)) config.shield = ParseSwitch(shieldArg, config.shield);
             if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
             if (!string.IsNullOrEmpty(comboArg)) config.comboContext = ParseSwitch(comboArg, config.comboContext);
+            if (!string.IsNullOrEmpty(careerArg)) config.careerTable = ParseSwitch(careerArg, config.careerTable);
         }
 
         // "on", "off", "true", "false", "1", "0".

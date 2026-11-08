@@ -62,12 +62,20 @@ public class ShiftManager : MonoBehaviour
         if (!IsShiftActive || !CustomersAllowed || IsFrozen) return;
 
         TimeRemaining -= Time.deltaTime;
-        if (TimeRemaining <= 0f)
-        {
-            TimeRemaining = 0f;
-            SetCustomersAllowed(false);      // doors close; shift ends when the player punches out
-            ShiftStateChanged?.Invoke();
-        }
+        if (TimeRemaining <= 0f) CloseDoors();
+    }
+
+    // The countdown has run out: the doors are closed to customers, and the shift waits for the
+    // clock-out. From then on Karen makes no new chores (0.3.0, the owner's call of 8 November).
+    public bool DoorsClosed => IsShiftActive && !CustomersAllowed;
+
+    // The doors close: what the countdown does when it reaches zero. Public for tests.
+    public void CloseDoors()
+    {
+        if (!IsShiftActive || !CustomersAllowed) return;
+        TimeRemaining = 0f;
+        SetCustomersAllowed(false);      // doors close; shift ends when the player punches out
+        ShiftStateChanged?.Invoke();
     }
 
     // The shift can't be closed with spills on the floor, a full bin, or gaps on the shelves.

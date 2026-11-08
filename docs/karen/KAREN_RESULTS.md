@@ -587,7 +587,7 @@ fixed four primary metrics before any run ([build plan §7](../plans/0.3.0-build
 
 | # | Metric | Result |
 |---|---|---|
-| 1 | Every live trick works end to end | **Pass in the trick check:** 12 of 12 forced tricks started, landed, showed their chore and were fixed. **In the ablation, three never ran:** the understudy (0 of 72 shifts where it was unlocked), the overtime (0 of 24) and Cut (0 of 240) |
+| 1 | Every live trick works end to end | **Pass in the trick check:** every forced trick started and landed. The test player fixed every chore but two: Spill and Shelf sweep landed, but the shift ended before it got to them, in some runs (both were fixed in others). **Tool theft didn't land in the first check of 8 November** (she stopped 2.2 m from the rack, out of reach), and is fixed. **In the ablation, three never ran:** the understudy (0 of 72 shifts where it was unlocked), the overtime (0 of 24) and Cut (0 of 240) |
 | 2 | Fairness violations: 0 | **Pass:** 0 in all 240 + 240 shifts, and in the diagnosis runs |
 | 3 | No stuck shifts | **Fail:** 13 of 240 on 0.3.0, against 2 of 240 on `main`. Causes below |
 | 4 | Setpoint error against `main` | **Slightly worse:** +0.01 ± 0.01 (rung C, training), +0.02 ± 0.01 (E, training), +0.01 ± 0.02 (C, held out), +0.04 ± 0.02 (E, held out) |
@@ -677,8 +677,9 @@ diagnosis runs, with what was still open and what she did after the doors closed
 - She's no stronger for it: catches are slightly down (0.02–0.10 a shift) and she hunts less.
 - **The shift has to stay finishable.** As built, she can add chores after closing faster than
   anyone can clear them, and the clock-out waits for every chore. A person would be stuck the
-  same way. One rule would fix it: no new chore after the doors close (she can still hunt). It's
-  the owner's call, and the ablation should run again after it.
+  same way. **The owner chose the fix (8 November):** no new chore after the doors close; she
+  can still hunt. That's rule 10 ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)), and the
+  ablation runs again to check it.
 - **Separately:** a hole in Aisle 4/B's floor (or something that pushes a body through it), the
   slowdown, and the understudy and the overtime, which the learner never picked.
 

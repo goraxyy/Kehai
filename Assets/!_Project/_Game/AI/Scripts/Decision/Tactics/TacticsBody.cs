@@ -209,6 +209,7 @@ namespace Kehai.Karen
     public sealed class UnderstudyTactic : Tactic
     {
         public override string Id => "understudy";
+        public override bool LeavesChore => true;
         public override string Title => "The understudy";
         public override ActionId[] Actions => new[] { ActionId.Flush };
         public override int Tier => 3;

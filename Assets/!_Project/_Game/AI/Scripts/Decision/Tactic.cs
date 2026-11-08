@@ -58,6 +58,13 @@ namespace Kehai.Karen
         // lights, the fog, the doors' motors — stay remote: she *is* the building.
         public virtual bool IsHandsOn => false;
 
+        // It leaves the player a job to do: a bay to restock, a spill to mop, a box to reset, a
+        // camera to unplug, Kenji to send away. None of these start once the doors have closed
+        // (the owner's call, 8 November): the shift has to stay finishable, and the clock-out
+        // waits for every job. She can still hunt, throw and wait in ambush. Drafts decide this
+        // when they come back.
+        public virtual bool LeavesChore => false;
+
         // Where the chore it left is fixed, while it's still waiting (0.3.0): the breaker box
         // after a blackout, the box behind a blocked door. Ambush waits on your way there; the
         // task list and the developer overlay can show it. False when there's nothing to fix in

@@ -84,6 +84,7 @@ public class KarenPolicyTests
         foreach (bool shield in new[] { true, false })
         {
             KarenContext c = Context(KarenRung.F_Policy, shield);
+            c.Config.careerTable = true;                   // off by default since 8 November; checked here when on
             c.Director.BeginShift(1, 300f);                // settling in: nothing above tier 1
             c.A = new Appraisal { Tension = 0f };          // and no budget
 

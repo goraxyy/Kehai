@@ -50,6 +50,9 @@ namespace Kehai.Karen
         public KarenRung rung = KarenRung.E_Ledger;
         [Tooltip("0 = pick from the clock. Any other value makes every decision reproducible (§9.8).")]
         public int seed = 0;
+        [Tooltip("Tricks unlock shift by shift (the career table, each trick's IntroducedShift). Off since 8 November, " +
+                 "the owner's call: every trick from shift 1 while they're tested. On brings the lock back.")]
+        public bool careerTable = false;
 
         [Header("Tick rates (§6.1)")]
         public float believeHz = 10f;
