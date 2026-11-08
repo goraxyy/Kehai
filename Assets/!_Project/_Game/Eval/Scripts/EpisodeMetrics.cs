@@ -62,6 +62,15 @@ namespace Kehai.Eval
         public float CameraSeenSeconds, PlaceRewardMean = -1f;
         public readonly Dictionary<string, int> TrickUses = new Dictionary<string, int>();
         public readonly Dictionary<string, float> AnswerSeconds = new Dictionary<string, float>();
+        // Why a shift couldn't be clocked out: what was still open when it ended, when the doors
+        // closed, and which tricks she used after that.
+        public readonly Dictionary<string, object> OpenAtEnd = new Dictionary<string, object>();
+        public readonly Dictionary<string, int> TricksAfterClose = new Dictionary<string, int>();
+        public float ClosedAt = -1f;
+        public int BotFalls;              // the test player's body fell through the floor
+        int fallsAtStart;
+        Dictionary<string, int> countsAtClose;
+        ShiftManager shift;
 
         // The trace: what the agent tried, when, and at what.
         public struct Step { public float T; public string Verb; public string Kind; public bool Ok; }
@@ -84,6 +93,7 @@ namespace Kehai.Eval
             Started = true;
             started = Time.time;
             violationsAtStart = FairnessGuard.Violations;
+            fallsAtStart = AgentDriver.FallsTotal;
             Belief.Begin();
             Hunt.Begin();
             Subscribe();
@@ -163,6 +173,14 @@ namespace Kehai.Eval
 
             if (burnout != null) MinEnergy = Mathf.Min(MinEnergy, burnout.Energy01);
 
+            if (shift == null) shift = Object.FindAnyObjectByType<ShiftManager>();
+            if (ClosedAt < 0f && shift != null && shift.IsShiftActive && !shift.CustomersAllowed)
+            {
+                ClosedAt = Time.time - started;
+                KarenBrain brain = KarenBrain.Instance;
+                countsAtClose = brain != null ? new Dictionary<string, int>(brain.Stats.TacticCounts) : new Dictionary<string, int>();
+            }
+
             if (Time.frameCount % 15 == 0 && tasks != null)
             {
                 int outstanding = tasks.Tasks.Count(t => !t.IsComplete);
@@ -184,6 +202,19 @@ namespace Kehai.Eval
             SimSeconds = Time.time - started;
             WallSeconds = wallSeconds;
             SpillsLeftStanding = Dirt.ActiveCount;
+            OpenAtEnd.Clear();
+            void Open(string what, int n) { if (n > 0) OpenAtEnd[what] = n; }
+            Open("spills", Dirt.ActiveCount);
+            Open("shelves_not_full", ShelfUnit.NotFullCount);
+            int trash = 0;
+            foreach (Trashcan can in Trashcan.All) trash += can.UsageCount;
+            Open("bin_uses", trash);
+            Open("bags_not_out", TrashBag.ActiveCount);
+            Open("customers_waiting", CustomerNPC.WaitingCount);
+            Open("customers_asking", CustomerRequest.PendingCount);
+            Open("tools_missing", ToolSnapPoint.TakenCount);
+            Open("clock_stopped", shift != null && shift.IsFrozen ? 1 : 0);
+            Open("fog", FogState.Any ? 1 : 0);
             CustomersLost += waitingSince.Count;           // still queued when it ended
             EnergyAtEnd = burnout != null ? burnout.Energy01 : 1f;
 
@@ -221,12 +252,20 @@ namespace Kehai.Eval
                 TrickUses.Clear();
                 foreach (Tactic t in TacticLibrary.Live)
                     if (!t.OwnMove) TrickUses[t.Id] = s.TacticCounts.TryGetValue(t.Id, out int n) ? n : 0;
+                TricksAfterClose.Clear();
+                if (countsAtClose != null)
+                    foreach (KeyValuePair<string, int> c in s.TacticCounts)
+                    {
+                        int before = countsAtClose.TryGetValue(c.Key, out int b) ? b : 0;
+                        if (c.Value > before && TacticLibrary.Get(c.Key)?.Tier > 0) TricksAfterClose[c.Key] = c.Value - before;
+                    }
                 AnswerSeconds.Clear();
                 foreach (var g in s.Answers.Where(a => a.seconds >= 0f).GroupBy(a => a.kind))
                     AnswerSeconds[g.Key] = g.Average(a => a.seconds);
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
+            BotFalls = AgentDriver.FallsTotal - fallsAtStart;
             Belief.End();
             Failures = FailureTaxonomy.Classify(this);
             Unsubscribe();
@@ -259,6 +298,17 @@ namespace Kehai.Eval
             };
             Belief.AddTo(d);
             Hunt.AddTo(d);
+            // Which of the test player's actions failed, and how often (0.3.0): a stuck shift says why.
+            var failed = new Dictionary<string, object>();
+            foreach (var g in Trace.Where(t => !t.Ok).GroupBy(t => t.Verb)) failed[g.Key] = g.Count();
+            d["verbs_failed"] = failed;
+            var verbs = new Dictionary<string, object>();
+            foreach (var g in Trace.GroupBy(t => t.Verb)) verbs[g.Key] = g.Count();
+            d["verbs"] = verbs;
+            d["open_at_end"] = new Dictionary<string, object>(OpenAtEnd);
+            d["closed_at_s"] = ClosedAt;
+            d["bot_fell_through_floor"] = BotFalls;
+            d["tricks_after_close"] = TricksAfterClose.ToDictionary(p => p.Key, p => (object)p.Value);
             d["catches_in_fog"] = CatchesInFog;
             d["catches_at_chore"] = CatchesAtChore;
             d["camera_seen_s"] = CameraSeenSeconds;

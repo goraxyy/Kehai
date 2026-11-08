@@ -803,7 +803,17 @@ namespace Kehai.Eval
             if (!home.Taken) { r.Pass("already back"); yield break; }
             yield return Approach(tool.transform.position, 1.3f, a, r);
             if (r.Finished) yield break;
-            if (tool.TryGetComponent(out IInteractable pick)) yield return Tap(pick, tool.transform.position);
+            // Hands full (the bot's own mop, the crate…): put the one in hand down first, as a
+            // person would, so the WC mop can be picked up.
+            if (Driver.Carry != null && !Driver.Carry.Contains(tool) && Driver.Carry.IsFull())
+            {
+                Driver.Drop();
+                yield return null;
+            }
+            if (tool.TryGetComponent(out PickupInteractable pick)) yield return Tap(pick, tool.transform.position);
+            else if (tool.TryGetComponent(out IInteractable use)) yield return Tap(use, tool.transform.position);
+            bool held = Driver.Carry != null && Driver.Carry.Contains(tool) || tool.isCarried;
+            if (!held) { r.Fail("couldn't pick the tool up"); yield break; }
             yield return Approach(home.transform.position, 1.7f, a, r);
             if (r.Finished) yield break;
             yield return Tap(home, home.transform.position);

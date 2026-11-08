@@ -249,6 +249,13 @@ the ablation over whole shifts is below the table.
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
   the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).
+- **Karen 0.3.0 can make the shift unfinishable:** after the doors close she keeps making chores
+  (spills, shelf sweeps, bins, Tool theft) faster than they can be cleared, and the clock-out
+  waits for every one. 13 of 240 test shifts got stuck, against 2 on `main`
+  ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). The proposed
+  rule: no new chore after closing. The owner's call.
+- **A body can fall through the floor in Aisle 4/B** (the test player did, once in 83 shifts), and
+  **0.3.0 runs 3.6 times slower** than `main` in the tests, for reasons not yet found.
 - **Karen can stand on a stuck player** without catching them.
 - **Hitches:** the GPU drawer's first growth (130–210 ms, once); the maze's NavMesh rebuild
   (about 20 ms per border crossed).

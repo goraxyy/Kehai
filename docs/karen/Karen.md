@@ -1671,3 +1671,17 @@ Ledger. Learning from all players comes with the learning plan (PR #76).
 The five drafts above; learning from all players and Panic's calibration (PR #76); the two
 Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
 
+### 17.7 The ablation (7 November)
+
+240 shifts against `main`, paired by seed ([KAREN_RESULTS.md](KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
+- **Fair:** 0 violations.
+- **Her tricks run:** 3.6 a shift against 1.1, Spill and Shelf sweep most.
+- **No stronger:** catches 0.02–0.10 a shift lower, fewer hunts, setpoint error 0.01–0.04 worse.
+- **13 stuck shifts against 2.** Mostly, she makes chores after the doors close faster than they
+  can be cleared, and nobody clocks out with a chore open. The owner decides whether to stop that.
+- **Never ran:** the understudy, the overtime and Cut.
+- **Also found:**
+  - the test player falling through Aisle 4/B's floor;
+  - 0.3.0 running 3.6 times slower;
+  - a fog warning that flooded the log (fixed).
+

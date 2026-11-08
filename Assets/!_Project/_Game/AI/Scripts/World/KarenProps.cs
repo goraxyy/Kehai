@@ -198,7 +198,10 @@ namespace Kehai.Karen
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
+            // All three in the same mode (two constants), or Unity warns every frame.
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
             velocity.y = new ParticleSystem.MinMaxCurve(0.05f, 0.18f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             var fade = ps.colorOverLifetime;
             fade.enabled = true;
