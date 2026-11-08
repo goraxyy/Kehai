@@ -30,7 +30,9 @@ namespace Kehai.Karen
 
         // Picks the goal to pursue now. `forced` bypasses the minimum commit time — used
         // when an interrupt has fired or the current plan has ended.
-        public ActionId Choose(KarenContext c, bool forced, out string because)
+        // `commit` false only looks: it doesn't move her onto the goal it picks (KarenBrain uses it
+        // while she finishes a hands-on trick, and commits only if a hunt wins).
+        public ActionId Choose(KarenContext c, bool forced, out string because, bool commit = true)
         {
             LastOptions.Clear();
             var scores = new Dictionary<ActionId, float>();
@@ -62,13 +64,15 @@ namespace Kehai.Karen
                 LastOptions.Add(new ThoughtOption { Name = g.Name(), Utility = scores[g], Why = whys[g] });
 
             because = whys[best];
-            if (best != Current || forced)
-            {
-                Current = best;
-                CommittedAt = c.Now;
-                lastChosen[best] = c.Now;
-            }
+            if (commit && (best != Current || forced)) Commit(best, c);
             return best;
+        }
+
+        public void Commit(ActionId goal, KarenContext c)
+        {
+            Current = goal;
+            CommittedAt = c.Now;
+            lastChosen[goal] = c.Now;
         }
 
         float Score(ActionId g, KarenContext c, out string why)

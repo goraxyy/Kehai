@@ -782,6 +782,43 @@ With the cooldown fix and the cached stand points (rungs C and E, 3 careers, the
 - **The fix, if the owner wants it:** once she's on her way to a hands-on trick, she finishes it,
   unless she starts a hunt or the trick can't be done any more.
 
+### After "finish what she starts" (8 November): the same 60 shifts
+
+The owner chose the fix ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)). The same check
+again: the skittish player, rungs C and E, 3 careers, the same seeds.
+
+| | Before | After |
+|---|---|---|
+| Spill, landed of started | 1 of 55 | **39 of 42** |
+| Shelf sweep | 9 of 51 | **48 of 48** |
+| Bin tamper | 0 of 13 | **7 of 7** |
+| Camera bolt-on | 0 of 12 | **13 of 16** |
+| The overtime | 1 of 5 | **4 of 4** |
+| Tool theft | 0 of 10 | 1 of 3 |
+| Block door | 0 of 7 | 0 of 2 |
+| Fog, Phantom chime, Blackout, the understudy | 65 of 68 | 114 of 120 |
+| Stuck shifts | 7 | **3** |
+| Catches a shift | 0.88 | 0.95 |
+| Tricks started a shift | 4.4 | 5.4 |
+| Shift length | 159 s | 199 s |
+| Setpoint error | 0.264 | 0.263 |
+| Fairness violations, chores after closing | 0, 0 | 0, 0 |
+
+- **Her chores get answered now.**
+  - Kenji was sent away 4 times, 34 s after he came, on average.
+  - The stopped clock was restarted 4 times, after 108 s.
+  - The fog was reset 18 times, after 82 s.
+- **The 3 stuck shifts are the test player's.**
+  - In two of them it "couldn't get close enough" to mop a spill in the office (Office/G), 5 and 7
+    times. The trick check's spill at Office/G also went unmopped twice, so a spot in the office
+    may be out of a player's reach, not just the bot's. To check in the playtest.
+  - The other was a bay it couldn't get close enough to.
+- **Too few to judge:** Tool theft and Block door (5 starts between them). The trick check lands
+  both.
+- **The trick check after it:** all 12 tricks landed, 11 chores were fixed (Bin tamper's shift
+  ended first), and 0 fairness violations.
+- **Speed:** 0.083 s of real time per simulated second, against 0.079 before. She does more now.
+
 ## Earlier runs
 
 The tables from the earlier runs are in this file's history (before 2026-10-16). Those runs used

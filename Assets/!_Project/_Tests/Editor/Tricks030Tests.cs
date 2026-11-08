@@ -192,4 +192,42 @@ public class Tricks030Tests
 
         TacticHelpers.ForgetStands();
     }
+
+    // ---- finish what she starts (the owner, 8 November) -------------------------------------
+
+    [Test]
+    public void AHandsOnTrickUnderWay_IsKept_UnlessAHuntWins()
+    {
+        Tactic spill = TacticLibrary.Get("spill");
+        Assert.IsTrue(spill.IsHandsOn);
+        foreach (ActionId next in new[] { ActionId.Roam, ActionId.Search, ActionId.Disrupt, ActionId.Flush, ActionId.LieInWait })
+            Assert.IsTrue(KarenBrain.FinishesFirst(spill, 5f, next), $"dropped for {next}");
+        Assert.IsFalse(KarenBrain.FinishesFirst(spill, 5f, ActionId.Hunt), "a hunt wins");
+        Assert.IsTrue(KarenBrain.IgnoresNoise(spill, 5f), "a noise doesn't make her start over");
+    }
+
+    [Test]
+    public void FinishingFirst_IsOnlyForHandsOnTricks_AndOnlyForAMinute()
+    {
+        Tactic spill = TacticLibrary.Get("spill"), fog = TacticLibrary.Get("fog");
+        Assert.IsFalse(fog.IsHandsOn);
+        Assert.IsFalse(KarenBrain.FinishesFirst(fog, 5f, ActionId.Roam), "the building's tricks land at once: nothing to finish");
+        Assert.IsFalse(KarenBrain.IgnoresNoise(fog, 5f));
+        Assert.IsFalse(KarenBrain.FinishesFirst(spill, KarenBrain.CommitSeconds + 1f, ActionId.Roam), "a plan that can't finish doesn't hold her");
+        Assert.IsFalse(KarenBrain.FinishesFirst(null, 5f, ActionId.Roam));
+    }
+
+    // Choose(commit: false) only looks; Commit is what moves her onto a goal (Choose itself needs
+    // a whole Karen, so the look runs in the eval's shifts).
+    [Test]
+    public void Commit_MovesHerOntoAGoal()
+    {
+        var c = new KarenContext { Config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 }, Rng = new KarenRng(7) };
+        var actions = new ActionSet();
+        actions.Reset();
+        Assert.AreEqual(ActionId.Roam, actions.Current);
+        actions.Commit(ActionId.Hunt, c);
+        Assert.AreEqual(ActionId.Hunt, actions.Current);
+        Assert.AreEqual(c.Now, actions.CommittedAt);
+    }
 }

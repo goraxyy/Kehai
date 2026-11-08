@@ -1653,6 +1653,15 @@ tricks are tested. Each trick keeps its unlock shift in the code, and `KarenConf
   - A chore trick that hasn't landed anything by closing stops (`PlanTree`). One that has landed
     finishes, so she never walks off holding the WC mop.
   - She can still hunt, Cut, throw and wait in ambush by a chore that's already open.
+- **She finishes what she starts** (the owner's call, 8 November, after the second ablation found
+  her hands-on tricks rarely landed).
+  - Once a hands-on trick is under way, neither her next decision nor a loud noise drops it. She
+    used to re-decide on the walk to its spot and drop it: Spill landed once in 55 starts.
+  - Only a hunt wins (`KarenBrain.FinishesFirst`, `IgnoresNoise`).
+  - Its own steps can still fail, and rule 10 still stops it if the doors close first.
+  - After 60 s she decides as usual (`CommitSeconds`), so a trick that can't finish doesn't hold
+    her.
+  - In a 60-shift check, Spill then landed 39 of 42 times and Shelf sweep 48 of 48.
 
 ### 17.4 How she learns, after 0.3.0
 

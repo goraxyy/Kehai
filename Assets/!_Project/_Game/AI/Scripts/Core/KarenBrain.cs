@@ -447,7 +447,8 @@ namespace Kehai.Karen
             if (desireTimer > 2f) { desireTimer = 0f; RefreshDesire(); }
 
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
-            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt) decideNow = true;
+            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt
+                && !IgnoresNoise(CurrentPlan.Tactic, PlanAge)) decideNow = true;
         }
 
         float lastSenseNote;
@@ -613,6 +614,22 @@ namespace Kehai.Karen
 
         // ---- decide -----------------------------------------------------------------------
 
+        // Finish what she starts (0.3.0, the owner's call of 8 November). She used to decide again
+        // on the walk to a hands-on trick's spot, twice a second and at every loud noise, and drop
+        // it: in the ablation's check Spill landed once in 55 starts. Now a hands-on trick under
+        // way is kept unless a hunt wins. Its own steps can still fail, rule 10 still stops it if
+        // the doors close before it lands, and after CommitSeconds she decides as usual, so a plan
+        // that can't finish doesn't hold her.
+        public const float CommitSeconds = 60f;
+
+        public static bool FinishesFirst(Tactic running, float runningFor, ActionId next) =>
+            running != null && running.IsHandsOn && runningFor < CommitSeconds && next != ActionId.Hunt;
+
+        public static bool IgnoresNoise(Tactic running, float runningFor) =>
+            running != null && running.IsHandsOn && runningFor < CommitSeconds;
+
+        float PlanAge => Time.time - planStartedAt;
+
         void Decide(bool forced)
         {
             // A trick started from the developer overlay runs to its end.
@@ -621,7 +638,15 @@ namespace Kehai.Karen
 
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
-            ActionId goal = Actions.Choose(Ctx, forced, out string because);
+            Tactic running = CurrentPlan?.Tactic;
+            bool finishing = IgnoresNoise(running, PlanAge);
+            ActionId goal = Actions.Choose(Ctx, forced, out string because, commit: !finishing);
+            if (finishing)
+            {
+                if (FinishesFirst(running, PlanAge, goal)) return;
+                Actions.Commit(goal, Ctx);
+                Note("PLAN", $"PLAN     {CurrentPlan.Name} dropped for {goal.Name()}");
+            }
 
             bool keep = CurrentPlan != null && CurrentPlan.Action == goal && !forced;
             if (keep) return;
@@ -694,7 +719,7 @@ namespace Kehai.Karen
                 Note("", "  interrupt: SeeingPlayerAtRange");
                 return true;
             }
-            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby)
+            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby && !IgnoresNoise(CurrentPlan.Tactic, PlanAge))
             {
                 Note("", "  interrupt: LoudNoiseAdjacent");
                 return true;

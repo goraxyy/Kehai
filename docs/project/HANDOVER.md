@@ -123,8 +123,8 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - **Found and fixed:**
     - the understudy's and the overtime's cooldown kept them from ever running;
     - Shelf sweep's bay lookup is cached (14% faster).
-  - **Found, not fixed:** her hands-on tricks (Spill, Bin tamper, Tool theft, Camera bolt-on, Block door, mostly Shelf sweep) rarely land in play. She re-decides on the walk and drops them. The fix, "finish what she starts", is the owner's call.
-  - **Left:** that call, then the ablation again; the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
+  - **Found:** her hands-on tricks (Spill, Bin tamper, Tool theft, Camera bolt-on, Block door, mostly Shelf sweep) rarely landed in play. She re-decided on the walk and dropped them. **Fixed on the owner's call (8 November):** she finishes what she starts, unless she starts a hunt. In a 60-shift check Spill then landed 39 of 42 times (was 1 of 55), and stuck shifts fell from 7 to 3.
+  - **Left:** the full ablation again (on the owner's go); a spill spot in the office the test player can't reach; the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
 - **PR #74, Karen 0.2.0** (`0.2.0` → `main`): **merged** (`d5d14f3`). What follows is how it was built, kept for reference.
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
