@@ -65,7 +65,7 @@ def stuck(rows, label, w):
     if not rs:
         return
     w(f"\n### {label}: the {len(rs)} stuck shifts\n")
-    w("| rung | player | seed | shift | doors closed at (s) | still open at the end | her tricks after closing | the bot's failed actions |")
+    w("| rung | player | seed | shift | doors closed at (s) | still open at the end | her tricks after closing | the bot's failed actions (and why, when recorded) |")
     w("|---|---|---|---|---|---|---|---|")
 
     def show(d):
@@ -78,7 +78,7 @@ def stuck(rows, label, w):
         closed = "—" if closed is None or closed < 0 else f"{closed:.0f}"
         who = r["agent"] + (" (held out)" if r["agent"] == HELD_OUT else "")
         w(f"| {r['rung']} | {who} | {r['seed']} | {r['shift']} | {closed} | {show(r.get('open_at_end'))} | "
-          f"{show(r.get('tricks_after_close'))} | {show(r.get('verbs_failed'))} |")
+          f"{show(r.get('tricks_after_close'))} | {show(r.get('failed_why') or r.get('verbs_failed'))} |")
 
 
 def secondary(rows, w):
@@ -92,14 +92,15 @@ def secondary(rows, w):
                            ("panic_setpoint_rmse", "setpoint error")]:
             w(f"| {label} | {fmt([num(r, key) for r in rs])} |")
 
-        w("\n| trick | uses per shift | shifts it ran in |")
-        w("|---|---|---|")
+        w("\n| trick | started per shift | landed per shift | shifts it ran in |")
+        w("|---|---|---|---|")
         for t in TRICKS:
             uses = [num(r, "uses_" + t) for r in rs if num(r, "uses_" + t) is not None]
             if not uses:
                 continue
+            landed = [num(r, "landed_" + t) for r in rs if num(r, "landed_" + t) is not None]
             ran = sum(1 for u in uses if u > 0)
-            w(f"| {t} | {mean(uses):.2f} | {ran} of {len(uses)} |")
+            w(f"| {t} | {mean(uses):.2f} | {fmt(landed) if landed else '—'} | {ran} of {len(uses)} |")
 
         w("\n| answer | seconds to answer | times |")
         w("|---|---|---|")

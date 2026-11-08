@@ -61,6 +61,7 @@ namespace Kehai.Eval
         public int CatchesInFog, CatchesAtChore;
         public float CameraSeenSeconds, PlaceRewardMean = -1f;
         public readonly Dictionary<string, int> TrickUses = new Dictionary<string, int>();
+        public readonly Dictionary<string, int> TrickLanded = new Dictionary<string, int>();
         public readonly Dictionary<string, float> AnswerSeconds = new Dictionary<string, float>();
         // Why a shift couldn't be clocked out: what was still open when it ended, when the doors
         // closed, and which tricks she used after that.
@@ -189,11 +190,19 @@ namespace Kehai.Eval
             }
         }
 
-        public void Record(string verb, string kind, bool ok)
+        public void Record(string verb, string kind, bool ok, string message = null)
         {
             Steps++;
             Trace.Add(new Step { T = Time.time - started, Verb = verb, Kind = kind, Ok = ok });
+            if (ok || string.IsNullOrEmpty(message)) return;
+            // Why it failed, without the ids and numbers that make every message different.
+            string why = verb + ": " + System.Text.RegularExpressions.Regex.Replace(message, @"[_ ]?\d+(\.\d+)?", "#");
+            if (why.Length > 80) why = why.Substring(0, 80);
+            FailedWhy[why] = FailedWhy.TryGetValue(why, out int n) ? n + 1 : 1;
         }
+
+        // The test player's failed actions, by verb and reason: "restock: no path to Aisle #/A".
+        public readonly Dictionary<string, int> FailedWhy = new Dictionary<string, int>();
 
         public void End(bool clockedOut, bool timedOut, BurnoutSystem burnout, float wallSeconds)
         {
@@ -250,8 +259,13 @@ namespace Kehai.Eval
                 var paid = brain.PlaceWatch.Settled;
                 PlaceRewardMean = paid.Count > 0 ? paid.Average(p => p.reward) : -1f;
                 TrickUses.Clear();
+                TrickLanded.Clear();
                 foreach (Tactic t in TacticLibrary.Live)
-                    if (!t.OwnMove) TrickUses[t.Id] = s.TacticCounts.TryGetValue(t.Id, out int n) ? n : 0;
+                {
+                    if (t.OwnMove) continue;
+                    TrickUses[t.Id] = s.TacticCounts.TryGetValue(t.Id, out int n) ? n : 0;
+                    TrickLanded[t.Id] = s.TacticLanded.TryGetValue(t.Id, out int l) ? l : 0;
+                }
                 TricksAfterClose.Clear();
                 if (countsAtClose != null)
                     foreach (KeyValuePair<string, int> c in s.TacticCounts)
@@ -305,6 +319,7 @@ namespace Kehai.Eval
             var verbs = new Dictionary<string, object>();
             foreach (var g in Trace.GroupBy(t => t.Verb)) verbs[g.Key] = g.Count();
             d["verbs"] = verbs;
+            d["failed_why"] = FailedWhy.OrderByDescending(p => p.Value).Take(8).ToDictionary(p => p.Key, p => (object)p.Value);
             d["open_at_end"] = new Dictionary<string, object>(OpenAtEnd);
             d["closed_at_s"] = ClosedAt;
             d["bot_fell_through_floor"] = BotFalls;
@@ -314,6 +329,7 @@ namespace Kehai.Eval
             d["camera_seen_s"] = CameraSeenSeconds;
             d["place_reward_mean"] = PlaceRewardMean;
             foreach (KeyValuePair<string, int> u in TrickUses) d["uses_" + u.Key] = u.Value;
+            foreach (KeyValuePair<string, int> l in TrickLanded) d["landed_" + l.Key] = l.Value;
             foreach (KeyValuePair<string, float> a in AnswerSeconds) d["answer_" + a.Key + "_s"] = a.Value;
             return d;
         }

@@ -215,7 +215,9 @@ namespace Kehai.Karen
         public override int Tier => 3;
         public override int IntroducedShift => 8;
         public override float TensionCost => 0.25f;
-        public override float Cooldown => 99999f;
+        // Once a shift (UsesThisShift). Not a huge cooldown: LastUsed starts at −9999 s, so
+        // 99999 s kept it on cooldown for the first 25 hours, and it never ran in play.
+        public override float Cooldown => 0f;
         public override float PanicPrior => 0.15f;
         public override TellKind Tell => TellKind.PaChime;
         public override string Chore => "walk up to Kenji and send him to the tills";

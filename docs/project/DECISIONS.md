@@ -256,6 +256,9 @@ the ablation over whole shifts is below the table.
   8 November (the owner):** no new chore once the doors close, rule 10
   ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)). Built; the ablation runs
   again to check it.
+- **Karen's hands-on tricks rarely land in play** (0.3.0's second run). She re-decides on her walk
+  to the spot and drops the trick: Spill landed 1 time in 55 starts. Proposed: once on her way,
+  she finishes, unless she starts a hunt. The owner's call.
 - **A body can fall through the floor in Aisle 4/B** (the test player did, once in 83 shifts), and
   **0.3.0 runs 3.6 times slower** than `main` in the tests, for reasons not yet found.
 - **Karen can stand on a stuck player** without catching them.

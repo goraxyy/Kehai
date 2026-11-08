@@ -117,7 +117,14 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - **Rule 10 (8 November, the owner's call):** no new chore once the doors close. It's built and tested.
   - **Every trick from shift 1 (8 November, the owner's call),** for testing: the career table is off behind `KarenConfig.careerTable`, to come back later.
   - **Tool theft fixed:** she stopped 2.2 m from the WC rack, out of rule 9's reach, so the take failed; she now stands at the nearest spot on her floor.
-  - **Left:** the ablation again (on the owner's go); the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
+  - **The second run (8 November)** ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-second-run-8-november-rule-10-every-trick-from-shift-1)):
+    - 0 chores after closing;
+    - 9 stuck shifts (the first run had 13, `main` 2), now from the test player's own walking and fear.
+  - **Found and fixed:**
+    - the understudy's and the overtime's cooldown kept them from ever running;
+    - Shelf sweep's bay lookup is cached (14% faster).
+  - **Found, not fixed:** her hands-on tricks (Spill, Bin tamper, Tool theft, Camera bolt-on, Block door, mostly Shelf sweep) rarely land in play. She re-decides on the walk and drops them. The fix, "finish what she starts", is the owner's call.
+  - **Left:** that call, then the ablation again; the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
 - **PR #74, Karen 0.2.0** (`0.2.0` → `main`): **merged** (`d5d14f3`). What follows is how it was built, kept for reference.
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.

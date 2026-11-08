@@ -168,4 +168,28 @@ public class Tricks030Tests
         staff.place = "WC";
         Assert.AreSame(staff, ToolTheftTactic.WcRack());
     }
+
+    // ---- speed: a bay's stand point, worked out once ----------------------------------------
+
+    [Test]
+    public void ABaysStandPoint_IsWorkedOutOnce_AndAgainWhenTheBayMoves()
+    {
+        var bay = new GameObject("Bay").AddComponent<ShelfUnit>();
+        bay.transform.SetParent(root.transform, false);
+        var point = new GameObject("ShelfPoint").transform;
+        point.SetParent(bay.transform, false);
+        point.localPosition = new Vector3(0f, 0f, -1f);
+        TacticHelpers.ForgetStands();
+
+        Vector3 first = TacticHelpers.StandIn(bay);
+        Assert.AreEqual(TacticHelpers.FindStand(bay), first, "the same answer as working it out");
+
+        point.localPosition = new Vector3(0f, 0f, -3f);
+        Assert.AreEqual(first, TacticHelpers.StandIn(bay), "kept while the bay stays put");
+
+        bay.transform.position += Vector3.right * 5f;
+        Assert.AreEqual(TacticHelpers.FindStand(bay), TacticHelpers.StandIn(bay), "worked out again once it moves");
+
+        TacticHelpers.ForgetStands();
+    }
 }

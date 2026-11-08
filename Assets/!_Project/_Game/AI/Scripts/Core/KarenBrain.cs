@@ -887,7 +887,17 @@ namespace Kehai.Karen
             Note("TELL", $"TELL     {kind} at {Map.Describe(at)} ({lead:0.0}s lead)");
         }
 
-        public void RecordEffect(string label) => Note("EFFECT", "EFFECT   " + label);
+        public void RecordEffect(string label)
+        {
+            // The first effect of a plan is its trick landing (0.3.0): started isn't landed.
+            if (CurrentPlan != null && CurrentPlan != landedPlan && CurrentPlan.Tactic != null)
+            {
+                landedPlan = CurrentPlan;
+                Stats.Landed(CurrentPlan.Tactic);
+            }
+            Note("EFFECT", "EFFECT   " + label);
+        }
+        PlanTree landedPlan;
 
         // An effect that carries its own sound before it — PA speech, after its chime.
         void RecordToldEffect(string label, string by, float toldAt) =>
@@ -1141,6 +1151,7 @@ namespace Kehai.Karen
 
         public void MazeChanged()
         {
+            TacticHelpers.ForgetStands();
             Map = StoreMap.Rebuild();
             RebuildBelief();
             Ledger.FillHabitPrior(Map, Belief.HabitPrior);
@@ -1340,6 +1351,10 @@ namespace Kehai.Karen
         public int CatchesAtChore { get; private set; }
         public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
         public void CaughtInFog() => CatchesInFog++;
+
+        // How often each trick landed (its plan's first effect), against TacticCounts' starts.
+        public readonly Dictionary<string, int> TacticLanded = new Dictionary<string, int>();
+        public void Landed(Tactic t) => TacticLanded[t.Id] = (TacticLanded.TryGetValue(t.Id, out int n) ? n : 0) + 1;
         public void CaughtAtChore() => CatchesAtChore++;
 
         float pacingSquaredError;
@@ -1365,6 +1380,7 @@ namespace Kehai.Karen
             Answers.Clear();
             CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
+            TacticLanded.Clear();
             TacticRewards.Clear();
             ChainsFound.Clear();
             PanicTrace.Clear();

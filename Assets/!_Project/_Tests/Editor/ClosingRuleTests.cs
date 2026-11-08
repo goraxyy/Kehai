@@ -177,4 +177,16 @@ public class ClosingRuleTests
         Assert.AreEqual(Status.Success, plan.Tick(c, 0.1f));
         Assert.IsTrue(done);
     }
+
+    // The understudy and the overtime had a 99999 s cooldown to mean "once a shift"; with
+    // LastUsed starting at −9999 s that kept both on cooldown for 25 hours, and neither ever ran
+    // in the ablation. No live trick may start a shift on cooldown, however long the game has run.
+    [Test]
+    public void NoLiveTrick_StartsAShiftOnCooldown()
+    {
+        TacticLibrary.ResetShift();
+        foreach (float now in new[] { 0f, 150f, 36000f, 200000f })
+            foreach (Tactic t in TacticLibrary.Live.Where(t => !t.Draft))
+                Assert.IsFalse(t.OnCooldown(now), $"{t.Id} is on cooldown at {now} s with no use this shift");
+    }
 }

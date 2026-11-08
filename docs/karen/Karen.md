@@ -1703,3 +1703,15 @@ Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
   - 0.3.0 running 3.6 times slower;
   - a fog warning that flooded the log (fixed).
 
+**The second run** (8 November: rule 10, every trick from shift 1):
+- 0 fairness violations, and 0 chores after closing.
+- 9 stuck shifts against the first run's 13 and `main`'s 2. The stuck shifts now come from the
+  test player: it can't get close enough to a bay or the tills, or its own fear interrupts it.
+- **It found two bugs:**
+  - The understudy and the overtime were on cooldown for the first 25 hours of play, so they
+    never ran. Fixed.
+  - **Her hands-on tricks rarely land in play.** She re-decides on the walk to the spot, and the
+    trick is dropped. Spill landed 1 time in 55 starts, and Bin tamper, Tool theft, Camera bolt-on
+    and Block door never did. The building's tricks always land.
+- Shelf sweep's bay lookup is now cached: 14% faster.
+

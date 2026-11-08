@@ -608,7 +608,7 @@ fixed four primary metrics before any run ([build plan §7](../plans/0.3.0-build
 
 | | `main` | 0.3.0 |
 |---|---|---|
-| Tricks per shift, training players | 1.1 | 3.6 |
+| Tricks per shift (started, not landed: see the check after the second run), training players | 1.1 | 3.6 |
 | Tricks per shift, held out | 1.2 | 5.3 |
 | Shift length, training players | 99 s | 119 s |
 | Shift length, held out | 110 s | 150 s |
@@ -682,6 +682,105 @@ diagnosis runs, with what was still open and what she did after the doors closed
   ablation runs again to check it.
 - **Separately:** a hole in Aisle 4/B's floor (or something that pushes a body through it), the
   slowdown, and the understudy and the overtime, which the learner never picked.
+
+### The second run (8 November): rule 10, every trick from shift 1
+
+**What changed** (`a25d8a5`), on the owner's calls of 8 November:
+- **Rule 10:** no new chore once the doors close ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)).
+- **Every trick from shift 1:** the career table is off for now.
+- **Tool theft fixed:** she stopped 2.2 m from the rack, out of reach.
+
+The same seeds and arguments as the first run, paired with the same `main` run. 240 shifts in
+56 minutes. One shift was numbered 11 instead of 6 (rung C, efficient, seed 1200), so it has no
+pair: 239 pairs.
+
+**The primary metrics:**
+
+| # | Metric | First run | Second run |
+|---|---|---|---|
+| 2 | Fairness violations | 0 | **0** |
+| 3 | Stuck shifts (`main`: 2) | 13 | **9:** rung C 3 + 2 held out, rung E 3 + 1 held out. Still a fail |
+| 4 | Setpoint error against `main` | 0.01–0.04 worse | +0.03 ± 0.01 (C, training), −0.01 ± 0.02 (C, held out), +0.02 ± 0.01 (E, training), +0.02 ± 0.02 (E, held out) |
+
+**Rule 10 holds:** 0 tricks that leave a chore after closing, in the 85 shifts that ran past
+closing. After closing she only waited in ambush (Ambush) or threw (Throw).
+
+**Why 9 shifts still got stuck:** the backlog at closing.
+- With every trick open from shift 1, the bot reached closing with 1–9 bays to restock and 1–6
+  spills.
+- It failed many of its restock and mop attempts: in one shift, restock 14 times, serve 18 and
+  mop 9.
+- The 240 s the test allows after closing wasn't enough to clear it.
+- This record doesn't say why the attempts failed; the next one does (`failed_why`).
+- In one shift a single bay was left: the bot failed to restock 8 times and to clock out 4.
+
+**0.3.0 against `main`** (paired, as above):
+- **Catches:** about the same, 0.93–0.97 a shift against 0.97–0.99.
+- **Hunts:** fewer (−0.23 to −0.90 a shift), and fewer seconds hunting (about half, for the training players).
+- **Detections:** up on rung C (+1.37 ± 0.59 training).
+- **Belief error out of view:** 1–4 m worse, within about one standard error.
+
+**Her tricks:**
+- 3.4 a shift for the training players and 4.5 held out, against 1.1 and 1.2 on `main`.
+- Spill ran in 144 of 180 training shifts and Shelf sweep in 107. Then came Ambush (0.39 a shift),
+  Fog (0.36) and Phantom chime (0.31).
+- 19% of catches came while a room was fogged (33 of 173). The fog was reset 37 times, 83 s after
+  it came, on average.
+
+**Two more bugs it found:**
+- **The understudy and the overtime could never run in play.** "Once a shift" was written as a
+  99,999 s cooldown, and a trick's last use starts at −9,999 s. Both stayed on cooldown for the
+  first 25 hours of play. The trick check forces tricks past cooldowns, so it never noticed.
+  Fixed: no cooldown, since the once-a-shift count already stops a second use. A new test checks
+  that no live trick starts a shift on cooldown.
+- **Tool theft started in 25 shifts, but the bot never once had to fetch the mop.** The count was
+  of plans started, not landed. Landings are now recorded (`landed_<trick>`).
+
+**Speed:** 0.099 s of real time per simulated second, against 0.152 in the first run (the fog
+fix) and 0.044 for `main`. One cost was the shelf-bay lookup: Shelf sweep found each bay's stand
+point by name, walking the scene's whole name registry, for about 200 bays several times a
+decision. It's now worked out once per bay, which made the check below 14% faster (0.079 against
+0.092 for the same player). The rest of the slowdown isn't found.
+
+### A check after the second run (8 November): 60 shifts, the skittish player
+
+With the cooldown fix and the cached stand points (rungs C and E, 3 careers, the same seeds):
+- **The understudy and the overtime run now.** Kenji came in 5 shifts, and was sent away 115 s
+  after he came, on average. The overtime started 5 times and stopped the clock once; the clock
+  was restarted 246 s later.
+- **Stuck shifts: 7 of 60,** against 4 for this player in the second run. Catches were 0.88 a
+  shift, against 0.93. Their failure reasons, now recorded (the top 8 a shift), are the test
+  player's own:
+  - "couldn't get close enough" to a bay, the tills or a spill: 69 times;
+  - interrupted by its fear: 60;
+  - walks that timed out: 9.
+- **Most of her hands-on tricks never land in play.** Started against landed (a trick lands at its
+  first effect):
+
+| Trick | Started | Landed |
+|---|---|---|
+| Spill | 55 | 1 |
+| Shelf sweep | 51 | 9 |
+| Bin tamper | 13 | 0 |
+| Tool theft | 10 | 0 |
+| Camera bolt-on | 12 | 0 |
+| Block door | 7 | 0 |
+| The overtime (walks to the clock) | 5 | 1 |
+| Fog | 23 | 20 |
+| Phantom chime | 30 | 30 |
+| Blackout | 10 | 10 |
+| The understudy | 5 | 5 |
+| Throw (oil, flour, tin) | 9 | 5 |
+
+- **Why:** a hands-on trick walks 10–30 m to its spot first. Karen decides again twice a second,
+  and a loud noise forces a fresh decision. When the new decision is a different action, the walk
+  is dropped and the trick never happens. The building's tricks land within about a second, so
+  they always do.
+- **Why the trick check didn't show it:** a forced trick runs to its end.
+- **So every count of tricks above is of tricks started.** The chores left at closing were mostly
+  the shoppers': they spill and take stock too.
+- **The fix, if the owner wants it:** once she's on her way to a hands-on trick, she finishes it,
+  unless she starts a hunt or the trick can't be done any more.
 
 ## Earlier runs
 

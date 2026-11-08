@@ -364,7 +364,7 @@ namespace Kehai.Eval
             message = result.Message;
             if (Config.verbose || (!ok && verb == "clock_in"))
                 Debug.Log($"[env t={ShiftSeconds:0.0}s] {a} → {(ok ? "ok" : "FAILED")}: {message}");
-            Metrics.Record(verb, kind, ok);
+            Metrics.Record(verb, kind, ok, message);
             LastResult = new Dictionary<string, object> { ["verb"] = verb, ["target"] = a.target, ["ok"] = ok, ["message"] = message };
             Busy = false;
         }

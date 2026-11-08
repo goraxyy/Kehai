@@ -235,7 +235,29 @@ namespace Kehai.Karen
 
         // Where you stand to use a bay: its ShelfPoint, which sits on the aisle side. The bay's
         // own transform is inside the shelving and can be nearer the far side of a wall.
+        //
+        // Worked out once per bay (0.3.0). Finding the ShelfPoint by name walks the scene's whole
+        // name registry, and Shelf sweep (and the test player's eyes) ask for every bay, about 200,
+        // several times a decision: that was most of the ablation's 3.6× slowdown. Kept while the
+        // bay stays put; forgotten when the store is rearranged (KarenBrain.MazeChanged).
+        static readonly Dictionary<ShelfUnit, (Vector3 at, Vector3 stand)> stands = new Dictionary<ShelfUnit, (Vector3, Vector3)>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStands() => stands.Clear();
+
+        public static void ForgetStands() => stands.Clear();
+
         public static Vector3 StandIn(ShelfUnit bay)
+        {
+            Vector3 at = bay.transform.position;
+            if (stands.TryGetValue(bay, out var known) && known.at == at) return known.stand;
+            if (stands.Count > 4096) stands.Clear();   // bays from earlier scene loads
+            Vector3 stand = FindStand(bay);
+            stands[bay] = (at, stand);
+            return stand;
+        }
+
+        public static Vector3 FindStand(ShelfUnit bay)
         {
             Transform point = SceneObjectNames.Child(bay.transform, "ShelfPoint");
             return OnFloor(point != null ? point.position : bay.transform.position + bay.transform.forward * -1.2f);
