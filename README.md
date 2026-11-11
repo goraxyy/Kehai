@@ -10,7 +10,7 @@ where you hide, and she moves when you blink. Her touch kills.
 > *"Employee wellbeing is a tracked metric. I am optimising it."*
 
 **Status:** a playable prototype on its way to a vertical slice; not released. What's left is in
-[`docs/project/RELEASE_PLAN.md`](docs/project/RELEASE_PLAN.md).
+[`docs/you/RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md).
 
 ---
 
@@ -24,7 +24,7 @@ code so it can be read here.
 
 The staff-room and office model libraries, layouts and organized Models_Island are generated
 by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
-[`docs/store/INTERIOR_MODELS.md`](docs/store/INTERIOR_MODELS.md) for their inventory, dimensions and saving steps.
+[`docs/agents/store/INTERIOR_MODELS.md`](docs/agents/store/INTERIOR_MODELS.md) for their inventory, dimensions and saving steps.
 
 ---
 
@@ -42,7 +42,7 @@ by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
   others remain disabled drafts. Hands-on tricks only happen where she stands, and she learns
   where each one works on you. Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15%
   faster. Tricks don't promise advance warnings. Design:
-  [`docs/karen/Karen.md`](docs/karen/Karen.md) (0.3.0: §17).
+  [`docs/agents/karen/Karen.md`](docs/agents/karen/Karen.md) (0.3.0: §17).
 - **The blink:** opt-in webcam tracking lets Karen act while your eyes are shut. Nothing is
   recorded, and nothing leaves your computer ([`tools/blink`](tools/blink/README.md)).
 - **Seeing what happened:** a live map (**F1**), a replay of the shift (**F2**), an HTML report
@@ -63,7 +63,7 @@ by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
 | F1 / F2 | Live map / replay |
 | F8 / F9 / F10 / B | Webcam blink on-off / calibrate / test / keyboard blink |
 
-Every key: [`docs/game/CONTROLS.md`](docs/game/CONTROLS.md), or **Esc → Keys** in the game.
+Every key: [`docs/agents/game/CONTROLS.md`](docs/agents/game/CONTROLS.md), or **Esc → Keys** in the game.
 
 ---
 
@@ -89,7 +89,7 @@ Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play \
 - **Windows:** `Builds/Windows/Kehai.exe`, with the rest of its folder. Not code-signed:
   **More info → Run anyway**. No webcam helper yet; **B** blinks.
 - Each build writes `build.txt` with its version and commit. `-playtest <round>` makes a
-  playtest build ([`docs/game/PLAYTEST.md`](docs/game/PLAYTEST.md)).
+  playtest build ([`docs/agents/game/PLAYTEST.md`](docs/agents/game/PLAYTEST.md)).
 
 ---
 
@@ -124,32 +124,41 @@ for the tools.
 
 ## Documents
 
-Sorted by topic under `docs/`. Start with the handover, then the 0.2.0 plan.
+Split by reader. `docs/you/` is short and is what the owner reads and edits. `docs/agents/` is
+long and exact, for coding agents. Start with [`docs/you/NOW.md`](docs/you/NOW.md).
 
 | folder | file | what it is |
 |---|---|---|
-| `project/` | [`HANDOVER.md`](docs/project/HANDOVER.md) | Start here: where everything is, the state of the work, what's next |
-| | [`RELEASE_PLAN.md`](docs/project/RELEASE_PLAN.md) | Everything left until release, in order |
-| | [`DECISIONS.md`](docs/project/DECISIONS.md) | The big technical choices and why |
-| | [`IDEAS.md`](docs/project/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
-| | [`CHANGELOG.md`](docs/project/CHANGELOG.md) | Changes players will notice |
-| `plans/` | [`0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md) | Karen 0.2.0, task by task: who builds what, with boxes to tick (built; the ablation ran) |
-| | [`0.2.0-design-notes.md`](docs/plans/0.2.0-design-notes.md) | Why 0.2.0 is built that way: today's code, the options, the sources, your answers |
-| | [`0.2.0-tuning-plan.md`](docs/plans/0.2.0-tuning-plan.md) | Turning 0.2.0 down: why she catches you, the levers, and the test (a draft for approval) |
-| | [`learned-motion-model.md`](docs/plans/learned-motion-model.md) | The learned motion model, draft PR #68 |
-| | [`karen-capture.md`](docs/plans/karen-capture.md) | What catches you, and new fair ways to kill (approved, not started) |
-| | [`marketing-agents.md`](docs/plans/marketing-agents.md) | Hands-off video publishing |
-| `karen/` | [`Karen.md`](docs/karen/Karen.md) | Karen's full design, and where the code differs |
-| | [`KAREN_RESULTS.md`](docs/karen/KAREN_RESULTS.md) | What testing Karen found |
-| `store/` | [`STORE.md`](docs/store/STORE.md) | The building, the products, how the shelves are stocked, Karen's map |
-| | [`SCENE_MAP.md`](docs/store/SCENE_MAP.md) | Where everything is in the Unity scene (generated) |
-| | [`STORE_MAP.md`](docs/store/STORE_MAP.md) | Karen's map of the store: regions, links, chokepoints (generated) |
-| | [`LEVEL_DESIGN.md`](docs/store/LEVEL_DESIGN.md) | Plans for the parking lot, the outside, the lobby, the restrooms and the staff rooms |
-| | [`INTERIOR_MODELS.md`](docs/store/INTERIOR_MODELS.md) | The staff room, office and model library as built |
-| `game/` | [`CONTROLS.md`](docs/game/CONTROLS.md) | Every key |
-| | [`PLAYTEST.md`](docs/game/PLAYTEST.md) | How playtests run |
-| `marketing/` | [`MARKETING.md`](docs/marketing/MARKETING.md) | The pitch, the videos, the automation |
-| `research/` | [`whiteboard-2026-11-05.md`](docs/research/whiteboard-2026-11-05.md) | Whiteboard notes: how Alien: Isolation and Hello Neighbor hunt you, and Kehai's three pillars |
-| `archive/` | [`notmerged.md`](docs/archive/notmerged.md) | Old: the 20 October status, how Karen adapts, the tech list |
-| | [`reactive-bots.md`](docs/archive/reactive-bots.md) | Old: the reactive simulated players plan, built in PR #62 |
-| | [`readchanges.md`](docs/archive/readchanges.md) | Old: the first redesign plan, replaced by the 0.2.0 plan |
+| `you/` | [`NOW.md`](docs/you/NOW.md) | Start here: what's being built, what waits on the owner, what's next |
+| | [`HOW_KAREN_WORKS.md`](docs/you/HOW_KAREN_WORKS.md) | Karen in plain words, on one page |
+| | [`DECISIONS.md`](docs/you/DECISIONS.md) | The owner's calls, one dated line each |
+| | [`IDEAS.md`](docs/you/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
+| | [`RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md) | Everything left until release, in order |
+| `you/plans/` | [`0.4.0-build-plan.md`](docs/you/plans/0.4.0-build-plan.md) | Karen 0.4.0: two trained Karens, players that feel real (being built) |
+| | [`playtest-v2.md`](docs/you/plans/playtest-v2.md) | Real players: how their shifts get recorded and uploaded (not built) |
+| | [`0.2.0-tuning-plan.md`](docs/you/plans/0.2.0-tuning-plan.md) | Turning her down: why she catches you, the levers, and the test (open questions) |
+| | [`marketing-agents.md`](docs/you/plans/marketing-agents.md) | Hands-off video publishing |
+| `agents/` | [`RULES.md`](docs/agents/RULES.md) | The working rules, in one place. `CLAUDE.md` and `AGENTS.md` point here |
+| | [`HANDOVER.md`](docs/agents/HANDOVER.md) | Where everything is on this Mac, and how to work on it |
+| | [`DECISIONS.md`](docs/agents/DECISIONS.md) | The big technical choices and why |
+| | [`CHANGELOG.md`](docs/agents/CHANGELOG.md) | Changes players will notice |
+| `agents/karen/` | [`Karen.md`](docs/agents/karen/Karen.md) | Karen's full design, and where the code differs |
+| `agents/results/` | [`KAREN_RESULTS.md`](docs/agents/results/KAREN_RESULTS.md) | What testing Karen found |
+| `agents/store/` | [`STORE.md`](docs/agents/store/STORE.md) | The building, the products, how the shelves are stocked, Karen's map |
+| | [`SCENE_MAP.md`](docs/agents/store/SCENE_MAP.md) | Where everything is in the Unity scene (generated) |
+| | [`STORE_MAP.md`](docs/agents/store/STORE_MAP.md) | Karen's map of the store: regions, links, chokepoints (generated) |
+| | [`LEVEL_DESIGN.md`](docs/agents/store/LEVEL_DESIGN.md) | Plans for the parking lot, the outside, the lobby, the restrooms and the staff rooms |
+| | [`INTERIOR_MODELS.md`](docs/agents/store/INTERIOR_MODELS.md) | The staff room, office and model library as built |
+| `agents/game/` | [`CONTROLS.md`](docs/agents/game/CONTROLS.md) | Every key |
+| | [`PLAYTEST.md`](docs/agents/game/PLAYTEST.md) | How playtests run |
+| `agents/marketing/` | [`MARKETING.md`](docs/agents/marketing/MARKETING.md) | The pitch, the videos, the automation |
+| `agents/research/` | [`whiteboard-2026-11-05.md`](docs/agents/research/whiteboard-2026-11-05.md) | Whiteboard notes: how Alien: Isolation and Hello Neighbor hunt you, and Kehai's three pillars |
+| `agents/archive/` | [`0.3.0-build-plan.md`](docs/agents/archive/0.3.0-build-plan.md) | Karen 0.3.0, the tricks rebuilt (merged) |
+| | [`0.2.0-build-plan.md`](docs/agents/archive/0.2.0-build-plan.md) | Karen 0.2.0, task by task (merged) |
+| | [`0.2.0-design-notes.md`](docs/agents/archive/0.2.0-design-notes.md) | Why 0.2.0 is built that way |
+| | [`karen-learning.md`](docs/agents/archive/karen-learning.md) | The first learning plan, replaced by 0.4.0 |
+| | [`learned-motion-model.md`](docs/agents/archive/learned-motion-model.md) | The learned motion model (PR #68, closed), redesigned inside 0.4.0 |
+| | [`karen-capture.md`](docs/agents/archive/karen-capture.md) | What catches you, and new fair ways to kill (approved, not built; partly taken into 0.4.0) |
+| | [`notmerged.md`](docs/agents/archive/notmerged.md) | Old: the 20 October status, how Karen adapts, the tech list |
+| | [`reactive-bots.md`](docs/agents/archive/reactive-bots.md) | Old: the reactive simulated players plan, built in PR #62 |
+| | [`readchanges.md`](docs/agents/archive/readchanges.md) | Old: the first redesign plan, replaced by the 0.2.0 plan |
