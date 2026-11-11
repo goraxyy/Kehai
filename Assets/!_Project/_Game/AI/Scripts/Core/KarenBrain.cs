@@ -115,6 +115,7 @@ namespace Kehai.Karen
             Learning.Enabled = config.learningRecords;
             if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
+            PlaceWatch.Placed += OnPlaced;
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
             NoiseBus.Emitted += OnOwnNoise;
@@ -1230,6 +1231,7 @@ namespace Kehai.Karen
         // has handed over. Seeing you again drops them.
         void UpdatePredictor(float dt)
         {
+            if (Belief.Motion is DestinationMotion) { UpdateModelPredictor(dt); return; }
             if (!chasing && !(Predictor.Active && Time.time - Predictor.SeenAt < 30f))
             {
                 if (Predictor.Active) Predictor.Clear();
@@ -1249,6 +1251,59 @@ namespace Kehai.Karen
                 Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals());
             Predictor.Reweigh(Belief, Time.time);
         }
+
+        // With the destination model (P2, P3: C4.5) her guesses come from the same model, and are
+        // built after any strong sighting (her eyes, a camera, Kenji), not only when a hunt loses
+        // you. Cut, Ambush and Hunt's run read them as they always have. Kept half a minute.
+        float strongSeenAt = -999f;
+
+        void UpdateModelPredictor(float dt)
+        {
+            predictorTimer -= dt;
+            if (predictorTimer > 0f) return;
+            predictorTimer = 0.25f;
+            SightSensor s = Body.Sight;
+            if (s.SeesNow)
+            {
+                if (Predictor.Active) Predictor.Clear();
+                strongSeenAt = Belief.LastStrongObservation;
+                return;
+            }
+            if (Belief.LastStrongObservation > strongSeenAt && Features.Count > 0)
+            {
+                strongSeenAt = Belief.LastStrongObservation;
+                bool ownEyes = Time.time - s.LastSeenTime < 1f;
+                Vector3 at = ownEyes ? s.LastSeenPosition : Belief.PeakPosition;
+                int start = Map.CellAt(at);
+                var goals = new List<(string, Vector3)>();
+                for (int k = 0; k < Features.Count; k++)
+                    if (Features.List[k].Cell >= 0) goals.Add((Features.List[k].Label, Features.List[k].Position));
+                Predictor.Build(at, ownEyes ? s.LastSeenVelocity : Vector3.zero, Belief.LastStrongObservation, goals,
+                    (name, p, kind) => ModelChance(start, name, kind));
+            }
+            if (Predictor.Active && Time.time - Predictor.SeenAt > 30f) Predictor.Clear();
+            if (Predictor.Active) Predictor.Reweigh(Belief, Time.time);
+        }
+
+        // The model's chance, from the sighting's cell, of the place a guess is named after.
+        float ModelChance(int start, string name, GuessKind kind)
+        {
+            if (start < 0) return 0.1f;
+            for (int k = 0; k < Features.Count; k++)
+            {
+                Destination d = Features.List[k];
+                bool match = kind == GuessKind.Goal ? d.Label == name
+                    : kind == GuessKind.TurnedBack ? d.Kind == DestinationKind.TurnBack : d.Kind == DestinationKind.Stay;
+                if (match) return Mathf.Max(1e-4f, Features.Chance(start, k));
+            }
+            return 1e-4f;
+        }
+
+        // A trick put down is a bet that you'll pass within 4 m of here in the next minute (C4.6).
+        // She can't settle it herself: the eval does, against where you really went.
+        void OnPlaced(Tactic trick, string key, float now) =>
+            Stats.Bets.Add(new TrickBet { Trick = trick.Id, Key = key, At = Body.Position, T = now, Radius = 4f, Horizon = 60f,
+                                          OnYourWay = Belief.Motion is DestinationMotion && Predictor.Active });
 
         // Where you might be going: your jobs and the time clock, the breaker box with the
         // lights out, and her ways out of the building.
@@ -1503,6 +1558,16 @@ namespace Kehai.Karen
         }
     }
 
+    // A trick put down on your way (0.4.0, C4.6): won if you pass within Radius before Horizon.
+    public sealed class TrickBet
+    {
+        public string Trick, Key;
+        public Vector3 At;
+        public float T, Radius, Horizon;
+        public bool OnYourWay;            // placed from the destination model's guesses
+        public bool Settled, Won;
+    }
+
     // One catch, and what led to it (0.4.0, build plan C1.2).
     public struct CatchCause
     {
@@ -1548,6 +1613,7 @@ namespace Kehai.Karen
         public int CatchesAtChore { get; private set; }
         public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
         public readonly List<CatchCause> CatchCauses = new List<CatchCause>();   // 0.4.0 (C1.2)
+        public readonly List<TrickBet> Bets = new List<TrickBet>();              // 0.4.0 (C4.6)
         public void CaughtInFog() => CatchesInFog++;
 
         // How often each trick landed (its plan's first effect), against TacticCounts' starts.
@@ -1577,6 +1643,7 @@ namespace Kehai.Karen
             CatchesInFog = CatchesAtChore = 0;
             Answers.Clear();
             CatchCauses.Clear();
+            Bets.Clear();
             CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
             TacticLanded.Clear();

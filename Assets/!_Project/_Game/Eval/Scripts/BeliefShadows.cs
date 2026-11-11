@@ -40,6 +40,11 @@ namespace Kehai.Eval
         }
 
         public static string[] Requested;      // from -belief-shadows
+        // p3x: P3 reading someone else's Ledger (§11, the personal part), from -belief-other-ledger.
+        public static string OtherLedgerPath;
+        KarenLedger otherLedger;
+        MotionFeatures otherFeatures;
+        float otherAt = -999f;
         public readonly List<Arm> Arms = new List<Arm>();
         public readonly List<MirrorArm> Mirrors = new List<MirrorArm>();
 
@@ -64,6 +69,13 @@ namespace Kehai.Eval
                 var grid = new BeliefGrid(b.Map);
                 var arm = new Arm { Id = id, Grid = grid, Senses = SenseModel.For(sense ? id : b.config.senses) };
                 grid.Motion = sense ? HandMotion.Today : MotionModels.Create(id, b.Features) ?? HandMotion.Today;
+                if (id == "p3x")
+                {
+                    otherLedger = new KarenLedger(new KarenConfig { ledgerPath = OtherLedgerPath ?? "" }) { Persistent = !string.IsNullOrEmpty(OtherLedgerPath) };
+                    otherLedger.Load();
+                    otherFeatures = new MotionFeatures { ReadLedger = true };
+                    grid.Motion = new DestinationMotion("p3x", otherFeatures, readLedger: true);
+                }
                 Arms.Add(arm);
             }
             foreach (MirrorMode m in new[] { MirrorMode.K0, MirrorMode.K1, MirrorMode.K2 })
@@ -147,9 +159,36 @@ namespace Kehai.Eval
             }
         }
 
+        // Someone else's Ledger, read into the same places her own refresh just made.
+        void RefreshOther()
+        {
+            MotionFeatures f = brain.Features;
+            if (otherFeatures == null || f == null || f.RefreshedAt == otherAt) return;
+            otherAt = f.RefreshedAt;
+            otherFeatures.SheIsThought = f.SheIsThought;
+            otherFeatures.LastSeenAt = f.LastSeenAt;
+            otherFeatures.LastSeenHeading = f.LastSeenHeading;
+            otherFeatures.TimeLeft01 = f.TimeLeft01;
+            otherFeatures.StoreOpen = f.StoreOpen;
+            var places = new List<Destination>();
+            foreach (Destination d0 in f.List)
+            {
+                Destination d = d0;
+                if (d.Kind == DestinationKind.Chore && !string.IsNullOrEmpty(d.AnswerKind)) d.AnswerSeconds = otherLedger.AnswerReading(d.AnswerKind, LedgerStart.Current).Guess;
+                if (d.Kind == DestinationKind.Hide)
+                {
+                    Region r = brain.Map.Regions.FirstOrDefault(x => x.Name == d.Name);
+                    d.Habit = r != null ? otherLedger.Habit(r) : 0f;
+                }
+                places.Add(d);
+            }
+            otherFeatures.Compute(brain.Map, Arms.First(a => a.Id == "p3x").Grid, places);
+        }
+
         void OnPredicted(float dt, float speed)
         {
             SyncFromBrain(resetMass: false);
+            RefreshOther();
             foreach (Arm a in Arms)
             {
                 long t0 = Stopwatch.GetTimestamp();

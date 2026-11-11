@@ -326,4 +326,31 @@ public class MotionModelTests
             Object.DestroyImmediate(player);
         }
     }
+
+    // ---- C4.5 her route guesses on the same model; C4.6 tricks on your way --------------------------
+
+    [Test]
+    public void RouteGuesses_TakeTheModelsChances_WhenGiven()
+    {
+        StoreMap map = Store(false);
+        var p = new RoutePredictor(map);
+        var goals = new List<(string, Vector3)> { ("a spill", map.CellPosition[5]), ("the time clock", map.CellPosition[40]) };
+        p.Build(map.CellPosition[20], Vector3.zero, 1f, goals, (name, at, kind) => name == "the time clock" ? 0.8f : kind == GuessKind.Goal ? 0.1f : 0.05f);
+        Assert.AreEqual("the time clock", p.Best.Name, "the model's chance decides");
+        Assert.AreEqual(1f, p.Guesses.Sum(g => g.Weight), 1e-5f);
+        var today = new RoutePredictor(map);
+        today.Build(map.CellPosition[20], Vector3.zero, 1f, goals);
+        Assert.AreEqual(0.1f / today.Guesses.Sum(g => g.Prior), today.Guesses.First(g => g.Kind == GuessKind.Hiding).Weight, 1e-6f, "no model: today's priors");
+    }
+
+    [Test]
+    public void TricksOnYourWay_OnlyWithTheDestinationModel()
+    {
+        StoreMap map = Store(false);
+        var config = new KarenConfig();
+        var c = new KarenContext { Map = map, Belief = new BeliefGrid(map), Config = config };
+        Assert.AreEqual(0f, TacticHelpers.OnGuessedRoutes(c, map.Regions[0]), "today's step: today's placements");
+        var bet = new TrickBet { Trick = "spill", At = Vector3.zero, Radius = 4f, Horizon = 60f };
+        Assert.IsFalse(bet.Settled);
+    }
 }

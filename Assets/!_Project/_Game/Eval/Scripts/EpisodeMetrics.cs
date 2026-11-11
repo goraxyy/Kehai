@@ -129,6 +129,19 @@ namespace Kehai.Eval
 
         void OnRebuilt(KarenBrain b) => Shadows.Attach(b);
 
+        // Her tricks' bets on your way (C4.6), settled against where you really went.
+        void SettleBets(Vector3 player)
+        {
+            KarenBrain brain = KarenBrain.Instance;
+            if (brain == null) return;
+            foreach (TrickBet b in brain.Stats.Bets)
+            {
+                if (b.Settled) continue;
+                if (FairnessGuard.Flat(player, b.At) <= b.Radius) { b.Settled = b.Won = true; }
+                else if (Time.time - b.T > b.Horizon) b.Settled = true;
+            }
+        }
+
         public void Unsubscribe()
         {
             Hunt.End();
@@ -182,6 +195,7 @@ namespace Kehai.Eval
                 AgentDriver driver = player.GetComponent<AgentDriver>();
                 Vector3? goal = driver != null && driver.Moving ? driver.Goal : (Vector3?)null;
                 Shadows.Tick(Time.deltaTime, player.position, goal);
+                SettleBets(player.position);
                 Trace040.Tick(player.position, goal);
             }
 
@@ -362,6 +376,14 @@ namespace Kehai.Eval
             d["catches_at_clock"] = CatchCauses.Count(c => c.AtClock);
             d["catches_seen_3s"] = CatchCauses.Count(c => c.SeenWithin3s);
             d["karen_brain"] = Brain;
+            KarenBrain kb = KarenBrain.Instance;
+            if (kb != null)
+            {
+                d["bets_placed"] = kb.Stats.Bets.Count;
+                d["bets_won"] = kb.Stats.Bets.Count(b => b.Won);
+                d["bets_on_your_way"] = kb.Stats.Bets.Count(b => b.OnYourWay);
+                d["bets_on_your_way_won"] = kb.Stats.Bets.Count(b => b.OnYourWay && b.Won);
+            }
             d["karen_set"] = KarenSet.Select(x => (object)x).ToList();
             if (Timing != null) d["timing"] = Timing;
             d["tricks_after_close"] = TricksAfterClose.ToDictionary(p => p.Key, p => (object)p.Value);

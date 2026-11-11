@@ -54,6 +54,7 @@ namespace Kehai.Eval
             b.Belief.Predicting += OnPredicting;
             b.Belief.WasResetTo += OnReset;
             b.Sensed += OnSensed;
+            NoiseBus.Emitted += OnNoise;
             predicts = 0;
             desireHash = habitHash = int.MinValue;
             Layers();
@@ -72,6 +73,7 @@ namespace Kehai.Eval
                 brain.Belief.WasResetTo -= OnReset;
                 brain.Sensed -= OnSensed;
             }
+            NoiseBus.Emitted -= OnNoise;
             w?.Flush();
             w?.Dispose();
             w = null;
@@ -108,6 +110,13 @@ namespace Kehai.Eval
                   .Append(",\"fresh\":").Append(N(nextRaw.Freshness)).Append(",\"dark\":").Append(nextRaw.LightsOut ? "true" : "false").Append('}');
             hasRaw = false;
             Line("obs", sb.ToString());
+        }
+
+        // Her own noises (not her steps): the mirror map's replay needs them (C4.8).
+        void OnNoise(NoiseEvent e)
+        {
+            if (w == null || (e.Author != NoiseAuthor.Karen && e.Author != NoiseAuthor.Director) || e.Kind == NoiseKind.KarenStep) return;
+            Line("her_noise", $"\"x\":{N(e.Position.x)},\"z\":{N(e.Position.z)},\"carry\":{N(e.Carry)},\"kind\":\"{e.Kind}\"");
         }
 
         void OnSwept(List<int> cells, List<float> p) =>

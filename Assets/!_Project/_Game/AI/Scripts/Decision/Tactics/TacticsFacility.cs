@@ -465,7 +465,9 @@ namespace Kehai.Karen
                 float onYourWay = 1f - Mathf.Abs(walk - 14f) / 16f;
                 float habit = c.Ledger != null ? c.Ledger.Habit(r) : 0f;
                 spots.Add(r);
-                candidates.Add(new PlaceCandidate(r.Name, Mathf.Clamp01(0.7f * onYourWay + 0.3f * habit)));
+                // With the destination model (P2, P3), her guessed routes join your habits (C4.6).
+                float guessed = TacticHelpers.OnGuessedRoutes(c, r);
+                candidates.Add(new PlaceCandidate(r.Name, Mathf.Clamp01(0.7f * onYourWay + 0.3f * habit + 0.5f * guessed)));
             }
             return spots;
         }
