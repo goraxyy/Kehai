@@ -1,6 +1,9 @@
 # Plan: Karen learns what scares you *and* what catches you, and gets three fair new ways to kill
 
 > **Status:** approved 2026-10-21, not started. It starts after the learned motion model (PR #68) is merged.
+>
+> **6 November:** [karen-learning.md](karen-learning.md), a draft, would replace this plan. It keeps
+> this plan's learner (§2) and adds learning from every player; the kill moves (§3) aren't in it.
 
 ## Context
 

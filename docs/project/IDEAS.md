@@ -13,6 +13,7 @@ did what it did; and the **blink** gives Karen an information edge to test.
 4. [Ablation](#4-ablation) · built, results in
 5. [The thought log](#5-the-thought-log) · built
 6. [How she searches, sees and remembers](#6-how-she-searches-sees-and-remembers) · ideas (added 2026-11-05)
+7. [Two versions of Karen](#7-two-versions-of-karen) · idea (added 2026-11-06)
 
 ---
 
@@ -263,4 +264,53 @@ locker has cooled.
 **What it needs.** Ids on the hiding objects (they're in the scene, not in code yet), a fairness
 check that a spot she answers still leaves the shift winnable, and an ablation of the Ledger with
 and without spots.
+
+---
+
+## 7. Two versions of Karen
+
+From the 2026-11-06 talk about how she learns. Not built, and not part of the learning plan: that
+plan keeps one Karen who learns from every player and adapts to each one within a session. This
+idea is a second reward on top of it, for later.
+
+**The idea.** Two Karens with the same tricks and the same fairness rules, told apart only by what
+they're rewarded for:
+
+| | Killing machine | General (the game) |
+|---|---|---|
+| Rewarded for | catching you, the sooner the better | keeping your fear near a target that rises through the shift, plus a smaller reward for a catch |
+| Pacing (the Director) | off, or nearly: no breathing room, she hunts whenever she can | on: builds tension, gives you breaks, saves the kill for tense moments |
+| Tricks | the same | the same |
+| Fairness | the same: she never knows where you really are | the same |
+| For | a benchmark and a hard mode; "how good can a fair AI get" | the game |
+| Measured by | catch rate, time to a catch | fear against its target; "scary" and "unfair" answers; how often players quit |
+
+**Today.** There's one Karen. Her trick picker is rewarded by the change in your panic in the 20 s
+after a trick (`KarenBrain.SettleRewards`), and the Director paces her toward a fear setpoint
+([Karen.md §7.2–7.4](../karen/Karen.md#72-tactic-selection-as-a-bandit)). The 0.2.0 ablation
+found she catches the bots in 97–100% of shifts already
+([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)), so today's Karen is closer to the killing machine.
+
+**Why.** The killing machine shows how strong a fair AI can be, which is the portfolio showpiece,
+and gives the learners a hard opponent to measure against. The general one is what makes the game
+fun: a Karen who always kills is a short game.
+
+**How it could work.**
+- **One learner, two dials (the likely pick).** The learner learns two numbers per trick and
+  situation: how much it scares, and how likely it leads to a catch (the approved
+  [capture plan](../plans/karen-capture.md)'s two heads). A version is only how much each number
+  counts when she chooses. One training run serves both, and a difficulty slider in between comes
+  for free.
+- **Or two trained brains:** rung F trained twice, once per reward. Each is fully specialised, but
+  it's twice the training, and rung F hasn't been trained even once.
+- The Director's pacing is rules, not a reward, so the killing machine also needs its own Director
+  setting.
+
+**Example.** Same seed, same shift: the killing machine cuts you off at the first sighting and
+catches you in 40 s. The general Karen loses you on purpose twice, blacks out the stockroom when
+your fear dips, and catches you at the end, or lets you clock out shaken.
+
+**What it needs.** The learning plan built first (her general and per-player learning); then the
+second reward, a Director setting per version, and an ablation of the two against the same
+players, the held-out cautious one included.
 
