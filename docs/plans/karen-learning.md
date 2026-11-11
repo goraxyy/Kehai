@@ -1,5 +1,11 @@
 # Plan: Karen learns from everyone, and adapts to you
 
+> **Replaced by 0.4.0 (10 November 2026).** The learner in this plan isn't built. The
+> [0.4.0 plan](0.4.0-build-plan.md) replaces it with two trained Karens. It takes in this plan's
+> blend of everyone and you, its learning records, its splits by player and its model cards
+> ([its §4.3](0.4.0-build-plan.md#43-against-pr-76-pros-and-cons)). [Playtest v2](playtest-v2.md)
+> and the two-Karens idea still stand. This file is kept for the record.
+
 > **Status:** a draft for your approval (6 November 2026). Nothing is built. This is Karen ML, so
 > once approved it's built as one PR. It would replace the [capture plan](karen-capture.md)
 > (approved 21 October, not started), keeping its learner. The idea of two Karens with different
