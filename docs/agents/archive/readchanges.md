@@ -1,6 +1,6 @@
 # Redesign: Karen's behaviour and tricks
 
-> **Archived on 2026-11-05.** Replaced by the [0.2.0 build plan](../plans/0.2.0-build-plan.md),
+> **Archived on 2026-11-05.** Replaced by the [0.2.0 build plan](0.2.0-build-plan.md),
 > approved the same day. It's kept for its detail on the PA console (§2.1) and the FX switch (§2.2).
 
 **Status:** draft plan, 2 November 2026. Nothing is built yet. Once you approve it, it gets built

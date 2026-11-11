@@ -132,7 +132,7 @@ to 240 ms; five fixes brought it to 35–55 ms, a few frames at most.
 
 **At full size:** 25 chunks, 96,000 slots, 626 lights, 9.2 ms.
 
-**Open:** whether it becomes its own game mode or part of the store ([IDEAS.md](IDEAS.md#2-the-endless-maze));
+**Open:** whether it becomes its own game mode or part of the store ([IDEAS.md](../you/IDEAS.md#2-the-endless-maze));
 shoppers, Karen and tasks in it; aisle signs; a floating origin for very long walks.
 
 ---
@@ -156,7 +156,7 @@ shoppers, Karen and tasks in it; aisle signs; a floating origin for very long wa
 honest: an agent that beats her beats a fair opponent.
 
 **Tested on the real game.** An agent plays through 18 actions using the real player body; a
-150 s shift runs headless in 5–15 s. That's what the ablation runs on ([IDEAS.md](IDEAS.md)).
+150 s shift runs headless in 5–15 s. That's what the ablation runs on ([IDEAS.md](../you/IDEAS.md)).
 
 ---
 
@@ -206,16 +206,16 @@ Existing coffee, radio, punch-clock and tool objects keep their gameplay referen
 bake, moving the navigation bounds' midpoint above the floor. Map sampling then found only a
 handful of cells. Ceilings are now excluded from the bake, and StoreMap samples at the lowest
 navigation level. The added third west room also requires another named rendering layer so
-its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](../store/INTERIOR_MODELS.md).
+its lights can stay separate. Details and limits: [INTERIOR_MODELS.md](store/INTERIOR_MODELS.md).
 
 ---
 
 ## 10. Karen 0.2.0
 
 A redesign of how Karen sees, where she works, how she hunts and how she learns. The plan is
-[`0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md), the reasoning
-[`0.2.0-design-notes.md`](../plans/0.2.0-design-notes.md), and what changed in the code
-[Karen.md §16](../karen/Karen.md#16-karen-020). The "what it gave" column is what the tests show;
+[`0.2.0-build-plan.md`](archive/0.2.0-build-plan.md), the reasoning
+[`0.2.0-design-notes.md`](archive/0.2.0-design-notes.md), and what changed in the code
+[Karen.md §16](karen/Karen.md#16-karen-020). The "what it gave" column is what the tests show;
 the ablation over whole shifts is below the table.
 
 | Decision | Why | The cost | What it gave so far |
@@ -231,7 +231,7 @@ the ablation over whole shifts is below the table.
 | **Her footsteps and floor cone for the developer only** | The bots heard her steps within 12 m, so the tests measured an easier game than players get | Players have little left to notice her by: seeing her, and the sounds of her tricks | The bots hear what players hear |
 
 **What the ablation found** (6 November, against `main`, paired by seed;
-[KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-ablation-results-6-november)):
+[KAREN_RESULTS.md](results/KAREN_RESULTS.md#the-ablation-results-6-november)):
 - **Together, the changes make her far deadlier:** a catch in 94–100% of shifts against 28–54%,
   for every simulated player, the held-out one included. A bot finished its shift in 1 of 144
   shifts, against 18 on `main`. She sees it within about 9 s, against 32–61 s.
@@ -248,18 +248,18 @@ the ablation over whole shifts is below the table.
   is open ([§10](#10-karen-020)); a playtest would show how people fare.
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
-  the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).
+  the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](results/KAREN_RESULTS.md)).
 - **Karen 0.3.0 can make the shift unfinishable:** after the doors close she keeps making chores
   (spills, shelf sweeps, bins, Tool theft) faster than they can be cleared, and the clock-out
   waits for every one. 13 of 240 test shifts got stuck, against 2 on `main`
-  ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). **Decided
+  ([KAREN_RESULTS.md](results/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). **Decided
   8 November (the owner):** no new chore once the doors close, rule 10
-  ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)). Built; the ablation runs
+  ([Karen.md §17.3](karen/Karen.md#173-the-new-fairness-rules)). Built; the ablation runs
   again to check it.
 - **Karen's hands-on tricks rarely landed in play** (0.3.0's second run). She re-decided on her
   walk to the spot and dropped the trick: Spill landed 1 time in 55 starts. **Decided 8 November
   (the owner):** she finishes what she starts, unless she starts a hunt
-  ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)).
+  ([Karen.md §17.3](karen/Karen.md#173-the-new-fairness-rules)).
 - **A body can fall through the floor in Aisle 4/B** (the test player did, once in 83 shifts), and
   **0.3.0 runs 3.6 times slower** than `main` in the tests, for reasons not yet found.
 - **Karen can stand on a stuck player** without catching them.

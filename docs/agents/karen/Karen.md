@@ -862,7 +862,7 @@ constraints, enforced in code, asserted in tests.
    region by at most `+0.15` per minute, may never exceed `0.5` of total mass, and may never
    trigger while the player is in line of sight of the Body's current path.
 3. ~~**Every tactic has a tell**, ≥ 0.8 s of lead time.~~ **Removed in 0.2.0** (the
-   [build plan](../plans/0.2.0-build-plan.md), decision Q17): a trick's sound may still play as it
+   [build plan](../archive/0.2.0-build-plan.md), decision Q17): a trick's sound may still play as it
    acts, but nothing waits for it and the audit no longer times it. Kept as rule 3, not
    renumbered, so old logs and results still read.
 4. **Recovery windows are guaranteed.** After a chase (a catch now ends the shift): ≥ 45 s at reduced
@@ -1180,7 +1180,7 @@ Sanity checks that fail loudly in CI:
 Everything in §§2–13 is built, though since 0.2.0 most of §8's tricks are drafts, off in play
 ([§16.4](#164-the-tricks)). This section maps the design onto the code and says where the code
 departs from the plan above. Results of the ablation ladder are in
-[`KAREN_RESULTS.md`](KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../tools/eval/README.md).
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../../tools/eval/README.md).
 
 ### Where each part lives (`Assets/!_Project/_Game/`)
 
@@ -1324,9 +1324,9 @@ suite is 262 tests in 26 files; 0.2.0's own are listed in §16.7.
 ## 16. Karen 0.2.0
 
 What the 0.2.0 redesign changed, where each change lives, and how it's checked. The decisions
-are in the [build plan](../plans/0.2.0-build-plan.md), and the reasoning and sources in the
-[design notes](../plans/0.2.0-design-notes.md). Measured results are in
-[`KAREN_RESULTS.md`](KAREN_RESULTS.md). **The ablation against `main` (6 November) found her far
+are in the [build plan](../archive/0.2.0-build-plan.md), and the reasoning and sources in the
+[design notes](../archive/0.2.0-design-notes.md). Measured results are in
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md). **The ablation against `main` (6 November) found her far
 deadlier than before:** she catches the simulated player in 94–100% of shifts, against 28–54%,
 and sees it within about 9 s instead of 32–61 s, the held-out player included. A summary is in [§16.7](#167-tests-the-ablation-and-whats-not-measured-yet).
 
@@ -1561,7 +1561,7 @@ both builders made).
 | `RouteLayerTests` (new, the second builder's) | the replay's routes layer: seeking, weights and windows from the recording, hiding guesses, plain-text names, old files, no cone, materials freed |
 
 **The ablation against `main`** (6 November; the full tables, caveats included, are in
-[`KAREN_RESULTS.md`](KAREN_RESULTS.md#the-ablation-results-6-november)):
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md#the-ablation-results-6-november)):
 
 | | Result |
 |---|---|
@@ -1593,7 +1593,7 @@ guessed then. Recordings from before version 2 show none.
 ## 17. Karen 0.3.0: the tricks come back
 
 The owner's 21 items of 7 November, built from
-[`docs/plans/0.3.0-build-plan.md`](../plans/0.3.0-build-plan.md), by one builder (Claude).
+[`docs/agents/archive/0.3.0-build-plan.md`](../archive/0.3.0-build-plan.md), by one builder (Claude).
 
 ### 17.1 The list
 
@@ -1699,7 +1699,7 @@ Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
 
 ### 17.7 The ablation (7 November)
 
-240 shifts against `main`, paired by seed ([KAREN_RESULTS.md](KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
+240 shifts against `main`, paired by seed ([KAREN_RESULTS.md](../results/KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
 - **Fair:** 0 violations.
 - **Her tricks run:** 3.6 a shift against 1.1, Spill and Shelf sweep most.
 - **No stronger:** catches 0.02–0.10 a shift lower, fewer hunts, setpoint error 0.01–0.04 worse.

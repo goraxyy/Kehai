@@ -1,16 +1,16 @@
 # Plan: Karen learns from everyone, and adapts to you
 
 > **Replaced by 0.4.0 (10 November 2026).** The learner in this plan isn't built. The
-> [0.4.0 plan](0.4.0-build-plan.md) replaces it with two trained Karens. It takes in this plan's
+> [0.4.0 plan](../../you/plans/0.4.0-build-plan.md) replaces it with two trained Karens. It takes in this plan's
 > blend of everyone and you, its learning records, its splits by player and its model cards
-> ([its §4.3](0.4.0-build-plan.md#43-against-pr-76-pros-and-cons)). [Playtest v2](playtest-v2.md)
+> ([its §4.3](../../you/plans/0.4.0-build-plan.md#43-against-pr-76-pros-and-cons)). [Playtest v2](../../you/plans/playtest-v2.md)
 > and the two-Karens idea still stand. This file is kept for the record.
 
 > **Status:** a draft for your approval (6 November 2026). Nothing is built. This is Karen ML, so
 > once approved it's built as one PR. It would replace the [capture plan](karen-capture.md)
 > (approved 21 October, not started), keeping its learner. The idea of two Karens with different
-> rewards stays in [IDEAS.md §7](../project/IDEAS.md#7-two-versions-of-karen). It needs real
-> players' data, which [playtest v2](playtest-v2.md) brings.
+> rewards stays in [IDEAS.md §7](../../you/IDEAS.md#7-two-versions-of-karen). It needs real
+> players' data, which [playtest v2](../../you/plans/playtest-v2.md) brings.
 
 1. [What you asked for](#1-what-you-asked-for)
 2. [What she has today](#2-what-she-has-today)
@@ -111,7 +111,7 @@ second head).
 - **the outcome:** the fear change over the window, and whether a catch followed within 30 s;
 - **a flag** when the Director's 45-second nudge toward your real area was active in the window.
   Those windows are left out of training, because her belief carried a hint from your real
-  position ([HANDOVER known gaps](../project/HANDOVER.md#5-whats-next-in-order)).
+  position ([HANDOVER known gaps](../HANDOVER.md#5-whats-next-in-order)).
 
 **Where they go:**
 - Written in bot runs and in playtest builds, as `learning.jsonl` in the session zip.
@@ -252,7 +252,7 @@ branch and worktree, [C] merges at each sync, and no file belongs to both builde
 
 ## 11. Not in this plan
 
-- **Two Karens with different rewards:** [IDEAS.md §7](../project/IDEAS.md#7-two-versions-of-karen).
+- **Two Karens with different rewards:** [IDEAS.md §7](../../you/IDEAS.md#7-two-versions-of-karen).
 - **New kill moves** (the capture plan's §3). Cut and Ambush on her guessed routes, from 0.2.0,
   already cover two of the three.
 - **Training rung F.**

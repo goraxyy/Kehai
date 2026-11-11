@@ -239,7 +239,7 @@ One character per 1.5 m cell, north up. The ruler marks every 10 m of X; row lab
 ## Planogram sections
 
 Which regions each section of the sales floor covers — where to send a customer asking
-for something. `docs/store/STORE.md` says what each section sells.
+for something. `docs/agents/store/STORE.md` says what each section sells.
 
 | section | bays | regions |
 |---|---|---|

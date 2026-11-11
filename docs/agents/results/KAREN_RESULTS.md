@@ -1,12 +1,12 @@
 # Karen — ablation results
 
-The ablation ladder from [`IDEAS.md`](../project/IDEAS.md#4-ablation), run headless against four simulated
+The ablation ladder from [`IDEAS.md`](../../you/IDEAS.md#4-ablation), run headless against four simulated
 players that react to her. Each rung adds one mechanism, so a difference between neighbouring
 rungs is that mechanism. This is the run of 2026-10-16, against today's Karen: her touch kills,
 she is slightly faster than the player, and the Director's blink dash is part of every rung from C.
 
 > **Karen 0.2.0** changes her eyes, where she works, the Hunt, her tricks and her learning
-> ([Karen.md §16](Karen.md#16-karen-020)). Everything above [Karen 0.2.0, so far](#karen-020-so-far)
+> ([Karen.md §16](../karen/Karen.md#16-karen-020)). Everything above [Karen 0.2.0, so far](#karen-020-so-far)
 > is about the Karen before it. 0.2.0's test results and its ablation against `main` (6 November)
 > are in that section.
 >
@@ -20,14 +20,14 @@ she is slightly faster than the player, and the Director's blink dash is part of
 | C | belief grid (incl. negative evidence), utility goals, the tactic library, the Director's pacing and blink dash | nothing — every tactic scored by its authored prior |
 | D | + the bandit | within a shift; starts each shift from the prior |
 | E | + the persistent Ledger | across shifts: tactic values, where you dwell and hide, your routes |
-| F | + a trained PPO policy picks the tactic ([`tools/rl`](../../tools/rl/README.md)) | offline, from training runs |
+| F | + a trained PPO policy picks the tactic ([`tools/rl`](../../../tools/rl/README.md)) | offline, from training runs |
 
 **Rung F is not in this run.** It is built, but no policy has been trained yet. Without a model it
 falls back to the bandit's pick, which would make it a second copy of E.
 
 ## How it was run
 
-- **Players.** `SimulatedPlayer` in four profiles ([`tools/eval/README.md`](../../tools/eval/README.md#the-simulated-players)):
+- **Players.** `SimulatedPlayer` in four profiles ([`tools/eval/README.md`](../../../tools/eval/README.md#the-simulated-players)):
   - *efficient*: nearest job first;
   - *skittish*: over-reacts to everything;
   - *reckless*: sprints, ignores noise;
@@ -557,8 +557,8 @@ reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's
 
 ## Karen 0.3.0: the ablation (7 November)
 
-0.3.0 rebuilds her tricks ([Karen.md §17](Karen.md#17-karen-030-the-tricks-come-back)). The plan
-fixed four primary metrics before any run ([build plan §7](../plans/0.3.0-build-plan.md#7-tests-and-metrics)).
+0.3.0 rebuilds her tricks ([Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back)). The plan
+fixed four primary metrics before any run ([build plan §7](../archive/0.3.0-build-plan.md#7-tests-and-metrics)).
 
 **How it ran:**
 
@@ -678,7 +678,7 @@ diagnosis runs, with what was still open and what she did after the doors closed
 - **The shift has to stay finishable.** As built, she can add chores after closing faster than
   anyone can clear them, and the clock-out waits for every chore. A person would be stuck the
   same way. **The owner chose the fix (8 November):** no new chore after the doors close; she
-  can still hunt. That's rule 10 ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)), and the
+  can still hunt. That's rule 10 ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)), and the
   ablation runs again to check it.
 - **Separately:** a hole in Aisle 4/B's floor (or something that pushes a body through it), the
   slowdown, and the understudy and the overtime, which the learner never picked.
@@ -686,7 +686,7 @@ diagnosis runs, with what was still open and what she did after the doors closed
 ### The second run (8 November): rule 10, every trick from shift 1
 
 **What changed** (`a25d8a5`), on the owner's calls of 8 November:
-- **Rule 10:** no new chore once the doors close ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)).
+- **Rule 10:** no new chore once the doors close ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)).
 - **Every trick from shift 1:** the career table is off for now.
 - **Tool theft fixed:** she stopped 2.2 m from the rack, out of reach.
 
@@ -784,7 +784,7 @@ With the cooldown fix and the cached stand points (rungs C and E, 3 careers, the
 
 ### After "finish what she starts" (8 November): the same 60 shifts
 
-The owner chose the fix ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)). The same check
+The owner chose the fix ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)). The same check
 again: the skittish player, rungs C and E, 3 careers, the same seeds.
 
 | | Before | After |

@@ -9,7 +9,7 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 > Google Form. See [What you set up](#what-you-set-up). Claude needs no key: it runs on your
 > Claude plan.
 >
-> **Changing:** [playtest v2](../plans/playtest-v2.md), a draft from 6 November, drops the tester
+> **Changing:** [playtest v2](../../you/plans/playtest-v2.md), a draft from 6 November, drops the tester
 > code, the Google Form and itch.io, and keeps everything in the cloud. Until it's built, this
 > page describes what's in the code.
 
@@ -128,11 +128,11 @@ will take only zips, under 50 MB.
 Once, in this order. Each step says what it unlocks.
 
 1. **`tools/playtest/.env`:** copy `tools/playtest/.env.example` (git ignores the copy).
-2. **The upload service** (Cloudflare, a few minutes): [tools/playtest/README.md](../../tools/playtest/README.md#setting-up-the-upload-service-once).
+2. **The upload service** (Cloudflare, a few minutes): [tools/playtest/README.md](../../../tools/playtest/README.md#setting-up-the-upload-service-once).
    *Unlocks:* builds that send sessions, and your Mac pulling them.
 3. **The Google Form** from the draft above, and its pre-filled link in `KEHAI_PLAYTEST_FORM_URL`.
    *Unlocks:* the "longer questions" button and the link in the tester messages.
-4. **The itch.io page:** [tools/playtest/ITCH_PAGE.md](../../tools/playtest/ITCH_PAGE.md); its address and
+4. **The itch.io page:** [tools/playtest/ITCH_PAGE.md](../../../tools/playtest/ITCH_PAGE.md); its address and
    password in `.env`. Or skip it and use direct links (`KEHAI_PLAYTEST_MAC_LINK`,
    `KEHAI_PLAYTEST_WINDOWS_LINK`).
 5. **Telegram and Claude:** `TELEGRAM_BOT_TOKEN` and `ANTHROPIC_API_KEY` in `tools/marketing/.env`,

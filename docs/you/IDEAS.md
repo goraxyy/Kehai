@@ -1,7 +1,7 @@
 # Ideas
 
 The ideas that make Kehai more than a store game, and what each still needs. Karen's full design
-is in [Karen.md](../karen/Karen.md); the release to-do list in [RELEASE_PLAN.md](RELEASE_PLAN.md).
+is in [Karen.md](../agents/karen/Karen.md); the release to-do list in [RELEASE_PLAN.md](RELEASE_PLAN.md).
 
 They fit together: the **endless maze** gives the **agent test environment** endless new layouts;
 the test environment runs the **ablation**; the **thought log** shows why each version of Karen
@@ -75,7 +75,7 @@ backs off.
 
 **Built** in its own scene, and parked: seeded 25 m chunks, mostly loops, streamed around you
 one chunk a frame, with the store's own shelves and products. How it works:
-[DECISIONS.md](DECISIONS.md#4-the-endless-maze).
+[DECISIONS.md](../agents/DECISIONS.md#4-the-endless-maze).
 
 **Why it's worth it.** New players get a new store. AI agents can't memorise a map, so "beat
 this level" becomes "beat this kind of level", which makes the test environment far more
@@ -148,7 +148,7 @@ that one thing. (The blink dash isn't a rung: it's part of the Director, on ever
 trained model; it is built, but not yet trained or measured.
 
 **What we found** (240 simulated shifts with players that react to her, 2026-10-16,
-[KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)):
+[KAREN_RESULTS.md](../agents/results/KAREN_RESULTS.md)):
 - **The belief map** finds players about three times as fast as patrols (31 s against 85–101 s).
 - **The fairness rules** were never broken.
 - **Learning (D–E) still doesn't beat C.** It makes her a little calmer (mean panic −0.03 to −0.04)
@@ -184,8 +184,8 @@ not sentences, so it can be counted and charted; only `because` is free text.
 
 ## 6. How she searches, sees and remembers
 
-Three ideas from the 2026-11-05 whiteboard ([notes](../research/whiteboard-2026-11-05.md)). None is
-built. Each would go into the [0.2.0 build plan](../plans/0.2.0-build-plan.md) only once you pick it.
+Three ideas from the 2026-11-05 whiteboard ([notes](../agents/research/whiteboard-2026-11-05.md)). None is
+built. Each would go into the [0.2.0 build plan](../agents/archive/0.2.0-build-plan.md) only once you pick it.
 
 ### 6.1 Search every spot, on purpose not perfectly
 
@@ -287,9 +287,9 @@ they're rewarded for:
 
 **Today.** There's one Karen. Her trick picker is rewarded by the change in your panic in the 20 s
 after a trick (`KarenBrain.SettleRewards`), and the Director paces her toward a fear setpoint
-([Karen.md §7.2–7.4](../karen/Karen.md#72-tactic-selection-as-a-bandit)). The 0.2.0 ablation
+([Karen.md §7.2–7.4](../agents/karen/Karen.md#72-tactic-selection-as-a-bandit)). The 0.2.0 ablation
 found she catches the bots in 97–100% of shifts already
-([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)), so today's Karen is closer to the killing machine.
+([KAREN_RESULTS.md](../agents/results/KAREN_RESULTS.md)), so today's Karen is closer to the killing machine.
 
 **Why.** The killing machine shows how strong a fair AI can be, which is the portfolio showpiece,
 and gives the learners a hard opponent to measure against. The general one is what makes the game
@@ -298,7 +298,7 @@ fun: a Karen who always kills is a short game.
 **How it could work.**
 - **One learner, two dials (the likely pick).** The learner learns two numbers per trick and
   situation: how much it scares, and how likely it leads to a catch (the approved
-  [capture plan](../plans/karen-capture.md)'s two heads). A version is only how much each number
+  [capture plan](../agents/archive/karen-capture.md)'s two heads). A version is only how much each number
   counts when she chooses. One training run serves both, and a difficulty slider in between comes
   for free.
 - **Or two trained brains:** rung F trained twice, once per reward. Each is fully specialised, but

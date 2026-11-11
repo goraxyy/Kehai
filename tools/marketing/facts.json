@@ -50,14 +50,14 @@
       "status": "qualified",
       "say": "Earlier tests against simulated players found that learning made her slightly calmer, not better, with a first small sign of tailoring to each player. No real players have tested it. These results do not measure the 0.2.0 redesign; its paired evaluation is pending.",
       "why": "So say she remembers; never say remembering makes her smarter, harder or better at catching you.",
-      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "Learning (D, E) makes her slightly calmer, not better." }],
+      "evidence": [{ "file": "docs/agents/results/KAREN_RESULTS.md", "contains": "Learning (D, E) makes her slightly calmer, not better." }],
       "avoid": ["uses it against you", "learns to beat you", "learns how to beat", "gets smarter", "gets better the more"]
     },
     {
       "id": "belief_finds_you_faster",
       "status": "qualified",
       "say": "In the earlier build, her belief map and planner found simulated players in about a third of the time of simple patrols (31 s against 85 to 101 s). These results do not measure the 0.2.0 redesign; its paired evaluation is pending.",
-      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "first detection 31 ± 6 s" }],
+      "evidence": [{ "file": "docs/agents/results/KAREN_RESULTS.md", "contains": "first detection 31 ± 6 s" }],
       "avoid": []
     },
     {
@@ -79,7 +79,7 @@
       "id": "the_store",
       "status": "true",
       "say": "The sales floor is a 60 × 45 m maze of 189 shelf bays, with 80 products in 13 sections.",
-      "evidence": [{ "file": "docs/store/STORE.md", "contains": "60 × 45 m maze of 189 shelf bays" }],
+      "evidence": [{ "file": "docs/agents/store/STORE.md", "contains": "60 × 45 m maze of 189 shelf bays" }],
       "avoid": ["150 × 150"]
     },
     {
@@ -87,21 +87,21 @@
       "status": "qualified",
       "say": "The shelves hold thousands of items, kept as data rather than scene objects.",
       "why": "The docs say 16,500 and the scene counts about 19,600, so don't give an exact number yet.",
-      "evidence": [{ "file": "docs/store/STORE.md", "contains": "**16,500 slots**" }],
+      "evidence": [{ "file": "docs/agents/store/STORE.md", "contains": "**16,500 slots**" }],
       "avoid": ["16,500"]
     },
     {
       "id": "who_has_played",
       "status": "true",
       "say": "So far only the developer and simulated players have played it. Don't claim players, reviews, reactions or sales.",
-      "evidence": [{ "file": "docs/project/RELEASE_PLAN.md", "contains": "nobody but bots has played it yet" }],
+      "evidence": [{ "file": "docs/you/RELEASE_PLAN.md", "contains": "nobody but bots has played it yet" }],
       "avoid": ["players love", "players are saying"]
     },
     {
       "id": "reinforcement_learning",
       "status": "do_not_claim",
       "say": "A reinforcement-learning policy is built but has never been trained. Don't say she's trained that way.",
-      "evidence": [{ "file": "docs/karen/KAREN_RESULTS.md", "contains": "no policy has been trained yet" }],
+      "evidence": [{ "file": "docs/agents/results/KAREN_RESULTS.md", "contains": "no policy has been trained yet" }],
       "avoid": ["trained neural network", "reinforcement learning agent"]
     },
     {
@@ -109,7 +109,7 @@
       "status": "qualified",
       "say": "She's a black capsule for now, and the art is placeholder until the redesign.",
       "why": "So never describe her as a person, a face or a figure, and don't promise final looks.",
-      "evidence": [{ "file": "docs/project/HANDOVER.md", "contains": "a black capsule body" }],
+      "evidence": [{ "file": "docs/agents/HANDOVER.md", "contains": "a black capsule body" }],
       "avoid": []
     }
   ]

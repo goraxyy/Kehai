@@ -28,8 +28,8 @@ the accounts and keys the playtest and marketing systems need.
 
 ## Setup: accounts and keys (do early, any order)
 
-Nothing here needs code. Steps: [MARKETING.md → Setup](../marketing/MARKETING.md#setup) and
-[PLAYTEST.md → What you set up](../game/PLAYTEST.md#what-you-set-up).
+Nothing here needs code. Steps: [MARKETING.md → Setup](../agents/marketing/MARKETING.md#setup) and
+[PLAYTEST.md → What you set up](../agents/game/PLAYTEST.md#what-you-set-up).
 
 - [ ] **Steamworks:** partner account, the $100 app fee, tax and bank forms. These take weeks
       and gate the release date, so start now.
@@ -107,7 +107,7 @@ Do this alongside the slice: a page that's live earlier collects more wishlists.
 - [ ] Reserve the app ID; pick the final title (check "Kehai" for trademark and search clashes)
 - [ ] Capsule art: main, small, header, library (worth paying an artist for)
 - [ ] 5+ screenshots that read as thumbnails
-- [ ] Short description (the pitch from [MARKETING.md](../marketing/MARKETING.md#pitch)) and a long one
+- [ ] Short description (the pitch from [MARKETING.md](../agents/marketing/MARKETING.md#pitch)) and a long one
       with GIFs
 - [ ] Trailer, 60–90 s, hook in the first 5 seconds
 - [ ] Tags, genre, system requirements (from real builds), age rating, Steam Deck yes/no
@@ -122,7 +122,7 @@ Do this alongside the slice: a page that's live earlier collects more wishlists.
 
 **Exit test: do players understand what to do without being told?**
 
-How a round runs: [PLAYTEST.md](../game/PLAYTEST.md). We're watching for confusion, not crashes.
+How a round runs: [PLAYTEST.md](../agents/game/PLAYTEST.md). We're watching for confusion, not crashes.
 
 - [x] Playtest builds: tester code, consent, the whole session recorded, questions, upload
 - [~] Upload service and reports: built; waits on the Cloudflare account (Setup)
@@ -154,7 +154,7 @@ notice she's learning?
 
 **Exit test: is there a place to follow the game that isn't the Steam page?**
 
-The plan: [MARKETING.md](../marketing/MARKETING.md).
+The plan: [MARKETING.md](../agents/marketing/MARKETING.md).
 
 - [x] The pitch
 - [x] Automation for fun shorts: picks moments, edits, voices, sends for approval, posts
@@ -198,7 +198,7 @@ Everything from the quick pass is redone. Level first, then models, then the loo
 - [ ] Back of house: stockroom, staff room, office, toilets, loading bay, breaker box
 - [ ] Outside: the parking lot, the street front, the bins and the skip, night lighting
 - Plans and model lists for the lot, the outside, the lobby, the restrooms and the staff rooms:
-  [LEVEL_DESIGN.md](../store/LEVEL_DESIGN.md)
+  [LEVEL_DESIGN.md](../agents/store/LEVEL_DESIGN.md)
 - [ ] Greybox first, playtest the layout (Karen's routes, the chase loops), then dress it
 - [ ] A lighting and mood pass per area
 

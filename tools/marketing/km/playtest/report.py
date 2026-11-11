@@ -180,7 +180,7 @@ def session_section(folder: Path, f: dict, summary: dict | None, bugs: list) -> 
         if summary["suggestions"]:
             out.append("<h3>What to change</h3><ul>" + "".join(f"<li>{e(s)}</li>" for s in summary["suggestions"]) + "</ul>")
     else:
-        out.append("<p class='dim'>No summary: Claude runs once it's set up (docs/marketing/MARKETING.md, Setup).</p>")
+        out.append("<p class='dim'>No summary: Claude runs once it's set up (docs/agents/marketing/MARKETING.md, Setup).</p>")
 
     first = f["first_clock_in_s"]
     out.append("<p>" + (f"First clock-in after <b>{clock(first)}</b>, walking {f['walked_before_clock_in_m']:.0f} m first."

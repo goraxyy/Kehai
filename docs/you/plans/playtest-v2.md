@@ -1,8 +1,8 @@
 # Plan: playtest v2, one link, no codes, everything in the cloud
 
 > **Status:** a draft for your approval (6 November 2026). Nothing is built. It changes the
-> playtest pipeline built on 4 October ([PLAYTEST.md](../game/PLAYTEST.md)). Karen's learning,
-> which will use this data, has its own plan ([karen-learning.md](karen-learning.md)).
+> playtest pipeline built on 4 October ([PLAYTEST.md](../../agents/game/PLAYTEST.md)). Karen's learning,
+> which will use this data, has its own plan ([karen-learning.md](../../agents/archive/karen-learning.md)).
 
 1. [Goals](#1-goals)
 2. [Decisions so far](#2-decisions-so-far)
@@ -42,7 +42,7 @@ All made on 6 November.
 | **No Apple Developer Program** | your choice. Mac testers do one "Open Anyway" step, shown with pictures on the page |
 | **Steam later** | Steam Playtest replaces the download page when strangers test |
 | **No Claude API key** | the Claude steps run on your Claude plan through `claude -p` (the default since PR #71) |
-| **The consent covers training Karen** | [karen-learning.md](karen-learning.md) trains on real shifts |
+| **The consent covers training Karen** | [karen-learning.md](../../agents/archive/karen-learning.md) trains on real shifts |
 
 ## 3. Questions for you
 
@@ -79,7 +79,7 @@ Answer these before the build starts.
 
 ## 5. What's recorded, and where it's kept
 
-What the game records doesn't change ([PLAYTEST.md](../game/PLAYTEST.md#whats-recorded)). Where it goes does.
+What the game records doesn't change ([PLAYTEST.md](../../agents/game/PLAYTEST.md#whats-recorded)). Where it goes does.
 
 | What | Size | Where | Kept |
 |---|---|---|---|
@@ -92,7 +92,7 @@ What the game records doesn't change ([PLAYTEST.md](../game/PLAYTEST.md#whats-re
 | Page visits | — | Cloudflare Web Analytics (no cookies) | Cloudflare's own |
 | Claude's summary of each session | a few KB | D1 `summaries`, written by your Mac | for good |
 | Email sign-ups from the website | tiny | D1 `signups` | until they unsubscribe |
-| Karen's learning records ([karen-learning.md](karen-learning.md)) | a few KB a shift | in the zip, and R2 `datasets/learning/` | for good |
+| Karen's learning records ([karen-learning.md](../../agents/archive/karen-learning.md)) | a few KB a shift | in the zip, and R2 `datasets/learning/` | for good |
 
 ## 6. How it fits together
 
@@ -266,7 +266,7 @@ R2 may ask for a card when you turn it on; it only charges past the free 10 GB.
 - **Apple signing.** You've decided not to pay for it.
 - **Recording the tester's voice** ("think aloud"): rich, but it breaks the "never the microphone"
   promise; a separate decision.
-- **Karen's learning:** [karen-learning.md](karen-learning.md). This plan only carries its data
+- **Karen's learning:** [karen-learning.md](../../agents/archive/karen-learning.md). This plan only carries its data
   and the consent wording.
 
 ## 12. Terms

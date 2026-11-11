@@ -14,7 +14,7 @@ hand-built baselines on clean metrics. This one is the most standard applied-ML 
 project: learn the motion model from player trajectories and score it with the existing
 belief-accuracy metric.
 
-**Numbers to beat** (rung C, out of view, `docs/karen/KAREN_RESULTS.md`): log p −7.40 (a uniform guess
+**Numbers to beat** (rung C, out of view, `docs/agents/results/KAREN_RESULTS.md`): log p −7.40 (a uniform guess
 scores −8.46), top-5 10.0%, error 18.6 m. The grid's peak is about 4–5 m nearer the player than
 last-seen.
 

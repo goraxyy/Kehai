@@ -2,7 +2,7 @@
 
 > **Archived on 2026-11-05.** The to-do list below is out of date: PR #68 has since been pushed
 > as a draft and PR #64 merged. What's next for Karen is the
-> [0.2.0 build plan](../plans/0.2.0-build-plan.md). Sections 2 and 3 still explain how Karen
+> [0.2.0 build plan](0.2.0-build-plan.md). Sections 2 and 3 still explain how Karen
 > adapts and the tech she uses.
 
 Three things in one place, as of 2026-10-20:
@@ -48,7 +48,7 @@ The diagrams are [Mermaid](https://mermaid.js.org/): GitHub and most Markdown pr
   - The README says "she gives you overtime", but a touch now kills.
   - `DECISIONS.md` says she can't outrun a sprint, but she's now 5% faster than you.
 
-### 1.4 The rest of the game ([RELEASE_PLAN.md](../project/RELEASE_PLAN.md))
+### 1.4 The rest of the game ([RELEASE_PLAN.md](../../you/RELEASE_PLAN.md))
 
 | milestone | what's left |
 |---|---|
@@ -402,7 +402,7 @@ The four types are efficient, skittish, reckless, and **cautious**. Cautious is 
 | Do reacting players help her learn? | They give her 1.5–4× more tricks per shift to learn from, but no bigger reward per trick |
 | Is she fair? | **0 violations** in 300 shifts |
 
-Full tables: [KAREN_RESULTS.md](../karen/KAREN_RESULTS.md).
+Full tables: [KAREN_RESULTS.md](../results/KAREN_RESULTS.md).
 
 ---
 

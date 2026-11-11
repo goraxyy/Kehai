@@ -7,7 +7,7 @@
 
 ## Context
 
-The 2026-10-16 ladder (240 shifts, `docs/karen/KAREN_RESULTS.md`) showed:
+The 2026-10-16 ladder (240 shifts, `docs/agents/results/KAREN_RESULTS.md`) showed:
 - the belief grid + planner (rung C) is the big win over patrols;
 - learning (bandit D, Ledger E) doesn't beat C: panic falls a little (−0.04), setpoint error doesn't move;
 - she kills in ~45% of shifts, mostly with no chase at all.

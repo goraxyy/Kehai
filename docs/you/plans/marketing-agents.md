@@ -2,7 +2,7 @@
 
 Approved by the owner on 2026-11-01. The owner has no time to play shifts or think of ideas, so
 agents plan, film, write and post the videos to a set blueprint and style. The pipeline in
-[`tools/marketing`](../../tools/marketing/README.md) stays; this adds what it's missing.
+[`tools/marketing`](../../../tools/marketing/README.md) stays; this adds what it's missing.
 
 ## Decisions
 
