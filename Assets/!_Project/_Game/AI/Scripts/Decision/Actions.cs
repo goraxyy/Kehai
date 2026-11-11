@@ -267,11 +267,15 @@ namespace Kehai.Karen
             return false;
         }
 
+        // The candidates the last Plan call ranked: the legal picks a learning record lists.
+        public static List<Tactic> LastCandidates { get; private set; } = new List<Tactic>();
+
         public static PlanTree Plan(ActionId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
                                     out Tactic chosen, out List<ThoughtOption> options, out string because)
         {
             var refusals = new List<string>();
             List<Tactic> candidates = Candidates(goal, c, refusals);
+            LastCandidates = candidates;
             options = new List<ThoughtOption>();
             chosen = null;
             because = null;

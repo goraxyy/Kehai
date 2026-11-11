@@ -69,6 +69,12 @@ namespace Kehai.Eval
         public readonly Dictionary<string, int> TricksAfterClose = new Dictionary<string, int>();
         public float ClosedAt = -1f;
         public int BotFalls;              // the test player's body fell through the floor
+        // 0.4.0 (build plan C1.2): every catch with its cause, and the time to the first one.
+        // A shift with no catch is "not caught yet" at SimSeconds (Kaplan–Meier), never missing.
+        public readonly List<CatchCause> CatchCauses = new List<CatchCause>();
+        public float TimeToCatch = -1f;
+        public string Brain = "planner";
+        public readonly List<string> KarenSet = new List<string>();
         int fallsAtStart;
         Dictionary<string, int> countsAtClose;
         ShiftManager shift;
@@ -276,6 +282,12 @@ namespace Kehai.Eval
                 AnswerSeconds.Clear();
                 foreach (var g in s.Answers.Where(a => a.seconds >= 0f).GroupBy(a => a.kind))
                     AnswerSeconds[g.Key] = g.Average(a => a.seconds);
+                CatchCauses.Clear();
+                CatchCauses.AddRange(s.CatchCauses);
+                TimeToCatch = CatchCauses.Count > 0 ? CatchCauses[0].T : -1f;
+                Brain = brain.config.brain.ToString().ToLowerInvariant() + (brain.config.hunter ? "+hunter" : "");
+                KarenSet.Clear();
+                KarenSet.AddRange(KarenBootstrap.SetArguments);
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
@@ -323,6 +335,12 @@ namespace Kehai.Eval
             d["open_at_end"] = new Dictionary<string, object>(OpenAtEnd);
             d["closed_at_s"] = ClosedAt;
             d["bot_fell_through_floor"] = BotFalls;
+            d["catch_causes"] = CatchCauses.Select(c => (object)c.ToDictionary()).ToList();
+            d["time_to_catch_s"] = TimeToCatch;
+            d["catches_at_clock"] = CatchCauses.Count(c => c.AtClock);
+            d["catches_seen_3s"] = CatchCauses.Count(c => c.SeenWithin3s);
+            d["karen_brain"] = Brain;
+            d["karen_set"] = KarenSet.Select(x => (object)x).ToList();
             d["tricks_after_close"] = TricksAfterClose.ToDictionary(p => p.Key, p => (object)p.Value);
             d["catches_in_fog"] = CatchesInFog;
             d["catches_at_chore"] = CatchesAtChore;

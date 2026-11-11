@@ -308,9 +308,11 @@ namespace Kehai.Karen
             c.Belief.Bias(trueRegion, step);
             biasThisMinute += step;
             BiasApplied += step;
+            LastBiasAt = Time.time;
         }
 
         public float BiasApplied { get; private set; }
+        public float LastBiasAt { get; private set; } = -999f;   // when the hint last moved her belief (learning records flag it)
 
         // The employee's true position — for debug views and replays only. Nothing that
         // plans may call this; the fairness test checks it.

@@ -143,6 +143,10 @@ namespace Kehai.Eval
 
         // ---- episodes -----------------------------------------------------------------------
 
+        // The launch, for file names that must not collide between runs.
+        public static readonly string RunStamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture)
+                                                 + (TrainerPort > 0 ? "_" + TrainerPort : "");
+
         public IEnumerator ResetEpisode(EnvConfig config)
         {
             Ready = false;
@@ -159,6 +163,9 @@ namespace Kehai.Eval
                 seed = Config.seed,
                 writeJsonl = false,
                 planBudgetMs = 0f,      // no wall-clock cut-off: decisions depend on the seed alone
+                // One learning record per decision (0.4.0, C1.1), beside the run's other output.
+                learningRecords = !KarenBootstrap.NoRecords,
+                learningPath = System.IO.Path.Combine(EvalDirectory, "learning", "learning_" + RunStamp + ".jsonl"),
                 ledgerPath = string.IsNullOrEmpty(Config.ledgerPath)
                     ? System.IO.Path.Combine(EvalDirectory, "eval_ledger.json")
                     : Config.ledgerPath

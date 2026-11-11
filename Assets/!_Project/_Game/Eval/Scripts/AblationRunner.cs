@@ -214,6 +214,8 @@ namespace Kehai.Eval
                 sb.AppendLine($"| {g.Key.Rung} | {g.Key.Agent} | {string.Join(", ", counts.OrderByDescending(p => p.Value).Take(5).Select(p => $"{p.Key} ×{p.Value}"))} |");
             }
 
+            CatchSection(sb);
+
             sb.AppendLine();
             sb.AppendLine("### Player failures (the eval taxonomy, applied to the simulated players)");
             sb.AppendLine();
@@ -222,6 +224,26 @@ namespace Kehai.Eval
             foreach (var g in Results.GroupBy(r => r.Rung).OrderBy(g => g.Key))
                 sb.AppendLine($"| {g.Key} | " + string.Join(" | ", Taxonomy.Select(t => $"{g.Count(r => r.Failures.Contains(t))}/{g.Count()}")) + " |");
             return sb.ToString();
+        }
+
+        // 0.4.0 (C1.2): why she caught them, and how soon. Time to catch counts a shift with no
+        // catch as "not caught yet" at its end (Kaplan–Meier), so the median is honest when most
+        // shifts end without one.
+        void CatchSection(StringBuilder sb)
+        {
+            sb.AppendLine();
+            sb.AppendLine("### Catches: what she was doing, and how soon");
+            sb.AppendLine();
+            sb.AppendLine("| rung | catches | in Hunt | seen in last 3 s | within 10 m of the clock | median time to catch (s, Kaplan–Meier) |");
+            sb.AppendLine("|---|---|---|---|---|---|");
+            foreach (var g in Results.GroupBy(r => r.Rung).OrderBy(g => g.Key))
+            {
+                var causes = g.SelectMany(r => r.CatchCauses).ToList();
+                float median = KaplanMeier.Median(g.Select(r => (r.TimeToCatch >= 0f ? r.TimeToCatch : r.SimSeconds, r.TimeToCatch >= 0f)));
+                sb.AppendLine($"| {g.Key} | {causes.Count} | {Pct(causes.Count(c => c.Action == "Hunt"), causes.Count)} | " +
+                              $"{Pct(causes.Count(c => c.SeenWithin3s), causes.Count)} | {Pct(causes.Count(c => c.AtClock), causes.Count)} | " +
+                              $"{(float.IsNaN(median) ? "not reached" : median.ToString("0", CultureInfo.InvariantCulture))} |");
+            }
         }
 
         static readonly string[] Taxonomy =
@@ -241,6 +263,47 @@ namespace Kehai.Eval
         }
 
         static string Pct(int k, int n) => n == 0 ? "—" : $"{100f * k / n:0}%";
+    }
+
+    // Time until an event when some never get there (build plan §15): the Kaplan–Meier estimate.
+    public static class KaplanMeier
+    {
+        // (time, happened) pairs: happened false means "not yet, when we stopped looking".
+        // Returns the survival curve as (time, share still not caught) steps.
+        public static List<(float t, float survival)> Curve(IEnumerable<(float t, bool happened)> samples)
+        {
+            var list = samples.OrderBy(x => x.t).ThenByDescending(x => x.happened).ToList();
+            var curve = new List<(float, float)>();
+            float s = 1f;
+            int atRisk = list.Count;
+            int i = 0;
+            while (i < list.Count)
+            {
+                float t = list[i].t;
+                int events = 0, gone = 0;
+                while (i < list.Count && list[i].t == t)
+                {
+                    if (list[i].happened) events++;
+                    gone++;
+                    i++;
+                }
+                if (events > 0 && atRisk > 0)
+                {
+                    s *= 1f - (float)events / atRisk;
+                    curve.Add((t, s));
+                }
+                atRisk -= gone;
+            }
+            return curve;
+        }
+
+        // The first time the share still not caught falls to a half or below; NaN if it never does.
+        public static float Median(IEnumerable<(float t, bool happened)> samples)
+        {
+            foreach (var (t, survival) in Curve(samples))
+                if (survival <= 0.5f) return t;
+            return float.NaN;
+        }
     }
 
     // The run's jsonl. Only shifts that really started go in, and each (rung, player, seed,

@@ -41,6 +41,12 @@ namespace Kehai.Karen
             $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} policy={Policy}";
     }
 
+    // Which brain answers "what next?" (0.4.0, build plan §5). The planner is today's game.
+    public enum KarenBrainKind { Planner, Basic, Vital }
+
+    // What she assumes you know of where she is (build plan §8.8).
+    public enum MirrorMode { K0, K1, K2 }
+
     // Every tunable in one place, with the Karen.md section it comes from. Plain data so an
     // eval run can override any of it from a JSON config without touching code.
     [System.Serializable]
@@ -180,6 +186,24 @@ namespace Kehai.Karen
         public bool shield = true;
         [Tooltip("Model under Resources/KarenPolicy/ (no extension). Empty or missing = the trainer if one is connected, else the bandit's choice.")]
         public string policyModel = "";
+
+        [Header("0.4.0: two Karens, her senses, the mirror map (build plan §5, §8.7, §8.8)")]
+        [Tooltip("What picks her action and trick: the hand-built planner (today), Basic (the game's) or Vital (catch-oriented).")]
+        public KarenBrainKind brain = KarenBrainKind.Planner;
+        [Tooltip("What she assumes you know of her: K0 where she is (today), K1 where you last sensed her, K2 the mirror map.")]
+        public MirrorMode mirror = MirrorMode.K0;
+        [Tooltip("Her senses' numbers: s0 today's hand-set ones, s1 fitted, s2 fitted with walls and lights.")]
+        public string senses = "s0";
+        [Tooltip("Her belief's predict step: p0 today's, p1 fitted, p2 destinations, p3 destinations reading your Ledger.")]
+        public string motion = "p0";
+        [Tooltip("The hunter: the planner with pacing and the Director's hint off, every fairness rule on (Vital's baseline).")]
+        public bool hunter;
+        [Tooltip("Write one learning record per decision (Diagnostics/LearningRecord.cs).")]
+        public bool learningRecords;
+        [Tooltip("Where the learning records go. Empty: <persistent data>/learning/learning_<launch>.jsonl.")]
+        public string learningPath = "";
+        [Tooltip("A model pack to load instead of the build's own numbers (Decision/Policy/ModelPack.cs). Empty: the newest good pack, else the build's.")]
+        public string modelPack = "";
 
         [Header("Debug")]
         public bool logToConsole = false;

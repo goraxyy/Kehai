@@ -44,6 +44,8 @@ namespace Kehai.Karen
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
         public BlinkDash Dash { get; } = new BlinkDash();   // her move while you blink (Decision/BlinkDash.cs)
+        public LearningRecorder Learning { get; } = new LearningRecorder();   // one line per decision (0.4.0, C1.1)
+        static readonly string sessionStamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture);
 
         public TaskManager Tasks { get; private set; }
         public ShiftManager Shift { get; private set; }
@@ -110,6 +112,8 @@ namespace Kehai.Karen
                 World = World, Log = Log, Rng = Rng, Config = config, Tasks = Tasks, Shift = Shift
             };
             InstallPolicy();
+            Learning.Enabled = config.learningRecords;
+            if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
@@ -250,6 +254,8 @@ namespace Kehai.Karen
             peakOutstanding.Clear();
             KilledThisShift = false;
             Dash.BeginShift();
+            Learning.BeginShift();
+            biasSeen = Director.BiasApplied;
 
             // Between shifts the store may be rearranged (§5.5). Done before anything reads
             // the map for this shift.
@@ -303,6 +309,7 @@ namespace Kehai.Karen
             AbortPlan();
             Director.EndShift();
             Policy?.EndShift();
+            Learning.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
             PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
             Ledger.EndShift(ShiftTime, energy, clockedOut);
@@ -386,7 +393,42 @@ namespace Kehai.Karen
             if (ShiftActive) Stats.SamplePacing(Director.Panic, Director.Setpoint);
             if (ShiftActive) PayPolicy(step);
             SettleRewards();
+            if (ShiftActive && Learning.Enabled)
+            {
+                if (Director.BiasApplied > biasSeen) Learning.HintFired(Director.LastBiasAt);
+                biasSeen = Director.BiasApplied;
+                Learning.Tick(Time.time, Director.Panic);
+            }
         }
+
+        float biasSeen;
+
+        // One learning record (C1.1): what she knew, what she could pick, what she picked. Built
+        // from what Plan already ranked, so it draws nothing and changes nothing.
+        void RecordDecision(PlanTree plan, Tactic tactic)
+        {
+            if (!Learning.Enabled || plan == null || tactic == null) return;
+            List<Tactic> legal = HtnPlanner.LastCandidates;
+            var names = new string[legal.Count];
+            for (int i = 0; i < legal.Count; i++) names[i] = PickKey(plan.Action, legal[i]);
+            Learning.Add(new LearningRecord
+            {
+                Shift = Stats.Shift, Seed = Rng.Seed, Player = Ledger.PlayerName, Rung = config.rung.ToString(),
+                T = ShiftTime, Now = Time.time,
+                Brain = "planner", BrainVersion = "hand",
+                Goal = plan.Action.ToString(),
+                InputsVersion = PolicyObservation.Version,
+                Inputs = PolicyObservation.Build(plan.Action, Ctx),
+                Legal = names,
+                Pick = PickKey(plan.Action, tactic),
+                Chance = 1f,
+                Panic = Director.Panic
+            });
+        }
+
+        // "flush:blackout": an (action, trick) pair by name (build plan §5.5, item 6).
+        public static string PickKey(ActionId action, Tactic tactic) =>
+            action.ToString().ToLowerInvariant() + ":" + (tactic != null ? tactic.Id : "none");
 
         // Rung F's reward (PolicyReward): how close panic sat to the setpoint over this tick,
         // less anything the fairness guard caught since the last one.
@@ -695,6 +737,7 @@ namespace Kehai.Karen
             if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
             else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
+            RecordDecision(plan, tactic);
             NarratePlan(plan);
         }
 
@@ -1030,6 +1073,8 @@ namespace Kehai.Karen
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
+            Stats.CatchCauses.Add(CauseOfCatch());
+            Learning.Caught(Time.time);
             if (FogState.Any) Stats.CaughtInFog();
             if (CurrentPlan != null && CurrentPlan.Tactic is AmbushTactic ambush && ambush.AtChore) Stats.CaughtAtChore();
             Ledger.Data.caughtCount++;
@@ -1046,6 +1091,32 @@ namespace Kehai.Karen
             World.PlayTell(TellKind.RevealSting, Body.Position, 0f);
             KarenNarrator.Say(StoryKind.Chase, $"{GameNames.Antagonist} got you. The shift starts again.", Body.Position);
             StartCoroutine(Consequences.Death(this, config.deathScreenSeconds));
+        }
+
+        // Why this catch happened (C1.2): what she was doing, whether she'd seen you in the last
+        // 3 s, and how far it was from the time clock (the clock-camp guard, §5.6).
+        CatchCause CauseOfCatch()
+        {
+            Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
+            Vector3 at = Body.Position;
+            float toClock = -1f;
+            if (clock.HasValue)
+            {
+                Vector3 d = clock.Value.Position - at;
+                d.y = 0f;
+                toClock = d.magnitude;
+            }
+            return new CatchCause
+            {
+                T = ShiftTime,
+                Action = CurrentPlan != null ? CurrentPlan.Action.ToString() : "none",
+                Tactic = CurrentPlan?.Tactic != null ? CurrentPlan.Tactic.Id : "none",
+                Chasing = chasing,
+                SeenWithin3s = Body.Sight.SeesNow || Body.Sight.Time_SinceSeen() <= 3f,
+                ClockDistance = toClock,
+                Where = Map.Describe(at),
+                Dash = Dash.Lurking
+            };
         }
 
         public void SetChasing(bool on)
@@ -1352,6 +1423,27 @@ namespace Kehai.Karen
         }
     }
 
+    // One catch, and what led to it (0.4.0, build plan C1.2).
+    public struct CatchCause
+    {
+        public float T;                 // seconds into the shift
+        public string Action, Tactic;   // what she was doing
+        public bool Chasing;
+        public bool SeenWithin3s;       // her own eyes had you in the last 3 s
+        public float ClockDistance;     // metres from the time clock; -1 with no clock
+        public string Where;
+        public bool Dash;               // she was lurking after a vanish
+
+        // Within 10 m of the clock: the clock-camp guard's count (§5.6).
+        public bool AtClock => ClockDistance >= 0f && ClockDistance <= 10f;
+
+        public System.Collections.Generic.Dictionary<string, object> ToDictionary() => new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["t"] = T, ["action"] = Action, ["tactic"] = Tactic, ["chasing"] = Chasing,
+            ["seen_3s"] = SeenWithin3s, ["clock_m"] = ClockDistance, ["where"] = Where, ["dash"] = Dash
+        };
+    }
+
     // What the eval harness and the ablation runner read at the end of a shift.
     public sealed class KarenStats
     {
@@ -1375,6 +1467,7 @@ namespace Kehai.Karen
         public int CatchesInFog { get; private set; }
         public int CatchesAtChore { get; private set; }
         public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
+        public readonly List<CatchCause> CatchCauses = new List<CatchCause>();   // 0.4.0 (C1.2)
         public void CaughtInFog() => CatchesInFog++;
 
         // How often each trick landed (its plan's first effect), against TacticCounts' starts.
@@ -1403,6 +1496,7 @@ namespace Kehai.Karen
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
             CatchesInFog = CatchesAtChore = 0;
             Answers.Clear();
+            CatchCauses.Clear();
             CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
             TacticLanded.Clear();
