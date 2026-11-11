@@ -219,6 +219,60 @@ namespace Kehai.Store
             CellPosition = positions.ToArray();
         }
 
+        // A map with no scene behind it (0.4.0, from PR #68): `columns` × `rows` cells where `open`
+        // says which are floor, joined by LinkCells' rule with no walls, one region per row, all of
+        // it sales floor. `outside` marks cells outside her part of the building (they become the
+        // belief's one outside cell, with exits where they touch hers). For tests and for the
+        // Python replay's parity checks (tools/belief), which build the same map by the same rule.
+        public static StoreMap Synthetic(int columns, int rows, bool[] open, bool[] outside = null)
+        {
+            var map = new StoreMap { origin = Vector3.zero, cols = columns, rows = rows, synthetic = true };
+            map.gridToCell = new int[columns * rows];
+            var positions = new List<Vector3>();
+            var outsideCells = new List<bool>();
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < columns; c++)
+                {
+                    int g = r * columns + c;
+                    map.gridToCell[g] = open == null || open[g] ? positions.Count : -1;
+                    if (map.gridToCell[g] < 0) continue;
+                    positions.Add(map.GridCentre(c, r, 0f));
+                    outsideCells.Add(outside != null && outside[g]);
+                }
+            map.CellCount = positions.Count;
+            map.CellPosition = positions.ToArray();
+            map.Bounds = new Bounds(new Vector3(columns * CellSize * 0.5f, 0f, rows * CellSize * 0.5f), new Vector3(columns * CellSize, 0f, rows * CellSize));
+            map.LinkCells();
+            map.CellRoom = new int[map.CellCount];
+            map.Rooms.Add("Sales floor");
+            map.cellIsDoor = new bool[map.CellCount];
+            map.CellRegion = new int[map.CellCount];
+            map.CellIsKarens = new bool[map.CellCount];
+            for (int cell = 0; cell < map.CellCount; cell++) map.CellIsKarens[cell] = !outsideCells[cell];
+            var byRow = new Dictionary<int, Region>();
+            for (int cell = 0; cell < map.CellCount; cell++)
+            {
+                int row = Mathf.FloorToInt(map.CellPosition[cell].z / CellSize);
+                if (!byRow.TryGetValue(row, out Region region))
+                {
+                    region = new Region { Id = map.Regions.Count, Key = "row_" + row, Name = "Row " + row, Room = "Sales floor", Area = "Sales floor", Section = string.Empty };
+                    map.Regions.Add(region);
+                    byRow[row] = region;
+                }
+                map.CellRegion[cell] = region.Id;
+                region.Cells.Add(cell);
+            }
+            foreach (Region region in map.Regions)
+            {
+                Vector3 sum = Vector3.zero;
+                foreach (int cell in region.Cells) sum += map.CellPosition[cell];
+                region.Centroid = sum / region.Cells.Count;
+            }
+            return map;
+        }
+
+        bool synthetic;
+
         Vector3 GridCentre(int c, int r, float y)
         {
             return new Vector3(origin.x + (c + 0.5f) * CellSize, y, origin.z + (r + 0.5f) * CellSize);
@@ -294,6 +348,7 @@ namespace Kehai.Store
 
         bool Walkable(Vector3 a, Vector3 b)
         {
+            if (synthetic) return true;
             if (Mathf.Abs(a.y - b.y) > 0.6f) return false;
 
             foreach (float height in sweepHeights)

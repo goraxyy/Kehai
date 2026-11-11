@@ -357,6 +357,11 @@ namespace Kehai.Eval
             string[] args = System.Environment.GetCommandLineArgs();
             if (KehaiEnv.Instance != null) return;   // already running
 
+            // 0.4.0 (C4.1, C4.2): shadow filters, and the belief trace for the Python replay.
+            string shadows = Str(args, "-belief-shadows", null);
+            if (shadows != null) BeliefShadows.Requested = shadows.Split(',').Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length > 0).ToArray();
+            BeliefTrace.Folder = Str(args, "-belief-trace", null);
+
             for (int i = 0; i < args.Length; i++)
             {
                 // Every trick end to end, in a real shift (0.3.0, TrickCheck).

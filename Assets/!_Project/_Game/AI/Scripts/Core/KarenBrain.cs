@@ -117,6 +117,7 @@ namespace Kehai.Karen
 
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
+            NoiseBus.Emitted += OnOwnNoise;
             World.Pa.ChimeStarted += OnPaChime;
             World.Pa.SpeechStarted += OnPaSpeech;
             GameEvents.ShelfRestocked += OnRestocked;
@@ -157,6 +158,7 @@ namespace Kehai.Karen
         void OnDestroy()
         {
             NoiseBus.Emitted -= OnNoise;
+            NoiseBus.Emitted -= OnOwnNoise;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.SpillCleaned -= OnSpillRoute;
             GameEvents.BinBagged -= OnBinRoute;
@@ -182,7 +184,14 @@ namespace Kehai.Karen
             Belief = new BeliefGrid(Map);
             Predictor = new RoutePredictor(Map);
             Sensorium = new Sensorium(Map, Energy);
+            // 0.4.0 (C4.1, C4.7, C4.8): the predict step, her senses' numbers, the mirror map.
+            // p0, s0 and k0 are today's: the same numbers in the same arithmetic.
+            Features = new MotionFeatures();
+            Belief.Motion = MotionModels.Create(config.motion, Features) ?? HandMotion.Today;
+            Sensorium.Senses = SenseModel.For(config.senses);
+            Mirror = new MirrorBelief(Map, config.mirror);
             ApplyRungToSenses();
+            BeliefRebuilt?.Invoke(this);
             if (Ctx != null)
             {
                 Ctx.Map = Map;
@@ -276,6 +285,8 @@ namespace Kehai.Karen
             Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
             if (clock.HasValue) Belief.ResetTo(clock.Value.Position, 3f);
             else Belief.ResetToPrior();
+            Features.Places.BeginShift();
+            Mirror?.Reset(StartPosition(), Time.time);
 
             Sensorium.ForgetShift();
             Actions.Reset();
@@ -457,8 +468,10 @@ namespace Kehai.Karen
             Energy.Tick(dt);
             Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
 
-            foreach (Observation o in Sensorium.Positive)
+            for (int i = 0; i < Sensorium.Positive.Count; i++)
             {
+                Observation o = Sensorium.Positive[i];
+                Sensed?.Invoke(o, i < Sensorium.Raw.Count ? Sensorium.Raw[i] : default);
                 if (Belief.Apply(o)) Note("BELIEF", $"lost the scent — everything ruled out, back to the prior (after {o.Label})");
                 if (o.Channel == SenseChannel.Hearing) heard.Add((Time.time, o.Position));
                 if (o.Channel != SenseChannel.Sight && o.Confidence > 0.3f) NoteSense(o);
@@ -485,6 +498,8 @@ namespace Kehai.Karen
                 Note("SENSE", "NEGATIVE sweep ruled out everything — back to the prior");
 
             Director.MaybeBias(Ctx, dt);
+            UpdateMirror(seeing, dt);
+            RefreshFeatures();
             Belief.Predict(dt, Energy.SpeedEstimate);
 
             int here = Map.RegionAt(Body.Position);
@@ -496,6 +511,58 @@ namespace Kehai.Karen
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
             if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt
                 && !IgnoresNoise(CurrentPlan.Tactic, PlanAge)) decideNow = true;
+        }
+
+        // ---- 0.4.0: where you're going, and where you think she is (C4.3–C4.8) ------------------------
+
+        public MotionFeatures Features { get; private set; }
+        public MirrorBelief Mirror { get; private set; }
+        // Told after the belief is rebuilt (a new map), and before each positive observation is
+        // applied: the shadow filters and the belief trace follow her through these.
+        public static event System.Action<KarenBrain> BeliefRebuilt;
+        public event System.Action<Observation, SenseRaw> Sensed;
+        // Set by the eval when shadow filters or the brains want the destinations every 2 s even
+        // while her own step is today's.
+        public static bool FeaturesWanted;
+        public bool MirrorRunning => config.mirror != MirrorMode.K0 || FeaturesWanted;
+
+        bool UsesFeatures => Belief.Motion != HandMotion.Today || FeaturesWanted || config.brain != KarenBrainKind.Planner;
+
+        void RefreshFeatures()
+        {
+            if (!UsesFeatures || !Features.Due(Time.time)) return;
+            Features.HerPosition = Body.Position;
+            Features.SheIsThought = Mirror != null ? Mirror.Thought(Body.Position) : Body.Position;
+            Features.SheIsThoughtStale = Mirror != null ? Mirror.Stale(Time.time) : 0f;
+            Features.LastSeenAt = Body.Sight.LastSeenPosition;
+            Features.LastSeenHeading = Body.Sight.LastSeenVelocity;
+            Features.StoreOpen = Shift == null || Shift.CustomersAllowed;
+            Features.TimeLeft01 = Shift != null && Shift.shiftDurationSeconds > 0f ? Mathf.Clamp01(Shift.TimeRemaining / Shift.shiftDurationSeconds) : 1f;
+            Features.Refresh(Ctx, Time.time);
+            if (Belief.Motion is HandMotion hand && hand.Fitted.HasValue) Features.WriteDanger(Belief.Danger);
+        }
+
+        // Where you think she is (K1, K2): corrected when she thinks you sensed her, spread while
+        // you can't. Her noises reach it through OnOwnNoise.
+        void UpdateMirror(bool seeing, float dt)
+        {
+            if (!MirrorRunning || Mirror == null) return;
+            if (seeing) Mirror.SawEachOther(Body.Position, Vector3.Distance(Body.Position, Body.Sight.LastSeenPosition), Time.time);
+            Mirror.Predict(dt);
+        }
+
+        float lastStepNoiseAt = -99f;
+
+        void OnOwnNoise(NoiseEvent e)
+        {
+            if (!ShiftActive || !MirrorRunning || Mirror == null) return;
+            if (e.Author != NoiseAuthor.Karen && e.Author != NoiseAuthor.Director) return;
+            if (e.Kind == NoiseKind.KarenStep)
+            {
+                if (Time.time - lastStepNoiseAt < 1f) return;   // her steps, once a second
+                lastStepNoiseAt = Time.time;
+            }
+            Mirror.MadeNoise(e.Position, e.Carry, Belief, Time.time, falseCue: e.Kind == NoiseKind.Tell);
         }
 
         float lastSenseNote;
@@ -544,12 +611,18 @@ namespace Kehai.Karen
             }
             if (targets.Count == 0)
             {
+                DesireTargets.Clear();
                 for (int i = 0; i < Belief.DesireDistance.Length; i++) Belief.DesireDistance[i] = float.PositiveInfinity;
                 return;
             }
             float[] field = Map.DistancesFrom(targets);
             System.Array.Copy(field, Belief.DesireDistance, field.Length);
+            DesireTargets.Clear();
+            DesireTargets.AddRange(targets);
         }
+
+        // The cells the desire field was last built from (the belief trace records them, C4.2).
+        public readonly List<int> DesireTargets = new List<int>();
 
         // The same list the fairness guard checks — every open job and the time clock. It
         // names objects in the store, not the employee, so Karen may use it: she wrote it.

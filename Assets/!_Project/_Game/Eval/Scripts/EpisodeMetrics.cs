@@ -55,6 +55,8 @@ namespace Kehai.Eval
         // How well she knew where the player was, scored against where they were.
         public readonly BeliefAccuracy Belief = new BeliefAccuracy();
         public readonly HuntMetrics Hunt = new HuntMetrics();       // 0.2.0's measurements (build plan §5)
+        public readonly BeliefShadows Shadows = new BeliefShadows(); // 0.4.0 (C4.1): -belief-shadows
+        public readonly BeliefTrace Trace040 = new BeliefTrace();    // 0.4.0 (C4.2): -belief-trace
         public bool ComboLearner;                                   // her bandit saw her last trick
         public int ChainsFound;
         // 0.3.0 (build plan §7): the secondary measurements, reported for 0.3.0 alone.
@@ -104,6 +106,12 @@ namespace Kehai.Eval
             fallsAtStart = AgentDriver.FallsTotal;
             Belief.Begin();
             Hunt.Begin();
+            if (KarenBrain.Instance != null)
+            {
+                Shadows.Attach(KarenBrain.Instance);
+                Trace040.Begin(KarenBrain.Instance, seed, shift, agent);
+            }
+            KarenBrain.BeliefRebuilt += OnRebuilt;
             Subscribe();
         }
 
@@ -119,9 +127,14 @@ namespace Kehai.Eval
             GameEvents.PunchAttempted += OnPunch;
         }
 
+        void OnRebuilt(KarenBrain b) => Shadows.Attach(b);
+
         public void Unsubscribe()
         {
             Hunt.End();
+            Shadows.Detach();
+            Trace040.End();
+            KarenBrain.BeliefRebuilt -= OnRebuilt;
             GameEvents.SpillCleaned -= OnSpill;
             GameEvents.ShelfRestocked -= OnShelf;
             GameEvents.BinBagged -= OnBin;
@@ -164,6 +177,13 @@ namespace Kehai.Eval
         {
             if (player != null) Belief.Tick(Time.deltaTime, player.position);
             if (player != null) Hunt.Tick(Time.deltaTime, player.position);
+            if (player != null)
+            {
+                AgentDriver driver = player.GetComponent<AgentDriver>();
+                Vector3? goal = driver != null && driver.Moving ? driver.Goal : (Vector3?)null;
+                Shadows.Tick(Time.deltaTime, player.position, goal);
+                Trace040.Tick(player.position, goal);
+            }
 
             foreach (CustomerNPC c in CustomerNPC.All)
             {
@@ -325,6 +345,7 @@ namespace Kehai.Eval
             };
             Belief.AddTo(d);
             Hunt.AddTo(d);
+            Shadows.AddTo(d);
             // Which of the test player's actions failed, and how often (0.3.0): a stuck shift says why.
             var failed = new Dictionary<string, object>();
             foreach (var g in Trace.Where(t => !t.Ok).GroupBy(t => t.Verb)) failed[g.Key] = g.Count();

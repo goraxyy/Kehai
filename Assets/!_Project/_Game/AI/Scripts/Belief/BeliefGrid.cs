@@ -41,7 +41,27 @@ namespace Kehai.Karen
         public float[] HabitPrior;       // 0..1 from the Ledger: where this player tends to be
         public float[] Danger;           // 0..1: where the player has reason to avoid
 
+        // Every operation, for the shadow filters and the belief trace (0.4.0, C4.1, C4.2). Told
+        // after the operation, with its inputs, so a replay can do the same.
+        public event System.Action<Observation> Applied;
+        public event System.Action<List<int>, List<float>> Swept;
+        public event System.Action<int, float> Biased;
+        public event System.Action<float, float> Predicted;
+        public event System.Action Predicting;                       // just before a step: its layers are final
+        public event System.Action<Vector3, float> WasResetTo;     // sigma ≤ 0: back to the prior
+
         public int CellCount => b.Length;
+        public StoreMap Map => map;
+        // The predict step's model (0.4.0, C4.1). Today's by default: HandMotion, unchanged.
+        public IMotionModel Motion = HandMotion.Today;
+        // The exit a border cell's mass leaves by, for a motion model writing `outflow`.
+        public int ExitIndexOf(int cell) => exitOf[cell];
+        // A copy of the belief, and a way to set one (shadow filters and the trace's replay checks).
+        public float[] Snapshot() => (float[])b.Clone();
+        public float[] Prior => prior;
+        public int OutsideCellCount => outsideCells;
+        public static int ExitLineSeconds => LineSeconds;
+        public static float ExitSpanMetres => ExitSpan;
         public float this[int cell] => b[cell];
         public float[] RegionMass => regionMass;
 
@@ -269,6 +289,7 @@ namespace Kehai.Karen
             ClearLines();
             SyncLines();
             Refresh();
+            WasResetTo?.Invoke(default, 0f);
         }
 
         // Certainty at a point — for a fresh shift with the player at the time clock, which
@@ -279,6 +300,7 @@ namespace Kehai.Karen
             ClearLines();
             Multiply(position, sigma, 1f, IsOutside(position));
             Normalise();
+            WasResetTo?.Invoke(position, sigma);
         }
 
         // ---- predict --------------------------------------------------------------
@@ -287,37 +309,13 @@ namespace Kehai.Karen
         // lower once she thinks you're out of energy, which is burnout narrowing the search.
         public void Predict(float dt, float speed)
         {
-            float mobility = Mathf.Clamp(speed * dt / StoreMap.CellSize, 0f, 0.8f) * MovingProbability;
+            Predicting?.Invoke();
             System.Array.Clear(scratch, 0, scratch.Length);
             if (inflow != null) System.Array.Clear(inflow, 0, inflow.Length);
 
-            for (int c = 0; c < b.Length; c++)
-            {
-                if (!hers[c]) continue;            // the outside moves in its exit lines, below
-                float mass = b[c];
-                if (mass <= 0f) continue;
-
-                int start = map.EdgeStart[c], end = map.EdgeStart[c + 1];
-                if (start == end) { scratch[c] += mass; continue; }
-
-                float leaving = mass * mobility;
-                scratch[c] += mass - leaving;
-
-                // Weight each neighbour by whether it takes you closer to unfinished work,
-                // toward places you habitually go, and away from where she has been.
-                float total = 0f;
-                float here = DesireDistance[c];
-                for (int e = start; e < end; e++)
-                    total += Weight(here, map.EdgeTo[e]);
-
-                for (int e = start; e < end; e++)
-                {
-                    int n = map.EdgeTo[e];
-                    float share = leaving * Weight(here, n) / total;
-                    if (hers[n]) scratch[n] += share;
-                    else inflow[exitOf[c]] += share;   // out through this exit
-                }
-            }
+            // How mass moves between her cells is the motion model's (0.4.0, C4.1): today's step
+            // (HandMotion), or a learned one. The outside, the leak and the bookkeeping are the grid's.
+            Motion.Spread(this, b, scratch, inflow, dt, speed);
 
             if (OutsideCell >= 0) scratch[OutsideCell] = StepOutside(dt);
 
@@ -325,6 +323,7 @@ namespace Kehai.Karen
             for (int c = 0; c < b.Length; c++) b[c] = (1f - u) * scratch[c] + u * prior[c];
             SyncLines();
             Refresh();
+            Predicted?.Invoke(dt, speed);
         }
 
         // The outside's mass comes back through the exit it went out by at any time, and
@@ -381,17 +380,6 @@ namespace Kehai.Karen
             return LineMass();
         }
 
-        float Weight(float hereDesire, int n)
-        {
-            float w = 1f;
-            float there = DesireDistance[n];
-            // A step that closes the distance to work is favoured, one that opens it isn't.
-            if (!float.IsInfinity(hereDesire) && !float.IsInfinity(there))
-                w *= 1f + DesireGain * 0.5f * Mathf.Clamp((hereDesire - there) / StoreMap.CellSize, -1f, 1f);
-            w *= 1f + HabitGain * HabitPrior[n];
-            w *= 1f - DangerAvoidance * Mathf.Clamp01(Danger[n]);
-            return Mathf.Max(0.02f, w);
-        }
 
         // ---- correct ----------------------------------------------------------------
 
@@ -422,7 +410,9 @@ namespace Kehai.Karen
 
             if (outside) Regroup(o.Position);
             if (o.IsStrong) LastStrongObservation = Time.time;
-            return Normalise();
+            bool collapsed = Normalise();
+            Applied?.Invoke(o);
+            return collapsed;
         }
 
         // How much she expects you at a spot (0.2.0, awareness D): her belief on its cell and the
@@ -468,7 +458,9 @@ namespace Kehai.Karen
             }
             if (OutsideCell >= 0 && lookedOutside > 0f)
                 b[OutsideCell] *= 1f - Mathf.Clamp01(lookedOutside / outsideCells);
-            return Normalise();
+            bool collapsed = Normalise();
+            Swept?.Invoke(cells, detectProbability);
+            return collapsed;
         }
 
         // Straight-line Gaussian: sightings, testimony, infrastructure. `confidence` blends
@@ -565,6 +557,7 @@ namespace Kehai.Karen
                 else if (OutsideCell >= 0) b[OutsideCell] += share;
             }
             Normalise();
+            Biased?.Invoke(region, amount);
         }
 
         // ---- bookkeeping --------------------------------------------------------------
