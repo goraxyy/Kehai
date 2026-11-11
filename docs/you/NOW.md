@@ -7,8 +7,8 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 
 | What | State | Where |
 |---|---|---|
-| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. A build session is working through phases 0–6. **Nothing is trained yet** | [the plan](plans/0.4.0-build-plan.md), on branch `claude/karen-0-4-0-build-d81c79` (local, not pushed) |
-| **The docs split** (this layout) | done on branch `docs/split-you-agents` (local, not pushed) | this page |
+| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. A build session is working through phases 0–6. **Nothing is trained yet** | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
+| **The docs split** (this layout) | done; in a pull request from branch `docs/split-you-agents` | this page |
 
 The plan on `main` is one step behind: the approved version, with fitted senses, the mirror map
 and the live model, arrives when the 0.4.0 branch merges.
@@ -22,7 +22,7 @@ and the live model, arrives when the 0.4.0 branch merges.
 | The go for each 0.4.0 recording, training and test run | "I will do the training later" |
 | Yes or no: a new model is published only on your yes each time (0.4.0 plan, D15) | a default I picked; you haven't seen it before |
 | How far to turn her down ([the tuning plan](plans/0.2.0-tuning-plan.md), Q2–Q5) | only you can answer |
-| The word to push the two local branches and open their PRs | nothing leaves this Mac without it |
+| The word to push the 0.4.0 build branch and open its PR, and the merge of the docs split | nothing leaves this Mac, or lands on `main`, without it |
 
 ## Next, in order
 
