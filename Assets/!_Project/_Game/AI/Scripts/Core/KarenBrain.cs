@@ -417,6 +417,7 @@ namespace Kehai.Karen
                 T = ShiftTime, Now = Time.time,
                 Brain = "planner", BrainVersion = "hand",
                 Goal = plan.Action.ToString(),
+                Phase = (int)Director.CurrentPhase,
                 InputsVersion = PolicyObservation.Version,
                 Inputs = PolicyObservation.Build(plan.Action, Ctx),
                 Legal = names,
@@ -425,6 +426,10 @@ namespace Kehai.Karen
                 Panic = Director.Panic
             });
         }
+
+        // The thought log's pick (C3.6): "PICK flush:blackout 41% (everyone +0.12, you +0.01 over 3 → +0.05)".
+        public static string PickLine(string key, float chance, LedgerReading reading) =>
+            $"PICK     {key} {chance:0%} ({reading})";
 
         // "flush:blackout": an (action, trick) pair by name (build plan §5.5, item 6).
         public static string PickKey(ActionId action, Tactic tactic) =>
@@ -737,6 +742,7 @@ namespace Kehai.Karen
             if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
             else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
+            if (tactic.Learnable) Note("PICK", PickLine(PickKey(plan.Action, tactic), 1f, Ledger.Reading(tactic, LedgerStart.Current, (int)Director.CurrentPhase)));
             RecordDecision(plan, tactic);
             NarratePlan(plan);
         }
@@ -903,6 +909,7 @@ namespace Kehai.Karen
                 if (Time.time - t0 < config.rewardWindow) continue;
                 pendingRewards.RemoveAt(i);
                 float delta = Director.MeanPanic(t0, t0 + config.rewardWindow) - p0;
+                Ledger.RecordEvidence(tactic, delta);   // 0.4.0: what it did to you, for "everyone and you" (C3.1)
                 if (config.Features.Bandit)
                 {
                     ChainStat found = Ledger.Settle(tactic.Id, after, delta);

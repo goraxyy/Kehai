@@ -34,6 +34,7 @@ namespace Kehai.Karen
         public string Brain = "planner";     // planner, basic or vital
         public string BrainVersion = "";     // the model card's version, or "hand" for the planner
         public string Goal = "";             // the action this pick is for
+        public int Phase = -1;               // the Director's phase (KarenDirector.Phase), for fits by phase
         public int InputsVersion;
         public float[] Inputs;
         public string[] Legal;
@@ -59,6 +60,7 @@ namespace Kehai.Karen
               .Append(",\"brain\":").Append(MiniJson.Escape(Brain))
               .Append(",\"brain_version\":").Append(MiniJson.Escape(BrainVersion))
               .Append(",\"goal\":").Append(MiniJson.Escape(Goal))
+              .Append(",\"phase\":").Append(Phase)
               .Append(",\"inputs_version\":").Append(InputsVersion)
               .Append(",\"inputs\":[");
             if (Inputs != null)

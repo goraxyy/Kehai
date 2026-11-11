@@ -205,7 +205,8 @@ public class Karen040PlayersTests
             var best = new EmployeeOutcome { Jobs = 40, UsedHabit = true, LookedOnce = true, ClockedOut = true };
             Assert.LessOrEqual(Mathf.Abs(EmployeeReward.Pay(w, worst)), EmployeeReward.Bound(w) + 1e-4f);
             Assert.LessOrEqual(Mathf.Abs(EmployeeReward.Pay(w, best)), EmployeeReward.Bound(w) + 1e-4f);
-            Assert.Less(EmployeeReward.Bound(w), 5f, "a decision's reward stays small next to PPO's clip");
+            // A decision's window is seconds (at most 4 s between choices, a minute in hiding).
+            Assert.Less(EmployeeReward.Bound(w, jobs: 5, lost: 3, seconds: 60f), 3f, "a decision's reward stays small next to PPO's clip");
         }
     }
 

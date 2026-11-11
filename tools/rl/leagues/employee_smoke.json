@@ -2,7 +2,7 @@
   "name": "employee_smoke",
   "learner": "employee",
   "split": "training",
-  "careers": 4,
+  "careers": 40,
   "shifts": 2,
   "start_shift": 1,
   "shift_seconds": 60,
