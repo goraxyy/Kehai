@@ -13,7 +13,9 @@ did what it did; and the **blink** gives Karen an information edge to test.
 4. [Ablation](#4-ablation) · built, results in
 5. [The thought log](#5-the-thought-log) · built
 6. [How she searches, sees and remembers](#6-how-she-searches-sees-and-remembers) · ideas (added 2026-11-05)
-7. [Two versions of Karen](#7-two-versions-of-karen) · idea (added 2026-11-06)
+7. [Two versions of Karen](#7-two-versions-of-karen) · idea (added 2026-11-06); planned as 0.4.0 since 2026-11-10
+8. [A style vector for each player](#8-a-style-vector-for-each-player) · idea (added 2026-11-11)
+9. [Learned pacing](#9-learned-pacing) · idea (added 2026-11-11)
 
 ---
 
@@ -314,3 +316,73 @@ your fear dips, and catches you at the end, or lets you clock out shaken.
 second reward, a Director setting per version, and an ablation of the two against the same
 players, the held-out cautious one included.
 
+
+---
+
+## 8. A style vector for each player
+
+From the 2026-11-11 talk about a deeper ML layer. Not built, and not in the
+[0.4.0 plan](../plans/0.4.0-build-plan.md): you asked for it to wait here.
+
+> **Embedding.** *What:* a short list of numbers that sums something up.
+> *In Kehai:* about 8 numbers that describe how you play.
+> *Elsewhere:* Spotify's taste profile, which places you near listeners like you.
+
+**The idea.** A small model reads your first few minutes (how you move, when you sprint, how often
+you look behind, how you answer her chores) and writes about 8 numbers: your style. Her brain and
+her prediction model read those numbers from the first shift.
+
+**Today.** She knows you only through the Ledger, which fills slowly: she uses about 3.6 tricks a
+shift. For most of your first shift she plays "everyone's" Karen.
+
+**Why.** The Ledger says what worked on *you*. A style vector says who you play *like*, so she can
+borrow from similar players at once.
+
+| | The Ledger (built) | A style vector (this idea) |
+|---|---|---|
+| Says | what each trick did to you | which kind of player you are |
+| Fills in | several shifts | a few minutes |
+| Made by | counting | a trained model |
+| Can be read by a person | yes | not directly |
+
+**How it could work.**
+- Train the model so that two halves of one player's shift land close together, and two different
+  players land apart.
+- The 0.4.0 bots have a hidden 14-number persona. A first test is free: can the model recover it
+  from a few minutes of play?
+- It ships in the model pack, and the vector stays on your computer beside the Ledger.
+
+**Example.** Ninety seconds in, you've sneaked everywhere and checked behind you six times. Your
+vector lands among the careful players, so she opens with slow tricks that work on them, not with
+a chase.
+
+**What it needs.** 0.4.0 built first (the personas, the dataset, the pack). Then real players in
+numbers: a style learned from bots only describes bots.
+
+## 9. Learned pacing
+
+From the same talk. Not built, and not in the 0.4.0 plan.
+
+**The idea.** The Director learns which tension curve suits each kind of player, judged by what
+players do next: finish the shift, start another, or quit.
+
+**Today.** One curve for everyone. The Director holds your panic near a target that rises through
+the shift, by rule (a PI controller), and Basic is paid for staying near that target
+([0.4.0 plan §5.4](../plans/0.4.0-build-plan.md#54-what-each-is-paid-for)). Nobody has checked
+that this curve is the one people enjoy.
+
+**Why.** "Fear near the target" is a stand-in for "a good night". The target itself is a guess.
+
+**How it could work.**
+- A few named curves (a slow burn, an early scare then calm, a steady climb), not free-form.
+- A bandit picks a curve for each player and learns from what they do next, the same way she
+  already picks tricks.
+- With a style vector (§8), it becomes one choice per kind of player.
+- The fairness rules and the 45 s recovery stay as code, whatever curve is picked.
+
+**Example.** Players who quit in their first ten minutes mostly met a hunt before minute three.
+For new careful players the Director learns to hold the first hunt back, and more of them finish
+the shift.
+
+**What it needs.** Real players in numbers, and a plain signal of a good night (finished the
+shift, came back). Bots can't supply it: they never quit.
