@@ -1,0 +1,52 @@
+{
+  "name": "employee_smoke",
+  "learner": "employee",
+  "split": "training",
+  "careers": 4,
+  "shifts": 2,
+  "start_shift": 1,
+  "shift_seconds": 60,
+  "players": [
+    {
+      "kind": "persona",
+      "mind": "trainer",
+      "share": 1
+    }
+  ],
+  "lessons": [
+    {
+      "name": "job",
+      "karen": "none"
+    },
+    {
+      "name": "planner",
+      "karen": [
+        {
+          "brain": "planner",
+          "rung": "C",
+          "share": 1
+        },
+        {
+          "brain": "planner",
+          "rung": "E",
+          "share": 1
+        }
+      ]
+    },
+    {
+      "name": "league",
+      "karen": [
+        {
+          "brain": "planner",
+          "rung": "C",
+          "share": 1
+        },
+        {
+          "brain": "planner",
+          "rung": "E",
+          "share": 1
+        }
+      ]
+    }
+  ]
+}

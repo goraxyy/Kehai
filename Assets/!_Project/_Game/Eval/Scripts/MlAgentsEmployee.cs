@@ -41,6 +41,8 @@ namespace Kehai.Eval
         static MlAgentsEmployee Build()
         {
             Academy.Instance.AutomaticSteppingEnabled = false;
+            // The curriculum's lesson (tools/rl/employee_ppo.yaml): 0 the job, 1 the planner, 2 the league.
+            LeagueRunner.Lesson = () => Mathf.RoundToInt(Academy.Instance.EnvironmentParameters.GetWithDefault("lesson", 0f));
             var go = new GameObject("Employee mind (ML-Agents)");
             go.SetActive(false);
             DontDestroyOnLoad(go);
@@ -74,6 +76,7 @@ namespace Kehai.Eval
 
         public string Name => recorder != null ? "the heuristic, recorded" : Academy.Instance.IsCommunicatorOn ? "the Employee policy being trained" : "the Employee heuristic";
         public bool Recording => recorder != null;
+        public bool Active => !Recording && Academy.Instance.IsCommunicatorOn;
 
         float[] inputs;
         bool[] what, how, which;
@@ -95,10 +98,19 @@ namespace Kehai.Eval
         {
             shown = choice;
             showing = true;
-            what = (bool[])what.Clone();
-            what[(int)choice.What] = true;   // a demonstration is never masked out
+            // A demonstration is never masked out.
+            what = Open(what, (int)choice.What);
+            how = Open(how, (int)choice.How);
+            which = Open(which, (int)choice.Which);
             Step(inputs, what, how, which);
             showing = false;
+        }
+
+        static bool[] Open(bool[] mask, int i)
+        {
+            bool[] m = (bool[])mask.Clone();
+            if (i >= 0 && i < m.Length) m[i] = true;
+            return m;
         }
 
         void Step(float[] inputs, bool[] what, bool[] how, bool[] which)

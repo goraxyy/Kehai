@@ -198,6 +198,8 @@ namespace Kehai.Karen
         public string motion = "p0";
         [Tooltip("The hunter: the planner with pacing and the Director's hint off, every fairness rule on (Vital's baseline).")]
         public bool hunter;
+        [Tooltip("Her brain's picks come from the ML-Agents trainer (the league's learner), not from its generated C#.")]
+        public bool brainFromTrainer;
         [Tooltip("Write one learning record per decision (Diagnostics/LearningRecord.cs).")]
         public bool learningRecords;
         [Tooltip("Where the learning records go. Empty: <persistent data>/learning/learning_<launch>.jsonl.")]

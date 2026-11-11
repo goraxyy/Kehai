@@ -1,0 +1,33 @@
+{
+  "name": "basic_smoke",
+  "learner": "basic",
+  "split": "training",
+  "careers": 4,
+  "shifts": 2,
+  "start_shift": 1,
+  "shift_seconds": 60,
+  "players": [
+    {
+      "kind": "scripted",
+      "profile": "efficient",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "skittish",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "reckless",
+      "share": 1
+    }
+  ],
+  "karen": [
+    {
+      "brain": "basic",
+      "rung": "E",
+      "share": 1
+    }
+  ]
+}

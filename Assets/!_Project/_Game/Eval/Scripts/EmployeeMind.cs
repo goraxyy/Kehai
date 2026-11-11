@@ -11,6 +11,10 @@ namespace Kehai.Eval
     {
         string Name { get; }
 
+        // Whether it will choose at all (a bridge with no trainer, or recording demonstrations,
+        // leaves every choice to the heuristic, which then keeps its hiding reflex too).
+        bool Active { get; }
+
         // Pick what, how and which among the unmasked options. `chances` (its probabilities for
         // the what) may be filled for the log. False: no choice, the heuristic picks.
         bool TryChoose(float[] inputs, bool[] what, bool[] how, bool[] which, Persona persona, System.Random dice, out EmployeeChoice choice);
@@ -38,7 +42,15 @@ namespace Kehai.Eval
         // -bot-mind trainer|generated|heuristic (default heuristic).
         public static IEmployeeMind Create(string kind)
         {
-            switch ((kind ?? "heuristic").Trim().ToLowerInvariant())
+            string k = (kind ?? "heuristic").Trim();
+            // "generated:EmployeeBrain_r1": an older round's mind, kept in the pool (§10.2).
+            if (k.StartsWith("generated:", System.StringComparison.OrdinalIgnoreCase))
+            {
+                IEmployeeMind old = GeneratedEmployeeMind.TryCreate(out string why, k.Substring("generated:".Length));
+                if (old == null) Debug.LogWarning("bot mind: " + why + "; the heuristic chooses");
+                return old;
+            }
+            switch (k.ToLowerInvariant())
             {
                 case "trainer": case "mlagents":
                     if (MlAgentsFactory != null) return MlAgentsFactory();
@@ -91,9 +103,9 @@ namespace Kehai.Eval
 
         GeneratedEmployeeMind(Kehai.Karen.BrainNet net) => this.net = net;
 
-        public static GeneratedEmployeeMind TryCreate(out string why)
+        public static GeneratedEmployeeMind TryCreate(out string why, string name = "EmployeeBrain")
         {
-            Kehai.Karen.BrainNet n = Kehai.Karen.BrainNets.Find("EmployeeBrain", out why);
+            Kehai.Karen.BrainNet n = Kehai.Karen.BrainNets.Find(name, out why);
             if (n == null) return null;
             if (n.InputSize != EmployeeObservation.Size) { why = $"EmployeeBrain expects {n.InputSize} inputs, the observation has {EmployeeObservation.Size}"; return null; }
             return new GeneratedEmployeeMind(n);
@@ -113,6 +125,7 @@ namespace Kehai.Eval
             return true;
         }
 
+        public bool Active => true;
         public void AddReward(float reward) { }
         public void EndShift(bool careerOver) { }
     }

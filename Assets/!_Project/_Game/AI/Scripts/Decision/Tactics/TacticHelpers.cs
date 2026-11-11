@@ -124,6 +124,14 @@ namespace Kehai.Karen
         public static Vector3 OnFloor(Vector3 p, float radius = 3f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, NavMesh.AllAreas) ? hit.position : p;
 
+        // A spill goes where your floor reaches (0.4.0, C0.2's fence): on the walkable floor, or the
+        // nearest walkable point within 3 m if she stood over an edge. Where it already is, unchanged.
+        public static Vector3 WhereYouCanMop(Vector3 p)
+        {
+            if (!NavMesh.SamplePosition(p, out NavMeshHit hit, 3f, NavMesh.AllAreas)) return p;
+            return FairnessGuard.Flat(hit.position, p) <= 0.5f ? p : hit.position;
+        }
+
         // The nearest spot on her part of the building's floor (KarenArea), or the point itself.
         public static Vector3 OnHerFloor(Vector3 p, float radius = 1.5f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, KarenArea.AgentMask) ? hit.position : p;

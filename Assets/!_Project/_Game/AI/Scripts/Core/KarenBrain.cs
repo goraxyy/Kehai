@@ -331,7 +331,7 @@ namespace Kehai.Karen
             if (Body == null) return;
             float dt = Time.deltaTime;
 
-            Body.Sight.Tick(dt);
+            using (ShiftTiming.Measure("sight")) Body.Sight.Tick(dt);
             if (!ShiftActive)
             {
                 Body.Stop();
@@ -346,17 +346,17 @@ namespace Kehai.Karen
             }
 
             believeTimer += dt;
-            if (believeTimer >= 1f / config.believeHz) { Believe(believeTimer); believeTimer = 0f; }
+            if (believeTimer >= 1f / config.believeHz) { using (ShiftTiming.Measure("believe")) Believe(believeTimer); believeTimer = 0f; }
 
             appraiseTimer += dt;
-            if (appraiseTimer >= 1f / config.appraiseHz) { Appraise(); appraiseTimer = 0f; }
+            if (appraiseTimer >= 1f / config.appraiseHz) { using (ShiftTiming.Measure("appraise")) Appraise(); appraiseTimer = 0f; }
 
-            TickDirector(dt);
-            UpdatePredictor(dt);
+            using (ShiftTiming.Measure("director")) TickDirector(dt);
+            using (ShiftTiming.Measure("predictor")) UpdatePredictor(dt);
 
             // What her tricks' places paid, once a second (0.3.0).
             placeTimer += dt;
-            if (placeTimer >= 1f) { placeTimer = 0f; PlaceWatch.Tick(Ctx, Time.time); }
+            if (placeTimer >= 1f) { placeTimer = 0f; using (ShiftTiming.Measure("places")) PlaceWatch.Tick(Ctx, Time.time); }
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -372,10 +372,10 @@ namespace Kehai.Karen
                 bool forced = decideNow;
                 decideNow = false;
                 decideTimer = 0f;
-                Decide(forced);
+                using (ShiftTiming.Measure("decide")) Decide(forced);
             }
 
-            RunPlan(dt);
+            using (ShiftTiming.Measure("plan")) RunPlan(dt);
             ExpireClosures();
         }
 

@@ -29,6 +29,9 @@ namespace Kehai.Eval
         // The old players, who don't react to her tricks (SimulatedPlayer): a control, to
         // compare a run with reacting players against.
         public bool staticBots = false;
+        // 0.4.0: who chooses for the players: heuristic (the scripted profiles, default), trainer
+        // (ML-Agents: demonstrations, or training), or generated (EmployeeBrain.g.cs).
+        public string botMind = "heuristic";
     }
 
     // The ablation ladder (IDEAS.md, Ablation), run end to end with simulated players.
@@ -71,6 +74,7 @@ namespace Kehai.Eval
             int total = Plan.rungs.Length * Plan.profiles.Length * Plan.careers * Plan.shiftsPerCareer;
             int done = 0;
             var log = new EpisodeLog(JsonlPath);
+            IEmployeeMind mind = null;
 
             foreach ((PlayerProfile profile, int career) in Order())
             {
@@ -106,10 +110,14 @@ namespace Kehai.Eval
                         }
 
                         Progress = $"{done + 1}/{total}: rung {config.rung}, {config.agent}, career {career + 1}, shift {Plan.startShift + s}";
-                        var bot = new SimulatedPlayer(env, profile, seed * 31 + s, reactive: !Plan.staticBots);
+                        mind = mind ?? EmployeeMinds.Create(Plan.botMind);
+                        var bot = mind == null
+                            ? new SimulatedPlayer(env, profile, seed * 31 + s, reactive: !Plan.staticBots)
+                            : new SimulatedPlayer(env, Persona.Of(profile), seed * 31 + s, !Plan.staticBots, null, mind);
                         yield return bot.PlayShift();
 
                         EpisodeMetrics m = env.Metrics;
+                        if (ShiftTiming.Enabled) { m.Timing = ShiftTiming.Summary(); Debug.Log(ShiftTiming.Report()); ShiftTiming.Reset(); }
                         done++;
                         if (log.TryAppend(m, out string refused)) Results.Add(m);
                         else
@@ -367,6 +375,27 @@ namespace Kehai.Eval
                     };
                     return;
                 }
+                // A league (0.4.0, C5.6): careers of six shifts, one side learning.
+                if (args[i] == "-league" && i + 1 < args.Length)
+                {
+                    LeagueSpec spec = LeagueSpec.Parse(File.ReadAllText(args[i + 1]));
+                    int careers = Int(args, "-league-careers", -1);
+                    if (careers > 0) spec.careers = careers;
+                    // Each training copy (one trainer port each) plays different careers.
+                    spec.seedOffset += KehaiEnv.TrainerPort % 100 * 1000;
+                    LeagueRunner league = LeagueRunner.Run(spec);
+                    league.Completed = r =>
+                    {
+                        Debug.Log($"League finished — {r.Progress}\n{r.JsonlPath}");
+                        if (!Application.isBatchMode) return;
+#if UNITY_EDITOR
+                        UnityEditor.EditorApplication.Exit(0);
+#else
+                        Application.Quit();
+#endif
+                    };
+                    return;
+                }
                 if (args[i] == "-kehai-env")
                 {
                     int port = i + 1 < args.Length && int.TryParse(args[i + 1], out int p) ? p : 5555;
@@ -387,7 +416,8 @@ namespace Kehai.Eval
                         outDirectory = Str(args, "-ablation-out", null),
                         verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0,
                         interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0,
-                        staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0
+                        staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0,
+                        botMind = Str(args, "-bot-mind", "heuristic")
                     };
                     string rungs = Str(args, "-ablation-rungs", null);
                     if (rungs != null)

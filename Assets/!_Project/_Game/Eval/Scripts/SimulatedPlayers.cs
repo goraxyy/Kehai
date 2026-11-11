@@ -119,8 +119,12 @@ namespace Kehai.Eval
                 }
 
                 // With a trained mind, hiding is one of its choices, not a reflex (§7.1).
-                if (mind == null && reactive && fear.Fear >= traits.HideAt && Time.time > calmUntil)
+                if (!MindActive && reactive && fear.Fear >= traits.HideAt && Time.time > calmUntil)
                 {
+                    if (mind is IEmployeeDemonstrator teacher && teacher.Recording)
+                        teacher.Demonstrate(EmployeeObservation.Build(obs, fear.Fear, Memory, persona, lastWhat, Time.time),
+                                            EmployeeOptions.MaskWhat(obs), EmployeeOptions.MaskHow(), EmployeeOptions.MaskWhich(Memory, lastThreatAt.HasValue),
+                                            new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, Which = EmployeeWhich.Safest });
                     yield return Flee();
                     continue;
                 }
@@ -541,7 +545,7 @@ namespace Kehai.Eval
 
             Hides++;
             Memory.Hid(hide.Name);
-            if (mind == null) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = hide.Name, Chance = 1f }, hide.Centroid);
+            if (!MindActive) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = hide.Name, Chance = 1f }, hide.Centroid);
             yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
             env.Driver.Crouch = true;
             float wait = profile == PlayerProfile.Cautious ? 10f : 6f;
@@ -679,6 +683,8 @@ namespace Kehai.Eval
             ((List<string>)((Dictionary<string, object>)obs["you"])["inventory"]).Contains(name);
 
         // ---- 0.4.0: the options, the log, the trained mind (build plan §7.3) ----------------------
+
+        bool MindActive => mind != null && mind.Active;
 
         Vector3 Here => env.Driver != null ? env.Driver.transform.position : Vector3.zero;
 

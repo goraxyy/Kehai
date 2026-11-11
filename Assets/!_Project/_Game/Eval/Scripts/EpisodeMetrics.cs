@@ -73,6 +73,7 @@ namespace Kehai.Eval
         // A shift with no catch is "not caught yet" at SimSeconds (Kaplan–Meier), never missing.
         public readonly List<CatchCause> CatchCauses = new List<CatchCause>();
         public float TimeToCatch = -1f;
+        public Dictionary<string, object> Timing;   // -kehai-timing (C0.2): where the wall time went
         public string Brain = "planner";
         public readonly List<string> KarenSet = new List<string>();
         int fallsAtStart;
@@ -341,6 +342,7 @@ namespace Kehai.Eval
             d["catches_seen_3s"] = CatchCauses.Count(c => c.SeenWithin3s);
             d["karen_brain"] = Brain;
             d["karen_set"] = KarenSet.Select(x => (object)x).ToList();
+            if (Timing != null) d["timing"] = Timing;
             d["tricks_after_close"] = TricksAfterClose.ToDictionary(p => p.Key, p => (object)p.Value);
             d["catches_in_fog"] = CatchesInFog;
             d["catches_at_chore"] = CatchesAtChore;

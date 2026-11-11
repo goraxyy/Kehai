@@ -119,7 +119,8 @@ namespace Kehai.Eval
         void Update()
         {
             if (!Ready) return;
-            Metrics.Tick(Tasks, Burnout, Driver != null ? Driver.transform : null);
+            ShiftTiming.Frame();
+            using (ShiftTiming.Measure("metrics")) Metrics.Tick(Tasks, Burnout, Driver != null ? Driver.transform : null);
 
             KarenScreen screen = KarenScreen.Instance;
             PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;
@@ -147,6 +148,9 @@ namespace Kehai.Eval
         public static readonly string RunStamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture)
                                                  + (TrainerPort > 0 ? "_" + TrainerPort : "");
 
+        // Set by the league (League.cs) before each career: changes the next Karen's config.
+        public static System.Action<KarenConfig> KarenSetup;
+
         public IEnumerator ResetEpisode(EnvConfig config)
         {
             Ready = false;
@@ -171,6 +175,7 @@ namespace Kehai.Eval
                     : Config.ledgerPath
             };
             if (KarenBootstrap.TryParseRung(Config.rung, out KarenRung rung)) karen.rung = rung;
+            KarenSetup?.Invoke(karen);   // the league's say: which brain she runs this career (0.4.0)
             KarenBootstrap.Override = karen;
             if (Config.freshLedger) new KarenLedger(karen) { Persistent = true }.Wipe();
 

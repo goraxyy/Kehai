@@ -104,6 +104,13 @@ namespace Kehai.Eval
             string her = karen != null && karen.Body != null ? $"{karen.Body.Position} ({karen.CurrentPlan?.Tactic?.Id ?? "no plan"})" : "absent";
             Debug.LogWarning($"[driver] FELL through the floor: stood at {safe} ({Kehai.Store.StoreMap.Current?.NameAt(safe)}), now {p}. " +
                              $"Under that spot: {under}. Within 1.5 m: {near}Karen: {her}");
+            // The fence (0.4.0, C0.2): back onto the spot it last stood on, so a hole in the floor
+            // costs a moment instead of the whole episode. A stuck episode poisons training.
+            if (body != null) body.enabled = false;
+            transform.position = safe + Vector3.up * 0.05f;
+            if (body != null) body.enabled = true;
+            Physics.SyncTransforms();
+            Stop();
         }
 
         public void Engage()

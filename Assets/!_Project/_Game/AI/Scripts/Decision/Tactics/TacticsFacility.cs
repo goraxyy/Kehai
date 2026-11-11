@@ -445,6 +445,11 @@ namespace Kehai.Karen
         // where you've walked before.
         // `reach` also asks the NavMesh that she can walk to each (the plan does; the gate, every
         // decision, doesn't need to).
+        // Spots the test player couldn't get near enough to mop (0.4.0, C0.2's fence): 0.3.0's
+        // ablation and trick check left Office/G's spill unmopped, and a chore nobody can do is a
+        // shift that never ends. The cause is in the scene (not in git); this keeps her off it.
+        public static readonly string[] NoSpill = { "Office/G" };
+
         public static List<Region> Spots(KarenContext c, out List<PlaceCandidate> candidates, bool reach = false)
         {
             var spots = new List<Region>();
@@ -453,6 +458,7 @@ namespace Kehai.Karen
             foreach (Region r in c.Map.Regions)
             {
                 if (!r.IsChokepoint || r.IsDoor || !TacticHelpers.Hers(c.Map, r)) continue;
+                if (System.Array.IndexOf(NoSpill, r.Name) >= 0) continue;
                 float walk = TacticHelpers.WalkFromBelief(c, r.Centroid);
                 if (walk < MinWalk || walk > MaxWalk) continue;
                 if (reach && !TacticHelpers.CanReach(c, TacticHelpers.OnFloor(r.Centroid), 1f)) continue;
@@ -479,7 +485,7 @@ namespace Kehai.Karen
             plan.Add(new Tell(TellKind.BucketClank, k => k.Body.Position, 1f));
             plan.Add(new HandsOn("kick over a bucket at " + plan.Target, _ => at, k =>
             {
-                Dirt dirt = k.World.Spill(k.Body.Position);
+                Dirt dirt = k.World.Spill(TacticHelpers.WhereYouCanMop(k.Body.Position));
                 Left = dirt;
                 LeftKey = key;
                 if (dirt == null) return;
