@@ -50,37 +50,53 @@ namespace Kehai.Karen
         public void Refresh(KarenContext c, float now)
         {
             RefreshedAt = now;
-            map = c.Map;
             Weights = PredictionWeights.Current;
-            int n = map.CellCount;
             Vector3 from = c.Belief != null ? c.Belief.PeakPosition : HerPosition;
+            List<Destination> built = Places.Build(c, from, now);
+            // The Ledger's numbers for P3, written onto each place (the trace records them too).
+            for (int i = 0; i < built.Count; i++)
+            {
+                Destination d = built[i];
+                d.AnswerSeconds = d.Kind == DestinationKind.Chore && !string.IsNullOrEmpty(d.AnswerKind) && c.Ledger != null
+                    ? c.Ledger.AnswerReading(d.AnswerKind, LedgerStart.Current).Guess : -1f;
+                d.Habit = d.Kind == DestinationKind.Hide && c.Ledger != null ? HabitOf(c, d.Name) : 0f;
+                built[i] = d;
+            }
+            Compute(c.Map, c.Belief, built);
+        }
+
+        // The arithmetic, from plain inputs (tests and the Python replay give it the same ones).
+        public void Compute(StoreMap m, BeliefGrid belief, IList<Destination> list)
+        {
+            map = m;
+            int n = map.CellCount;
             places.Clear();
-            places.AddRange(Places.Build(c, from, now));
+            places.AddRange(list);
             int k = places.Count;
 
             if (distance.Length != k) distance = new float[k][];
             bool[] notHers = new bool[n];
-            for (int i = 0; i < n; i++) notHers[i] = c.Belief != null && !c.Belief.IsHers(i);
+            for (int i = 0; i < n; i++) notHers[i] = belief != null && !belief.IsHers(i);
             for (int d = 0; d < k; d++)
             {
                 if (places[d].Cell < 0) { distance[d] = null; continue; }
                 var sources = new List<int>();
-                if (places[d].Kind == DestinationKind.Exit && c.Belief != null)
+                if (places[d].Kind == DestinationKind.Exit && belief != null)
                 {
-                    int exit = c.Belief.ExitOf(places[d].Cell);
-                    if (exit >= 0) sources.AddRange(c.Belief.ExitBorder(exit));
+                    int exit = belief.ExitOf(places[d].Cell);
+                    if (exit >= 0) sources.AddRange(belief.ExitBorder(exit));
                 }
                 if (sources.Count == 0) sources.Add(places[d].Cell);
                 distance[d] = map.DistancesFrom(sources, float.MaxValue, distance[d], notHers);
             }
 
-            FillDanger(c, n);
-            FillChances(c, n, k);
-            FillRates(c, n, k);
+            FillDanger(n);
+            FillChances(n, k);
+            FillRates(belief, n, k);
         }
 
         // P1's Danger layer, and P2's bend: near where you think she is, by walking distance.
-        void FillDanger(KarenContext c, int n)
+        void FillDanger(int n)
         {
             if (danger.Length != n) danger = new float[n];
             int herCell = map.CellAt(SheIsThought);
@@ -97,13 +113,13 @@ namespace Kehai.Karen
             System.Array.Copy(danger, into, into.Length);
         }
 
-        void FillChances(KarenContext c, int n, int k)
+        void FillChances(int n, int k)
         {
             if (chance.Length != n * k) chance = new float[n * k];
             PredictionWeights w = Weights;
             var logits = new float[k];
             var global = new float[k];
-            for (int d = 0; d < k; d++) global[d] = GlobalLogit(c, places[d], w);
+            for (int d = 0; d < k; d++) global[d] = GlobalLogit(places[d], w);
             for (int cell = 0; cell < n; cell++)
             {
                 float max = float.NegativeInfinity;
@@ -133,7 +149,7 @@ namespace Kehai.Karen
         }
 
         // The part of a destination's score that is the same from every cell.
-        float GlobalLogit(KarenContext c, Destination d, PredictionWeights w)
+        float GlobalLogit(Destination d, PredictionWeights w)
         {
             float l = w.Kind[(int)d.Kind];
             if (d.Kind == DestinationKind.Job || d.Kind == DestinationKind.Chore || d.Kind == DestinationKind.Queue)
@@ -145,14 +161,11 @@ namespace Kehai.Karen
                 to.y = 0f;
                 if (to.sqrMagnitude > 0.01f) l += w.Heading * Vector3.Dot(to.normalized, new Vector3(LastSeenHeading.x, 0f, LastSeenHeading.z).normalized);
             }
-            if (ReadLedger && c.Ledger != null)
+            if (ReadLedger)
             {
-                if (d.Kind == DestinationKind.Chore && !string.IsNullOrEmpty(d.AnswerKind))
-                {
-                    float seconds = c.Ledger.AnswerReading(d.AnswerKind, LedgerStart.Current).Guess;
-                    l += w.LedgerAnswer * (1f - seconds / (seconds + 60f));
-                }
-                if (d.Kind == DestinationKind.Hide) l += w.LedgerHide * HabitOf(c, d.Name);
+                if (d.Kind == DestinationKind.Chore && d.AnswerSeconds >= 0f)
+                    l += w.LedgerAnswer * (1f - d.AnswerSeconds / (d.AnswerSeconds + 60f));
+                if (d.Kind == DestinationKind.Hide) l += w.LedgerHide * d.Habit;
             }
             return l;
         }
@@ -182,7 +195,7 @@ namespace Kehai.Karen
         // its chance × the mean speed ÷ the cell size, spread over the neighbours that are nearer to
         // it, bent away from where you think she is. Staying and turning back are kept in place and
         // sent back the way you came.
-        void FillRates(KarenContext c, int n, int k)
+        void FillRates(BeliefGrid belief, int n, int k)
         {
             int edges = map.EdgeTo.Length;
             if (rate.Length != edges) rate = new float[edges];
@@ -193,7 +206,7 @@ namespace Kehai.Karen
             float avoid = Mathf.Clamp01(Weights.Avoid);
             for (int cell = 0; cell < n; cell++)
             {
-                if (c.Belief != null && !c.Belief.IsHers(cell)) continue;
+                if (belief != null && !belief.IsHers(cell)) continue;
                 int start = map.EdgeStart[cell], end = map.EdgeStart[cell + 1];
                 for (int d = 0; d < k; d++)
                 {
@@ -203,7 +216,9 @@ namespace Kehai.Karen
                     if (dest.Kind == DestinationKind.Stay) continue;
                     if (dest.Kind == DestinationKind.TurnBack)
                     {
-                        Downhill(cell, start, end, p * move, avoid, e => -Vector3.Dot(map.CellPosition[map.EdgeTo[e]] - map.CellPosition[cell], LastSeenHeading));
+                        Vector3 here = map.CellPosition[cell];
+                        Downhill(cell, start, end, p * move, avoid, e =>
+                            -((map.CellPosition[map.EdgeTo[e]].x - here.x) * LastSeenHeading.x + (map.CellPosition[map.EdgeTo[e]].z - here.z) * LastSeenHeading.z));
                         continue;
                     }
                     float[] dist = distance[d];
@@ -211,7 +226,7 @@ namespace Kehai.Karen
                     if (dist[cell] <= 0.01f)
                     {
                         // Arrived: an exit's mass goes out; anything else stays to work or hide.
-                        if (dest.Kind == DestinationKind.Exit && c.Belief != null && c.Belief.ExitOf(cell) >= 0) exitRate[cell] += p * move;
+                        if (dest.Kind == DestinationKind.Exit && belief != null && belief.ExitOf(cell) >= 0) exitRate[cell] += p * move;
                         continue;
                     }
                     Downhill(cell, start, end, p * move, avoid, e => dist[cell] - dist[map.EdgeTo[e]]);

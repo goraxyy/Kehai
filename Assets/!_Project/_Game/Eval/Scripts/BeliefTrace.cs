@@ -95,6 +95,13 @@ namespace Kehai.Eval
               .Append(",\"conf\":").Append(N(o.Confidence)).Append(",\"sigma\":").Append(N(o.Sigma)).Append(",\"hx\":").Append(N(o.Heading.x)).Append(",\"hz\":").Append(N(o.Heading.z))
               .Append(",\"ts\":").Append(N(o.Timestamp)).Append(",\"outside\":").Append(brain.Belief.IsOutside(o.Position) ? "true" : "false")
               .Append(",\"cell\":").Append(brain.Map.CellAt(o.Position));
+            if (o.Channel == SenseChannel.Trace)
+            {
+                // A footprint says where you went: the bump's centre, as BeliefGrid.Apply moved it.
+                Vector3 centre = o.Position;
+                if (o.Heading.sqrMagnitude > 0.01f) centre += o.Heading.normalized * Mathf.Min(6f, 1.5f + (Time.time - o.Timestamp) * 1.2f);
+                sb.Append(",\"cx\":").Append(N(centre.x)).Append(",\"cz\":").Append(N(centre.z)).Append(",\"centre_cell\":").Append(brain.Map.CellAt(centre));
+            }
             if (hasRaw)
                 sb.Append(",\"raw\":{\"kind\":").Append(nextRaw.Kind).Append(",\"a\":").Append(N(nextRaw.Awareness)).Append(",\"d\":").Append(N(nextRaw.D))
                   .Append(",\"carry\":").Append(N(nextRaw.Carry)).Append(",\"straight\":").Append(N(nextRaw.Straight)).Append(",\"age\":").Append(N(nextRaw.Age))
@@ -178,8 +185,7 @@ namespace Kehai.Eval
             {
                 Destination d = f.List[i];
                 if (i > 0) sb.Append(',');
-                float answer = !string.IsNullOrEmpty(d.AnswerKind) ? brain.Ledger.AnswerReading(d.AnswerKind, LedgerStart.Current).Guess : -1f;
-                float habit = d.Kind == DestinationKind.Hide ? HabitOf(d.Name) : 0f;
+                float answer = d.AnswerSeconds, habit = d.Habit;
                 sb.Append("{\"kind\":\"").Append(d.Kind).Append("\",\"cell\":").Append(d.Cell).Append(",\"waited\":").Append(N(d.Waited))
                   .Append(",\"x\":").Append(N(d.Position.x)).Append(",\"z\":").Append(N(d.Position.z)).Append(",\"answer_s\":").Append(N(answer)).Append(",\"habit\":").Append(N(habit)).Append('}');
             }

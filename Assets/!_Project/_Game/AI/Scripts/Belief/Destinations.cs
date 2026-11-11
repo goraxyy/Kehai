@@ -19,6 +19,8 @@ namespace Kehai.Karen
         public int Cell;             // -1 for Stay and TurnBack (no place of their own)
         public float Waited;         // seconds she has seen it waiting (jobs and chores)
         public string AnswerKind;    // her chore's answer in the Ledger ("fog_reset"), for P3
+        public float AnswerSeconds;  // P3: how soon you answer it, your Ledger blended with everyone's (-1: not a chore)
+        public float Habit;          // P3: how much it's one of your places (hiding spots), 0..1
 
         public string Label => Kind == DestinationKind.Job || Kind == DestinationKind.Chore ? Kind + ":" + Name : Kind.ToString();
     }
