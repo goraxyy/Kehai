@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Kehai.Karen;
 using NUnit.Framework;
+using UnityEngine;
 
 // Karen 0.2.0, phase 1: goals became actions, tricks are the ways to do them, and the drafts
 // are off in play. These pin the shape the build plan settled on, so a change to it is a
@@ -35,7 +37,19 @@ public class KarenActionsTests
     public void TheLiveTricks_AreTheOnesThePlanKeeps()
     {
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
-        CollectionAssert.AreEqual(new[] { "ambush", "bin_tamper", "blackout", "cut", "door_lock", "poll_witnesses", "throw_flour", "throw_oil", "throw_tin" }, live);
+        CollectionAssert.AreEqual(new[]
+        {
+            "ambush", "bin_tamper", "blackout", "camera_bolt_on", "cut", "door_lock", "fog", "overtime", "phantom_chime",
+            "poll_witnesses", "shelf_sweep", "spill", "throw_flour", "throw_oil", "throw_tin", "tool_theft", "understudy",
+        }, live);
+    }
+
+    // 0.3.0: the five the owner didn't ask about stay drafts (build plan D9); nothing else does.
+    [Test]
+    public void TheDrafts_AreTheFiveLeft()
+    {
+        var drafts = TacticLibrary.All.Where(t => t.Draft).Select(t => t.Id).OrderBy(id => id).ToArray();
+        CollectionAssert.AreEqual(new[] { "crate_wall", "favour", "mimicry", "shelf_relocation", "stalk" }, drafts);
     }
 
     // Roam, Check, Search, Hunt and Back off move on their own; Lie in wait, Flush, Disrupt and
@@ -60,10 +74,80 @@ public class KarenActionsTests
         CollectionAssert.AreEqual(new[] { ActionId.Hunt }, hunt.Actions);
     }
 
+    // ---- 0.3.0: nine tricks removed for good (build plan C1.1) -------------------------------
+
+    static readonly string[] RemovedIn030 =
+    {
+        "mirror_black", "task_falsification", "pa_decoy", "pa_announce_position", "pa_task_readback",
+        "pa_countdown", "pa_footsteps", "silence", "witness",
+    };
+
+    [Test]
+    public void TheNineRemovedIn030_AreGone_AndTheLibraryHolds27()
+    {
+        foreach (string id in RemovedIn030)
+            Assert.IsNull(TacticLibrary.Get(id), $"{id} is still in the library");
+        Assert.AreEqual(27, TacticLibrary.All.Count);
+    }
+
+    // An old save that learned about the removed tricks still loads; it just forgets them.
+    [Test]
+    public void ALedgerThatKnewTheRemovedTricks_StillLoads_AndDropsThem()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "kehai_removed_" + System.Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var old = new LedgerData();
+            foreach (string id in RemovedIn030) old.arms.Add(new ArmStat { id = id, q = 0.5f, n = 3f });
+            old.arms.Add(new ArmStat { id = "blackout", q = 0.4f, n = 2f });
+            old.chains.Add(new ChainStat { first = "silence", then = "ambush", q = 0.3f, n = 4f });
+            old.chains.Add(new ChainStat { first = "blackout", then = "ambush", q = 0.3f, n = 4f });
+            File.WriteAllText(path, JsonUtility.ToJson(old));
+
+            var ledger = new KarenLedger(new KarenConfig { ledgerPath = path }) { Persistent = true };
+            ledger.Load();
+            ledger.Save();
+
+            LedgerData now = JsonUtility.FromJson<LedgerData>(File.ReadAllText(path));
+            CollectionAssert.AreEqual(new[] { "blackout" }, now.arms.Select(a => a.id).ToArray());
+            CollectionAssert.AreEqual(new[] { "blackout" }, now.chains.Select(c => c.first).ToArray());
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+    }
+
     [Test]
     public void Ambush_ComesOnShiftThree()
     {
         Assert.AreEqual(3, TacticLibrary.Get("ambush").IntroducedShift);
+    }
+
+    // The owner, 8 November: every trick from shift 1 while they're tested. The career table
+    // stays in the code (each trick's IntroducedShift), behind KarenConfig.careerTable.
+    [Test]
+    public void EveryTrick_ComesOnShiftOne_UntilTheCareerTableIsBack()
+    {
+        var config = new KarenConfig { rung = KarenRung.E_Ledger, seed = 7 };
+        Assert.IsFalse(config.careerTable, "the lock is off by default");
+        var ledger = new KarenLedger(config);
+        var director = new KarenDirector(config, ledger);
+        director.BeginShift(1, 300f);
+        var c = new KarenContext { Config = config, Rng = new KarenRng(7), Ledger = ledger, Director = director, A = new Appraisal { Tension = 1f } };
+        Assert.AreEqual(1, c.ShiftNumber);
+
+        var later = TacticLibrary.Live.Where(t => !t.Draft && t.IntroducedShift > 1).ToList();
+        Assert.IsNotEmpty(later);
+        foreach (Tactic t in later)
+        {
+            HtnPlanner.Gated(t, c, out string why);
+            Assert.AreNotEqual($"introduced on shift {t.IntroducedShift}", why, $"{t.Id} is still locked on shift 1");
+        }
+
+        config.careerTable = true;
+        foreach (Tactic t in later)
+        {
+            Assert.IsFalse(HtnPlanner.Gated(t, c, out string why), $"{t.Id} got through on shift 1 with the table on");
+            Assert.AreEqual($"introduced on shift {t.IntroducedShift}", why);
+        }
     }
 
     // ---- phase 2: Hunt -----------------------------------------------------------------------

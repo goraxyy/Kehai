@@ -14,6 +14,9 @@ all of that maps onto the systems that already exist in this project.
 > learner that finds combos. [§16](#16-karen-020) lists every change and where it lives in the
 > code. The sections below keep the original design, with a short **0.2.0** note wherever it no
 > longer matches.
+>
+> **Karen 0.3.0** (the `0.3.0` branch) brings the owner's tricks back, rebuilt end to end, and
+> removes nine for good. [§17](#17-karen-030-the-tricks-come-back) lists what each one does now.
 
 ---
 
@@ -722,6 +725,10 @@ that holds the whole design together.
 Every entry is a ScriptableObject: preconditions, tension cost, cooldown, expected-panic prior,
 the tell it must emit, and the *chore it generates*. Grouped by which sense it attacks.
 
+**In 0.3.0** this list is the original design. What each trick does now, which are live, and
+the nine removed (Mirror-black, Task falsification, the five PA tricks, Silence, The witness) are
+in [§17](#17-karen-030-the-tricks-come-back).
+
 **In 0.2.0** most of this library is now **drafts**, kept in the code but off in play until
 they're reworked or removed. Live are Ask the customers, Bin tamper, Ambush, Blackout (lights
 only) and the new Cut and Throw, plus each action's own move. A trick's "tell" below may still
@@ -869,6 +876,10 @@ constraints, enforced in code, asserted in tests.
    behaviour must visibly work within two shifts, or the learning is a punishment ratchet.
 8. **Determinism on demand.** Seeded RNG and a replayable decision log, so any "that was
    bullshit" moment can be replayed and adjudicated. This is a QA feature and a trust feature.
+9. **Hands-on tricks happen at her hands** (0.3.0, [§17.3](#173-the-new-fairness-rules)).
+10. **No new chore once the doors close** (0.3.0, the owner's call of 8 November;
+    [§17.3](#173-the-new-fairness-rules)). Rule 6 for closing time: the clock-out waits for every
+    chore, so a chore made after closing can keep a shift from ever ending.
 
 ---
 
@@ -1576,3 +1587,140 @@ both builders made).
 draws each live guess on the floor plan, numbered, with its weight and when you could reach its
 end. Replays have a `routes` layer drawn only from the recording, so seeking back shows what she
 guessed then. Recordings from before version 2 show none.
+
+---
+
+## 17. Karen 0.3.0: the tricks come back
+
+The owner's 21 items of 7 November, built from
+[`docs/plans/0.3.0-build-plan.md`](../plans/0.3.0-build-plan.md), by one builder (Claude).
+
+### 17.1 The list
+
+| | Count |
+|---|---|
+| Tactics in the library | 27 (nine removed) |
+| Live tricks | 15, 17 choices for the learner (Throw has three): Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy, the overtime |
+| Drafts that stay | 5: Crate wall, Shelf relocation, Mimicry, Stalk-and-withdraw, Peace offering |
+
+**What's put into the store at load** (`KarenFixtures`, data in C# since the scene isn't in git):
+the WC mop's rack, the fridge control box beside the breaker box, the PA box beside the time
+clock, two-way doors, the fog's look and wall clocks whose hands run and stop. The props use the
+Blender models once they're imported (**Kehai → Props → Import Karen's Props**), and their own
+boxes until then.
+
+**Removed:** Mirror-black, Task falsification, PA decoy, PA: your position, PA: your task list,
+PA: countdown, PA: her footsteps, Silence, The witness. Old Ledgers that learned about them load
+and forget them. Their warning sounds keep their numbers in `TellKind`, because replays store
+sounds by number.
+
+### 17.2 Each trick
+
+| Trick | What she does | Your chore |
+|---|---|---|
+| Fog | Floods the room she thinks you're in (if it has fridges) from its fridges. Everyone in it sees 2 m (`KarenConfig.fogVisibility`): you, her, her cameras, Kenji, shoppers | Reset the fridge control box in the backstreet |
+| Camera bolt-on | Stands a camera in a shelf slot, turned and tilted to see where you usually are (`CameraPlacement`). At most two. It beeps while it sees you | Unplug it (hold E), or keep out of its view |
+| Shelf sweep | Stands at a full bay on your way and knocks 5–15 products off. The task list names the aisle | Restock the bay |
+| Spill | Drops the shoppers' dirt at her feet, on a neck you're likely to cross | Mop it, or leave wet footprints |
+| Bin tamper | Refills a bin she's standing at, in her part of the building | Bag it, take it out back |
+| Tool theft | Takes the WC mop (never the staff room's), carries it off, leaves it where you go least | Find it, carry it back to its rack |
+| The overtime | In the shift's last 2 minutes, stops the time clock: the countdown freezes | Restart the clock at the staff room |
+| Phantom chime | The front doors near you open and shut, chiming, for 20 s, with nobody there. Her own ears ignore it | Check them, or don't |
+| Block door | A box on a floor frame behind a door, on the far side from you. No timer. Every door swings both ways | Go round, pick the box up |
+| The understudy | Kenji, the new hire, shadows you at 10–20 m and tells her where you are. Welcomed over the PA only if it's on | Walk up and send him to the tills |
+
+The **PA box** in the staff room switches the PA off: no announcements and no sounds through it.
+
+**Every trick from shift 1, for now** (the owner, 8 November): the career table is off while the
+tricks are tested. Each trick keeps its unlock shift in the code, and `KarenConfig.careerTable`
+(or `-karen-career-table on`) brings the lock back.
+
+### 17.3 The new fairness rules
+
+- **Rule 9, hands-on tricks happen at her hands.** Spill, Bin tamper, Shelf sweep, Tool theft,
+  Camera bolt-on, Block door and the overtime land only while her body is within 2 m of the spot,
+  across the floor (`HandsOn` step). `FairnessGuard.CheckHandsOn` counts anything that lands
+  further as a violation. The building's tricks (Blackout, Fog, Phantom chime) stay remote.
+- **Every chore says where it is** (`Tactic.FixAt`): the breaker box, the fridge box, the clock,
+  the mop, the box's side of a door, Kenji, the camera. Ambush waits on your way to it, so Tool
+  theft then Ambush is a combo she can learn.
+- **Rule 10, no new chore once the doors close** (the owner's call, 8 November, after the
+  ablation found shifts that couldn't end).
+  - From closing on, the gate refuses every trick that leaves a chore (`Tactic.LeavesChore`). It
+    refuses on every rung, rung F's shield or not.
+  - The 11 tricks: Shelf sweep, Spill, Bin tamper, Tool theft, the overtime, Fog, Camera bolt-on,
+    Phantom chime, Block door, the understudy and Blackout.
+  - A chore trick that hasn't landed anything by closing stops (`PlanTree`). One that has landed
+    finishes, so she never walks off holding the WC mop.
+  - She can still hunt, Cut, throw and wait in ambush by a chore that's already open.
+- **She finishes what she starts** (the owner's call, 8 November, after the second ablation found
+  her hands-on tricks rarely landed).
+  - Once a hands-on trick is under way, neither her next decision nor a loud noise drops it. She
+    used to re-decide on the walk to its spot and drop it: Spill landed once in 55 starts.
+  - Only a hunt wins (`KarenBrain.FinishesFirst`, `IgnoresNoise`).
+  - Its own steps can still fail, and rule 10 still stops it if the doors close first.
+  - After 60 s she decides as usual (`CommitSeconds`), so a trick that can't finish doesn't hold
+    her.
+  - In a 60-shift check, Spill then landed 39 of 42 times and Shelf sweep 48 of 48.
+
+### 17.4 How she learns, after 0.3.0
+
+**Placement memory**, a new term:
+- *What it is:* for each trick, a score per place: how well doing it *there* paid before. She
+  mostly picks the best place she knows, and sometimes tries the one she knows least.
+- *How Kehai uses it:* each trick lists candidate places (from your habits and the map) with a
+  guess for each; the memory sorts them (`PlacementMemory`, in the Ledger). When a trick lands, it
+  leaves a watch on its place (`PlaceRewards`), and the answer pays the place: how long the bay
+  stayed short, the mop stayed lost, the camera saw you, the door held you; whether you walked
+  through the spill; how much the fog rattled you; whether you went to look at the doors.
+- *Elsewhere:* Google Maps preferring the route you actually take, or YouTube mixing a new kind of
+  video in with the ones you've liked.
+
+It fades over shifts like everything else she learns (rule 7), and it is saved per player in the
+Ledger. Learning from all players comes with the learning plan (PR #76).
+
+**Your answers:** every chore you fix is recorded with how long it took (`fog_reset`,
+`clock_restarted`, `mop_returned`, `box_moved`, `understudy_sent_away`, `pa_off`, and
+`camera_unplugged`). The shift report lists them and her best places.
+
+### 17.5 The test players and the checks
+
+- The bots see her chores (`karen_chores`) and answer each one: `reset_fog`, `restart_clock`,
+  `find_tool`, `unblock_door`, `send_kenji`, `unplug_camera`. They're blinded by fog too.
+- `-kehai-trick-check` (`TrickCheck`) plays a long shift on the real store, forces each trick in
+  turn and writes down whether it started, landed, showed its chore, and was fixed, and whether
+  the shift still ended.
+- Replays (version 3) record fogged rooms and the stopped clock, and show the fog on playback.
+
+### 17.6 Not in 0.3.0
+
+The five drafts above; learning from all players and Panic's calibration (PR #76); the two
+Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
+
+### 17.7 The ablation (7 November)
+
+240 shifts against `main`, paired by seed ([KAREN_RESULTS.md](KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
+- **Fair:** 0 violations.
+- **Her tricks run:** 3.6 a shift against 1.1, Spill and Shelf sweep most.
+- **No stronger:** catches 0.02–0.10 a shift lower, fewer hunts, setpoint error 0.01–0.04 worse.
+- **13 stuck shifts against 2.** Mostly, she made chores after the doors closed faster than they
+  could be cleared, and nobody clocks out with a chore open. Rule 10 now stops that (§17.3; the
+  owner's call, 8 November).
+- **Never ran:** the understudy, the overtime and Cut.
+- **Also found:**
+  - the test player falling through Aisle 4/B's floor;
+  - 0.3.0 running 3.6 times slower;
+  - a fog warning that flooded the log (fixed).
+
+**The second run** (8 November: rule 10, every trick from shift 1):
+- 0 fairness violations, and 0 chores after closing.
+- 9 stuck shifts against the first run's 13 and `main`'s 2. The stuck shifts now come from the
+  test player: it can't get close enough to a bay or the tills, or its own fear interrupts it.
+- **It found two bugs:**
+  - The understudy and the overtime were on cooldown for the first 25 hours of play, so they
+    never ran. Fixed.
+  - **Her hands-on tricks rarely land in play.** She re-decides on the walk to the spot, and the
+    trick is dropped. Spill landed 1 time in 55 starts, and Bin tamper, Tool theft, Camera bolt-on
+    and Block door never did. The building's tricks always land.
+- Shelf sweep's bay lookup is now cached: 14% faster.
+

@@ -66,6 +66,12 @@ namespace Kehai.Replay
         readonly List<SlotView> changingSlots = new List<SlotView>();
         readonly List<LightView> lights = new List<LightView>();
         readonly List<ReplayEvent> circuits = new List<ReplayEvent>();
+        readonly List<ReplayEvent> fogs = new List<ReplayEvent>();   // 0.3.0: rooms fogged and cleared
+        bool fogWas;
+        float fogStartWas, fogEndWas;
+        FogMode fogModeWas;
+        Color fogColourWas;
+        bool fogSaved;
         readonly Dictionary<int, Material> moodEyes = new Dictionary<int, Material>();
         ReplayPuppets puppets;
         SimulationMode physicsWas;
@@ -128,6 +134,7 @@ namespace Kehai.Replay
             int slotsMatched = MatchSlots(sceneSlots);
             int lightsMatched = MatchLights();
             foreach (ReplayEvent ev in Data.Events) if (ev.Type == KrecEvent.Circuits) circuits.Add(ev);
+            foreach (ReplayEvent ev in Data.Events) if (ev.Type == KrecEvent.Fog) fogs.Add(ev);
             built = true;
             Apply(Start, 0f);
 
@@ -439,7 +446,59 @@ namespace Kehai.Replay
                 bits = e.Kind;
             }
             CircuitBits = bits;
+            ApplyFog(q);
             Physics.SyncTransforms();
+        }
+
+        // Her fog, as it was at q (0.3.0): FogState is set to match, and while the replay's camera
+        // is in a fogged room the renderer's own distance fog closes in to the visibility.
+        void ApplyFog(float q)
+        {
+            if (fogs.Count == 0) return;
+            var now = new Dictionary<string, float>();
+            foreach (ReplayEvent e in fogs)
+            {
+                if (e.T > q) break;
+                now[e.Text ?? ""] = e.Value;
+            }
+            foreach (KeyValuePair<string, float> room in now)
+            {
+                bool fogged = room.Value > 0f;
+                if (fogged && !FogState.IsFogged(room.Key)) FogState.Fill(room.Key, room.Value, 0.01f);
+                else if (!fogged && FogState.IsFogged(room.Key)) FogState.Clear(room.Key, 0.01f);
+            }
+
+            Camera eye = Camera.main;
+            string at = eye != null ? FogState.RoomOf(eye.transform.position) : null;
+            float visibility = at != null ? FogState.VisibilityOf(at) : 0f;
+            if (!fogSaved)
+            {
+                fogSaved = true;
+                fogWas = RenderSettings.fog;
+                fogStartWas = RenderSettings.fogStartDistance;
+                fogEndWas = RenderSettings.fogEndDistance;
+                fogModeWas = RenderSettings.fogMode;
+                fogColourWas = RenderSettings.fogColor;
+            }
+            if (visibility > 0f)
+            {
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.Linear;
+                RenderSettings.fogStartDistance = 0f;
+                RenderSettings.fogEndDistance = visibility * 1.5f;
+                RenderSettings.fogColor = new Color(0.82f, 0.84f, 0.86f);
+            }
+            else RestoreFog();
+        }
+
+        void RestoreFog()
+        {
+            if (!fogSaved) return;
+            RenderSettings.fog = fogWas;
+            RenderSettings.fogStartDistance = fogStartWas;
+            RenderSettings.fogEndDistance = fogEndWas;
+            RenderSettings.fogMode = fogModeWas;
+            RenderSettings.fogColor = fogColourWas;
         }
 
         void ApplyActors(float q, float dt)
@@ -520,6 +579,8 @@ namespace Kehai.Replay
         public void Dispose()
         {
             Physics.simulationMode = physicsWas;
+            RestoreFog();
+            if (fogs.Count > 0) FogState.Reset();
         }
     }
 }

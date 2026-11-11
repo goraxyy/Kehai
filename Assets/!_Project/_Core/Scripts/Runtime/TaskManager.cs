@@ -12,7 +12,8 @@ using UnityEngine;
 // The shift can only be clocked out once all three read complete.
 public class TaskManager : MonoBehaviour
 {
-    public enum TaskKind { Mop, Trash, Stock, Serve, Directions }
+    // Stored by name in the shift records, and by number nowhere: new kinds go at the end.
+    public enum TaskKind { Mop, Trash, Stock, Serve, Directions, ReturnTool, RestartClock }
 
     public readonly struct ShiftTask
     {
@@ -66,8 +67,41 @@ public class TaskManager : MonoBehaviour
     public int CustomersAsking => CustomerRequest.PendingCount;
     public bool AllDirectionsGiven => CustomersAsking == 0;
 
+    // Karen's chores (0.3.0). A tool she took and hid (Tool theft): it has to go back on its
+    // rack, by hand — the rack won't recall it.
+    public int ToolsMissing => ToolSnapPoint.TakenCount;
+    public bool ToolsHome => ToolsMissing == 0;
+
+    // The time clock she stopped (the overtime): restart it at the clock.
+    public bool ClockRunning => Shift == null || !Shift.IsFrozen;
+
     public bool AllComplete => FloorClean && ShelvesStocked && TrashEmpty
-                            && AllCustomersServed && AllDirectionsGiven;
+                            && AllCustomersServed && AllDirectionsGiven && ToolsHome && ClockRunning;
+
+    // Where a job is, when somebody knows: "Aisle 4" after she swept a bay there. Shown beside
+    // the job while it's open, and dropped once the job's done.
+    readonly Dictionary<TaskKind, string> hints = new Dictionary<TaskKind, string>();
+
+    public void Hint(TaskKind kind, string where)
+    {
+        if (string.IsNullOrEmpty(where)) hints.Remove(kind);
+        else hints[kind] = where;
+        NotifyChanged();
+    }
+
+    public string HintFor(TaskKind kind) => hints.TryGetValue(kind, out string where) ? where : string.Empty;
+
+    string Detail(TaskKind kind, bool complete, string otherwise)
+    {
+        if (complete) { hints.Remove(kind); return otherwise; }
+        string hint = HintFor(kind);
+        if (hint.Length == 0) return otherwise;
+        return otherwise.Length == 0 ? hint : hint + " · " + otherwise;
+    }
+
+    [Tooltip("The shift's clock, for the overtime's job. Found in the scene when empty.")]
+    public ShiftManager shiftManager;
+    ShiftManager Shift => shiftManager != null ? shiftManager : shiftManager = FindAnyObjectByType<ShiftManager>();
     public bool HasTasks => ShiftRunning;
 
     public IEnumerable<ShiftTask> Tasks
@@ -76,13 +110,13 @@ public class TaskManager : MonoBehaviour
         {
             // No running total — just whether the floor needs attention at all.
             yield return new ShiftTask(TaskKind.Mop, "Mop up spills",
-                string.Empty, FloorClean);
+                Detail(TaskKind.Mop, FloorClean, string.Empty), FloorClean);
 
             yield return new ShiftTask(TaskKind.Stock, "Restock the shelves",
-                string.Empty, ShelvesStocked);
+                Detail(TaskKind.Stock, ShelvesStocked, string.Empty), ShelvesStocked);
 
             string trashDetail = TrashBag.ActiveCount > 0 ? "take the bag out back" : string.Empty;
-            yield return new ShiftTask(TaskKind.Trash, "Empty the trash", trashDetail, TrashEmpty);
+            yield return new ShiftTask(TaskKind.Trash, "Empty the trash", Detail(TaskKind.Trash, TrashEmpty, trashDetail), TrashEmpty);
 
             string serveDetail = CustomersWaiting > 0 ? $"{CustomersWaiting} waiting" : string.Empty;
             yield return new ShiftTask(TaskKind.Serve, "Serve the customers", serveDetail, AllCustomersServed);
@@ -93,6 +127,15 @@ public class TaskManager : MonoBehaviour
             if (CustomersAsking > 0)
                 yield return new ShiftTask(TaskKind.Directions, "Help customers find things",
                     $"{CustomersAsking} asking", false);
+
+            // Karen's chores, also only while they're waiting.
+            foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
+                yield return new ShiftTask(TaskKind.ReturnTool, "Return the " + rack.ToolName,
+                    Detail(TaskKind.ReturnTool, false, string.Empty), false);
+
+            if (!ClockRunning)
+                yield return new ShiftTask(TaskKind.RestartClock, "Restart the time clock",
+                    Detail(TaskKind.RestartClock, false, "staff room"), false);
         }
     }
 
@@ -100,6 +143,7 @@ public class TaskManager : MonoBehaviour
     public void BeginShift(int shiftNumber)
     {
         ShiftRunning = true;
+        hints.Clear();
         NotifyChanged();
     }
 

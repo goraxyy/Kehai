@@ -8,6 +8,7 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
     public HingeDoor Door { get; private set; }
     public Item Box { get; private set; }
     public int Region { get; private set; }
+    public int Side { get; private set; }   // which side of the door the box is on (SideOf)
     public bool IsBlocking => !cleared && Box != null && Box.gameObject.activeInHierarchy &&
         !Box.isCarried && (Box.transform.position - boxPosition).sqrMagnitude < .04f;
 
@@ -50,18 +51,40 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
             box.TryGetComponent(out BoxCollider collider) && collider.enabled && !collider.isTrigger;
     }
 
+    // Which way the door's two sides face: +1 along this, -1 against it (0.3.0).
+    public static bool SideNormal(HingeDoor door, out Vector3 normal)
+    {
+        normal = default;
+        if (door == null) return false;
+        Vector3 along = door.DoorCentre - door.transform.position;
+        along.y = 0f;
+        if (along.sqrMagnitude < .01f) return false;
+        normal = Vector3.Cross(along.normalized, Vector3.up);
+        return true;
+    }
+
+    // The side of a door a point is on: +1 or -1, as SideNormal.
+    public static int SideOf(HingeDoor door, Vector3 point)
+    {
+        if (!SideNormal(door, out Vector3 normal)) return 1;
+        Vector3 d = point - door.DoorCentre;
+        d.y = 0f;
+        return Vector3.Dot(d, normal) >= 0f ? 1 : -1;
+    }
+
     // Only a closed, still door with floor space on one side is eligible. All dimensions
     // come from the existing colliders, in metres; no rescaling of stock or hinge prefabs.
-    public static bool TryPlacement(HingeDoor door, ProductBox box, out Vector3 position, out Quaternion rotation)
+    // Either side (the first that fits), or the one Karen asks for (0.3.0: side = +1 or -1).
+    public static bool TryPlacement(HingeDoor door, ProductBox box, out Vector3 position, out Quaternion rotation) =>
+        TryPlacement(door, box, 0, out position, out rotation);
+
+    public static bool TryPlacement(HingeDoor door, ProductBox box, int wanted, out Vector3 position, out Quaternion rotation)
     {
         position = default;
         rotation = Quaternion.identity;
         if (door == null || !door.isActiveAndEnabled || door.Locked || door.IsOpen || door.IsMoving ||
             door.Panel == null || !Available(box)) return false;
-        Vector3 along = door.DoorCentre - door.transform.position;
-        along.y = 0f;
-        if (along.sqrMagnitude < .01f) return false;
-        Vector3 normal = Vector3.Cross(along.normalized, Vector3.up);
+        if (!SideNormal(door, out Vector3 normal)) return false;
         BoxCollider collider = box.GetComponent<BoxCollider>();
         Vector3 size = WorldSize(collider);
         Bounds panel = door.Panel.bounds;
@@ -71,6 +94,7 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
             Mathf.Abs(Vector3.Dot(normal, leaf.transform.TransformVector(Vector3.forward * leaf.size.z * .5f)));
         for (int side = 1; side >= -1; side -= 2)
         {
+            if (wanted != 0 && side != wanted) continue;
             Vector3 outward = normal * side;
             rotation = Quaternion.LookRotation(outward);
             Vector3 centre = door.DoorCentre + outward * (thickness + size.z * .5f + .04f);
@@ -97,13 +121,17 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
         return new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
     }
 
-    public static DoorBlock Spawn(HingeDoor door, ProductBox box, int region)
+    public static DoorBlock Spawn(HingeDoor door, ProductBox box, int region) => Spawn(door, box, region, 0);
+
+    // On the side asked for (+1 or -1; 0 for whichever fits).
+    public static DoorBlock Spawn(HingeDoor door, ProductBox box, int region, int side)
     {
-        if (!TryPlacement(door, box, out Vector3 at, out Quaternion rotation)) return null;
+        if (!TryPlacement(door, box, side, out Vector3 at, out Quaternion rotation)) return null;
         var root = new GameObject("Door box slot");
         root.layer = box.gameObject.layer;
         root.transform.SetPositionAndRotation(at, rotation);
         var block = root.AddComponent<DoorBlock>();
+        block.Side = SideOf(door, at);
         block.Door = door;
         block.Box = box.GetComponent<Item>();
         block.Region = region;
@@ -165,7 +193,19 @@ public sealed class DoorBlock : MonoBehaviour, IInteractable, IHoverable
     }
 
     public void Interact(PlayerInteract player) { if (IsBlocking) pickup.Interact(player); }
-    public string GetPrompt() => IsBlocking ? "Move box to unblock door" : string.Empty;
+    public string GetPrompt() => IsBlocking ? PickUpPrompt : string.Empty;
+
+    // What the door says (0.3.0): from the box's side, how to clear it; from the other, that it's
+    // held from beyond (and it rattles, HingeDoor.Use), so you know to go round.
+    public const string PickUpPrompt = "Pick up the box to unblock the door";
+    public const string OtherSidePrompt = "Blocked from the other side";
+
+    public string PromptFor(PlayerInteract player)
+    {
+        if (!IsBlocking) return string.Empty;
+        if (player == null || Door == null) return PickUpPrompt;
+        return SideOf(Door, player.transform.position) == Side ? PickUpPrompt : OtherSidePrompt;
+    }
     public void OnHoverEnter() { hovered = true; Highlight(true); }
     public void OnHoverExit() { hovered = false; Highlight(false); }
 

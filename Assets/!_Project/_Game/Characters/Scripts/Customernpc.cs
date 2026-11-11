@@ -672,29 +672,6 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
         if (agent != null && agent.isOnNavMesh && !isFrozen) agent.isStopped = false;
     }
 
-    // The witness: walk to a spot, look around, then carry on out of the store.
-    public void SendToLook(Vector3 point, float seconds)
-    {
-        StopAllCoroutines();
-        IsWaitingToBeServed = false;
-        StartCoroutine(Look(point, seconds));
-    }
-
-    IEnumerator Look(Vector3 point, float seconds)
-    {
-        CurrentActivity = Activity.LookingAround;
-        QueueingSince = -1f;
-        yield return MoveTo(point);
-        float end = Time.time + seconds;
-        while (Time.time < end)
-        {
-            transform.Rotate(Vector3.up, 60f * Time.deltaTime);
-            yield return null;
-        }
-        if (exitPoint != null) yield return MoveTo(exitPoint.position);
-        Despawn();
-    }
-
     void Despawn()
     {
         onDespawn?.Invoke();

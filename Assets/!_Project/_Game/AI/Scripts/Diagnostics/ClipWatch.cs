@@ -214,6 +214,7 @@ namespace Kehai.Karen
         int openProp = -1;
         float openPropUntil;
         float lastClockRefused = -999f;
+        float lastClockStopped = -999f;
 
         public void Record(float t, string kind, string chose, string text, Vector2 karenAt)
         {
@@ -257,7 +258,7 @@ namespace Kehai.Karen
                                 break;
                             }
                     }
-                    else if (label.StartsWith("clock-out refused")) ClockRefused(t, karenAt, false);
+                    else if (label.StartsWith("stop the time clock")) ClockStopped(t, karenAt);
                     break;
             }
         }
@@ -295,13 +296,20 @@ namespace Kehai.Karen
             Add("pa_call", t, Vector2.zero, false, $"{Her} over the speakers: \"{text}\"");
         }
 
-        public void PunchRefused(float t, Vector2 playerAt) => ClockRefused(t, playerAt, true);
-
-        void ClockRefused(float t, Vector2 at, bool byTheClock)
+        // The time clock refusing you: your jobs aren't done (or the clock she stopped isn't one of them yet).
+        public void PunchRefused(float t, Vector2 playerAt)
         {
             if (t - lastClockRefused < ClipMarkers.ClockRefusedCooldown) return;
             lastClockRefused = t;
-            Add("clock_refused", t, at, true, byTheClock ? "The time clock refused you." : $"{Her} refused your clock-out: two more minutes.");
+            Add("clock_refused", t, playerAt, true, "The time clock refused you.");
+        }
+
+        // The overtime (0.3.0): she stopped the time clock, and the shift's countdown with it.
+        void ClockStopped(float t, Vector2 at)
+        {
+            if (t - lastClockStopped < ClipMarkers.ClockStoppedCooldown) return;
+            lastClockStopped = t;
+            Add("clock_stopped", t, at, true, $"{Her} stopped the time clock. The shift won't end until you restart it.");
         }
 
         public void CustomerGaveUp(float t, Vector2 at) => Add("customer_chaos", t, at, true, "A customer gave up waiting at the till and left.");

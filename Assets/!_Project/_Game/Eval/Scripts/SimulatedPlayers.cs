@@ -541,6 +541,20 @@ namespace Kehai.Eval
             if (bins.Count > 0 && (int)bins[0]["fill"] >= (profile == PlayerProfile.Efficient ? 1 : 2))
                 jobs.Add((Cost(bins[0]), "bag_trash", (string)bins[0]["id"]));
 
+            // Her tricks' chores (0.3.0): the fog box, the stopped clock, the WC mop she hid, a box
+            // behind a door, Kenji, her cameras. Jobs like the rest, nearest first; the clock comes
+            // first once the doors close, since nobody clocks out while it's stopped.
+            if (obs.TryGetValue("karen_chores", out object choresObj))
+                foreach (var chore in ((List<object>)choresObj).Cast<Dictionary<string, object>>())
+                {
+                    string kind = (string)chore["kind"], id = (string)chore["id"];
+                    string verb = ChoreVerb(kind);
+                    if (verb == null || Avoided(verb, id)) continue;
+                    if (kind == "camera" && (profile == PlayerProfile.Reckless || (float)chore["walk_m"] > 25f)) continue;
+                    if (kind == "clock" && !storeOpen) return new EnvAction { verb = verb, target = id, sprint = sprint };
+                    jobs.Add((Cost(chore), verb, id));
+                }
+
             if (jobs.Count > 0)
             {
                 var job = jobs.OrderBy(j => j.d < 0 ? 999f : j.d).First();
@@ -557,6 +571,20 @@ namespace Kehai.Eval
                 return Unless(new EnvAction { verb = "clock_out", sprint = sprint }, Idle());
 
             return Idle();
+        }
+
+        static string ChoreVerb(string kind)
+        {
+            switch (kind)
+            {
+                case "fog": return "reset_fog";
+                case "clock": return "restart_clock";
+                case "lost_tool": return "find_tool";
+                case "blocked_door": return "unblock_door";
+                case "kenji": return "send_kenji";
+                case "camera": return "unplug_camera";
+                default: return null;
+            }
         }
 
         // A job's walk, plus the detour a frightened player makes round where she was.

@@ -43,6 +43,13 @@ namespace Kehai.Eval
         Vector3 lastPosition;
         float jitterPhase;
 
+        // Falling through the floor (0.3.0's ablation saw the body drop 53 m in Aisle 4/B): the
+        // last place it stood on the NavMesh, and how many times it has fallen, in all.
+        public static int FallsTotal { get; private set; }
+        CharacterController body;
+        Vector3 safe;
+        bool hasSafe, falling;
+
         public bool Sprint { get; set; }
         public bool Crouch { get; set; }
         public bool Jump => false;
@@ -62,7 +69,41 @@ namespace Kehai.Eval
             motor = GetComponent<PlayerMotor>();
             hands = GetComponent<PlayerInteract>();
             carry = GetComponent<CarrySlot>();
+            body = GetComponent<CharacterController>();
             path = new NavMeshPath();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => FallsTotal = 0;
+
+        // Once per fall, whatever `verbose` says: where it stood last, where it is, and what
+        // was around and under that spot, so the hole can be found.
+        void WatchForFalls()
+        {
+            Vector3 p = transform.position;
+            bool standing = body == null || body.isGrounded;
+            if (standing && NavMesh.SamplePosition(p, out NavMeshHit onMesh, 1.5f, NavMesh.AllAreas))
+            {
+                safe = p;
+                hasSafe = true;
+                falling = false;
+                return;
+            }
+            if (!hasSafe || falling || p.y > safe.y - 3f) return;
+            falling = true;
+            FallsTotal++;
+            var near = new System.Text.StringBuilder();
+            foreach (Collider c in Physics.OverlapSphere(safe, 1.5f, ~0, QueryTriggerInteraction.Collide))
+            {
+                if (c == null || c.transform.IsChildOf(transform)) continue;
+                near.Append($"{c.name} ({c.GetType().Name}{(c.isTrigger ? ", trigger" : "")}{(c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic ? ", moving" : "")}); ");
+            }
+            string under = Physics.Raycast(safe + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 4f, ~0, QueryTriggerInteraction.Ignore)
+                ? $"{hit.collider.name} {hit.distance - 0.5f:0.00} m below" : "nothing within 3.5 m";
+            Kehai.Karen.KarenBrain karen = Kehai.Karen.KarenBrain.Instance;
+            string her = karen != null && karen.Body != null ? $"{karen.Body.Position} ({karen.CurrentPlan?.Tactic?.Id ?? "no plan"})" : "absent";
+            Debug.LogWarning($"[driver] FELL through the floor: stood at {safe} ({Kehai.Store.StoreMap.Current?.NameAt(safe)}), now {p}. " +
+                             $"Under that spot: {under}. Within 1.5 m: {near}Karen: {her}");
         }
 
         public void Engage()
@@ -159,6 +200,9 @@ namespace Kehai.Eval
             if (body != null) body.enabled = enabledBefore;
             Physics.SyncTransforms();
             lastPosition = progressFrom = transform.position;
+            safe = transform.position;
+            hasSafe = true;
+            falling = false;
             stuckFor = 0f;
             return true;
         }
@@ -182,6 +226,7 @@ namespace Kehai.Eval
 
         void Update()
         {
+            WatchForFalls();
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
             Vector3 facing = transform.forward;
 

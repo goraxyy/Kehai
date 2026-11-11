@@ -6,7 +6,8 @@ showpiece.
 
 **Start here:**
 - [`docs/project/HANDOVER.md`](docs/project/HANDOVER.md): where everything is on this Mac, the state of the work, and what's next.
-- [`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md): the Karen 0.2.0 redesign, what's next for her.
+- [`docs/plans/0.3.0-build-plan.md`](docs/plans/0.3.0-build-plan.md): Karen 0.3.0, the tricks rebuilt end to end (one builder: Claude).
+- [`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md): Karen 0.2.0, merged; how the tricks work today.
 - Docs are sorted by topic under `docs/` (`project/`, `plans/`, `karen/`, `store/`, `game/`, `marketing/`, `research/`); finished or stale ones go to `docs/archive/`. The README lists them all.
 - [`docs/store/SCENE_MAP.md`](docs/store/SCENE_MAP.md) and [`docs/store/STORE_MAP.md`](docs/store/STORE_MAP.md): the scene layout and Karen's map. Neither the scene nor the art is in git.
 - Then [`README.md`](README.md), [`docs/karen/Karen.md`](docs/karen/Karen.md), [`docs/karen/KAREN_RESULTS.md`](docs/karen/KAREN_RESULTS.md) and [`docs/project/RELEASE_PLAN.md`](docs/project/RELEASE_PLAN.md).
@@ -58,16 +59,3 @@ python3 tools/eval/analyze_ablation.py <kehai_eval>/ablation_<time>.jsonl
 # Regenerate the scene map after changing the scene
 python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/store/SCENE_MAP.md
 ```
-
-## If you're the second builder, [B]
-
-Two AI builders work on Karen 0.2.0 at the same time. You are **[B]** in
-[`docs/plans/0.2.0-build-plan.md`](docs/plans/0.2.0-build-plan.md); Claude is [C].
-
-- **Your tasks:** only the ones tagged [B], phase by phase. Tick each box (`- [ ]` → `- [x]`) in the same commit as the work.
-- **Your place:** the worktree `.claude/worktrees/0.2.0-b`, on branch `0.2.0-b`. Never commit to `0.2.0` yourself: at each sync point [C] merges `0.2.0-b` into `0.2.0`, and you then merge `0.2.0` back into `0.2.0-b`.
-- **Your files:** only the ones your task lists. If you need a file that isn't on the list, add a row to the plan's §7 "Requests between builders" and move on to something else.
-- **The APIs between you:** where a [B] task says "Needs" a [C] task, wait for that API to land on `0.2.0`, then merge it in.
-- **Unity:** never start one while the owner's editor is open (see the rules above). Ask the owner first.
-- **Commits** read as the owner's own: no AI credit and no `Co-Authored-By` lines.
-- **New props:** ask the owner whether they want materials before you build one.

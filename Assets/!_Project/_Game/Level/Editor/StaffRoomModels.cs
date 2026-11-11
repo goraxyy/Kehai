@@ -431,7 +431,7 @@ public static class StaffRoomModels
         Box(p,"Header",new Vector3(0,2.56f,0),new Vector3(1.66f,.08f,.18f),ivory,true);
         var hinge=Door(p,"staff door",new Vector3(-.75f,0,0),1.5f,2.46f,.035f,Material("Door Neutral Grey",new Color(.68f,.69f,.67f)),95f);
         var door=hinge.gameObject.AddComponent<HingeDoor>();
-        door.aimedInteraction=true;door.fixedSwingDirection=true;door.openAngle=95f;
+        door.aimedInteraction=true;door.fixedSwingDirection=false;door.openAngle=95f;   // both ways since 0.3.0
         hinge.GetComponent<FurnitureDoor>().roomDoor=door;
         foreach(float side in new[]{-1f,1f})
             Box(hinge,"Kick plate",new Vector3(.75f,.2f,side*.039f),new Vector3(1.42f,.27f,.014f),metal);

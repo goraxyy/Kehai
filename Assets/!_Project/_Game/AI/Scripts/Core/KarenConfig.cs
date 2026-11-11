@@ -50,6 +50,9 @@ namespace Kehai.Karen
         public KarenRung rung = KarenRung.E_Ledger;
         [Tooltip("0 = pick from the clock. Any other value makes every decision reproducible (§9.8).")]
         public int seed = 0;
+        [Tooltip("Tricks unlock shift by shift (the career table, each trick's IntroducedShift). Off since 8 November, " +
+                 "the owner's call: every trick from shift 1 while they're tested. On brings the lock back.")]
+        public bool careerTable = false;
 
         [Header("Tick rates (§6.1)")]
         public float believeHz = 10f;
@@ -140,6 +143,11 @@ namespace Kehai.Karen
         public float denyMaxCompletion = 0.8f;
         public float ambushMaxWait = 90f;
         public float ambushAbortPanic = 0.85f;
+
+        [Header("Her tricks (0.3.0)")]
+        [Tooltip("How far anyone can see inside her fog, in metres: you, her, her cameras, Kenji. " +
+                 "The F1 developer overlay has a slider for it.")]
+        [Range(0.5f, 10f)] public float fogVisibility = 2f;
 
         [Header("Being caught (§8.6)")]
         [Tooltip("Seconds of the death screen before the shift starts again.")]

@@ -53,6 +53,28 @@ namespace Kehai.Karen
         // isn't (LastTrick.Active), however long ago it started.
         public virtual bool EffectRunning(KarenContext c) => false;
 
+        // Rule 9 (0.3.0): a hands-on trick lands only while her body is within reach of the spot
+        // it touches (the HandsOn step, FairnessGuard.HandsOnReach). The building's tricks — the
+        // lights, the fog, the doors' motors — stay remote: she *is* the building.
+        public virtual bool IsHandsOn => false;
+
+        // It leaves the player a job to do: a bay to restock, a spill to mop, a box to reset, a
+        // camera to unplug, Kenji to send away. None of these start once the doors have closed
+        // (the owner's call, 8 November): the shift has to stay finishable, and the clock-out
+        // waits for every job. She can still hunt, throw and wait in ambush. Drafts decide this
+        // when they come back.
+        public virtual bool LeavesChore => false;
+
+        // Where the chore it left is fixed, while it's still waiting (0.3.0): the breaker box
+        // after a blackout, the box behind a blocked door. Ambush waits on your way there; the
+        // task list and the developer overlay can show it. False when there's nothing to fix in
+        // one place, or nothing left to fix.
+        public virtual bool FixAt(KarenContext c, out Vector3 at)
+        {
+            at = default;
+            return false;
+        }
+
         // How exposed doing this leaves her (§6.3 w_risk). 0 = unseen, 1 = in plain view.
         public virtual float ExposureRisk(KarenContext c) => 0f;
 
@@ -119,17 +141,16 @@ namespace Kehai.Karen
                 new WithdrawTactic(), new HuntTactic(),
 
                 // §8.1 sight
-                new BlackoutTactic(), new MirrorBlackTactic(), new FogTactic(), new CameraBoltOnTactic(),
+                new BlackoutTactic(), new FogTactic(), new CameraBoltOnTactic(),
                 // §8.2 work
-                new ShelfSweepTactic(), new SpillTactic(), new BinTamperTactic(), new TaskFalsificationTactic(),
-                new ToolTheftTactic(), new OvertimeTactic(),
-                // §8.3 sound and trust
-                new PaDecoyTactic(), new PaAnnouncePositionTactic(), new PaTaskReadbackTactic(),
-                new PaCountdownTactic(), new PaFootstepsTactic(), new PhantomChimeTactic(), new SilenceTactic(),
+                new ShelfSweepTactic(), new SpillTactic(), new BinTamperTactic(), new ToolTheftTactic(),
+                new OvertimeTactic(),
+                // §8.3 sound
+                new PhantomChimeTactic(),
                 // §8.4 space
                 new CrateWallTactic(), new DoorLockTactic(), new ShelfRelocationTactic(),
                 // §8.5 social
-                new MimicryTactic(), new WitnessTactic(), new UnderstudyTactic(),
+                new MimicryTactic(), new UnderstudyTactic(),
                 // §8.6 you
                 new StalkTactic(), new AmbushTactic(), new FavourTactic(),
                 // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
@@ -139,14 +160,14 @@ namespace Kehai.Karen
 
         public static IEnumerable<Tactic> For(ActionId goal) => All.Where(t => t.Actions.Contains(goal));
 
-        // The drafts (0.2.0 build plan §6): off in play until reworked or removed. Live today are
-        // the own moves, Ask the customers, Bin tamper, Cut, Ambush, the three throws, Block door and Blackout.
+        // The drafts: off in play until reworked or removed. 0.3.0 brought the owner's tricks back,
+        // each once it worked end to end (build plan C1.2); the five the owner didn't ask about
+        // stay drafts (D9). Everything else is live: the own moves, Ask the customers, Cut,
+        // Ambush, the three throws, Blackout, Fog, Camera bolt-on, Shelf sweep, Spill, Bin tamper,
+        // Tool theft, the overtime, Phantom chime, Block door and the understudy.
         static readonly HashSet<string> Drafts = new HashSet<string>
         {
-            "mirror_black", "fog", "camera_bolt_on", "shelf_sweep", "spill", "task_falsification", "tool_theft",
-            "overtime", "pa_decoy", "pa_announce_position", "pa_task_readback", "pa_countdown", "pa_footsteps",
-            "phantom_chime", "silence", "crate_wall", "shelf_relocation", "mimicry", "witness",
-            "understudy", "stalk", "favour",
+            "crate_wall", "shelf_relocation", "mimicry", "stalk", "favour",
         };
 
         public static bool IsDraft(string id) => Drafts.Contains(id);

@@ -25,7 +25,7 @@ namespace Kehai.Eval
     {
         readonly Dictionary<Object, string> ids = new Dictionary<Object, string>();
         readonly Dictionary<string, Object> objects = new Dictionary<string, Object>();
-        int nextSpill = 1, nextCustomer = 1, nextBag = 1;
+        int nextSpill = 1, nextCustomer = 1, nextBag = 1, nextChore = 1;
         float[] fromPlayer;
         long noiseCursor;
         readonly List<NoiseEvent> noises = new List<NoiseEvent>();
@@ -76,8 +76,7 @@ namespace Kehai.Eval
         public const float TellFar = 60f;   // as KarenWorld plays a tell
 
         public static bool Storewide(TellKind kind) =>
-            kind == TellKind.PaChime || kind == TellKind.SpeakerCrackle || kind == TellKind.HoldMusic ||
-            kind == TellKind.CrtTick || kind == TellKind.BallastWhine;
+            kind == TellKind.PaChime || kind == TellKind.HoldMusic || kind == TellKind.BallastWhine;
 
         // What kind of warning it is, as a person would class it.
         public static string TellCategory(TellKind kind)
@@ -85,13 +84,10 @@ namespace Kehai.Eval
             switch (kind)
             {
                 case TellKind.BallastWhine:
-                case TellKind.Flicker:
                     return "light";
                 case TellKind.PaChime:
-                case TellKind.SpeakerCrackle:
                 case TellKind.HoldMusic:
                     return "pa";
-                case TellKind.CrtTick:
                 case TellKind.PunchBuzz:
                     return "hud";
                 case TellKind.CustomerFreeze:
@@ -119,7 +115,7 @@ namespace Kehai.Eval
             Vector3 her = brain.Body.Position + Vector3.up * 1.4f;
             Vector3 d = her - me.Head;
             distance = d.magnitude;
-            if (distance > 35f || Vector3.Angle(me.Facing, d) > 55f) return false;
+            if (distance > Mathf.Min(35f, FogState.SightLimit(me.Head, her)) || Vector3.Angle(me.Facing, d) > 55f) return false;   // fog blinds you too
             return !Physics.Linecast(me.Head, her, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
                    || hit.collider.transform.IsChildOf(brain.Body.transform);
         }
@@ -145,7 +141,7 @@ namespace Kehai.Eval
             {
                 if (p == null) continue;
                 Vector3 at = p.transform.position, d = at - me.Head;
-                if (d.magnitude > 35f || Vector3.Angle(me.Facing, d) > 55f) continue;
+                if (d.magnitude > Mathf.Min(35f, FogState.SightLimit(me.Head, at)) || Vector3.Angle(me.Facing, d) > 55f) continue;
                 if (!Incoming(me.Position, at, p.Velocity, out float eta)) continue;
                 if (Physics.Linecast(me.Head, at, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) && !me.Owns(hit.collider)) continue;
                 seen = new ThrowSeen
@@ -192,7 +188,7 @@ namespace Kehai.Eval
         {
             Vector3 p = spot + Vector3.up * 1.4f;
             Vector3 d = p - me.Head;
-            if (d.magnitude > 35f || Vector3.Angle(me.Facing, d) > 50f) return false;
+            if (d.magnitude > Mathf.Min(35f, FogState.SightLimit(me.Head, p)) || Vector3.Angle(me.Facing, d) > 50f) return false;
             return !Physics.Linecast(me.Head, p, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) || (hit.point - p).magnitude < 0.8f;
         }
 
@@ -207,6 +203,7 @@ namespace Kehai.Eval
         }
 
         public string SpillId(Dirt d) => Id(d, "spill", ref nextSpill);
+        public string ChoreId(Object o, string kind) => Id(o, kind, ref nextChore);
         public string CustomerId(CustomerNPC c) => Id(c, "cust", ref nextCustomer);
         public string BagId(TrashBag b) => Id(b, "bag", ref nextBag);
 
@@ -264,6 +261,9 @@ namespace Kehai.Eval
 
         public static Item Tool(ItemType type)
         {
+            // The staff room's mop first: the WC's is hers to take (0.3.0, Tool theft).
+            foreach (ToolSnapPoint s in Object.FindObjectsByType<ToolSnapPoint>())
+                if (s.tool != null && s.tool.type == type && IsTool(s.tool) && s.place != ToolTheftTactic.Rack && !s.Taken) return s.tool;
             foreach (ToolSnapPoint s in Object.FindObjectsByType<ToolSnapPoint>())
                 if (s.tool != null && s.tool.type == type && IsTool(s.tool)) return s.tool;
             foreach (Item i in Object.FindObjectsByType<Item>())
@@ -284,6 +284,42 @@ namespace Kehai.Eval
             if (cell < 0 || fromPlayer == null) return -1f;
             float d = fromPlayer[cell];
             return float.IsInfinity(d) ? -1f : Mathf.Round(d * 10f) / 10f;
+        }
+
+        // ---- her chores (0.3.0) -----------------------------------------------------------------
+
+        // What her tricks left you to fix, and where, as the task list and your eyes would tell you:
+        // the fog box, the stopped time clock, the WC mop she hid, a box behind a door, Kenji, and
+        // any camera of hers still running.
+        public List<object> Chores()
+        {
+            var chores = new List<object>();
+            void Add(string kind, string id, Vector3 at) => chores.Add(new Dictionary<string, object>
+            {
+                ["kind"] = kind, ["id"] = id, ["region"] = Map.NameAt(at), ["walk_m"] = Walk(at),
+            });
+
+            if (FogState.Any)
+            {
+                Vector3? box = FogState.ResetBox != null ? FogState.ResetBox.position : Map.FindLandmark(LandmarkKind.BreakerBox)?.Position;
+                if (box.HasValue) Add("fog", "fog_box", box.Value);
+            }
+            ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
+            Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
+            if (shift != null && shift.IsFrozen && clock.HasValue) Add("clock", "time_clock", clock.Value.Position);
+            foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
+                if (rack != null && rack.tool != null) Add("lost_tool", ChoreId(rack.tool, "tool"), rack.tool.transform.position);
+            foreach (HingeDoor door in HingeDoor.All)
+                if (door != null && door.Blocker != null && door.Blocker.IsBlocking && door.Blocker.Box != null)
+                    Add("blocked_door", ChoreId(door, "door"), door.Blocker.Box.transform.position);
+            if (Understudy.Current != null && !Understudy.Current.Leaving)
+            {
+                objects["kenji"] = Understudy.Current;
+                Add("kenji", "kenji", Understudy.Current.transform.position);
+            }
+            foreach (CctvCamera cam in CctvCamera.All)
+                if (cam != null && cam.BoltedOn && !cam.Dead) Add("camera", ChoreId(cam, "camera"), cam.transform.position);
+            return chores;
         }
 
         public Dictionary<string, object> Observe(KehaiEnv env)
@@ -315,10 +351,10 @@ namespace Kehai.Eval
                 ["held_by_karen"] = Consequences.PlayerHeld
             };
 
-            // The HUD, exactly as the player sees it — lies included.
+            // The task list, as the player sees it.
             var tasks = new List<object>();
             if (env.Tasks != null && env.Tasks.HasTasks)
-                foreach (TaskManager.ShiftTask t in HudFeed.Shown(env.Tasks.Tasks))
+                foreach (TaskManager.ShiftTask t in env.Tasks.Tasks)
                     tasks.Add(new Dictionary<string, object> { ["kind"] = t.Kind.ToString(), ["label"] = t.Label, ["done"] = t.IsComplete, ["detail"] = t.Detail });
             o["hud_tasks"] = tasks;
 
@@ -389,9 +425,12 @@ namespace Kehai.Eval
                 {
                     ["id"] = "breaker_" + i, ["on"] = panel.SwitchOn(i), ["hum_pitch_rank"] = panel.PitchOf(i)
                 }).ToList();
-                power["pa_jammed"] = panel.PaJammed;
             }
+            // The PA's power (0.3.0: the PA box), under its old name for the agents' readers.
+            power["pa_jammed"] = KarenWorld.Instance != null && !KarenWorld.Instance.Pa.Powered;
             o["power"] = power;
+
+            o["karen_chores"] = Chores();
 
             o["karen"] = KarenAsSeen(me);
             var thrown = new List<object>();

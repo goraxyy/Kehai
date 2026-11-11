@@ -124,10 +124,16 @@ namespace Kehai.Karen
             GameEvents.PunchAttempted += OnClockRoute;
             GameEvents.DoorUsed += OnDoorSensor;
 
+            // Your answers to her tricks (0.3.0): what you did, and how long it took.
+            FogState.Filled += OnFogFilled;
+            FogState.Cleared += OnFogCleared;
+            Understudy.SentAway += OnUnderstudySentAway;
+            if (World != null) World.Pa.PowerChanged += OnPaPower;
+
             if (Shift != null)
             {
                 Shift.ShiftStateChanged += OnShiftStateChanged;
-                Shift.ClockOutGuard = ShouldRefuseClockOut;
+                Shift.FreezeChanged += OnFreezeChanged;
                 if (Shift.IsShiftActive) BeginShift();
             }
 
@@ -155,6 +161,11 @@ namespace Kehai.Karen
             GameEvents.PunchAttempted -= OnClockRoute;
             GameEvents.CustomerServed -= OnServed;
             GameEvents.DoorUsed -= OnDoorSensor;
+            FogState.Filled -= OnFogFilled;
+            FogState.Cleared -= OnFogCleared;
+            Understudy.SentAway -= OnUnderstudySentAway;
+            if (World != null && World.Pa != null) World.Pa.PowerChanged -= OnPaPower;
+            if (Shift != null) Shift.FreezeChanged -= OnFreezeChanged;
             Director?.Dispose();
             if (Shift != null) Shift.ShiftStateChanged -= OnShiftStateChanged;
             Sensorium?.Dispose();
@@ -229,15 +240,14 @@ namespace Kehai.Karen
             Stats.BeginShift(number);
             TacticLibrary.ResetShift();
             TraceRegistry.Clear();
-            HudFeed.Clear();
             closedUntil.Clear();
             closedNow.Clear();
             pendingRewards.Clear();
+            PlaceWatch.Clear();
             lastTrick = null;
             lastTrickAt = -999f;
             sabotaged.Clear();
             peakOutstanding.Clear();
-            OvertimeArmed = false;
             KilledThisShift = false;
             Dash.BeginShift();
 
@@ -294,6 +304,7 @@ namespace Kehai.Karen
             Director.EndShift();
             Policy?.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
+            PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
             Ledger.EndShift(ShiftTime, energy, clockedOut);
             Stats.EndShift(this);
             if (config.writeJsonl)
@@ -335,6 +346,10 @@ namespace Kehai.Karen
 
             TickDirector(dt);
             UpdatePredictor(dt);
+
+            // What her tricks' places paid, once a second (0.3.0).
+            placeTimer += dt;
+            if (placeTimer >= 1f) { placeTimer = 0f; PlaceWatch.Tick(Ctx, Time.time); }
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -432,7 +447,8 @@ namespace Kehai.Karen
             if (desireTimer > 2f) { desireTimer = 0f; RefreshDesire(); }
 
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
-            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt) decideNow = true;
+            if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt
+                && !IgnoresNoise(CurrentPlan.Tactic, PlanAge)) decideNow = true;
         }
 
         float lastSenseNote;
@@ -598,11 +614,39 @@ namespace Kehai.Karen
 
         // ---- decide -----------------------------------------------------------------------
 
+        // Finish what she starts (0.3.0, the owner's call of 8 November). She used to decide again
+        // on the walk to a hands-on trick's spot, twice a second and at every loud noise, and drop
+        // it: in the ablation's check Spill landed once in 55 starts. Now a hands-on trick under
+        // way is kept unless a hunt wins. Its own steps can still fail, rule 10 still stops it if
+        // the doors close before it lands, and after CommitSeconds she decides as usual, so a plan
+        // that can't finish doesn't hold her.
+        public const float CommitSeconds = 60f;
+
+        public static bool FinishesFirst(Tactic running, float runningFor, ActionId next) =>
+            running != null && running.IsHandsOn && runningFor < CommitSeconds && next != ActionId.Hunt;
+
+        public static bool IgnoresNoise(Tactic running, float runningFor) =>
+            running != null && running.IsHandsOn && runningFor < CommitSeconds;
+
+        float PlanAge => Time.time - planStartedAt;
+
         void Decide(bool forced)
         {
+            // A trick started from the developer overlay runs to its end.
+            if (forcedPlan && CurrentPlan != null) return;
+            forcedPlan = false;
+
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
-            ActionId goal = Actions.Choose(Ctx, forced, out string because);
+            Tactic running = CurrentPlan?.Tactic;
+            bool finishing = IgnoresNoise(running, PlanAge);
+            ActionId goal = Actions.Choose(Ctx, forced, out string because, commit: !finishing);
+            if (finishing)
+            {
+                if (FinishesFirst(running, PlanAge, goal)) return;
+                Actions.Commit(goal, Ctx);
+                Note("PLAN", $"PLAN     {CurrentPlan.Name} dropped for {goal.Name()}");
+            }
 
             bool keep = CurrentPlan != null && CurrentPlan.Action == goal && !forced;
             if (keep) return;
@@ -675,7 +719,7 @@ namespace Kehai.Karen
                 Note("", "  interrupt: SeeingPlayerAtRange");
                 return true;
             }
-            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby)
+            if (g != ActionId.Hunt && Sensorium.LoudNoiseNearby && !IgnoresNoise(CurrentPlan.Tactic, PlanAge))
             {
                 Note("", "  interrupt: LoudNoiseAdjacent");
                 return true;
@@ -690,7 +734,9 @@ namespace Kehai.Karen
             Status s = CurrentPlan.Tick(Ctx, dt);
             if (s == Status.Running) return;
 
-            if (s == Status.Failure && !CurrentPlan.Interrupted && CurrentPlan.Plan.ViolatedGuard != null)
+            if (s == Status.Failure && CurrentPlan.StoppedAtClosing)
+                Note("PLAN", $"PLAN     {CurrentPlan.Name} stopped: {FairnessGuard.ClosedWhy}");
+            else if (s == Status.Failure && !CurrentPlan.Interrupted && CurrentPlan.Plan.ViolatedGuard != null)
                 Note("PLAN", $"PLAN     {CurrentPlan.Name} aborted — precondition violated: {CurrentPlan.Plan.ViolatedGuard}");
             else if (s == Status.Failure && !CurrentPlan.Interrupted)
                 Note("PLAN", $"PLAN     {CurrentPlan.Name} failed at step {CurrentPlan.Plan.Index + 1}/{CurrentPlan.Plan.Count}");
@@ -704,12 +750,100 @@ namespace Kehai.Karen
         public void HandOverToDash() => AbortPlan();
         public void ResumeDeciding() => decideNow = true;
 
+        // ---- your answers (0.3.0) -------------------------------------------------------------
+
+        readonly Dictionary<string, float> fogFilled = new Dictionary<string, float>();
+        float clockStoppedAt = -1f;
+
+        void OnFogFilled(string room) => fogFilled[room] = Time.time;
+
+        void OnFogCleared(string room)
+        {
+            if (!ShiftActive) return;   // the shift's end clears it, not you
+            float since = fogFilled.TryGetValue(room, out float at) ? Time.time - at : -1f;
+            fogFilled.Remove(room);
+            Answered("fog_reset", since, $"the fog in {room} reset");
+        }
+
+        void OnFreezeChanged()
+        {
+            if (Shift == null || !ShiftActive) return;
+            if (Shift.IsFrozen) { clockStoppedAt = Time.time; return; }
+            Answered("clock_restarted", clockStoppedAt >= 0f ? Time.time - clockStoppedAt : -1f, "the time clock restarted");
+            clockStoppedAt = -1f;
+        }
+
+        void OnUnderstudySentAway(float seconds) => Answered("understudy_sent_away", seconds, "Kenji sent to the tills");
+
+        void OnPaPower(bool on)
+        {
+            if (!on && ShiftActive) Answered("pa_off", -1f, "the PA switched off");
+        }
+
+        // Written to the Ledger and the thought log. The tricks' own places hear the same answer
+        // through their watches (PlaceRewards); this is the record of what you did.
+        public void Answered(string kind, float seconds, string what)
+        {
+            Ledger.RecordCounterplay(kind, seconds);
+            Stats.Answers.Add((kind, seconds));
+            Note("LEARN", seconds >= 0f ? $"LEARN    answer: {what} after {seconds:0} s" : $"LEARN    answer: {what}");
+        }
+
+        // ---- placement memory's rewards (0.3.0) ---------------------------------------------
+
+        // Each trick leaves a watch on the place it used; this asks them once a second.
+        public PlaceRewards PlaceWatch { get; } = new PlaceRewards();
+        float placeTimer;
+
+        // ---- the developer overlay: force a trick (0.3.0) ----------------------------------
+
+        bool forcedPlan;
+        public bool ForcedPlanRunning => forcedPlan && CurrentPlan != null;
+
+        // Start a trick now, past the Director's gate (tier, cooldown, budget, unlock shift) and
+        // the drafts list, but not past its own preconditions: a trick with nothing to work on
+        // says why. It isn't learned from, but it does count as her last trick, so a forced
+        // Tool theft then a forced Ambush tries the combo. Developer builds and the editor only.
+        public bool Force(string tacticId, out string why)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Tactic t = TacticLibrary.Get(tacticId);
+            if (t == null) { why = "no trick called " + tacticId; return false; }
+            if (!ShiftActive) { why = "no shift running"; return false; }
+            Ctx.A = Appraised();
+            Ctx.Last = LastTrickNow();
+            if (!t.Available(Ctx, out why)) { why = why ?? "not available"; return false; }
+
+            var builder = new PlanBuilder(0f);
+            t.Plan(Ctx, builder);
+            if (builder.Steps.Count == 0) { why = "it found nothing to do"; return false; }
+
+            AbortPlan();
+            ActionId goal = t.Actions.Length > 0 ? t.Actions[0] : ActionId.Roam;
+            CurrentPlan = new PlanTree($"{goal.Name()}({t.Id})", goal, t, builder.Steps, _ => false) { Target = builder.Target };
+            forcedPlan = true;
+            planStartedAt = Time.time;
+            t.LastUsed = Time.time;
+            t.UsesThisShift++;
+            if (t.Learnable) { lastTrick = t.Id; lastTrickAt = Time.time; }
+            Stats.Used(t);
+            Note("PLAN", $"PLAN     {t.Id} forced from the developer overlay → {builder.Target}");
+            NarratePlan(CurrentPlan);
+            why = null;
+            return true;
+#else
+            why = "developer builds only";
+            return false;
+#endif
+        }
+
         void AbortPlan()
         {
             if (CurrentPlan == null) return;
             CurrentPlan.Abort(Ctx);
             CurrentPlan = null;
             if (chasing) SetChasing(false);
+            Body.DropCarried();   // a theft cut short leaves the mop where she stood (0.3.0)
             Body.Silent = false;
             Body.SweepHead(0f);
             Body.Stop();
@@ -778,7 +912,17 @@ namespace Kehai.Karen
             Note("TELL", $"TELL     {kind} at {Map.Describe(at)} ({lead:0.0}s lead)");
         }
 
-        public void RecordEffect(string label) => Note("EFFECT", "EFFECT   " + label);
+        public void RecordEffect(string label)
+        {
+            // The first effect of a plan is its trick landing (0.3.0): started isn't landed.
+            if (CurrentPlan != null && CurrentPlan != landedPlan && CurrentPlan.Tactic != null)
+            {
+                landedPlan = CurrentPlan;
+                Stats.Landed(CurrentPlan.Tactic);
+            }
+            Note("EFFECT", "EFFECT   " + label);
+        }
+        PlanTree landedPlan;
 
         // An effect that carries its own sound before it — PA speech, after its chime.
         void RecordToldEffect(string label, string by, float toldAt) =>
@@ -886,6 +1030,8 @@ namespace Kehai.Karen
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
+            if (FogState.Any) Stats.CaughtInFog();
+            if (CurrentPlan != null && CurrentPlan.Tactic is AmbushTactic ambush && ambush.AtChore) Stats.CaughtAtChore();
             Ledger.Data.caughtCount++;
             Dash.Cancel(Ctx);
             AbortPlan();
@@ -975,32 +1121,13 @@ namespace Kehai.Karen
             return true;
         }
 
-        // ---- the overtime (§8.2) -------------------------------------------------------------
+        // ---- the overtime (0.3.0) --------------------------------------------------------------
 
-        public bool OvertimeArmed { get; private set; }
-
-        public void ArmOvertime() => OvertimeArmed = true;
-
-        // Asked by the time clock when the employee tries to leave with everything done.
-        bool ShouldRefuseClockOut()
+        // She stopped the time clock (OvertimeTactic): counted for the shift report and the eval.
+        public void ClockStopped(Vector3 at)
         {
-            if (!OvertimeArmed || !ShiftActive || !config.Features.Goals) return false;
-            OvertimeArmed = false;
-            StartCoroutine(Overtime());
-            return true;
-        }
-
-        System.Collections.IEnumerator Overtime()
-        {
-            Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
-            Vector3 at = clock.HasValue ? clock.Value.Position : Body.Position;
-            World.PlayTell(TellKind.PunchBuzz, at, 0.9f);
-            RecordTell(TellKind.PunchBuzz, at, 0.9f);
-            yield return new WaitForSeconds(0.9f);
-            Consequences.AddOvertime(120f);
-            World.Pa.Announce($"Thank you for your flexibility, {Ledger.PlayerName}. Your shift has been extended.");
-            Note("EFFECT", "EFFECT   clock-out refused; +2:00 of shift");
-            Stats.OvertimeApplied();
+            Note("EFFECT", "EFFECT   the time clock stopped; the shift's countdown with it");
+            Stats.ClockStopped();
         }
 
         // ---- the endgame (§10.3) ---------------------------------------------------------------
@@ -1049,6 +1176,7 @@ namespace Kehai.Karen
 
         public void MazeChanged()
         {
+            TacticHelpers.ForgetStands();
             Map = StoreMap.Rebuild();
             RebuildBelief();
             Ledger.FillHabitPrior(Map, Belief.HabitPrior);
@@ -1241,6 +1369,19 @@ namespace Kehai.Karen
         public readonly List<float> PanicTrace = new List<float>();
         public readonly List<float> SetpointTrace = new List<float>();
 
+        // 0.3.0's measurements (build plan §7): catches in her fog, catches at a chore she left
+        // (Ambush waiting on your way to it), your answers and how long they took, and what her
+        // tricks' places paid.
+        public int CatchesInFog { get; private set; }
+        public int CatchesAtChore { get; private set; }
+        public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
+        public void CaughtInFog() => CatchesInFog++;
+
+        // How often each trick landed (its plan's first effect), against TacticCounts' starts.
+        public readonly Dictionary<string, int> TacticLanded = new Dictionary<string, int>();
+        public void Landed(Tactic t) => TacticLanded[t.Id] = (TacticLanded.TryGetValue(t.Id, out int n) ? n : 0) + 1;
+        public void CaughtAtChore() => CatchesAtChore++;
+
         float pacingSquaredError;
         int pacingSamples;
 
@@ -1260,7 +1401,11 @@ namespace Kehai.Karen
             pacingSamples = 0;
             FirstDetection = -1f;
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
+            CatchesInFog = CatchesAtChore = 0;
+            Answers.Clear();
+            CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
+            TacticLanded.Clear();
             TacticRewards.Clear();
             ChainsFound.Clear();
             PanicTrace.Clear();
@@ -1275,7 +1420,7 @@ namespace Kehai.Karen
 
         public void Caught() => Catches++;
         public void Chased() => Chases++;
-        public void OvertimeApplied() => Overtimes++;
+        public void ClockStopped() => Overtimes++;   // the overtime: times she stopped the clock
         public void BlinkSeen() => BlinksSeen++;
 
         public void Used(Tactic t)

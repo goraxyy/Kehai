@@ -505,6 +505,13 @@ namespace Kehai.Replay
                     e.Lights = new List<(int, bool)>(n);
                     for (int i = 0; i < n; i++) e.Lights.Add((Krec.ReadVarint(r), r.ReadBoolean()));
                     break;
+                case KrecEvent.Fog:
+                    e.Text = r.ReadString();
+                    e.Value = r.ReadSingle();
+                    break;
+                case KrecEvent.Clock:
+                    e.Flag = r.ReadBoolean();
+                    break;
                 default:
                     throw new KrecFormatException($"unknown event {e.Type}");
             }

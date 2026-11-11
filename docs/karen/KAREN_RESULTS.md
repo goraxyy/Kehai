@@ -9,6 +9,9 @@ she is slightly faster than the player, and the Director's blink dash is part of
 > ([Karen.md §16](Karen.md#16-karen-020)). Everything above [Karen 0.2.0, so far](#karen-020-so-far)
 > is about the Karen before it. 0.2.0's test results and its ablation against `main` (6 November)
 > are in that section.
+>
+> **Karen 0.3.0** rebuilds her tricks. Its ablation against `main` (7 November) is in
+> [Karen 0.3.0: the ablation](#karen-030-the-ablation-7-november).
 
 | rung | Karen | learns |
 |---|---|---|
@@ -551,6 +554,270 @@ catch within two minutes, so the Hunt's later parts (losing you, Cut, combos) ha
 to run, and primary metric 2 can't be measured. How far to turn her down, and with what (her
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
+
+## Karen 0.3.0: the ablation (7 November)
+
+0.3.0 rebuilds her tricks ([Karen.md §17](Karen.md#17-karen-030-the-tricks-come-back)). The plan
+fixed four primary metrics before any run ([build plan §7](../plans/0.3.0-build-plan.md#7-tests-and-metrics)).
+
+**How it ran:**
+
+| Run | Code | Shifts | Real time | Used for |
+|---|---|---|---|---|
+| 0.3.0 | `5de838e` | 240 | 82 min | the results |
+| `main` | `d5d14f3` (`origin/main`) | 240 | 21 min | the results |
+| 0.3.0, second run | `5de838e` plus the bot's Tool theft fix and the stuck-shift record, every action logged | 83 of 240: it stopped when the session ended | 40 min | finding why shifts got stuck |
+| 0.3.0, replay | the same, plus the fall detector and the fog fix (below) | 40: the efficient player, careers 1–2 | 27 min | the same |
+
+- The same arguments for both builds:
+  - rungs C and E;
+  - four players, the cautious one held out;
+  - 3 careers of shifts 1–10;
+  - 150 s shifts;
+  - seed 1000.
+- Pairs are by rung, player, seed and shift (`compare_builds.py`). 0.3.0's own numbers come from
+  `tricks030.py`.
+- **Only training players' shifts were used to find causes.** The two diagnosis runs played only
+  the training players' stuck shifts, so nothing was tuned on the cautious player.
+- **The same seed still doesn't give the same shift.** The replay matched the second run for 2
+  shifts, then drifted (130 s against 71 s on shift 3). Seeded shifts can be paired, but not
+  replayed one for one.
+
+**The primary metrics:**
+
+| # | Metric | Result |
+|---|---|---|
+| 1 | Every live trick works end to end | **Pass in the trick check:** every forced trick started and landed. The test player fixed every chore but two: Spill and Shelf sweep landed, but the shift ended before it got to them, in some runs (both were fixed in others). **Tool theft didn't land in the first check of 8 November** (she stopped 2.2 m from the rack, out of reach), and is fixed. **In the ablation, three never ran:** the understudy (0 of 72 shifts where it was unlocked), the overtime (0 of 24) and Cut (0 of 240) |
+| 2 | Fairness violations: 0 | **Pass:** 0 in all 240 + 240 shifts, and in the diagnosis runs |
+| 3 | No stuck shifts | **Fail:** 13 of 240 on 0.3.0, against 2 of 240 on `main`. Causes below |
+| 4 | Setpoint error against `main` | **Slightly worse:** +0.01 ± 0.01 (rung C, training), +0.02 ± 0.01 (E, training), +0.01 ± 0.02 (C, held out), +0.04 ± 0.02 (E, held out) |
+
+**0.3.0 against `main`,** `main` → 0.3.0, with the paired difference ± one standard error:
+
+| | Rung C, training (90) | Rung E, training (90) | Rung C, held out (30) | Rung E, held out (30) |
+|---|---|---|---|---|
+| Catches per shift | 0.99 → 0.97 (−0.02 ± 0.02) | 0.99 → 0.96 (−0.03 ± 0.02) | 0.97 → 0.93 (−0.03 ± 0.06) | 0.97 → 0.87 (−0.10 ± 0.07) |
+| Detections | 4.3 → 3.6 (−0.6 ± 0.4) | 4.9 → 5.3 (+0.4 ± 0.6) | 3.2 → 3.9 (+0.7 ± 0.7) | 5.3 → 5.3 (0.0 ± 1.0) |
+| Hunts | 1.54 → 0.98 (−0.57 ± 0.16) | 1.42 → 1.50 (+0.08 ± 0.17) | 1.33 → 1.00 (−0.33 ± 0.28) | 2.03 → 1.37 (−0.67 ± 0.39) |
+| Seconds hunting | 2.0 → 1.0 (−1.0 ± 0.3) | 2.2 → 1.8 (−0.4 ± 0.4) | 1.2 → 0.4 (−0.8 ± 0.4) | 1.9 → 0.8 (−1.2 ± 0.5) |
+| Catches you never saw coming | 0.39 → 0.38 | 0.34 → 0.36 | 0.37 → 0.33 | 0.50 → 0.33 (−0.17 ± 0.13) |
+| Throws | 0 → 0.01 | 0.34 → 0.24 (−0.10 ± 0.07) | 0.07 → 0 | 0.20 → 0.10 |
+| Belief error out of view (m) | 12.1 → 12.1 | 13.1 → 14.7 (+1.6 ± 1.6) | 14.9 → 16.0 (+1.1 ± 3.4) | 19.1 → 22.2 (+3.1 ± 3.7) |
+| Bot turned back from her | 1.07 → 1.04 | 1.10 → 1.64 (+0.54 ± 0.31) | 0.47 → 0.40 | 0.60 → 0.90 (+0.30 ± 0.28) |
+| Setpoint error | 0.24 → 0.25 | 0.23 → 0.25 | 0.23 → 0.24 | 0.22 → 0.26 |
+
+| | `main` | 0.3.0 |
+|---|---|---|
+| Tricks per shift (started, not landed: see the check after the second run), training players | 1.1 | 3.6 |
+| Tricks per shift, held out | 1.2 | 5.3 |
+| Shift length, training players | 99 s | 119 s |
+| Shift length, held out | 110 s | 150 s |
+| Shifts that ran past closing | 63 | 80 |
+| …that got stuck | 2 | 13 |
+| …that the bot clocked out of | 2 | 0 |
+
+**Her tricks in play** (0.3.0, both rungs; `poll_witnesses`, her own move, about 2.3 a shift):
+
+| Trick | Training: uses a shift | Shifts it ran in | Held out: uses a shift | Shifts it ran in |
+|---|---|---|---|---|
+| Spill | 0.88 | 101 of 180 | 1.12 | 41 of 60 |
+| Shelf sweep | 0.63 | 83 | 0.97 | 35 |
+| Phantom chime | 0.57 | 50 | 0.95 | 23 |
+| Ambush | 0.39 | 54 | 0.62 | 23 |
+| Bin tamper | 0.27 | 40 | 0.45 | 17 |
+| Blackout | 0.23 | 38 | 0.35 | 17 |
+| Fog | 0.23 | 36 | 0.42 | 16 |
+| Tool theft | 0.17 | 27 | 0.28 | 14 |
+| Camera bolt-on | 0.08 | 14 | 0.10 | 6 |
+| Throw (oil, flour, tin) | 0.13 | 24 | 0.07 | 4 |
+| Block door | 0.02 | 4 | 0.03 | 2 |
+| Cut, the understudy, the overtime | 0 | 0 | 0 | 0 |
+
+**0.3.0's own measurements** (the plan's secondary list):
+
+| Measurement | Result |
+|---|---|
+| Catches while a room was fogged | 19 of 173 catches (0.11 a shift), training players |
+| Catches while Ambush waited by a chore | 0 |
+| Seconds her cameras saw you | About 0: her cameras went up in 20 shifts and saw a bot in 2 of them, for 7 s in all |
+| Seconds to answer each chore | Fog: 75 s ± 14 (17 times, training players). The others never came up: the clock was never stopped, Kenji never came, no box was moved, and the bot never had to fetch the WC mop |
+| Does placement memory improve over a career? | **Not measurable here:** what her places paid was 0.05–0.37 on shifts 1–3 and 0.18–0.38 on shifts 8–10, over 1–12 shifts each. Fewer tricks are unlocked early, so the two aren't the same mix |
+
+**Why shifts got stuck.** Five stuck shifts of training players were recorded in the two
+diagnosis runs, with what was still open and what she did after the doors closed:
+
+| Cause | Stuck shifts | What the record shows |
+|---|---|---|
+| **She keeps making chores after the doors close** | 3 (the efficient player, seed 1000, shifts 8–10, both rungs) | 14–15 tricks in the 240 s after closing, 6–7 of them new chores that stop the clock-out (spills, shelf sweeps, bins, Tool theft). Still open at the end: 2–6 bays, 2–3 spills, a bin or a bag. The bot kept working and she kept ahead of it |
+| **The bot fell through the floor in Aisle 4/B** | 1 (efficient, seed 1100, shift 3, rung C) | Its height went from 1.08 m to −52 m between two samples 3 s apart, at about (62–66, −141). After that, every action failed with "no path". The first run's same shift (rungs C and E) shows the same pattern: about 390 actions in 390 s |
+| **The bot wedged itself on the staff-room furniture** | 1 (efficient, seed 1000, shift 5, rung E) | Blocked 42 times by a dining chair's seat and 36 by the coffee table, where the NavMesh says there's room. She also made 5 chores after closing |
+
+- **`main` has the first cause, milder:** its 2 stuck shifts had Bin tamper 5 and 6 times. 0.3.0
+  has five tricks that make such chores, against `main`'s one.
+- **The first run didn't record what was open.** 7 of its 13 stuck shifts had Tool theft in them,
+  and the bot then couldn't pick a tool up with full hands. That is fixed in the bot
+  (`KehaiEnv.FindTool`), but its effect isn't measured: in the diagnosis runs the bot never once
+  had to fetch the mop, though Tool theft started in 11 of the second run's shifts. A use counts
+  a plan started, not a mop hidden.
+
+**Two more findings:**
+- **The fog flooded the log.** Each fog cloud set its rising speed as a range and its other two
+  directions as plain numbers. Unity wants all three alike, so it logged "Particle Velocity curves
+  must all be in the same mode" every frame: 16.6 million lines in the first run, against 20,000
+  for `main`'s whole log. Fixed in `KarenProps.cs` (the replay logged none). It's the same warning
+  0.2.0's results found 49,034 times on the `main` of then.
+- **0.3.0 runs 3.6 times slower than `main`:** 0.15 s of real time per simulated second, against
+  0.04. It's slower from shift 1, when few tricks are unlocked (0.13 against 0.04), and the
+  replay was as slow without the warnings. So the cost is in something that always runs, and it
+  isn't found yet. A suspect: Shelf sweep checks about 200 bays at each decision.
+
+**What it means for 0.3.0:**
+- Her tricks run in play (3.6 a shift against 1.1), all live tricks work when forced, and she
+  stays fair.
+- She's no stronger for it: catches are slightly down (0.02–0.10 a shift) and she hunts less.
+- **The shift has to stay finishable.** As built, she can add chores after closing faster than
+  anyone can clear them, and the clock-out waits for every chore. A person would be stuck the
+  same way. **The owner chose the fix (8 November):** no new chore after the doors close; she
+  can still hunt. That's rule 10 ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)), and the
+  ablation runs again to check it.
+- **Separately:** a hole in Aisle 4/B's floor (or something that pushes a body through it), the
+  slowdown, and the understudy and the overtime, which the learner never picked.
+
+### The second run (8 November): rule 10, every trick from shift 1
+
+**What changed** (`a25d8a5`), on the owner's calls of 8 November:
+- **Rule 10:** no new chore once the doors close ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)).
+- **Every trick from shift 1:** the career table is off for now.
+- **Tool theft fixed:** she stopped 2.2 m from the rack, out of reach.
+
+The same seeds and arguments as the first run, paired with the same `main` run. 240 shifts in
+56 minutes. One shift was numbered 11 instead of 6 (rung C, efficient, seed 1200), so it has no
+pair: 239 pairs.
+
+**The primary metrics:**
+
+| # | Metric | First run | Second run |
+|---|---|---|---|
+| 2 | Fairness violations | 0 | **0** |
+| 3 | Stuck shifts (`main`: 2) | 13 | **9:** rung C 3 + 2 held out, rung E 3 + 1 held out. Still a fail |
+| 4 | Setpoint error against `main` | 0.01–0.04 worse | +0.03 ± 0.01 (C, training), −0.01 ± 0.02 (C, held out), +0.02 ± 0.01 (E, training), +0.02 ± 0.02 (E, held out) |
+
+**Rule 10 holds:** 0 tricks that leave a chore after closing, in the 85 shifts that ran past
+closing. After closing she only waited in ambush (Ambush) or threw (Throw).
+
+**Why 9 shifts still got stuck:** the backlog at closing.
+- With every trick open from shift 1, the bot reached closing with 1–9 bays to restock and 1–6
+  spills.
+- It failed many of its restock and mop attempts: in one shift, restock 14 times, serve 18 and
+  mop 9.
+- The 240 s the test allows after closing wasn't enough to clear it.
+- This record doesn't say why the attempts failed; the next one does (`failed_why`).
+- In one shift a single bay was left: the bot failed to restock 8 times and to clock out 4.
+
+**0.3.0 against `main`** (paired, as above):
+- **Catches:** about the same, 0.93–0.97 a shift against 0.97–0.99.
+- **Hunts:** fewer (−0.23 to −0.90 a shift), and fewer seconds hunting (about half, for the training players).
+- **Detections:** up on rung C (+1.37 ± 0.59 training).
+- **Belief error out of view:** 1–4 m worse, within about one standard error.
+
+**Her tricks:**
+- 3.4 a shift for the training players and 4.5 held out, against 1.1 and 1.2 on `main`.
+- Spill ran in 144 of 180 training shifts and Shelf sweep in 107. Then came Ambush (0.39 a shift),
+  Fog (0.36) and Phantom chime (0.31).
+- 19% of catches came while a room was fogged (33 of 173). The fog was reset 37 times, 83 s after
+  it came, on average.
+
+**Two more bugs it found:**
+- **The understudy and the overtime could never run in play.** "Once a shift" was written as a
+  99,999 s cooldown, and a trick's last use starts at −9,999 s. Both stayed on cooldown for the
+  first 25 hours of play. The trick check forces tricks past cooldowns, so it never noticed.
+  Fixed: no cooldown, since the once-a-shift count already stops a second use. A new test checks
+  that no live trick starts a shift on cooldown.
+- **Tool theft started in 25 shifts, but the bot never once had to fetch the mop.** The count was
+  of plans started, not landed. Landings are now recorded (`landed_<trick>`).
+
+**Speed:** 0.099 s of real time per simulated second, against 0.152 in the first run (the fog
+fix) and 0.044 for `main`. One cost was the shelf-bay lookup: Shelf sweep found each bay's stand
+point by name, walking the scene's whole name registry, for about 200 bays several times a
+decision. It's now worked out once per bay, which made the check below 14% faster (0.079 against
+0.092 for the same player). The rest of the slowdown isn't found.
+
+### A check after the second run (8 November): 60 shifts, the skittish player
+
+With the cooldown fix and the cached stand points (rungs C and E, 3 careers, the same seeds):
+- **The understudy and the overtime run now.** Kenji came in 5 shifts, and was sent away 115 s
+  after he came, on average. The overtime started 5 times and stopped the clock once; the clock
+  was restarted 246 s later.
+- **Stuck shifts: 7 of 60,** against 4 for this player in the second run. Catches were 0.88 a
+  shift, against 0.93. Their failure reasons, now recorded (the top 8 a shift), are the test
+  player's own:
+  - "couldn't get close enough" to a bay, the tills or a spill: 69 times;
+  - interrupted by its fear: 60;
+  - walks that timed out: 9.
+- **Most of her hands-on tricks never land in play.** Started against landed (a trick lands at its
+  first effect):
+
+| Trick | Started | Landed |
+|---|---|---|
+| Spill | 55 | 1 |
+| Shelf sweep | 51 | 9 |
+| Bin tamper | 13 | 0 |
+| Tool theft | 10 | 0 |
+| Camera bolt-on | 12 | 0 |
+| Block door | 7 | 0 |
+| The overtime (walks to the clock) | 5 | 1 |
+| Fog | 23 | 20 |
+| Phantom chime | 30 | 30 |
+| Blackout | 10 | 10 |
+| The understudy | 5 | 5 |
+| Throw (oil, flour, tin) | 9 | 5 |
+
+- **Why:** a hands-on trick walks 10–30 m to its spot first. Karen decides again twice a second,
+  and a loud noise forces a fresh decision. When the new decision is a different action, the walk
+  is dropped and the trick never happens. The building's tricks land within about a second, so
+  they always do.
+- **Why the trick check didn't show it:** a forced trick runs to its end.
+- **So every count of tricks above is of tricks started.** The chores left at closing were mostly
+  the shoppers': they spill and take stock too.
+- **The fix, if the owner wants it:** once she's on her way to a hands-on trick, she finishes it,
+  unless she starts a hunt or the trick can't be done any more.
+
+### After "finish what she starts" (8 November): the same 60 shifts
+
+The owner chose the fix ([Karen.md §17.3](Karen.md#173-the-new-fairness-rules)). The same check
+again: the skittish player, rungs C and E, 3 careers, the same seeds.
+
+| | Before | After |
+|---|---|---|
+| Spill, landed of started | 1 of 55 | **39 of 42** |
+| Shelf sweep | 9 of 51 | **48 of 48** |
+| Bin tamper | 0 of 13 | **7 of 7** |
+| Camera bolt-on | 0 of 12 | **13 of 16** |
+| The overtime | 1 of 5 | **4 of 4** |
+| Tool theft | 0 of 10 | 1 of 3 |
+| Block door | 0 of 7 | 0 of 2 |
+| Fog, Phantom chime, Blackout, the understudy | 65 of 68 | 114 of 120 |
+| Stuck shifts | 7 | **3** |
+| Catches a shift | 0.88 | 0.95 |
+| Tricks started a shift | 4.4 | 5.4 |
+| Shift length | 159 s | 199 s |
+| Setpoint error | 0.264 | 0.263 |
+| Fairness violations, chores after closing | 0, 0 | 0, 0 |
+
+- **Her chores get answered now.**
+  - Kenji was sent away 4 times, 34 s after he came, on average.
+  - The stopped clock was restarted 4 times, after 108 s.
+  - The fog was reset 18 times, after 82 s.
+- **The 3 stuck shifts are the test player's.**
+  - In two of them it "couldn't get close enough" to mop a spill in the office (Office/G), 5 and 7
+    times. The trick check's spill at Office/G also went unmopped twice, so a spot in the office
+    may be out of a player's reach, not just the bot's. To check in the playtest.
+  - The other was a bay it couldn't get close enough to.
+- **Too few to judge:** Tool theft and Block door (5 starts between them). The trick check lands
+  both.
+- **The trick check after it:** all 12 tricks landed, 11 chores were fixed (Bin tamper's shift
+  ended first), and 0 fairness violations.
+- **Speed:** 0.083 s of real time per simulated second, against 0.079 before. She does more now.
 
 ## Earlier runs
 

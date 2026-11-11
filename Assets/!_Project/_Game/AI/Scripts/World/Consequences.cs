@@ -48,12 +48,6 @@ namespace Kehai.Karen
             ShiftRestart.Restart();
         }
 
-        public static void AddOvertime(float seconds)
-        {
-            ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
-            if (shift != null) shift.AddOvertime(seconds);
-        }
-
         // ---- the endings ---------------------------------------------------------------
 
         // You burn out. The last thing that happens is that she makes you a coffee.

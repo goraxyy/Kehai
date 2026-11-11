@@ -42,6 +42,8 @@ namespace Kehai.Replay
         Story = 7,      // narrator kind, text
         Slot = 8,       // slot index, filled, product id
         Lights = 9,     // changed ceiling lights: index, on
+        Fog = 10,       // a room fogged or cleared (version 3, Karen 0.3.0): room, visibility (0 = cleared)
+        Clock = 11,     // the time clock stopped or restarted (version 3): stopped
     }
 
     // Bits of a Pose or Spawn's state for the kinds that have one.
@@ -61,7 +63,7 @@ namespace Kehai.Replay
     public static class Krec
     {
         public const string Magic = "KREC";
-        public const ushort Version = 2;               // 2 adds her route guesses; 1 still reads
+        public const ushort Version = 3;               // 3 adds fog and the stopped clock; 2 her route guesses; 1 and 2 still read
         public const float TickRate = 30f;
         public const float CameraRate = 60f;
         public const float BeliefRate = 2f;

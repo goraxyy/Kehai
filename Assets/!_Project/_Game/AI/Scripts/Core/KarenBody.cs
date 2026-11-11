@@ -234,6 +234,14 @@ namespace Kehai.Karen
             item.SetCarried(true, hand);
         }
 
+        public Item Carried => carried;
+
+        // A plan cut short doesn't leave her holding something: it goes down where she stands.
+        public void DropCarried()
+        {
+            if (carried != null) PutDown(carried);
+        }
+
         public void PutDown(Item item)
         {
             if (item == null) return;

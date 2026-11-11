@@ -35,8 +35,6 @@ namespace Kehai.Karen
         float lastSeenTime = -999f;
         float nextLook;
         float jumpyUntil = -1f;
-        Vector3 lookTarget;
-        float lookUntil = -1f;
         CustomerNPC npc;
 
         static readonly RaycastHit[] hits = new RaycastHit[8];
@@ -58,10 +56,6 @@ namespace Kehai.Karen
                 nextLook = Time.time + 0.5f;
                 Look();
             }
-
-            // The PA announced the employee's position: everyone turns to stare.
-            if (Time.time < lookUntil && npc != null)
-                npc.FaceTowards(lookTarget);
         }
 
         void Look()
@@ -73,6 +67,7 @@ namespace Kehai.Karen
             Vector3 d = player.Chest - eye;
             float distance = d.magnitude;
             float range = IsJumpy ? sightRange * 1.4f : sightRange;
+            range = Mathf.Min(range, FogState.SightLimit(eye, player.Chest));   // fog blinds shoppers too (0.3.0)
             if (distance > range) return;
             if (Vector3.Angle(transform.forward, d) > fieldOfView * 0.5f && distance > 2f) return;
 
@@ -94,12 +89,6 @@ namespace Kehai.Karen
         }
 
         public void MakeJumpy(float seconds) => jumpyUntil = Mathf.Max(jumpyUntil, Time.time + seconds);
-
-        public void StareAt(Vector3 point, float seconds)
-        {
-            lookTarget = point;
-            lookUntil = Time.time + seconds;
-        }
 
         // A witness report fades with age: sure of the aisle a moment ago, vague a minute later.
         public Observation ToObservation()

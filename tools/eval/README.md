@@ -93,6 +93,18 @@ hunt), `hunt_s`, `sprint_s`, `outside_s`, `far_sightings`, `blind_catches`, `thr
 `throw_hits`, `catches_after_throw`, `cuts`, `cuts_right`, `karen_combo_learner` and
 `karen_chains_found`.
 
+**0.3.0's tricks:** `tricks030.py branch.jsonl [main.jsonl]` prints the build plan's §7 numbers:
+- fairness violations and stuck shifts, per build;
+- for each stuck shift:
+  - what was still open (`open_at_end`) and when the doors closed (`closed_at_s`);
+  - her tricks after closing (`tricks_after_close`);
+  - the bot's failed actions (`verbs_failed`);
+- per trick, for 0.3.0 alone:
+  - its uses, `uses_<trick>`;
+  - seconds to answer its chore, `answer_<kind>_s`;
+- catches in fog and at a chore, and seconds her cameras saw you;
+- what her places paid, early in a career against late.
+
 ### The simulated players
 
 They play through the same actions and senses as any agent (`EnvWorld.Observe`, which they read

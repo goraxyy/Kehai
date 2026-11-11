@@ -198,7 +198,10 @@ namespace Kehai.Karen
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
+            // All three in the same mode (two constants), or Unity warns every frame.
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
             velocity.y = new ParticleSystem.MinMaxCurve(0.05f, 0.18f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             var fade = ps.colorOverLifetime;
             fade.enabled = true;
@@ -233,6 +236,46 @@ namespace Kehai.Karen
         void OnEnable() => all.Add(this);
         void OnDisable() => all.Remove(this);
 
+        // 0.3.0, Camera bolt-on: the slot it stands in, how it's turned from the slot's front
+        // (yaw, degrees) and tilted (pitch, degrees, down is negative), and how long it has seen
+        // you — the placement memory's reward.
+        public ShelfSlot Slot { get; private set; }
+        public float Yaw { get; private set; }
+        public float Pitch { get; private set; }
+        public float SecondsSeen { get; private set; }
+        public bool SeesYou => !Dead && eye != null && eye.SeesNow;
+        public SightSensor Eye => eye;
+        public bool HasModel { get; private set; }
+        OutlineHighlight outline;
+        float nextBeep;
+
+        public const float BeepEvery = 1f;   // a pip a second while it sees you (build plan D8)
+
+        // Seconds any camera of hers saw you this shift, for the eval (KarenStats resets it).
+        public static float SeenByHers;
+
+        // A camera of hers standing in a shelf slot like a product. A product already there drops
+        // to the floor to make room; the slot is hers while the camera stands in it.
+        public static CctvCamera Mount(ShelfSlot slot, float yaw, float pitch)
+        {
+            if (slot == null) return null;
+            if (slot.isFilled) slot.Eject();
+            Quaternion facing = Quaternion.LookRotation(slot.Outward, Vector3.up) * Quaternion.Euler(-pitch, yaw, 0f);
+            CctvCamera cam = Spawn(slot.Position + Vector3.up * 0.05f, facing * Vector3.forward, true);
+            // Product-sized: the model is made so (about 10 × 17 × 10 cm); its own boxes shrink to fit.
+            if (!cam.HasModel) cam.transform.localScale = Vector3.one * 0.6f;
+            cam.Slot = slot;
+            cam.Yaw = yaw;
+            cam.Pitch = pitch;
+            slot.Block(cam);
+            return cam;
+        }
+
+        void OnDestroy()
+        {
+            if (Slot != null) Slot.Unblock(this);
+        }
+
         public static CctvCamera Spawn(Vector3 position, Vector3 look, bool boltedOn)
         {
             var root = new GameObject(boltedOn ? "KAREN_Camera_BoltedOn" : "KAREN_Camera");
@@ -240,15 +283,33 @@ namespace Kehai.Karen
             root.transform.position = position;
             root.transform.rotation = Quaternion.LookRotation(look.sqrMagnitude > 0.01f ? look : Vector3.forward);
 
-            GameObject body = KarenProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
-            body.transform.localPosition = Vector3.zero;
-            body.transform.localRotation = Quaternion.identity;
-            body.layer = root.layer;
-            GameObject lens = KarenProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
-            lens.transform.localPosition = new Vector3(0f, 0f, 0.18f);
+            // Hers stand in a slot as the Blender model when it's imported (0.3.0, PropModels).
+            GameObject model = boltedOn ? PropModels.Place(PropModels.Camera, root.transform) : null;
+            if (model != null)
+            {
+                var hit = root.AddComponent<BoxCollider>();
+                hit.size = new Vector3(0.1f, 0.1f, 0.17f);
+            }
+            else
+            {
+                GameObject body = KarenProps.Box("Housing", position, new Vector3(0.18f, 0.16f, 0.34f), new Color(0.85f, 0.85f, 0.82f), root.transform);
+                body.transform.localPosition = Vector3.zero;
+                body.transform.localRotation = Quaternion.identity;
+                body.layer = root.layer;
+                GameObject lens = KarenProps.Box("Lens", position, new Vector3(0.1f, 0.1f, 0.04f), Color.black, root.transform, collider: false);
+                lens.transform.localPosition = new Vector3(0f, 0f, 0.18f);
+            }
 
             var cam = root.AddComponent<CctvCamera>();
             cam.BoltedOn = boltedOn;
+            cam.HasModel = model != null;
+
+            // Looking at it lights it up, like the store's own things (0.3.0).
+            var outline = root.AddComponent<OutlineHighlight>();
+            foreach (OutlineHighlight o in FindObjectsByType<OutlineHighlight>())
+                if (o != null && o != outline && o.outlineMaterial != null) { outline.outlineMaterial = o.outlineMaterial; break; }
+            outline.shape = OutlineHighlight.OutlineShape.BoundingBox;
+            cam.outline = outline;
 
             var eyeGo = new GameObject("Eye");
             eyeGo.transform.SetParent(root.transform, false);
@@ -275,6 +336,23 @@ namespace Kehai.Karen
         {
             if (Dead) return;
             eye.Tick(Time.deltaTime);
+            if (eye.SeesNow)
+            {
+                SecondsSeen += Time.deltaTime;
+                if (BoltedOn) SeenByHers += Time.deltaTime;
+            }
+
+            // Hers beep while they see you, and their red light goes solid; otherwise it blinks.
+            if (BoltedOn)
+            {
+                bool sees = eye.SeesNow;
+                if (sees && Time.time >= nextBeep)
+                {
+                    nextBeep = Time.time + BeepEvery;
+                    OneShotAudio.PlayAt(ProceduralAudio.CameraBeep(), transform.position, 0.8f, SoundKind.Karen);
+                }
+                if (led != null) led.enabled = sees || Mathf.Repeat(Time.time, 2f) < 0.15f;
+            }
             if (eye.Awareness < eye.glimpseAt || Time.time < nextReport) return;
 
             nextReport = Time.time + 1f;
@@ -305,8 +383,8 @@ namespace Kehai.Karen
             KarenBrain.Instance?.Ledger.RecordCounterplay("camera_unplugged");
         }
 
-        public void OnHoverEnter() { }
-        public void OnHoverExit() { }
+        public void OnHoverEnter() { if (outline != null) outline.SetHighlighted(true); }
+        public void OnHoverExit() { if (outline != null) outline.SetHighlighted(false); }
     }
 
     // ---- the coffee (§8.6, §10.3) -------------------------------------------------------

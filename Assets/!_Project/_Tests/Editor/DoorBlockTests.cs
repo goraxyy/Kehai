@@ -79,7 +79,7 @@ public class DoorBlockTests
         Assert.IsTrue(door.Panel.GetComponent<NavMeshObstacle>().enabled);
         Assert.AreSame(item,block.Box);
         Assert.AreSame(home.snapPoint, item.GetComponent<ItemHome>().snapPoint);
-        Assert.AreEqual("Move box to unblock door",block.GetPrompt());
+        Assert.AreEqual(DoorBlock.PickUpPrompt,block.GetPrompt());
     }
     [Test] public void PickupImmediatelyReleasesDoorAndRetainsBoxInHand()
     {
@@ -205,6 +205,24 @@ public class DoorBlockTests
         var handle=New("door handle").AddComponent<FurnitureDoor>(); handle.roomDoor=door;
         Assert.AreEqual("Open locker",handle.GetPrompt());
         Block();
-        Assert.AreEqual("Move box to unblock door",handle.GetPrompt());
+        Assert.AreEqual(DoorBlock.PickUpPrompt,handle.GetPrompt());
+    }
+    // 0.3.0: the box goes on the side asked for, and the door says which side you're on.
+    [Test] public void TheBox_GoesOnTheSideAsked_AndEachSideSaysItsOwnThing()
+    {
+        Assert.IsTrue(DoorBlock.SideNormal(door,out Vector3 normal));
+        foreach (int side in new[]{1,-1})
+        {
+            var block=DoorBlock.Spawn(door,stock,12,side);
+            if (block==null) continue;   // no floor that side in this little scene
+            Assert.AreEqual(side,block.Side);
+            Assert.AreEqual(side,DoorBlock.SideOf(door,block.Box.transform.position));
+            player.transform.position=door.DoorCentre+normal*side*1.5f;
+            Assert.AreEqual(DoorBlock.PickUpPrompt,block.PromptFor(player));
+            player.transform.position=door.DoorCentre-normal*side*1.5f;
+            Assert.AreEqual(DoorBlock.OtherSidePrompt,block.PromptFor(player));
+            block.Clear();
+            home.ReturnHome();
+        }
     }
 }

@@ -249,6 +249,19 @@ the ablation over whole shifts is below the table.
 - **Karen's learning** doesn't beat planning alone against scripted players, even now that they
   react to her tricks: it calms her slightly and tailors a little to the player, but doesn't track
   the setpoint better. It needs people, or a trained policy ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md)).
+- **Karen 0.3.0 can make the shift unfinishable:** after the doors close she keeps making chores
+  (spills, shelf sweeps, bins, Tool theft) faster than they can be cleared, and the clock-out
+  waits for every one. 13 of 240 test shifts got stuck, against 2 on `main`
+  ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)). **Decided
+  8 November (the owner):** no new chore once the doors close, rule 10
+  ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)). Built; the ablation runs
+  again to check it.
+- **Karen's hands-on tricks rarely landed in play** (0.3.0's second run). She re-decided on her
+  walk to the spot and dropped the trick: Spill landed 1 time in 55 starts. **Decided 8 November
+  (the owner):** she finishes what she starts, unless she starts a hunt
+  ([Karen.md §17.3](../karen/Karen.md#173-the-new-fairness-rules)).
+- **A body can fall through the floor in Aisle 4/B** (the test player did, once in 83 shifts), and
+  **0.3.0 runs 3.6 times slower** than `main` in the tests, for reasons not yet found.
 - **Karen can stand on a stuck player** without catching them.
 - **Hitches:** the GPU drawer's first growth (130–210 ms, once); the maze's NavMesh rebuild
   (about 20 ms per border crossed).

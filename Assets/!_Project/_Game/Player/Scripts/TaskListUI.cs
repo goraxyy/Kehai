@@ -51,14 +51,6 @@ public class TaskListUI : MonoBehaviour
             ApplyVisibility();
         }
 
-        // The tell for a falsified line: the list blinks out for exactly one frame.
-        if (panel != null)
-        {
-            bool hide = Kehai.Karen.HudFeed.HideForTell;
-            float alpha = visible && !hide ? 1f : 0f;
-            if (!Mathf.Approximately(panel.alpha, alpha)) panel.alpha = alpha;
-        }
-
         // The clock is the only thing that needs a periodic redraw, and only once a second.
         if (shiftManager != null && shiftManager.IsShiftActive)
         {
@@ -88,7 +80,11 @@ public class TaskListUI : MonoBehaviour
         {
             int remaining = Mathf.Max(0, Mathf.CeilToInt(shiftManager.TimeRemaining));
             builder.AppendLine($"<b>SHIFT {shiftManager.ShiftNumber}</b>");
-            builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>");
+            // Karen's overtime (0.3.0): the time clock stopped, and the countdown with it.
+            if (shiftManager.IsFrozen)
+                builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>  <color=#FF6F61>Clock stopped</color>");
+            else
+                builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>");
             if (!shiftManager.CustomersAllowed)
                 builder.AppendLine("<i>Store closed - clock out</i>");
         }
@@ -109,8 +105,7 @@ public class TaskListUI : MonoBehaviour
         }
         else
         {
-            // Karen can stand between the task list and your HUD (Karen.md §8.2).
-            foreach (TaskManager.ShiftTask task in Kehai.Karen.HudFeed.Shown(taskManager.Tasks))
+            foreach (TaskManager.ShiftTask task in taskManager.Tasks)
             {
                 // TMP renders <s> as a strikethrough, which is how a finished task reads.
                 // Restocking and trash are live states, so they come back if a customer

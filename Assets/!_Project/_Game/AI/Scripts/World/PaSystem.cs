@@ -108,8 +108,8 @@ namespace Kehai.Karen
 
     // The tannoy (Karen.md §8.3). Karen owns it and is not obliged to be truthful. Plays
     // through the store's own ceiling speakers — the ones nearest you — with a chime first,
-    // ducks the radio underneath, and puts the words on screen. Jam it at the breaker box
-    // and she has no voice.
+    // ducks the radio underneath, and puts the words on screen. Switch it off at the PA box in
+    // the staff room (0.3.0) and she has no voice: no announcements, no sounds through it.
     public sealed class PaSystem : MonoBehaviour
     {
         public float volume = 0.9f;
@@ -127,7 +127,19 @@ namespace Kehai.Karen
         public event System.Action<PaAnnouncement> ChimeStarted;    // the tell
         public event System.Action<PaAnnouncement> SpeechStarted;   // the effect
 
-        public bool Jammed => BreakerPanel.Instance != null && BreakerPanel.Instance.PaJammed;
+        // On, unless someone has switched it off at the PA box in the staff room (PaBox). Back
+        // on at each shift's end.
+        public bool Powered => powered;
+        bool powered = true;
+        public event System.Action<bool> PowerChanged;
+
+        public void SetPowered(bool on)
+        {
+            if (powered == on) return;
+            powered = on;
+            if (!on) Silence();
+            PowerChanged?.Invoke(on);
+        }
         public bool Busy => current != null;
         public string CurrentText => current != null ? current.Text : string.Empty;
         public int Announcements { get; private set; }
@@ -154,7 +166,7 @@ namespace Kehai.Karen
         public PaAnnouncement Announce(string text, AudioClip clip = null)
         {
             var a = new PaAnnouncement { Text = text, Clip = clip };
-            if (Jammed)
+            if (!Powered)
             {
                 a.Jammed = true;
                 a.Done = true;
@@ -168,7 +180,7 @@ namespace Kehai.Karen
         // the store, a crackle, hold music.
         public void PlayNear(Vector3 point, AudioClip clip, float gain = 1f)
         {
-            if (Jammed || clip == null) return;
+            if (!Powered || clip == null) return;
             Transform speaker = NearestSpeaker(point);
             OneShotAudio.PlayAt(clip, speaker != null ? speaker.position : point, gain, SoundKind.Voice);
         }
@@ -179,7 +191,7 @@ namespace Kehai.Karen
             {
                 if (queue.Count == 0) return;
                 current = queue.Dequeue();
-                if (Jammed) { current.Jammed = true; current.Done = true; current = null; return; }
+                if (!Powered) { current.Jammed = true; current.Done = true; current = null; return; }
 
                 current.Started = Time.time;
                 Announcements++;
@@ -261,10 +273,19 @@ namespace Kehai.Karen
 
         public void Clear()
         {
+            Silence();
+            if (!powered) { powered = true; PowerChanged?.Invoke(true); }
+        }
+
+        // Everything queued or playing stops now.
+        void Silence()
+        {
+            foreach (PaAnnouncement a in queue) { a.Jammed = true; a.Done = true; }
             queue.Clear();
-            if (current != null) current.Done = true;
+            if (current != null) { current.Jammed = true; current.Done = true; }
             current = null;
             phase = 0;
+            foreach (AudioSource v in voices) if (v != null) v.Stop();
             Duck(false);
         }
     }

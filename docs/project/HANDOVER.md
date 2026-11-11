@@ -85,7 +85,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 - **Coordinates:** world metres. The street is north (high Z), the store runs south along −Z to the stockroom, and east is +X.
 - **If the editor opens an empty Untitled scene,** `OpenStoreOnLaunch.cs` opens the store. Otherwise open `SampleScene.unity` by hand.
 
-## 4. State of the work (updated 2026-11-05)
+## 4. State of the work (updated 2026-11-07)
 
 **Merged to main** (highlights; the full history is in git and [`CHANGELOG.md`](CHANGELOG.md)):
 
@@ -104,7 +104,28 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | #65 | [`notmerged.md`](../archive/notmerged.md) |
 
 **Open:**
-- **PR #74, Karen 0.2.0** (`0.2.0` → `main`). **The owner merges it once everything is built; don't merge it.**
+- **Karen 0.3.0, the tricks come back** (branch `0.3.0`, worktree `.claude/worktrees/tricks`; draft [PR #78](https://github.com/goraxyy/Kehai/pull/78)). The owner's 21 items of 7 November: nine tricks removed, ten rebuilt end to end, a fog that blinds everyone, a PA off switch, placement memory.
+  - Plan with tick boxes and a progress table: [`plans/0.3.0-build-plan.md`](../plans/0.3.0-build-plan.md). What each trick does now: [Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back).
+  - **One builder** (the owner's call, 7 November): Claude built every task, the old [B] ones too.
+  - **Built (7 November):** phases 0–4, most of 5, the props' Blender models (`~/Desktop/KehaiRelated/Props`) and their importer, the claims, and the trick check (`-kehai-trick-check`). All 15 of the owner's live tricks are live; five drafts stay.
+  - **The trick check** passes: every forced trick starts and lands, with 0 fairness violations. The test player fixes every chore but Spill's and Shelf sweep's, which the shift sometimes ends before it gets to.
+  - **The ablation against `main`** ran on 7 November ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
+    - fairness 0, and she uses 3.6 tricks a shift against 1.1;
+    - **13 of 240 shifts got stuck**, against 2 on `main`: mostly because she keeps making chores after the doors close, and the clock-out waits for all of them;
+    - also found: the bot falling through Aisle 4/B's floor, the bot wedging on the staff-room furniture, 0.3.0 running 3.6 times slower, and the fog's log flood (fixed);
+    - the understudy, the overtime and Cut never ran.
+  - **Rule 10 (8 November, the owner's call):** no new chore once the doors close. It's built and tested.
+  - **Every trick from shift 1 (8 November, the owner's call),** for testing: the career table is off behind `KarenConfig.careerTable`, to come back later.
+  - **Tool theft fixed:** she stopped 2.2 m from the WC rack, out of rule 9's reach, so the take failed; she now stands at the nearest spot on her floor.
+  - **The second run (8 November)** ([KAREN_RESULTS.md](../karen/KAREN_RESULTS.md#the-second-run-8-november-rule-10-every-trick-from-shift-1)):
+    - 0 chores after closing;
+    - 9 stuck shifts (the first run had 13, `main` 2), now from the test player's own walking and fear.
+  - **Found and fixed:**
+    - the understudy's and the overtime's cooldown kept them from ever running;
+    - Shelf sweep's bay lookup is cached (14% faster).
+  - **Found:** her hands-on tricks (Spill, Bin tamper, Tool theft, Camera bolt-on, Block door, mostly Shelf sweep) rarely landed in play. She re-decided on the walk and dropped them. **Fixed on the owner's call (8 November):** she finishes what she starts, unless she starts a hunt. In a 60-shift check Spill then landed 39 of 42 times (was 1 of 55), and stuck shifts fell from 7 to 3.
+  - **Left:** the full ablation again (on the owner's go); a spill spot in the office the test player can't reach; the slowdown and the fall; the How Karen Learns guide; the owner's model import (Kehai → Props → Import Karen's Props), playtest and merge.
+- **PR #74, Karen 0.2.0** (`0.2.0` → `main`): **merged** (`d5d14f3`). What follows is how it was built, kept for reference.
   - Plan with tick boxes: [`plans/0.2.0-build-plan.md`](../plans/0.2.0-build-plan.md). What changed in the code: [Karen.md §16](../karen/Karen.md#16-karen-020). Why: [DECISIONS.md §10](DECISIONS.md#10-karen-020).
   - **Two builders.** Claude [C] does the logic on `0.2.0` (worktree `.claude/worktrees/0.2.0`). A second agent [B] does level design and small code on `0.2.0-b` (`.claude/worktrees/0.2.0-b`), following `AGENTS.md`. [C] merges `0.2.0-b` in at each sync point. Requests between them go in the plan's §7.
   - **Built [C]:** phases 0–5's code: her area and grid, actions and drafts, Hunt at 7.5 m/s on her guesses, no warnings, the route guesses, Cut, Throw and their effects, her eyes, the combo room, bots that turn back and dodge, and the ablation's measurements. At syncs 2–4 (6 November) the second builder's work was merged in, Block door went live, and replays record her route guesses (`.krec` version 2). All 290 EditMode tests pass.
@@ -125,15 +146,13 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 
 ## 5. What's next, in order
 
-1. **Karen 0.2.0 is merged** (PR #74, 6 November). The ablation found her far too deadly against
-   the bots; the owner has set turning her down aside.
-2. **Real players: playtest v2** ([`plans/playtest-v2.md`](../plans/playtest-v2.md), a draft
-   from 6 November): one link, no codes, everything kept in Cloudflare. It waits on the owner's
-   approval, a Cloudflare account and a Telegram bot.
-3. **Karen learns from everyone, and adapts to you** ([`plans/karen-learning.md`](../plans/karen-learning.md),
-   a draft from 6 November, one PR). It would replace the capture plan, and needs playtest v2's data.
-4. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
-5. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
+1. **Finish Karen 0.3.0 (PR #78):** run the ablation again with rule 10 (no new chore after closing), then the owner's playtest and merge. 0.2.0 is merged; how far to turn her down is still open.
+2. **Finish PR #68:** re-record on the new grid, then train (on the owner's go), test, write up, merge.
+3. **Rung F (PPO) comes back as the combo learner's second step,** once the drafts return and there's more to choose from. Training takes about 10 Mac nights, or the university's Windows PCs. It's judged against rung E on the same seeds.
+4. **The capture plan,** re-read against 0.2.0 first, as one PR.
+5. **Real players.** The playtest pipeline is built and waits on:
+   - a Cloudflare account (then the `wrangler` deploy in `tools/playtest/README.md`);
+   - a Google Form, a password-protected itch.io page, and the Telegram and Claude keys.
 6. **The release plan:** setup accounts, the vertical slice, the Steam page, playtests, demo and Next Fest, marketing, beta, the redesign ([`RELEASE_PLAN.md`](RELEASE_PLAN.md)).
 
 **Known gaps:**

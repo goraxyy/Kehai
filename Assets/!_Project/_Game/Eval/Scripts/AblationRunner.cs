@@ -288,6 +288,22 @@ namespace Kehai.Eval
 
             for (int i = 0; i < args.Length; i++)
             {
+                // Every trick end to end, in a real shift (0.3.0, TrickCheck).
+                if (args[i] == "-kehai-trick-check")
+                {
+                    TrickCheck check = TrickCheck.Run(Int(args, "-trick-check-seed", 4242), Str(args, "-trick-check-only", null));
+                    check.Completed = c =>
+                    {
+                        Debug.Log("Trick check finished: " + c.ReportPath);
+                        if (!Application.isBatchMode) return;
+#if UNITY_EDITOR
+                        UnityEditor.EditorApplication.Exit(0);
+#else
+                        Application.Quit();
+#endif
+                    };
+                    return;
+                }
                 if (args[i] == "-kehai-env")
                 {
                     int port = i + 1 < args.Length && int.TryParse(args[i + 1], out int p) ? p : 5555;

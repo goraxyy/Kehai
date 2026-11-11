@@ -358,7 +358,9 @@ namespace Kehai.Karen
             switch (c.Rng.Range(0, 3))
             {
                 case 0:
-                    // A noise with no author, somewhere between you and nothing.
+                    // A noise with no author, somewhere between you and nothing. It comes through
+                    // the PA's speakers, so not while the PA is switched off (0.3.0).
+                    if (!c.World.Pa.Powered) { c.Think("DIRECTOR", "environmental: skipped, the PA is off"); break; }
                     Vector3 away = near + new Vector3(c.Rng.Range(-14f, 14f), 0f, c.Rng.Range(-14f, 14f));
                     c.World.Pa.PlayNear(away, ProceduralAudio.Tell(c.Rng.Chance(0.5f) ? TellKind.Scrape : TellKind.SilenceFalls), 0.8f);
                     NoiseBus.Emit(away, 0.5f, NoiseKind.Environmental, NoiseAuthor.Director);

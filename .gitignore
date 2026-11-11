@@ -106,3 +106,7 @@ Assets/!_Project/_Game/AI/Resources.meta
 # ML-Agents writes its profiling timers here when an agent runs in the editor
 Assets/ML-Agents/
 Assets/ML-Agents.meta
+
+# Karen 0.3.0 props imported from the Blender pipeline (Kehai/Props/Import Karen's Props): art stays on the Mac
+/Assets/!_Project/_Game/Level/Props/
+/Assets/!_Project/_Game/Level/Props.meta

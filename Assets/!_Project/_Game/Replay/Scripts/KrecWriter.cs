@@ -244,6 +244,20 @@ namespace Kehai.Replay
             w.Write(text ?? "");
         }
 
+        // A room she fogged (visibility in metres), or cleared (0).
+        public void Fog(float t, string room, float visibility)
+        {
+            Event(t, KrecEvent.Fog);
+            w.Write(room ?? "");
+            w.Write(visibility);
+        }
+
+        public void Clock(float t, bool stopped)
+        {
+            Event(t, KrecEvent.Clock);
+            w.Write(stopped);
+        }
+
         public void Circuits(float t, int bits)
         {
             Event(t, KrecEvent.Circuits);
