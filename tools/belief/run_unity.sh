@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Runs one batch league on a verify clone of the owner's project (docs/project/HANDOVER.md §6),
+# Runs one batch league on a verify clone of the owner's project (docs/agents/HANDOVER.md §6),
 # holding the heavy-work lock, silent, and cleans up after. The editor must be closed.
 #   tools/belief/run_unity.sh <league.json> <output folder> [more game flags…]
+#   tools/belief/run_unity.sh --ablation <output folder> [ablation flags…]     (no league)
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; root="$(cd "$here/../.." && pwd)"
 league="$1"; out="$2"; shift 2
+if [ "$league" = "--ablation" ]; then mode=(-kehai-ablation); else mode=(-league "CLONE/${league#$root/}"); fi
 unity=/Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity
 lock=~/TokenLimit/marketing/state/heavy.lock
 clone="${KEHAI_CLONE:-/private/tmp/kehai-verify-run}"
@@ -20,7 +22,8 @@ rm -rf "$clone"; cp -Rc ~/Developer/Kehai "$clone"; rm -rf "$clone/Temp" "$clone
 (cd "$root" && git archive HEAD) | tar -x -C "$clone"
 sed -i '' 's/^  productName: .*/  productName: Kehai-verify/' "$clone/ProjectSettings/ProjectSettings.asset"
 mkdir -p "$out"
-"$unity" -batchmode -nographics -projectPath "$clone" -executeMethod EvalBatch.Play -league "$clone/${league#$root/}" \
+mode=("${mode[@]/CLONE/$clone}")
+"$unity" -batchmode -nographics -projectPath "$clone" -executeMethod EvalBatch.Play "${mode[@]}" \
   -eval-timeout-min "${KEHAI_TIMEOUT_MIN:-600}" -logFile "$out/unity.log" "$@"
 data="$HOME/Library/Application Support/TokenLimit/Kehai-verify"
 [ -d "$data/shift_records" ] && cp -R "$data/shift_records" "$out/"
