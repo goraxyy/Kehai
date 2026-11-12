@@ -135,7 +135,7 @@ long and exact, for coding agents. Start with [`docs/you/NOW.md`](docs/you/NOW.m
 | | [`IDEAS.md`](docs/you/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
 | | [`RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md) | Everything left until release, in order |
 | `you/plans/` | [`0.4.0-build-plan.md`](docs/you/plans/0.4.0-build-plan.md) | Karen 0.4.0: two trained Karens, players that feel real (being built) |
-| | [`playtest-v2.md`](docs/you/plans/playtest-v2.md) | Real players: how their shifts get recorded and uploaded (not built) |
+| | [`playtest-v2.md`](docs/you/plans/playtest-v2.md) | Finish the test build: illustrated instructions, automatic cloud uploads, later Windows dataset download (checkbox plan; homepage draft built) |
 | | [`0.2.0-tuning-plan.md`](docs/you/plans/0.2.0-tuning-plan.md) | Turning her down: why she catches you, the levers, and the test (open questions) |
 | | [`marketing-agents.md`](docs/you/plans/marketing-agents.md) | Hands-off video publishing |
 | `agents/` | [`RULES.md`](docs/agents/RULES.md) | The working rules, in one place. `CLAUDE.md` and `AGENTS.md` point here |

@@ -9,9 +9,12 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 > Google Form. See [What you set up](#what-you-set-up). Claude needs no key: it runs on your
 > Claude plan.
 >
-> **Changing:** [playtest v2](../../you/plans/playtest-v2.md), a draft from 6 November, drops the tester
-> code, the Google Form and itch.io, and keeps everything in the cloud. Until it's built, this
-> page describes what's in the code.
+> **Changing:** the [playtest v2 build plan](../../you/plans/playtest-v2.md), updated 12 November,
+> covers the illustrated instructions and live connection. The owner's target is no typed code,
+> cloud retention, and a later manual dataset download/training run on Windows. No Mac job or
+> training run is required when a session arrives. These changes are not implemented yet:
+> everything below describes v1, including its delete-after-pull behavior. Do not treat its
+> old Form/itch setup as requirements for v2. The v2 plan owns implementation checkboxes.
 
 ---
 
