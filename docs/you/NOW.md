@@ -26,16 +26,13 @@ and the live model, arrives when the 0.4.0 branch merges.
 
 ## Open questions
 
-| Question | Where / suggested answer (not yet your decision) |
-|---|---|
-| Keep her current eye targets? | [tuning Q2](plans/0.2.0-tuning-plan.md#3-your-decisions); explanation requested, no answer yet |
-| Should bots see her spotlight? | same, Q5; explanation requested, no answer yet |
-| How long to keep data, which deletion-contact email, and whether to keep rounds? | [playtest Q5, Q7, Q8](plans/playtest-v2.md#3-questions-for-you); explanations requested |
+The questions raised in this playtest/tuning review are answered. See the
+[playtest answers](plans/playtest-v2.md#3-questions-for-you),
+[tuning answers](plans/0.2.0-tuning-plan.md#3-your-decisions) and [decision log](DECISIONS.md).
+The account setup, Notes import and owner-started runs above are still outstanding actions.
 
-Already decided: no typed tester code; collect in the cloud independently of your computers;
-training starts later, manually, on Windows. The Basic catch target is already 0.20–0.35.
-The latest [decisions](DECISIONS.md) resolve publication approval, touch lethality, sprint speed,
-free hosting, feedback questions, nickname, the fairness prompt and update notices.
+No tester code is sent or typed. The game assigns an internal ID automatically; collection
+runs independently of your computers and training starts later, manually, on Windows.
 
 ## Next, in order
 

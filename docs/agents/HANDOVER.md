@@ -164,9 +164,12 @@ checks; once those pass, do not ask for per-model publication approval. Integrat
 when the build branch merges; this documentation change does not deploy or publish a model.
 
 The [tuning plan](../you/plans/0.2.0-tuning-plan.md#3-your-decisions) now excludes removing
-outside-Hunt touch kills and reducing the sprint speed. Vision and bot spotlight perception
-remain open. The [v2 plan](../you/plans/playtest-v2.md#3-questions-for-you) records the website
-and feedback choices; retention, deletion contact and rounds still need answers.
+outside-Hunt touch kills and reducing the sprint speed. Vision targets stay; spotlight
+perception for bots is rejected (the visible light for humans stays). The
+[v2 answers](../you/plans/playtest-v2.md#3-questions-for-you) settle retention, the deletion
+contact and rounds. C2.1 and C3.6 require eliminating codes from both the sender's workflow
+and the tester's screens. The internal automatic ID is only for grouping records; it must
+never become a code the owner sends or the player has to enter.
 
 ## 6. How to work on it
 

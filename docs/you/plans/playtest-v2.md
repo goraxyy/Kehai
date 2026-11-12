@@ -59,7 +59,7 @@ The original choices were made on 6 November; delivery and deferred Windows trai
 |---|---|
 | **Cloudflare only:** R2 for files, D1 for rows, a Worker in front, Pages for the website | one account for uploads, the website and marketing videos; measure session sizes before estimating capacity |
 | **Everything is kept in the cloud;** the Mac keeps no session files | your Mac is low on disk |
-| **No tester code:** the game makes a random ID | the code was only a label (any code was accepted) and a step to get wrong |
+| **No tester code to send or type:** the game makes an internal random ID | send the same platform ZIP/link to every tester; no code-generation step, per-person invitation, registration or code-entry screen |
 | **No Google Form:** three optional typed answers in the game (wording chosen in Q2) | the form was a second step most people skip; answers now arrive with the session |
 | **No itch.io:** a `/playtest` page on your own website | one less account, and the same site does marketing |
 | **No Apple Developer Program** | your choice. Mac testers do one "Open Anyway" step, shown with pictures on the page |
@@ -73,20 +73,19 @@ The original choices were made on 6 November; delivery and deferred Windows trai
 
 ## 3. Questions for you
 
-Answers updated 12 November. “Open” means the owner asked for an explanation, not approval.
-Build independent plumbing first; confirm retention and the contact before public distribution.
-Telegram and Claude remain optional for collection and the Windows handoff.
+All questions below were answered on 12 November. Account setup and implementation remain
+outstanding. Telegram and Claude are optional for collection and the Windows handoff.
 
-| # | Question | Answer / remaining choice |
+| # | Question | Owner answer |
 |---|---|---|
 | Q1 | A domain for the website? | **Free for now.** Use the assigned Pages address; no domain purchase |
 | Q2 | The three typed questions | **Owner delegated the wording.** Use: “What were you trying to do, and what was confusing?”, “When did Karen feel scary, unfair or annoying? Describe a moment.”, “What would you change first?” All optional |
 | Q3 | An optional nickname box at the end? | **Yes** |
 | Q4 | “Was that fair? Y / N” for 4 seconds after each catch? | **No.** Do not implement an after-catch fairness prompt |
-| Q5 | How long to keep the data? | **Open: explain first.** Retain means keep stored before automatic deletion. Replays, small feedback rows and training records can have different lifetimes. Suggested starting point: 12 months for raw sessions; decide the lifetime of the other data separately. Training later requires that its source records still exist |
+| Q5 | How long to keep the data? | **Six months from session collection.** Apply to raw session ZIPs, replays, per-session feedback/statistics/summaries and learning records, including their copies in derived datasets. Downloading or importing does not restart the clock. Earlier deletion requests still apply; email signups have their separate unsubscribe policy |
 | Q6 | A “new build available” line in the game? | **Yes** |
-| Q7 | Which contact email handles deletion requests? | **Open: explain first.** Show an address where a tester can send their automatic ID and ask to remove their records; no tester email is required to play. Choose an existing inbox or a dedicated game-support address |
-| Q8 | Keep rounds (`round1`, `round2`…)? | **Open: explain first.** A round labels a batch of tests before/after fixes, like named experiment batches. Build versions remain recorded too. Suggested: yes, assigned by the developer; players type nothing |
+| Q7 | Which contact email handles deletion requests? | **tokenlimitlabs@gmail.com**. Show it in the privacy page and bundled guide, with the automatic ID in the game's help/end screen; testers do not need to provide an email to play |
+| Q8 | Keep rounds (`round1`, `round2`…)? | **Yes.** The developer sets the round in the build; players type nothing. Record both round and build version |
 
 ## 4. What a tester does
 
@@ -112,16 +111,16 @@ Keep the existing [recordings](../../agents/game/PLAYTEST.md#whats-recorded), ad
 
 | What | Size | Where | Kept |
 |---|---|---|---|
-| The session zip: 3D replays, the session log, Karen's logs and Ledger, the game's log | measure on actual recordings | R2 `sessions/<round>/<id>/<launch>.zip` | proposed in Q5 |
-| The session row: computer, frame rate, minutes played, how it ended | tiny | D1 `sessions` | agree in Q5 |
-| A row per shift: length, clocked out, caught, times spotted, closest she got, trick sounds, lowest energy | tiny | D1 `shifts` | agree in Q5 |
-| Answers: the 4 taps, the 3 typed answers, the nickname | tiny | D1 `answers` | agree in Q5 |
-| Moments: bug notes, each with its shift and replay time | tiny | D1 `moments` | agree in Q5 |
-| The funnel: download, first launch, agreed, first shift, finished | tiny | D1 `events` | agree in Q5 |
+| The session zip: 3D replays, the session log, Karen's logs and Ledger, the game's log | measure on actual recordings | R2 `sessions/<round>/<id>/<launch>.zip` | Q5 |
+| The session row: computer, frame rate, minutes played, how it ended | tiny | D1 `sessions` | Q5 |
+| A row per shift: length, clocked out, caught, times spotted, closest she got, trick sounds, lowest energy | tiny | D1 `shifts` | Q5 |
+| Answers: the 4 taps, the 3 typed answers, the nickname | tiny | D1 `answers` | Q5 |
+| Moments: bug notes, each with its shift and replay time | tiny | D1 `moments` | Q5 |
+| The funnel: download, first launch, agreed, first shift, finished | tiny | D1 `events` | Q5 |
 | Page visits | — | Cloudflare Web Analytics (no cookies) | Cloudflare's own |
-| Claude's summary of each session | a few KB | D1 `summaries`, written by an optional later analysis run | agree in Q5 |
+| Claude's summary of each session | a few KB | D1 `summaries`, written by an optional later analysis run | Q5 |
 | Email sign-ups from the website | tiny | D1 `signups` | until they unsubscribe |
-| Karen's learning records ([0.4.0](0.4.0-build-plan.md)) | measure on actual recordings | preserved in the session zip; derived datasets made on demand | agree in Q5 |
+| Karen's learning records ([0.4.0](0.4.0-build-plan.md)) | measure on actual recordings | preserved in the session zip; derived datasets made on demand | Q5 |
 
 ## 6. How it fits together
 
@@ -190,7 +189,10 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `tools/playtest/worker/src/` (split into a file per route), `wrangler.toml`.
   - Done when: `node --test` passes against stand-ins for R2 and D1, and `wrangler dev` serves it
     on this Mac.
-- [ ] **C1.3 Keeping to Q5.** A cloud scheduled run applies the agreed lifetimes to replays, rows and learning records. It requires no local computer; deletion requests override retention.
+- [ ] **C1.3 Keeping to Q5.** A cloud scheduled run applies Q5 to replays, rows and learning records. It requires no local computer; deletion requests override retention. Export expiry/deletion metadata for later Windows reconciliation.
+  - Done when: records on either side of the cutoff are handled correctly, retained sessions remain
+    downloadable, expired sessions are excluded from new manifests, and import does not extend
+    their lifetime. The Windows tools remove expired local copies before subsequent dataset use.
   - Files: `tools/playtest/worker/src/cron.js`, `wrangler.toml`.
 - [ ] **C1.4 Deploy and prove receipt** (after C0.1). Done when: a real consented session from
   a packaged build reaches R2 and D1 while local processing is stopped. Match its session ID,
@@ -213,7 +215,11 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   per launch. Reinstallation/new computers are not silently assumed to be the same person.
   This is a grouping label, not authentication.
   - Files: `PlaytestConfig.cs`, `PlaytestScreens.cs`.
-  - Done when: a fresh install goes from launch to the consent page with nothing typed.
+  - Done when: the owner can send one identical platform ZIP/link to several new testers without
+    generating or sending codes. Every clean install reaches the walkthrough/consent with no code
+    box or login, gets its own persistent internal ID, and uploads under that ID after consent.
+    Restart keeps the ID; an existing v1 ID migrates without asking the player to type it again.
+    The optional nickname is never required to start playing or upload.
 - [ ] **C2.2 Consent.** The text adds: *"…and may be used to train Karen."*
   - Files: `PlaytestScreens.cs`, `PLAYTEST.md`.
   - Done when: the consent version and permission travel with every upload; decline sends no
@@ -282,7 +288,7 @@ Unity while the owner's editor is open.
 - [ ] **C3.6 Replace the invitation workflow.** Retire code generation and the form/itch templates
   from the v2 path. Put one short copyable ZIP/link + opening-instructions message in the README.
   Preserve v1 import compatibility while older builds exist.
-  - Done when: a complete round needs no per-person code list, form or invitation account, and
+  - Done when: a complete round needs no generated or sent codes, per-person code list, form or invitation account, and
     `pytest tools/marketing` passes with a stand-in Worker.
 - [ ] **C3.7 Windows dataset download, on demand.** Add a cross-platform CLI outside the Mac-only
   scheduler, under `tools/playtest/`. Select round/build/session IDs and output directory; write
@@ -351,7 +357,7 @@ Unity while the owner's editor is open.
 | Instructions | Real Mac/Windows ZIPs; offline guide, first-launch walkthrough, skip/reopen, legibility and correct controls |
 | End to end | Packaged build (or an explicit upload-enabled test config) → local Worker → live service; the default editor simulation does not upload |
 | Deferred processing | Both owner jobs off at receipt, later manual analysis; no pull deletes cloud data and no upload starts training |
-| Windows handoff | PowerShell downloader with read-only key: fixed manifest, hashes, resume, consent/schema filtering, player splits and deletion reconciliation |
+| Windows handoff | PowerShell downloader with read-only key: fixed manifest, hashes, resume, consent/schema filtering, player splits and expiry/deletion reconciliation |
 
 ## 9. Costs
 

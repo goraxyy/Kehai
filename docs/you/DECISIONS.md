@@ -6,6 +6,8 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-12 | Keep Karen's vision targets; bots must not use her spotlight as a perception cue | [tuning decisions](plans/0.2.0-tuning-plan.md#3-your-decisions) |
+| 2026-11-12 | Keep playtest session data for six months; use tokenlimitlabs@gmail.com for deletion requests; keep developer-assigned testing rounds; nobody sends or types a tester code | [playtest decisions](plans/playtest-v2.md#3-questions-for-you) |
 | 2026-11-12 | No per-model publication approval; training still starts manually on Windows and publication must pass the existing evaluation/compatibility checks | [agent handover](../agents/HANDOVER.md#12-november-owner-answers) |
 | 2026-11-12 | Touch remains lethal outside Hunt; do not reduce Karen's sprint below 7.5 m/s. Vision and bots noticing the spotlight remain open pending explanation | [tuning decisions](plans/0.2.0-tuning-plan.md#3-your-decisions) |
 | 2026-11-12 | Use a free website address for now; choose the feedback questions for me; include optional nickname and new-build notice; no after-catch fairness prompt | [playtest decisions](plans/playtest-v2.md#3-questions-for-you) |
