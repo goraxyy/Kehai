@@ -108,7 +108,8 @@ namespace Kehai.Karen
             var sb = new StringBuilder();
             double total = wall.Elapsed.TotalMilliseconds;
             sb.Append($"timing: {frames} frames in {total / 1000.0:0.0} s wall ({(frames > 0 ? total / frames : 0):0.00} ms a frame), {logs} log lines ({warnings} warnings)");
-            foreach (var p in parts.OrderByDescending(p => p.Value.ms))
+            // Unity's markers only count with its profiler on (not in a batch editor): left out when empty.
+            foreach (var p in parts.Where(p => p.Value.calls > 0).OrderByDescending(p => p.Value.ms))
                 sb.Append($"\n  {p.Key,-14} {p.Value.ms,9:0} ms  {100.0 * p.Value.ms / System.Math.Max(1.0, total),5:0.0}%  {p.Value.calls} calls");
             foreach (var r in repeated.OrderByDescending(r => r.Value).Take(3))
                 sb.Append($"\n  log ×{r.Value}: {r.Key}");
