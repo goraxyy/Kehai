@@ -111,7 +111,7 @@ namespace Kehai.Eval
         int recorded;
         void CountRecorded()
         {
-            if (recorder == null || recorder.NumStepsToRecord <= 0 || ++recorded < recorder.NumStepsToRecord) return;
+            if (recorder == null || recorder.NumStepsToRecord <= 0 || recorded < recorder.NumStepsToRecord) return;
             recorder.Close();
             Debug.Log($"{name}: {recorded} demonstrations recorded; stopping");
 #if UNITY_EDITOR
@@ -140,8 +140,11 @@ namespace Kehai.Eval
             Academy.Instance.EnvironmentStep();
         }
 
-        public override void CollectObservations(VectorSensor sensor) =>
+        public override void CollectObservations(VectorSensor sensor)
+        {
             sensor.AddObservation(inputs ?? new float[EmployeeObservation.Size]);
+            if (recorder != null) recorded++;   // a step the recorder writes
+        }
 
         public override void WriteDiscreteActionMask(IDiscreteActionMask mask)
         {
@@ -178,6 +181,7 @@ namespace Kehai.Eval
         {
             EndEpisode();
             Academy.Instance.EnvironmentStep();
+            CountRecorded();
         }
 
         static string Arg(string name)

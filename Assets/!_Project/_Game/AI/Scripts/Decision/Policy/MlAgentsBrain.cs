@@ -120,7 +120,7 @@ namespace Kehai.Karen
         int recorded;
         void CountRecorded()
         {
-            if (recorder == null || recorder.NumStepsToRecord <= 0 || ++recorded < recorder.NumStepsToRecord) return;
+            if (recorder == null || recorder.NumStepsToRecord <= 0 || recorded < recorder.NumStepsToRecord) return;
             recorder.Close();
             Debug.Log($"{name}: {recorded} demonstrations recorded; stopping");
 #if UNITY_EDITOR
@@ -130,7 +130,11 @@ namespace Kehai.Karen
 #endif
         }
 
-        public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(inputs ?? new float[BrainObservation.Size]);
+        public override void CollectObservations(VectorSensor sensor)
+        {
+            sensor.AddObservation(inputs ?? new float[BrainObservation.Size]);
+            if (recorder != null) recorded++;   // a step the recorder writes
+        }
 
         public override void WriteDiscreteActionMask(IDiscreteActionMask m)
         {
