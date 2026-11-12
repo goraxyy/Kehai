@@ -2,7 +2,7 @@
 # "Employee", plays every persona: the persona is in its observation and sets its reward's weights
 # (EmployeeObservation, EmployeeReward). Three choices at once (what 14, how 3, which 3), masked.
 #
-#   tools/rl/train.sh employee_r1 2 tools/rl/employee_ppo.yaml --env-args -league tools/rl/leagues/employee_r1.json
+#   tools/rl/train_league.sh employee_r1 2 tools/rl/employee_ppo.yaml tools/rl/leagues/employee_r1.json
 #
 # Round 1 (Employee-1) is about 1.0 M decisions; round 3 (Employee-2) 0.4 M more (§10.2).
 behaviors:

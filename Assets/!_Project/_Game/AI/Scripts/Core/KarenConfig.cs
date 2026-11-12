@@ -200,6 +200,8 @@ namespace Kehai.Karen
         public bool hunter;
         [Tooltip("Her brain's picks come from the ML-Agents trainer (the league's learner), not from its generated C#.")]
         public bool brainFromTrainer;
+        [Tooltip("Basic's catch dial (§5.4): paid for a catch in a tense phase. Starts at +0.15; turned between rounds until her catch rate sits in 0.20–0.35 a shift. May go below zero.")]
+        public float catchDial = 0.15f;
         [Tooltip("Write one learning record per decision (Diagnostics/LearningRecord.cs).")]
         public bool learningRecords;
         [Tooltip("Where the learning records go. Empty: <persistent data>/learning/learning_<launch>.jsonl.")]
@@ -214,6 +216,11 @@ namespace Kehai.Karen
         public string ledgerPath = "";
 
         public RungFeatures Features => new RungFeatures(rung);
+
+        // The Director's pacing off (0.4.0, C5.4): Vital, and the hunter (the planner with the same
+        // freedom). Tiers, the tension budget, cooldowns, settling in and the recovery stop gating;
+        // the Director's hint toward your area stops; every fairness rule stays.
+        public bool PacingOff => hunter || brain == KarenBrainKind.Vital;
 
         public KarenConfig Clone() => (KarenConfig)MemberwiseClone();
     }

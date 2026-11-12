@@ -112,6 +112,7 @@ namespace Kehai.Karen
                 World = World, Log = Log, Rng = Rng, Config = config, Tasks = Tasks, Shift = Shift
             };
             InstallPolicy();
+            InstallBrain();
             Learning.Enabled = config.learningRecords;
             if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
@@ -266,6 +267,7 @@ namespace Kehai.Karen
             Dash.BeginShift();
             Learning.BeginShift();
             biasSeen = Director.BiasApplied;
+            stuck = false;
 
             // Between shifts the store may be rearranged (§5.5). Done before anything reads
             // the map for this shift.
@@ -321,6 +323,14 @@ namespace Kehai.Karen
             AbortPlan();
             Director.EndShift();
             Policy?.EndShift();
+            if (BrainPay != null)
+            {
+                BrainPay.EndShift(KilledThisShift, stuck: stuck);
+                PayBrain();
+                BrainPolicy?.EndShift();
+                BrainPay.Reset();
+            }
+            Ledger.ReadBy(BrainPolicy?.Version);
             Learning.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
             PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
@@ -427,14 +437,15 @@ namespace Kehai.Karen
             {
                 Shift = Stats.Shift, Seed = Rng.Seed, Player = Ledger.PlayerName, Rung = config.rung.ToString(),
                 T = ShiftTime, Now = Time.time,
-                Brain = "planner", BrainVersion = "hand",
+                Brain = brainPick != null ? config.brain.ToString().ToLowerInvariant() : "planner",
+                BrainVersion = brainPick != null ? BrainPolicy.Version : "hand",
                 Goal = plan.Action.ToString(),
                 Phase = (int)Director.CurrentPhase,
-                InputsVersion = PolicyObservation.Version,
-                Inputs = PolicyObservation.Build(plan.Action, Ctx),
-                Legal = names,
+                InputsVersion = BrainObservation.Version,
+                Inputs = BrainObservation.Build(Ctx, config.brain == KarenBrainKind.Basic),
+                Legal = brainPick != null ? brainPick.Value.legal : names,
                 Pick = PickKey(plan.Action, tactic),
-                Chance = 1f,
+                Chance = brainPick != null ? brainPick.Value.chance : 1f,
                 Panic = Director.Panic
             });
         }
@@ -451,6 +462,14 @@ namespace Kehai.Karen
         // less anything the fairness guard caught since the last one.
         void PayPolicy(float dt)
         {
+            if (BrainPay != null)
+            {
+                float shiftLength = Shift != null ? Shift.shiftDurationSeconds : 300f;
+                BrainPay.Pacing(Director.Panic, Director.Setpoint, dt, shiftLength);
+                int v = FairnessGuard.Violations;
+                if (v > violationsSeen) BrainPay.Violations(v - violationsSeen);
+                violationsSeen = v;
+            }
             if (Policy == null) return;
             float length = Shift != null ? Shift.shiftDurationSeconds : 300f;
             Policy.AddReward(PolicyReward.Pacing(Director.Panic, Director.Setpoint, dt, length));
@@ -674,7 +693,7 @@ namespace Kehai.Karen
                 Awareness = Body.Sight.Awareness,
                 PeakRegion = Belief.PeakRegion,
                 PeakPosition = Belief.PeakPosition,
-                InRecovery = Director.InRecovery,
+                InRecovery = !config.PacingOff && Director.InRecovery,   // Vital and the hunter: no recovery (C5.4)
                 Blinking = EyesClosed
             };
 
@@ -756,6 +775,7 @@ namespace Kehai.Karen
             // A trick started from the developer overlay runs to its end.
             if (forcedPlan && CurrentPlan != null) return;
             forcedPlan = false;
+            if (DecideByBrain(forced)) return;
 
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
@@ -785,6 +805,13 @@ namespace Kehai.Karen
                 if (plan == null) return;
             }
 
+            Adopt(plan, tactic, options, why);
+        }
+
+        // A plan she's going ahead with: its cost, the record of it, and on (the planner's and the
+        // brain's decisions both end here).
+        void Adopt(PlanTree plan, Tactic tactic, List<ThoughtOption> options, string why)
+        {
             if (tactic.TensionCost > 0f && !Director.TrySpend(tactic.TensionCost))
             {
                 if (HtnPlanner.Shielded(Ctx))
@@ -794,7 +821,7 @@ namespace Kehai.Karen
                 }
                 Note("PLAN", $"PLAN     {tactic.Id} over the tension budget — unshielded, so it goes ahead");
             }
-            FairnessGuard.CheckPacing(tactic, Director);
+            if (!config.PacingOff) FairnessGuard.CheckPacing(tactic, Director);   // with pacing off by design, not a violation
 
             tactic.LastUsed = Time.time;
             tactic.UsesThisShift++;
@@ -816,9 +843,86 @@ namespace Kehai.Karen
             if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
             else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
-            if (tactic.Learnable) Note("PICK", PickLine(PickKey(plan.Action, tactic), 1f, Ledger.Reading(tactic, LedgerStart.Current, (int)Director.CurrentPhase)));
+            if (tactic.Learnable) Note("PICK", PickLine(PickKey(plan.Action, tactic), brainPick != null ? brainPick.Value.chance : 1f, Ledger.Reading(tactic, LedgerStart.Current, (int)Director.CurrentPhase)));
+            BrainPolicy?.AddReward(0f);
+            if (brainPick != null) BrainPay?.Used(tactic.UsesThisShift - 1);
             RecordDecision(plan, tactic);
+            brainPick = null;
             NarratePlan(plan);
+        }
+
+        // ---- the two Karens (0.4.0, build plan §5, C5.1) -----------------------------------------
+
+        public IBrainPolicy BrainPolicy { get; private set; }
+        public BrainPay BrainPay { get; private set; }
+        (string[] legal, float chance, bool agreed)? brainPick;
+        public int BrainDecisions { get; private set; }
+        public int BrainAgreed { get; private set; }
+
+        void InstallBrain()
+        {
+            BrainPolicy = BrainPolicies.Create(config, out string why);
+            BrainPay = config.brain != KarenBrainKind.Planner ? new BrainPay(config.brain) { Dial = config.catchDial } : null;
+            if (config.brain == KarenBrainKind.Planner) return;
+            Note("SYSTEM", BrainPolicy != null
+                ? $"brain: {config.brain} — {BrainPolicy.Name} {BrainPolicy.Version}{(BrainPolicy is GeneratedBrain g && g.Warning != null ? " (" + g.Warning + ")" : "")}"
+                : $"brain: {config.brain}, but {why} — the planner decides{(config.PacingOff ? ", with pacing off (the hunter)" : "")}");
+        }
+
+        // The brain answers "which action, which trick" as one pair, at the planner's own decision
+        // moments; the plan's steps stay the planner's. False: the planner decides this time.
+        bool DecideByBrain(bool forced)
+        {
+            if (BrainPolicy == null || !config.Features.Goals) return false;
+            Ctx.A = Appraised();
+            Ctx.Last = LastTrickNow();
+            Tactic running = CurrentPlan?.Tactic;
+            bool finishing = IgnoresNoise(running, PlanAge);
+            if (CurrentPlan != null && !BrainSeam.Asks(forced, true, Time.time - Actions.CommittedAt, config.minCommitSeconds)) return true;
+
+            List<BrainSeam.Pair> legal = BrainSeam.Legal(Ctx);
+            if (finishing) legal.RemoveAll(p => p.Action != ActionId.Hunt);   // finish what she starts, unless she hunts
+            if (legal.Count == 0) return finishing;
+
+            // What the planner would pick: the teacher, and "how often she agrees with the planner".
+            ActionId plannerGoal = Actions.Choose(Ctx, forced, out _, commit: false);
+            List<Tactic> plannerCandidates = HtnPlanner.Candidates(plannerGoal, Ctx, null);
+            Tactic plannerTactic = plannerCandidates.Count > 0 ? HtnPlanner.Rank(plannerCandidates, Ctx)[0].t : null;
+            int plannerPick = legal.FindIndex(p => p.Action == plannerGoal && p.Tactic == plannerTactic);
+
+            PayBrain();
+            float[] inputs = BrainObservation.Build(Ctx, config.brain == KarenBrainKind.Basic);
+            if (!BrainPolicy.Choose(inputs, legal, plannerPick, out int index, out float chance) || index < 0 || index >= legal.Count)
+            {
+                if (plannerPick < 0) return false;
+                index = plannerPick;
+                chance = 1f;
+            }
+            BrainSeam.Pair pick = legal[index];
+            BrainDecisions++;
+            if (index == plannerPick) BrainAgreed++;
+            if (CurrentPlan != null && CurrentPlan.Action == pick.Action && CurrentPlan.Tactic == pick.Tactic && !forced) return true;
+
+            Actions.Commit(pick.Action, Ctx);
+            WriteBelief();
+            AbortPlan();
+            PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
+                                            prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
+            if (plan == null) return false;
+            brainPick = (legal.ConvertAll(p => p.Key).ToArray(), tactic == pick.Tactic ? chance : 0f, index == plannerPick);
+            Adopt(plan, tactic, options, why);
+            return true;
+        }
+
+        // The eval timed the shift out: it couldn't end (Basic's stuck-shift cost, C5.3).
+        bool stuck;
+        public void MarkStuck() => stuck = true;
+
+        // What the brain earned since it was last asked (C5.3), handed over with the next ask.
+        void PayBrain()
+        {
+            if (BrainPay == null || BrainPolicy == null) return;
+            BrainPolicy.AddReward(BrainPay.Take());
         }
 
         void WriteBelief()
@@ -836,7 +940,7 @@ namespace Kehai.Karen
             bool exempt = g == ActionId.Hunt || g == ActionId.Loom || g == ActionId.LieInWait || g == ActionId.Lure || g == ActionId.BackOff;
             // Only when a hunt could actually start: with Hunt cooling down (0.2.0), a sighting
             // would otherwise cut the plan that's already hurrying to you, every tick.
-            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f
+            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && BrainSeam.Permission(ActionId.Hunt, c) > 0f
                 && HtnPlanner.Candidates(ActionId.Hunt, c, null).Count > 0)
             {
                 Note("", "  interrupt: SeeingPlayerAtRange");
@@ -1156,6 +1260,7 @@ namespace Kehai.Karen
             Stats.Caught();
             Stats.CatchCauses.Add(CauseOfCatch());
             Learning.Caught(Time.time);
+            BrainPay?.Caught(ShiftTime, Shift != null ? Shift.shiftDurationSeconds : 300f, Director.CurrentPhase);
             if (FogState.Any) Stats.CaughtInFog();
             if (CurrentPlan != null && CurrentPlan.Tactic is AmbushTactic ambush && ambush.AtChore) Stats.CaughtAtChore();
             Ledger.Data.caughtCount++;
@@ -1215,7 +1320,7 @@ namespace Kehai.Karen
             if (ShiftActive) KarenNarrator.Say(StoryKind.Chase, on ? GameNames.Antagonist + " is chasing you — run!" : GameNames.Antagonist + " gave up the chase.", Body.Position);
             Body.SetMood(on ? KarenBody.Mood.Hunt : KarenBody.Mood.Calm);
             if (on) Stats.Chased();
-            else if (config.Features.Goals && ShiftActive) Director.StartRecovery(config.recoverySeconds, Ctx, "after a chase");
+            else if (config.Features.Goals && ShiftActive && !config.PacingOff) Director.StartRecovery(config.recoverySeconds, Ctx, "after a chase");
         }
 
         public void SuppressPursuit(float seconds) => Director.SuppressPursuit(seconds);

@@ -305,6 +305,7 @@ namespace Kehai.Eval
 
             Done = true;
             Metrics.End(clockedOut, timedOut, Burnout, Time.realtimeSinceStartup - wallStartedAt);
+            if (timedOut) KarenBrain.Instance?.MarkStuck();
             if (timedOut && Shift.IsShiftActive) Shift.EndShift();
             return true;
         }

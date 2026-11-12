@@ -114,7 +114,7 @@ namespace Kehai.Karen
             float u = k.wConfidence * fit + k.wStress * stress + k.wTask * task + k.wNovelty * novelty
                       - k.wCost * cost - k.wRisk * risk;
 
-            u *= c.Director.ActionPermission(g, c);
+            u *= c.Config.PacingOff ? c.Director.FairPermission(g, c) : c.Director.ActionPermission(g, c);
 
             why = $"{fitWhy}; stress {stress:+0.00;-0.00}, task {task:0.00}, novelty {novelty:0.0}, cost {cost:0.00}, risk {risk:0.00}";
             return Mathf.Max(0f, u);
@@ -235,7 +235,7 @@ namespace Kehai.Karen
         // The Director's gates — tier permission, cooldowns, the tension budget — hold on every
         // rung but one: rung F with its shield off, which exists to find out what a trained
         // policy does without them (FairnessGuard.CheckPacing counts it).
-        public static bool Shielded(KarenContext c) => !c.Features.Policy || c.Config.shield;
+        public static bool Shielded(KarenContext c) => (!c.Features.Policy || c.Config.shield) && !c.Config.PacingOff;
 
         static bool Introduced(Tactic t, KarenContext c, ref string why)
         {
@@ -270,8 +270,9 @@ namespace Kehai.Karen
         // The candidates the last Plan call ranked: the legal picks a learning record lists.
         public static List<Tactic> LastCandidates { get; private set; } = new List<Tactic>();
 
+        // `prefer` (0.4.0, C5.1): a brain's trick, tried first; the planner's order is the fallback.
         public static PlanTree Plan(ActionId goal, KarenContext c, System.Func<KarenContext, bool> interrupt,
-                                    out Tactic chosen, out List<ThoughtOption> options, out string because)
+                                    out Tactic chosen, out List<ThoughtOption> options, out string because, Tactic prefer = null, string preferWhy = null)
         {
             var refusals = new List<string>();
             List<Tactic> candidates = Candidates(goal, c, refusals);
@@ -295,6 +296,7 @@ namespace Kehai.Karen
                 c.Policy.TryChoose(goal, candidates, scored[0].t, c, out int index, out string pickedWhy) &&
                 index >= 0 && index < candidates.Count)
                 PolicyFirst(scored, candidates[index], pickedWhy);
+            if (prefer != null) PolicyFirst(scored, prefer, preferWhy ?? "brain");
 
             foreach (var entry in scored.Take(4))
                 options.Add(new ThoughtOption { Name = entry.t.Id, Utility = entry.s, Why = entry.why });

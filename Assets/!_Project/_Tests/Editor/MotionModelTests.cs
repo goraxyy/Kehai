@@ -231,14 +231,18 @@ public class MotionModelTests
     [Test]
     public void Senses_S0IsTodaysNumbers()
     {
+        // Each expected value is stored in a float first, as Sensorium's locals always were.
         SenseModel s = SenseModel.For("s0");
-        for (float a = 0f; a <= 1f; a += 0.05f) Assert.AreEqual(Mathf.Lerp(3f, 0.8f, a), s.SightSigma(a), 0f);
+        for (float a = 0f; a <= 1f; a += 0.05f) { float sigma0 = Mathf.Lerp(3f, 0.8f, a); Assert.AreEqual(sigma0, s.SightSigma(a), 0f); }
         for (float d = 0f; d < 20f; d += 0.7f)
         {
-            Assert.AreEqual(Mathf.Sqrt(1f - d / 25f) * 0.9f, s.HearingConfidence(d, 25f), 0f);
-            Assert.AreEqual(1f + d * 0.12f, s.HearingSigma(d, d * 0.5f, true), 0f, "S0 ignores walls and the dark");
+            float confidence = Mathf.Sqrt(1f - d / 25f) * 0.9f;
+            float hearing = 1f + d * 0.12f;
+            Assert.AreEqual(confidence, s.HearingConfidence(d, 25f), 0f);
+            Assert.AreEqual(hearing, s.HearingSigma(d, d * 0.5f, true), 0f, "S0 ignores walls and the dark");
         }
-        Assert.AreEqual(2.5f + 12f * 0.25f, s.TestimonySigma(12f), 0f);
+        float testimony = 2.5f + 12f * 0.25f;
+        Assert.AreEqual(testimony, s.TestimonySigma(12f), 0f);
         s.Trace(TraceKind.WetFootprint, 0.5f, 3f, out float conf, out float sigma);
         Assert.AreEqual(0.55f * 0.5f, conf, 0f);
         Assert.AreEqual(3f, sigma, 0f);

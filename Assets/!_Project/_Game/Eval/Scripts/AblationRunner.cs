@@ -388,7 +388,7 @@ namespace Kehai.Eval
                     int careers = Int(args, "-league-careers", -1);
                     if (careers > 0) spec.careers = careers;
                     // Each training copy (one trainer port each) plays different careers.
-                    spec.seedOffset += KehaiEnv.TrainerPort % 100 * 1000;
+                    spec.seedOffset += KehaiEnv.TrainerPort % 100 * 1000 + Int(args, "-league-seed-offset", 0);
                     LeagueRunner league = LeagueRunner.Run(spec);
                     league.Completed = r =>
                     {

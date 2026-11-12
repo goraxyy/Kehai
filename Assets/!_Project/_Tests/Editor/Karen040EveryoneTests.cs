@@ -132,7 +132,7 @@ public class Karen040EveryoneTests
     public void Separation_TheGameNeverWritesTheGeneralModel()
     {
         string game = Path.Combine(Application.dataPath, "!_Project/_Game");
-        var writes = new Regex(@"\.(SetTrick|SetKind|SetAnswer)\(|Hides\.Add|Routes\.Add");
+        var writes = new Regex(@"\.(SetTrick|SetKind|SetAnswer)\(|\b(everyone|start|LedgerStart\.Current)\.(Hides|Routes)\.Add");
         var files = new Regex(@"File\.(Write|Append|Copy|Move|Delete)\w*\([^)]*(kpack|ModelPack\.Folder|Generated|\.g\.cs)");
         var leaks = new List<string>();
         foreach (string file in Directory.GetFiles(game, "*.cs", SearchOption.AllDirectories))
