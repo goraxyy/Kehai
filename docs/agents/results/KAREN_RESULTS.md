@@ -574,9 +574,9 @@ plan's §11, written before any run and unchanged. Negative results first.
   this branch with learning records off and 7.3 ms with them on (1.05× and 1.2×). Her own code is
   about a quarter of the frame (her belief update 13–16%, decisions 7–10%); Unity's own markers read
   nothing in a batch editor (its profiler is off), so the rest isn't broken down.
-- **The training player doesn't reach the trainer.** Built from a clone, it floods TextMeshPro
-  `NullReferenceException`s on the null graphics device (400,000 in ten minutes) and the trainer
-  times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
+- **The training player doesn't reach the trainer, on `main` too.** Built from a clone, it floods
+  TextMeshPro `NullReferenceException`s on the null graphics device (400,000 in ten minutes; `main`'s
+  own player, built the same way, 7,600 in two minutes and no shift played) and the trainer times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
   two copies, and C0.3's two-copy speed, wait for the player.
 - **The first real belief trace failed the parity gate** (largest difference 0.05): it had no start
   state. With a `state` line (her belief, the prior, the exit lines) a fresh trace passes:
@@ -586,7 +586,7 @@ plan's §11, written before any run and unchanged. Negative results first.
 
 | Check | Result |
 |---|---|
-| EditMode suite on a clone | 428 of 428 (360 before 0.4.0) |
+| EditMode suite on a clone | 430 of 430 (360 before 0.4.0) |
 | Today's predict step behind `IMotionModel` | bit for bit against a frozen copy of the old loop, with and without the outside cell (200 steps) |
 | The C# filter against the Python replay, synthetic map | to 1e-5 on every cell, every step, for P0, P1 and P2 |
 | The C# network against ML-Agents' own actor | to 4 decimals (largest difference 5e-5 allowed) on 1,000 inputs; the smoke exports matched to 1e-9 |
@@ -594,7 +594,7 @@ plan's §11, written before any run and unchanged. Negative results first.
 | The four scripted players, built from personas | the same reflexes, field for field, four seeds each |
 | Training never meets a held-out seed or persona | 5,000 draws; the league stops if a file asks for one |
 | Smoke runs | the Employee (400 decisions), Vital and Basic (300 each) trained through the editor and exported |
-| Today's shift, with every switch at its default | the same as `main`: efficient 263 s and skittish 99 s, the same jobs, tricks and catch |
+| Today's shift, with every switch at its default | the same as `main`: efficient 263 s and skittish 99 s, the same jobs, tricks and catch; still 263 s with all six shadow filters and the belief trace on, and with a refused model pack |
 | Trick check, each brain (untrained, so the planner decides; Vital with pacing off) | every trick that started landed under the planner, as on `main` (twice); under Basic the same; under Vital she caught the test player nine times, so three tricks never got a turn. 0 fairness violations in every run |
 
 **Where a batch frame's time goes** (C0.2, `-kehai-timing`, one shift): her belief update 13–16%, her decisions 7–10%, her plan's steps 1–2%, the eval's metrics 1%; the rest is outside her code and not broken down.
