@@ -44,7 +44,7 @@ review is not a live deployment. Record verification beside the task in its impl
 
 - **Least friction for testers:** one link, one click to agree, nothing to type, no second website.
 - **Most data for you:** everything they did (the 3D replays and logs, as today), their answers
-  inside the game, a "was that fair?" at the moments that matter, and a funnel that shows where
+  inside the game, timestamped bug notes, and a funnel that shows where
   people drop off.
 - **Little disk on your Mac:** the cloud keeps everything; the Mac only holds what it's using.
 - **Instructions travel with the game:** an illustrated START HERE guide plus a short first-launch walkthrough.
@@ -60,7 +60,7 @@ The original choices were made on 6 November; delivery and deferred Windows trai
 | **Cloudflare only:** R2 for files, D1 for rows, a Worker in front, Pages for the website | one account for uploads, the website and marketing videos; measure session sizes before estimating capacity |
 | **Everything is kept in the cloud;** the Mac keeps no session files | your Mac is low on disk |
 | **No tester code:** the game makes a random ID | the code was only a label (any code was accepted) and a step to get wrong |
-| **No Google Form:** three optional typed answers in the game | the form was a second step most people skip; answers now arrive with the session |
+| **No Google Form:** three optional typed answers in the game (wording chosen in Q2) | the form was a second step most people skip; answers now arrive with the session |
 | **No itch.io:** a `/playtest` page on your own website | one less account, and the same site does marketing |
 | **No Apple Developer Program** | your choice. Mac testers do one "Open Anyway" step, shown with pictures on the page |
 | **Steam later** | Steam Playtest replaces the download page when strangers test |
@@ -73,20 +73,20 @@ The original choices were made on 6 November; delivery and deferred Windows trai
 
 ## 3. Questions for you
 
-These remain open; the suggestions are not approvals. Build independent plumbing first.
-Confirm the privacy/retention wording before public distribution; a paid domain is optional.
-Collection and the Windows handoff do not depend on Telegram or Claude being configured.
+Answers updated 12 November. “Open” means the owner asked for an explanation, not approval.
+Build independent plumbing first; confirm retention and the contact before public distribution.
+Telegram and Claude remain optional for collection and the Windows handoff.
 
-| # | Question | My suggestion |
+| # | Question | Answer / remaining choice |
 |---|---|---|
-| Q1 | A domain for the website, and which name? | Start with the assigned free Pages address; buy a domain later if wanted (the project name/address must be available) |
-| Q2 | The three typed questions | "What did you think you had to do at first?", "When did Karen feel unfair, if ever?", "Anything else?" (the old form's 1, 3 and 9) |
-| Q3 | An optional nickname box at the end? | Yes, so you can tell your friends apart |
-| Q4 | "Was that fair? Y / N" for 4 seconds after each catch? | Yes. It can be ignored, and the game doesn't pause |
-| Q5 | How long to keep the replays | 12 months for replays; agree a separate lifetime for rows and learning records. Confirm that training can start within that window; expired source files cannot be recovered |
-| Q6 | A "new build available" line in the game? | Yes: the game asks the Worker at launch |
-| Q7 | Which email goes on the privacy page for deletion requests? | Yours, or a new one for Kehai |
-| Q8 | Keep rounds (`round1`, `round2`…)? | Yes: they stop one round's report mixing with the fixes after it |
+| Q1 | A domain for the website? | **Free for now.** Use the assigned Pages address; no domain purchase |
+| Q2 | The three typed questions | **Owner delegated the wording.** Use: “What were you trying to do, and what was confusing?”, “When did Karen feel scary, unfair or annoying? Describe a moment.”, “What would you change first?” All optional |
+| Q3 | An optional nickname box at the end? | **Yes** |
+| Q4 | “Was that fair? Y / N” for 4 seconds after each catch? | **No.** Do not implement an after-catch fairness prompt |
+| Q5 | How long to keep the data? | **Open: explain first.** Retain means keep stored before automatic deletion. Replays, small feedback rows and training records can have different lifetimes. Suggested starting point: 12 months for raw sessions; decide the lifetime of the other data separately. Training later requires that its source records still exist |
+| Q6 | A “new build available” line in the game? | **Yes** |
+| Q7 | Which contact email handles deletion requests? | **Open: explain first.** Show an address where a tester can send their automatic ID and ask to remove their records; no tester email is required to play. Choose an existing inbox or a dedicated game-support address |
+| Q8 | Keep rounds (`round1`, `round2`…)? | **Open: explain first.** A round labels a batch of tests before/after fixes, like named experiment batches. Build versions remain recorded too. Suggested: yes, assigned by the developer; players type nothing |
 
 ## 4. What a tester does
 
@@ -96,7 +96,7 @@ Collection and the Windows handoff do not depend on Telegram or Claude being con
 | Download | password-protected itch page | your website, which offers their Mac or Windows build |
 | First launch | Mac: "Open Anyway". Windows: "Run anyway". Then type `T07` | the same warnings; **nothing to type** |
 | Consent | two buttons | the same, one click: **Play and send** or **Play without sending** |
-| Playing | Shift+F7 marks a bug | the same, plus "Was that fair? Y / N" after a catch (Q4) |
+| Playing | Shift+F7 marks a bug | the same; no after-catch question |
 | The end | 4 taps in the game, then a 9-question Google Form | 4 taps, 3 optional typed answers and an optional nickname, **all in the game** |
 
 **Step by step:**
@@ -116,7 +116,7 @@ Keep the existing [recordings](../../agents/game/PLAYTEST.md#whats-recorded), ad
 | The session row: computer, frame rate, minutes played, how it ended | tiny | D1 `sessions` | agree in Q5 |
 | A row per shift: length, clocked out, caught, times spotted, closest she got, trick sounds, lowest energy | tiny | D1 `shifts` | agree in Q5 |
 | Answers: the 4 taps, the 3 typed answers, the nickname | tiny | D1 `answers` | agree in Q5 |
-| Moments: fairness taps and bug notes, each with its shift and replay time | tiny | D1 `moments` | agree in Q5 |
+| Moments: bug notes, each with its shift and replay time | tiny | D1 `moments` | agree in Q5 |
 | The funnel: download, first launch, agreed, first shift, finished | tiny | D1 `events` | agree in Q5 |
 | Page visits | — | Cloudflare Web Analytics (no cookies) | Cloudflare's own |
 | Claude's summary of each session | a few KB | D1 `summaries`, written by an optional later analysis run | agree in Q5 |
@@ -141,7 +141,7 @@ cloud ingestion (always available, no owner computer required)
 you, later, on Windows
           ── choose a round/build and download a fixed dataset snapshot
           ── verify file hashes and schema versions, then import into tools/learn
-          ── start the chosen training command manually; evaluate; separately approve publication
+          ── start the chosen training command manually; evaluate; publish only if the checks pass
 
 optional analysis / notifications (when explicitly run or enabled)
           ── read facts, ask Claude for a summary, update D1/report, notify Telegram
@@ -162,7 +162,8 @@ stays unchanged when new photos arrive. It is not a model, and fetching it does 
 **Who:** one builder, plus **[You]** for accounts, decisions and the real-device checks. Existing
 C/B task IDs are retained for references; they do not assign concurrent agents. Work in an
 isolated branch/worktree, following [RULES.md](../../agents/RULES.md). Tick and verify each phase
-before proceeding. This plan does not start 0.4.0 training or change the live-model publish gate.
+before proceeding. Training stays owner-started. Per-model publication approval is no longer
+required; evaluation/compatibility checks still apply ([owner answers](../../agents/HANDOVER.md#12-november-owner-answers)).
 
 ### Phase 0: accounts and answers [You]
 
@@ -221,9 +222,8 @@ before proceeding. This plan does not start 0.4.0 training or change the live-mo
 - [ ] **C2.3 The end page.** The 4 taps, the 3 typed answers (Q2) and the nickname (Q3), all
   optional. The form button goes, and so does `formUrl` (from `PlaytestConfig` and `KehaiBuild`).
   - Files: `PlaytestScreens.cs`, `PlaytestConfig.cs`, `KehaiBuild.cs`, `PlaytestTests.cs`.
-- [ ] **C2.4 "Was that fair?"** (Q4). After a catch: Y or N, for 4 seconds, logged with the shift
-  and the replay time.
-  - Files: `PlaytestSession.cs`, `PlaytestScreens.cs`.
+- **C2.4 Removed from scope by the owner (12 November):** no after-catch fairness prompt.
+  This is not completed implementation. Keep timestamped bug notes and optional end feedback.
 - [ ] **C2.5 The funnel.** After consent, send allowed launch/consent/shift/end events; buffer
   pre-consent session events locally and discard them on decline. Queue consented events offline.
   - Files: `PlaytestFiles.cs` (`PlaytestUploader`), `PlaytestSession.cs`.
@@ -300,7 +300,8 @@ Unity while the owner's editor is open.
     produce a clear rejection/report. A revoked player is excluded from new snapshots and removed
     from a local dataset on reconciliation. Record the exact tested PowerShell commands in the
     README; command names are to be implemented, not advertised as working today.
-  - Training/evaluation/publication are separate owner-started commands under the 0.4.0 plan.
+  - Training starts manually under the 0.4.0 plan. Publication follows its checks without a
+    per-model owner approval; it is never triggered just by receiving a session.
     The handoff test is not permission to run a full training job.
 
 ### Phase 4: the website and download instructions
@@ -318,7 +319,7 @@ Unity while the owner's editor is open.
   - Files: `tools/website/**`.
 - [ ] **B4.2 [B] Page visits:** the Cloudflare Web Analytics snippet (no cookies, no banner needed).
 - [ ] **C4.1 [C] Deploy.** `tools/website/deploy.sh` runs `wrangler pages deploy` with the assets
-  folder; the domain (Q1) is attached in the dashboard.
+  folder; use the assigned free Pages address (Q1).
   - Done when: the site opens on your phone, the button downloads the right build, and a test
     sign-up lands in D1.
 
@@ -345,7 +346,7 @@ Unity while the owner's editor is open.
 | Part | How |
 |---|---|
 | The Worker | `node --test` against stand-ins for R2 and D1 (today's pattern), then `wrangler dev` on this Mac |
-| The game | the EditMode suite on an APFS clone: no code page, the end page, the fairness tap, the summary's shape, the funnel queue offline |
+| The game | the EditMode suite on an APFS clone: no code page, the end page, no after-catch prompt, the summary's shape, the funnel queue offline |
 | The Mac side | `pytest` with a stand-in Worker (`httpx.MockTransport`, as today) |
 | Instructions | Real Mac/Windows ZIPs; offline guide, first-launch walkthrough, skip/reopen, legibility and correct controls |
 | End to end | Packaged build (or an explicit upload-enabled test config) → local Worker → live service; the default editor simulation does not upload |
@@ -402,7 +403,7 @@ The estimates above are planning figures, not an account balance or a measured s
 **Cloudflare** (about 10 minutes):
 1. Sign up at <https://dash.cloudflare.com/sign-up> and confirm your email.
 2. In the left menu, open **R2** and turn on the free plan (it may ask for a card).
-3. Optional (Q1): **Domain Registration → Register Domains**, and buy the name.
+3. Use the free Pages address for now (Q1); no domain purchase is needed.
 4. Tell Claude. Claude runs `npx wrangler login`; a browser tab opens and you click **Allow**.
    Claude does the rest (C0.1).
 

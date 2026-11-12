@@ -28,15 +28,14 @@ and the live model, arrives when the 0.4.0 branch merges.
 
 | Question | Where / suggested answer (not yet your decision) |
 |---|---|
-| Must each new model wait for your explicit yes before publication? | 0.4.0 build branch, D15; yes by default |
-| Keep her current eye targets? | [tuning Q2](plans/0.2.0-tuning-plan.md#3-your-decisions); keep them |
-| Should a touch outside a Hunt still kill? | same, Q3; only Hunt and Lie in wait kill |
-| May her sprint drop below 7.5 m/s? | same, Q4; try 7.0 only if other changes are insufficient |
-| Should bots see her spotlight? | same, Q5; yes |
-| Domain, written questions, nickname, fairness prompt, retention, update notice, deletion email and rounds? | [playtest Q1–Q8](plans/playtest-v2.md#3-questions-for-you), with suggested answers there |
+| Keep her current eye targets? | [tuning Q2](plans/0.2.0-tuning-plan.md#3-your-decisions); explanation requested, no answer yet |
+| Should bots see her spotlight? | same, Q5; explanation requested, no answer yet |
+| How long to keep data, which deletion-contact email, and whether to keep rounds? | [playtest Q5, Q7, Q8](plans/playtest-v2.md#3-questions-for-you); explanations requested |
 
 Already decided: no typed tester code; collect in the cloud independently of your computers;
 training starts later, manually, on Windows. The Basic catch target is already 0.20–0.35.
+The latest [decisions](DECISIONS.md) resolve publication approval, touch lethality, sprint speed,
+free hosting, feedback questions, nickname, the fairness prompt and update notices.
 
 ## Next, in order
 
@@ -47,7 +46,7 @@ training starts later, manually, on Windows. The Basic catch target is already 0
    no-code first launch, automatic cloud collection, and a dataset you can download on Windows
    for training later. Uploads do not start training or require the Mac to process them.
 5. **Real players:** run the first round with the finished test build, review, fix, repeat.
-   The live model's download also depends on v2; publishing remains separately gated.
+   The live model's download also depends on v2; publication still requires evaluation/compatibility checks, but no per-model owner approval.
 6. **Hands-off videos:** [the marketing agents plan](plans/marketing-agents.md), phase 2 on.
 7. **The release:** the Steam page, the demo, the redesign ([RELEASE_PLAN.md](RELEASE_PLAN.md)).
 

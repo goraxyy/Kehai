@@ -155,6 +155,19 @@ redesigned inside the [0.4.0 plan](../you/plans/0.4.0-build-plan.md).
 - On 0.2.0, Cut rarely fires: never on a 25 m dash, sometimes on a 45–60 m run (Karen.md §16.4), and never in the ablation's 144 shifts.
 - On 0.2.0, `main` runs 2 to 4.6 times slower per simulated second than the branch in batch mode, for a reason not yet found; its log repeats a particle-system warning tens of thousands of times. Allow for it when timing a run against `main`.
 
+### 12 November owner answers
+
+The [decision log](../you/DECISIONS.md) supersedes the separate 0.4.0 build branch's D15
+requirement to obtain the owner's yes for every model publication. Training remains manually
+started on the Windows computer. Keep evaluation, fairness, compatibility, signing and rollback
+checks; once those pass, do not ask for per-model publication approval. Integrate this decision
+when the build branch merges; this documentation change does not deploy or publish a model.
+
+The [tuning plan](../you/plans/0.2.0-tuning-plan.md#3-your-decisions) now excludes removing
+outside-Hunt touch kills and reducing the sprint speed. Vision and bot spotlight perception
+remain open. The [v2 plan](../you/plans/playtest-v2.md#3-questions-for-you) records the website
+and feedback choices; retention, deletion contact and rounds still need answers.
+
 ## 6. How to work on it
 
 The short rules are in [`RULES.md`](RULES.md). The longer how-to:

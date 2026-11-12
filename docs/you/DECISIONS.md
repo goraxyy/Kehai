@@ -6,6 +6,9 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-12 | No per-model publication approval; training still starts manually on Windows and publication must pass the existing evaluation/compatibility checks | [agent handover](../agents/HANDOVER.md#12-november-owner-answers) |
+| 2026-11-12 | Touch remains lethal outside Hunt; do not reduce Karen's sprint below 7.5 m/s. Vision and bots noticing the spotlight remain open pending explanation | [tuning decisions](plans/0.2.0-tuning-plan.md#3-your-decisions) |
+| 2026-11-12 | Use a free website address for now; choose the feedback questions for me; include optional nickname and new-build notice; no after-catch fairness prompt | [playtest decisions](plans/playtest-v2.md#3-questions-for-you) |
 | 2026-11-12 | Testers get the game ZIP/link and illustrated instructions, with no typed code; sessions stay in the cloud and training runs later, manually, on a separate Windows computer | [playtest v2 build plan](plans/playtest-v2.md) |
 | 2026-11-12 | After 0.4.0: 0.4.1 from Notes, vertical slice, finish the test build, then the remaining list | [NOW.md](NOW.md#next-in-order) |
 | 2026-11-11 | The docs are split by reader: `docs/you/` for you, `docs/agents/` for agents | [RULES.md](../agents/RULES.md) |
