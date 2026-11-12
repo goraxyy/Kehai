@@ -36,9 +36,43 @@ namespace Kehai.Karen
 
         public static Scope Measure(string name) => new Scope(Enabled ? name : null);
 
+        // Unity's own frame markers (C0.2): where the rest of the frame goes. Each recorder gives the
+        // last frame's time; summed per shift.
+        static readonly string[] markers =
+        {
+            "PlayerLoop", "FixedUpdate.PhysicsFixedUpdate", "Physics.Simulate", "Update.ScriptRunBehaviourUpdate",
+            "Update.ScriptRunDelayedDynamicFrameRate", "PreLateUpdate.ScriptRunBehaviourLateUpdate", "FixedUpdate.ScriptRunBehaviourFixedUpdate",
+            "PreUpdate.AIUpdatePostScript", "PostLateUpdate.UpdateAllRenderers", "PostLateUpdate.FinishFrameRendering",
+            "PreLateUpdate.DirectorUpdateAnimationBegin", "PreLateUpdate.ParticleSystemBeginUpdateAll", "GC.Collect", "Gfx.WaitForPresentOnGfxThread"
+        };
+        static UnityEngine.Profiling.Recorder[] recorders;
+
+        static void SampleMarkers()
+        {
+            if (recorders == null)
+            {
+                recorders = new UnityEngine.Profiling.Recorder[markers.Length];
+                for (int i = 0; i < markers.Length; i++)
+                {
+                    recorders[i] = UnityEngine.Profiling.Recorder.Get(markers[i]);
+                    if (recorders[i].isValid) recorders[i].enabled = true;
+                }
+                return;
+            }
+            for (int i = 0; i < markers.Length; i++)
+            {
+                var r = recorders[i];
+                if (r == null || !r.isValid) continue;
+                double ms = r.elapsedNanoseconds / 1e6;
+                parts.TryGetValue("unity:" + markers[i], out var p);
+                parts["unity:" + markers[i]] = (p.ms + ms, p.calls + r.sampleBlockCount);
+            }
+        }
+
         public static void Frame()
         {
             if (!Enabled) return;
+            SampleMarkers();
             if (!listening)
             {
                 listening = true;

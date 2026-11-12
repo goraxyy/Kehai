@@ -151,6 +151,7 @@ namespace Kehai.Karen
             open.Sort((a, b) => a.Now.CompareTo(b.Now));
             foreach (LearningRecord r in open) Write(r);
             open.Clear();
+            Flush();
         }
 
         void Write(LearningRecord r)
@@ -161,14 +162,33 @@ namespace Kehai.Karen
             if (string.IsNullOrEmpty(FilePath)) return;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-                File.AppendAllText(FilePath, r.ToJson() + "\n");
+                if (writer == null || writerPath != FilePath)
+                {
+                    writer?.Dispose();
+                    Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+                    writer = new StreamWriter(FilePath, true);
+                    writerPath = FilePath;
+                }
+                writer.WriteLine(r.ToJson());
             }
             catch (System.Exception e)
             {
                 Debug.LogWarning($"{GameNames.Antagonist}: learning record not written ({e.Message}); recording stops");
                 FilePath = null;
             }
+        }
+
+        // One file kept open for the session, flushed at each shift's end (a file opened per record
+        // cost the batch eval about a third of its decision time).
+        StreamWriter writer;
+        string writerPath;
+
+        public void Flush() => writer?.Flush();
+
+        public void Close()
+        {
+            writer?.Dispose();
+            writer = null;
         }
     }
 }

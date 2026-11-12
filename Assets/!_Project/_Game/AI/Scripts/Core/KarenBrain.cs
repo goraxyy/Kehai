@@ -177,6 +177,7 @@ namespace Kehai.Karen
             Director?.Dispose();
             if (Shift != null) Shift.ShiftStateChanged -= OnShiftStateChanged;
             Sensorium?.Dispose();
+            Learning.Close();
             if (Instance == this) Instance = null;
         }
 
