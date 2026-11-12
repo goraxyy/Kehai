@@ -562,12 +562,18 @@ any recording, training or test run (each waits for the owner's go). The primary
 plan's §11, written before any run and unchanged. Negative results first.
 
 **What didn't work, or isn't known yet:**
-- **A batch shift doesn't repeat itself, run to run, on the same build.** One shift, rung E, the
-  efficient player, seed 1000: four runs gave 183, 200, 200 and 263 s, two of them the same code. The
-  likely cause is older than 0.4.0: the blink channel times blinks with the wall clock
-  (`Time.unscaledTime`) while the eval runs a fixed step, and blinks feed the Panic Index and the
-  blink dash. So "every decision matches today's" is shown by bit-for-bit unit tests, not by
-  replaying a shift; and paired comparisons share a start, not every step (§13 of the plan says so).
+- **C0.2's two fences changed today's shift, and were moved behind a switch.** A bisect over the
+  branch's commits (one shift, rung E, the efficient player, seed 1000, two runs each) found today's
+  shift (263 s) unchanged through phases 1–2, and changed from the commit that fenced the spill spot
+  at Office/G and put a fallen test player back. With the fences on, the same seed gave 183, 200 or
+  208 s on different runs: today's game has a little run-to-run jitter too (191 or 192 steps), and
+  after the fence's change it tipped the shift one way or another. The fences are now off by default
+  (`KarenConfig.trapFences`), on in the league, and with them off the branch plays today's shift
+  exactly: 263 s, the same jobs and tricks, for the efficient and the skittish players.
+- **0.3.0's slowdown against 0.2.0 wasn't found.** Today a batch frame is 6.1 ms on `main`, 6.4 ms on
+  this branch with learning records off and 7.3 ms with them on (1.05× and 1.2×). Her own code is
+  about a quarter of the frame (her belief update 13–16%, decisions 7–10%); Unity's own markers read
+  nothing in a batch editor (its profiler is off), so the rest isn't broken down.
 - **The training player doesn't reach the trainer.** Built from a clone, it floods TextMeshPro
   `NullReferenceException`s on the null graphics device (400,000 in ten minutes) and the trainer
   times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
@@ -580,7 +586,7 @@ plan's §11, written before any run and unchanged. Negative results first.
 
 | Check | Result |
 |---|---|
-| EditMode suite on a clone | TESTS_LINE |
+| EditMode suite on a clone | 428 of 428 (360 before 0.4.0) |
 | Today's predict step behind `IMotionModel` | bit for bit against a frozen copy of the old loop, with and without the outside cell (200 steps) |
 | The C# filter against the Python replay, synthetic map | to 1e-5 on every cell, every step, for P0, P1 and P2 |
 | The C# network against ML-Agents' own actor | to 4 decimals (largest difference 5e-5 allowed) on 1,000 inputs; the smoke exports matched to 1e-9 |
@@ -588,10 +594,10 @@ plan's §11, written before any run and unchanged. Negative results first.
 | The four scripted players, built from personas | the same reflexes, field for field, four seeds each |
 | Training never meets a held-out seed or persona | 5,000 draws; the league stops if a file asks for one |
 | Smoke runs | the Employee (400 decisions), Vital and Basic (300 each) trained through the editor and exported |
-| Trick check, each brain (untrained, so the planner decides; Vital with pacing off) | TRICKS_LINE |
+| Today's shift, with every switch at its default | the same as `main`: efficient 263 s and skittish 99 s, the same jobs, tricks and catch |
+| Trick check, each brain (untrained, so the planner decides; Vital with pacing off) | every trick that started landed under the planner, as on `main` (twice); under Basic the same; under Vital she caught the test player nine times, so three tricks never got a turn. 0 fairness violations in every run |
 
-**Where a batch frame's time goes** (C0.2, `-kehai-timing`; one shift each):
-TIMING_LINES
+**Where a batch frame's time goes** (C0.2, `-kehai-timing`, one shift): her belief update 13–16%, her decisions 7–10%, her plan's steps 1–2%, the eval's metrics 1%; the rest is outside her code and not broken down.
 
 ## Karen 0.3.0: the ablation (7 November)
 

@@ -7,7 +7,7 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 
 | What | State | Where |
 |---|---|---|
-| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. Being built: phases 1–4's code is in (players, the Ledger blend, the model pack, the prediction model, the mirror map); phase 5 (the two Karens) is next. **Nothing is trained yet** | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
+| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. Built: phases 1–5's code and tests (428 of 428 pass; the game plays as `main` with every switch off). **Nothing is trained yet**: every recording, training and test run waits for your go, one command each in the plan | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
 | **The docs split** (this layout) | merged into `main` (PR #80) | this page |
 
 The plan on `main` is one step behind: the approved version, with fitted senses, the mirror map

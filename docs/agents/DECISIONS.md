@@ -253,7 +253,7 @@ made where the plan didn't say, each the plan's nearest default (11 November 202
 | Call | Why | The cost |
 |---|---|---|
 | **Every new part is behind a switch, off by default,** and off is today's arithmetic | The plan's "Done when" lines ask for today's decisions and belief, number for number, with `planner`, `k0`, `s0` | Shift-level runs can't show it (the next row); bit-for-bit unit tests do |
-| **The identity check is made in unit tests, not by replaying a shift** | A batch shift doesn't repeat itself run to run, even the first shift on the same build: the blink channel times with the wall clock (`Time.unscaledTime`) while the eval runs a fixed step | A gap in today's eval, found here and not fixed (it changes the eval): every paired comparison shares a start, not every step |
+| **The identity check is made twice:** bit-for-bit unit tests, and the same shift on `main` and here | A shift on `main` repeats itself almost exactly (191 or 192 steps); a bisect over the branch found the one change that moved it | — |
 | **Learning records name picks as "action:trick" from the first version** | One format for the planner and the brains | Version-1 records of the planner list only the chosen action's tricks as legal |
 | **The players' choices go into the shift record** (`choice` events, at the destination) | Legs and the scorecard read bots and people from the same files | A few hundred more lines a shift |
 | **Persona named points keep their profile's tables exactly**; every other persona maps smoothly | The four profiles must play as today, choice for choice | Two code paths for reflexes |
@@ -261,8 +261,7 @@ made where the plan didn't say, each the plan's nearest default (11 November 202
 | **Vital's "pacing off" also skips counting pacing as violations** | Tier-2 tricks in a recovery are what pacing off means for her; counting them would make her "violations: 0" impossible by design | Her fairness count covers the fairness rules only, as the plan's table lists them |
 | **"Never a hunt outside" and "nothing off shift" stay on for Vital** | They're fairness rules (her body stays in her part of the building) | — |
 | **Tricks "on your way", the route guesses after any sighting, and the mirror map's placement bonus** only work with the destination model (P2, P3) or the mirror (K1, K2) | With today's settings her placements must not change | They can't be judged until the prediction model is chosen (C4.11) |
-| **Spill isn't put at Office/G** (a fence), and a spill lands on the player's floor | 0.3.0's ablation left that spot unmopped and the shift stuck; the cause is in the scene, not in git | One fewer spill spot; the cause is still open |
-| **A bot that falls through the floor is put back on the spot it last stood** | A stuck episode poisons training | The hole is still there; the log still says where |
+| **C0.2's fences are off by default** (`KarenConfig.trapFences`), on in the league: Spill not at Office/G and only on your floor; a fallen test player put back where it stood | On, they changed today's shift (the bisect); training needs them, because a stuck episode poisons it | Ablations without `-karen-set trapFences=on` can still get stuck there; the causes are in the scene, not in git |
 | **The Employee's trainer side learns the careful corner; Karen's never meets it** | §7.6 says so; the league checks it and stops otherwise | — |
 
 ## 12. Still open

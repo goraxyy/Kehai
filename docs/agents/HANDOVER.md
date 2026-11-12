@@ -114,8 +114,10 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
     Vital's gates, the brains' bridge (`KarenVital`, `KarenBasic`), the network in C# and its export.
   - **Nothing is trained.** Every default is today's game; every recording, training and test run is one command beside its task
     in the plan, and waits for the owner's go.
-  - **Found:** a batch shift doesn't repeat itself run to run on the same build (the blink channel uses the wall clock); see
-    [DECISIONS.md §11](DECISIONS.md#11-karen-040-the-builds-own-calls).
+  - **Checked:** 428 of 428 EditMode tests; with every switch at its default, a shift plays exactly as on `main`.
+  - **Found:** the training player doesn't reach the trainer (TextMeshPro errors on the null graphics device), so for now
+    training runs one copy in the editor (`tools/rl/train_editor.sh`); C0.2's fences changed today's shift, so they're off by
+    default and on in the league. See [KAREN_RESULTS.md](results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november).
 - **Karen 0.3.0, the tricks come back** (branch `0.3.0`, worktree `.claude/worktrees/tricks`; draft [PR #78](https://github.com/goraxyy/Kehai/pull/78)). The owner's 21 items of 7 November: nine tricks removed, ten rebuilt end to end, a fog that blinds everyone, a PA off switch, placement memory.
   - Plan with tick boxes and a progress table: [`plans/0.3.0-build-plan.md`](archive/0.3.0-build-plan.md). What each trick does now: [Karen.md §17](karen/Karen.md#17-karen-030-the-tricks-come-back).
   - **One builder** (the owner's call, 7 November): Claude built every task, the old [B] ones too.
