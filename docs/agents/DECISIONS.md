@@ -13,7 +13,8 @@ are from the dev Mac (M2, 8 GB), in the editor, at 1080p.
 8. [The pipelines](#8-the-pipelines)
 9. [Reproducible interior models and safe room circulation](#9-reproducible-interior-models-and-safe-room-circulation)
 10. [Karen 0.2.0](#10-karen-020)
-11. [Still open](#11-still-open)
+11. [Karen 0.4.0: the build's own calls](#11-karen-040-the-builds-own-calls)
+12. [Still open](#12-still-open)
 
 ---
 
