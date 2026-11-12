@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speaks the same lines in several candidate voices, so the owner can pick (docs/marketing/MARKETING.md, Still to decide).
+"""Speaks the same lines in several candidate voices, so the owner can pick (docs/agents/marketing/MARKETING.md, Still to decide).
 
     uv run voice_samples.py [--backend azure|say] [--role narrator|karen] [--lang en|ru] [--dry-run] [--root DIR]
 

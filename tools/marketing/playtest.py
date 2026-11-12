@@ -40,7 +40,7 @@ def main() -> int:
         found = sessions(where)
         print(f"playtests: {where} ({len(found)} session(s))")
         print("upload service: " + ("set up" if inbox.remote() else "not set up (KEHAI_PLAYTEST_UPLOAD_URL and KEHAI_PLAYTEST_ADMIN_KEY in tools/playtest/.env)"))
-        print("summaries: " + ("on" if summary.ready() else "off until Claude is set up (docs/marketing/MARKETING.md, Setup)"))
+        print("summaries: " + ("on" if summary.ready() else "off until Claude is set up (docs/agents/marketing/MARKETING.md, Setup)"))
         print("issues go to: " + (setting("KEHAI_ISSUES_REPO") or "goraxyy/Kehai") + (" (dry run)" if setting("KEHAI_DRY_RUN") == "1" else ""))
         return 0
     if a.cmd == "report":

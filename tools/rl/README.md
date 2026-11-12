@@ -10,7 +10,7 @@ trained with reinforcement learning picks it instead of the bandit. Everything e
 - the tells
 - the fairness rules
 
-It sits on the ablation ladder ([`KAREN_RESULTS.md`](../../docs/karen/KAREN_RESULTS.md)), so "does a
+It sits on the ablation ladder ([`KAREN_RESULTS.md`](../../docs/agents/results/KAREN_RESULTS.md)), so "does a
 learned policy beat the bandit?" is answered the same way as every other rung: paired against E
 on the same seeds.
 

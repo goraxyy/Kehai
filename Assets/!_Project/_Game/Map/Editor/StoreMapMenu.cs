@@ -5,7 +5,7 @@ using UnityEngine;
 
 // Writes the full store map out for people and agents to read. The map itself is rebuilt from
 // the scene every time the game runs; this writes a readable copy into Library/ (not the repo:
-// docs/store/STORE.md has the short version).
+// docs/agents/store/STORE.md has the short version).
 public static class StoreMapMenu
 {
     const string MarkdownPath = "Library/Kehai/STORE_MAP.md";

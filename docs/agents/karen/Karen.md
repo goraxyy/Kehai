@@ -1,0 +1,1726 @@
+# Karen
+
+**Karen** — the store's management AI, and the thing that is hunting you.
+
+> *"Employee wellbeing is a tracked metric. I am optimising it."*
+
+This document specifies the adaptive antagonist for **Kehai**. It is a design + architecture
+document, not an implementation. It describes what Karen perceives, how it thinks, how it adapts
+across a single shift and across a career, the full library of things it can do to you, and how
+all of that maps onto the systems that already exist in this project.
+
+> **Karen 0.2.0** (the `0.2.0` branch, November 2026) changes a good part of what follows: her
+> eyes, where she works, goals that become actions, the Hunt, two new tricks, no warnings, and a
+> learner that finds combos. [§16](#16-karen-020) lists every change and where it lives in the
+> code. The sections below keep the original design, with a short **0.2.0** note wherever it no
+> longer matches.
+>
+> **Karen 0.3.0** (the `0.3.0` branch) brings the owner's tricks back, rebuilt end to end, and
+> removes nine for good. [§17](#17-karen-030-the-tricks-come-back) lists what each one does now.
+
+---
+
+## 0. TL;DR
+
+Karen is not a monster with a patrol route. It is a **facility** that happens to have a body.
+
+It runs three minds at once:
+
+| Mind | Knows | Controls | Timescale |
+|---|---|---|---|
+| **The Body** | only what it can sense | where it walks, what it does to you | frames |
+| **The Director** | everything | pacing, tension, environmental events | seconds–minutes |
+| **The Ledger** | everything you have ever done | which tactics get chosen at all | shifts–career |
+
+The Body is honest and beatable. The Director keeps the shift from being boring. The Ledger is
+the part that makes players say *"it learned me."*
+
+The core loop it plays against you:
+
+```
+     you have jobs to do  ──────────────►  the jobs force you into the maze
+              ▲                                        │
+              │                                        ▼
+     Karen adds jobs / breaks jobs  ◄────────  the maze is where Karen lives
+```
+
+Karen almost never wins by catching you. It wins by making the shift take longer than you have
+energy for. **Kehai is the fail state. Karen's real weapon is overtime.**
+
+---
+
+## 1. Design pillars
+
+Five rules everything below has to obey.
+
+**1. The horror is administrative.**
+An Alien kills you. Karen *assigns you more work*. Every scare should end with the player having a
+new chore, a longer route, or less light — not just a raised heart rate. Fear that converts into
+a task is fear the player carries for the next ten minutes.
+
+**2. The Body never cheats, the Director never touches the Body.**
+Alien Isolation's split. The Director may spawn a noise, cut the lights, or nudge a *search
+region* — it may never teleport the Body, and it may never hand the Body your exact location. If a
+player reviews a replay, every single thing the Body did must be explainable from something it
+could actually have sensed. This is a hard architectural boundary, not a guideline.
+
+**3. Adaptation must be two-way.**
+Hello Neighbor's failure mode is that the AI learns and the player just loses. Every Karen
+counter-strategy must have a player counter-counter: cameras can be unplugged, the PA can be
+jammed, traps can be spotted, the maze can be re-learned. If a player can't fight back against
+the adaptation, it isn't adaptation, it's a difficulty slider with a story.
+
+**4. Regulate dread, don't maximise it.**
+Karen targets a *band* of player stress, not the top of it. A permanently terrified player goes
+numb in ninety seconds. The quiet stretches are what make the loud ones work — so quiet is
+something Karen actively schedules, not something that happens when it fails.
+
+**5. Every decision must be legible.**
+Karen keeps a running natural-language trace of its own reasoning. It is a debugging tool, it is
+a design tool, and at the end of a run it is a *feature* — the post-shift screen shows you what
+it was thinking. Being outsmarted is only satisfying if you can see how.
+
+---
+
+## 2. Anatomy: three minds
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  THE LEDGER            persistent · cross-shift · knows you          │
+│  player model · tactic values · route priors · difficulty calibration│
+└───────────────┬──────────────────────────────────────────────────────┘
+                │  biases (which tactics are even on the table)
+                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  THE DIRECTOR          omniscient · per-shift · knows the truth      │
+│  panic estimate · pacing setpoint · tension budget · event scheduling│
+└───────────────┬──────────────────────────────────────────────────────┘
+                │  pressure, permissions, search hints (bounded)
+                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  THE BODY              honest · per-frame · knows only what it sensed│
+│  sensorium → belief grid → appraisal → goal → plan → act             │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.1 The Body
+
+A NavMeshAgent with a probabilistic model of where you are and a planner that turns that model
+into behaviour. It has no reference to `playerTransform` at all — that reference is the single
+biggest thing separating the current `EnemyAI.cs` from Karen. It has a *belief*, and it acts on it.
+
+### 2.2 The Director
+
+Sees everything, controls nothing directly. Its job is the shape of the shift: when it's quiet,
+when it isn't, and whether the Body is allowed to spend the big tactics right now. Its levers:
+
+- **Tension budget** — a currency that regenerates over time and is spent on tactics. Big scares
+  cost a lot; the budget is why Karen can't blackout-blackout-blackout.
+- **Search bias** — may bias the belief grid toward the player's true region, capped hard (see
+  §9). Used only when the player has been unthreatened for too long.
+- **Environmental events** — noises with no author, a flickering light, a door chime. Free dread
+  that costs the Body nothing and reveals nothing.
+- **Permissions** — gates whole classes of tactic by shift number and by panic level.
+
+### 2.3 The Ledger
+
+A serialised profile of the player that survives death, quitting, and new shifts. It does not
+decide *what happens*; it decides *what Karen is inclined to try*. Details in §7.
+
+---
+
+## 3. Perception: the Sensorium
+
+Six sense channels. Each produces `Observation` records that feed one shared belief update.
+Nothing in the game grants Karen a boolean "sees player" — everything is evidence with a
+confidence and a timestamp.
+
+```csharp
+public readonly struct Observation
+{
+    public readonly SenseChannel Channel;   // Sight, Hearing, Trace, Testimony, Infrastructure, Absence
+    public readonly Vector3 Position;
+    public readonly float  Confidence;      // 0..1
+    public readonly float  Timestamp;
+    public readonly int    NodeId;          // aisle-graph node, -1 if off-graph
+    public readonly bool   IsNegative;      // "I looked and there was nothing here"
+}
+```
+
+### 3.1 Sight — graded, not binary
+
+The existing cone-plus-raycast check becomes a **detection score** accumulated over time, the way
+Alien Isolation and Splinter Cell handle awareness:
+
+```
+detect  =  angularFalloff · distanceFalloff · lightLevel · motionSalience · exposure
+```
+
+| Term | Meaning | Player counter |
+|---|---|---|
+| `angularFalloff` | 1.0 dead centre → 0 at cone edge | stay peripheral |
+| `distanceFalloff` | inverse-square, clamped | keep distance |
+| `lightLevel` | sampled from the lighting at your feet | stay out of lit aisles, kill the lights |
+| `motionSalience` | sprint 1.0 · walk 0.55 · crouch 0.2 · still 0.05 | slow down |
+| `exposure` | fraction of your capsule unoccluded, 3 rays not 1 | break silhouette behind a shelf |
+
+Detection integrates upward while the score is positive and decays while it isn't, so a glimpse
+through a gap between two `ShelfUnit`s does not instantly promote to a chase. **Crucially, the
+flashlight raises your own `lightLevel`** — light is the resource you trade for safety.
+
+**In 0.2.0** (`SightSensor`, set up by `KarenBody.ConfigureEye`):
+
+| Setting | Before | 0.2.0 |
+|---|---|---|
+| Cone | 120°, 18 m | **150°, 36 m** |
+| `distanceFalloff` | half strength at 8 m | half strength at **16 m** (cameras and possessed shoppers keep 8) |
+| Gain (option A) | 2.2 | **1.65**, tuned down to the targets, because the bigger cone made her too quick |
+| Score floor | 0.02 | **0.04**, so crouched in the dim stays unseen |
+| Grace (option E) | none | awareness **holds for 0.5 s** after you leave her view, then drains |
+| Expectation (option D) | none | it fills up to **2× as fast** where her belief expects you (`BeliefGrid.Expectation`) |
+
+The targets, and how she does on the walk-by set (`AwarenessTests`):
+
+| You | Target | 0.2.0 |
+|---|---|---|
+| Walking 10 m away in a lit aisle | seen within 0.7 s | 0.67 s |
+| 15 m away, 45° off-centre | within 1.5 s | 1.40 s |
+| Crouched, a third of you showing, in the dim | never | never |
+
+With a 36 m cone, long aisles stop being safe: she sees down most of the sales floor in 1–2 s.
+The falloff is `1 / (1 + (d / 16)²)`. More in [§16.1](#161-her-eyes).
+
+### 3.2 Hearing — an event bus, not a physics query
+
+Every noisy thing in the store already exists in code; it just needs to announce itself. One
+static bus, cheap, no per-frame scanning:
+
+```csharp
+NoiseBus.Emit(new NoiseEvent {
+    position  = transform.position,
+    loudness  = 0.8f,          // metres of nominal carry
+    kind      = NoiseKind.DroppedItem,
+    authored  = NoiseAuthor.Player
+});
+```
+
+| Source | Existing hook | Loudness | What it tells Karen |
+|---|---|---|---|
+| Sprinting | `PlayerMotor.IsSprinting()` | 0.9 | you are moving, and you have energy |
+| Walking | `PlayerMotor` | 0.35 | rough bearing only |
+| Crouch-walk | `PlayerMotor` | 0.1 | almost nothing |
+| Dropping an item | `PickupInteractable`, `Q` | 0.7 | exact point, and *that you were carrying* |
+| Mopping | `Dirt` hold-interaction | 0.5, sustained | you are stationary for 3s — free ambush window |
+| Stocking a shelf | `ShelfSlot.FillWithNewItem` | 0.45 | which task you're on |
+| Trash bag rustle | `TrashBag` while carried | 0.3, continuous | a *moving* noise — it can follow you by ear alone |
+| Coffee machine | `CoffeeMachine.Interact` | 0.6 | you were low on energy, and where you go to fix that |
+| Auto doors | `AutoDoubleDoor` | 0.55 | region transitions |
+| Time puncher | `Puncher` | 0.8 | you are trying to leave |
+
+Loudness attenuates **along the nav graph, not through walls** — a shout two aisles away around a
+corner is quieter than one straight down the aisle. This is what makes the maze matter acoustically.
+
+### 3.3 Traces — the world remembers you
+
+Physical evidence with a decay clock. This is the sense that makes the store feel like it's
+watching even when nothing is.
+
+| Trace | Left by | Lifetime | Read as |
+|---|---|---|---|
+| Wet footprints | walking through a spill or a mopped patch | 45 s, fading | a **directed trail** — Karen gets a bearing, not just a point |
+| A gap on a shelf | `ShelfSlot.TakeItem` | until refilled | someone worked here recently |
+| A *filled* shelf it sabotaged | `ShelfUnit.IsFull` flipping back | permanent | you undid its work — it knows you were here and it knows when |
+| Item on the floor | `Q` drop | until picked up | your carry state, and your panic (dropped things = fleeing) |
+| The mop away from its `ToolSnapPoint` | `ItemHome` | until returned | where you're working now |
+| Bagged bin | `Trashcan.UsageCount` reset | until re-filled | task progress |
+| An open door held open | `HingeDoor` | seconds | you went through *and were in a hurry* |
+
+Traces are the reason Karen can be terrifying without ever seeing you: it walks into an aisle,
+finds a bagged bin and wet footprints heading north, and now has a hard prior on half the store.
+
+### 3.4 Testimony — the customers are its sensor network
+
+**This is the mechanic the maze exists for.**
+
+The store is full of `CustomerNPC`s doing their own routine. Each carries a tiny short-term
+memory: `lastSawEmployeeAt`, `when`, `confidence`. Karen doesn't read their minds — the Body has
+to physically pass near a customer to "ask", which costs it time and puts it in the open.
+
+```csharp
+// Body, on approaching a customer within 2m
+foreach (var c in CustomerNPC.NearbyOf(transform.position, 2f))
+    if (c.Memory.HasSighting && !alreadyPolled.Contains(c))
+        sensorium.Submit(c.Memory.ToObservation(decayedConfidence: c.Memory.Age));
+```
+
+Consequences that fall out of this for free, without writing a line of special-case code:
+
+- **The store is more dangerous when busy.** A packed shift is a dense sensor grid.
+- **Serving customers is a risk decision.** Standing at the till puts you in front of the most
+  reliable witness in the building, for as long as it takes.
+- **Hiding *among* customers works** — motion salience and exposure both drop in a crowd.
+- **Emptying the store helps you and hurts your score.** Ignore the queue and you're harder to
+  find, but `TaskManager.AllCustomersServed` is false and you can't clock out. Real dilemma.
+- **A customer who was near a scare is a jumpy witness** — higher confidence, wider recall radius.
+
+### 3.5 Infrastructure — it owns the building
+
+Karen is the *store*. Static sensors it always has, and which the player can attack:
+
+| Asset | Gives Karen | Player counter | Cost of the counter |
+|---|---|---|---|
+| CCTV nodes | permanent low-confidence sighting in a cone | unplug it (hold-interact, 4 s) | Karen notices the dead camera and *investigates the blind spot* |
+| Door sensors | region-transition events, storewide | prop a door open | that door now never reports — and never closes behind you |
+| The POS terminal | knows when a customer was served | serve away from the till (not possible yet) | — |
+| PA system | it can *speak* (§8) | jam it from the powerbox | costs a breaker slot you might need for lights |
+| Powerbox | knows which breakers are on | it's yours to control too | the panel is deep in the maze |
+
+Unplugging a camera is a beautiful trap: it buys silence and it *announces that you exist*. A
+dead sensor is information.
+
+### 3.6 Absence — the sense that most AIs skip
+
+When Karen sweeps a cone and finds nothing, that is an observation with `IsNegative = true`. It
+subtracts probability. Without this, search AI re-checks the same three aisles forever and the
+player learns to stand still. With it, Karen *clears* the map methodically and closes in — which
+is the single most frightening property a searcher can have.
+
+**In 0.2.0** the sweep checks only the cells inside her cone (`Sensorium.ConeCells`), 120 a tick,
+each weighed by how well she'd see a person standing there. In the editor a sweep costs about
+1.3 ms and 108 rays. It uses the same eye model as her sight (`SightSensor.Visibility`), so it
+no longer keeps its own copy of the numbers.
+
+---
+
+## 4. Belief: where it thinks you are
+
+Karen never stores `lastPlayerPosition`. It stores a **probability distribution over the whole
+store**, and updates it like a Bayes filter. This is the single change that turns a stalker into
+an investigator.
+
+### 4.1 The grid
+
+The nav mesh is voxelised into cells of ~1.5 m (tunable), one float each. For a 60×60 m store
+that's ~1600 live cells — trivial. Cells are linked by the **aisle graph** (§5), so probability
+flows the way a body can actually walk.
+
+```
+b(c)  =  P(player is in cell c)          Σ b(c) = 1
+```
+
+**In 0.2.0 her grid stops at her part of the building:** the store, the office, the WC, the
+backstreet and the pavement, to z −106 (`StoreMap.CellIsKarens`). Everything outside is **one
+cell**. It remembers which exit you used, and mass reaches the other exits only after the walk
+round, about 95 m. Her body stops at the same line (the `KarenArea` NavMesh area). She never
+hunts you outside: she sets up for your return instead.
+
+**Where you're going (0.2.0, `RoutePredictor`).** On top of the grid she keeps 3–6 guesses at
+your route, each with a time window: when you'd get there sprinting, walking or crouching. The
+grid reweighs them, including "she looked and you weren't there". Hunt, Cut and Ambush read
+them. More in [§16.2](#162-where-she-works) and [§16.3](#163-actions-and-the-hunt).
+
+### 4.2 Predict — probability leaks the way you can move
+
+Every 100 ms, mass diffuses along graph edges:
+
+```
+b'(c) = Σ  T(c | c') · b(c')
+        c'
+```
+
+`T` is not uniform. It is weighted by:
+
+- **Traversal cost** — you flow down open aisles faster than through a blocked one.
+- **Your movement budget.** Karen knows whether it forced you into a sprint, and it knows the
+  store's coffee machine usage. If it believes you're out of energy, `CanSprint == false`, and
+  the diffusion radius it uses **shrinks accordingly**. Getting burnt out doesn't only stop you
+  running — it *narrows the search area*. That is the mechanic and the theme in one equation.
+- **Goal attraction.** Karen knows the shift's task list (it wrote it). Mass flows preferentially
+  toward unfinished work: understocked `ShelfUnit`s, live `Dirt`, a full `Trashcan`, the
+  `TrashContainer` out back if a bag is active. **You are predictable because you are employed.**
+- **Ledger priors.** Your historical route habits bias `T` (§7.6).
+
+### 4.3 Correct — evidence, including the absence of it
+
+```
+b(c)  ∝  b'(c) · P(observation | player in c)
+```
+
+- Positive sighting → a tight Gaussian bump, `Confidence` sets the width
+- Noise → a bump smeared along the nav graph at the attenuated radius
+- Trace → a bump plus a **directional push** (footprints have a heading)
+- Testimony → a wide, age-decayed bump
+- **Negative** → `b(c) *= (1 - detect(c))` for every cell it just swept
+
+Then renormalise. If total mass collapses (everything was ruled out), reset to the graph-wide
+prior — Karen "loses the scent" and starts over, and the player can *feel* that happen.
+
+### 4.4 What the Body reads off the grid
+
+| Quantity | Formula | Drives |
+|---|---|---|
+| **Peak** | `argmax b(c)` | where to go |
+| **Confidence** | `max b(c)` | whether to hunt or to sweep |
+| **Entropy** | `H = -Σ b log b` | how lost it is; high H → tactics that flush you out |
+| **Containment** | mass inside the region it has blocked | whether the trap is worth springing |
+| **Staleness** | time since the last positive observation | when to give up and go back to sabotage |
+
+Entropy is the interesting one. When Karen doesn't know where you are, it doesn't wander — it
+**does something that makes you make a noise**. High entropy is the trigger for a blackout, a
+shelf sweep, or a PA announcement. It is deliberately creating evidence.
+
+---
+
+## 5. The maze as a graph
+
+The store is not a room; it's a topology. Karen reasons about it as one.
+
+### 5.1 The aisle graph
+
+Authored once (or baked from the nav mesh) as nodes = aisle segments / junctions / rooms, edges =
+walkable connections with a width and a door flag.
+
+```
+        [BACK ROOM]───[STORE ROOM]───[POWERBOX]
+             │              │
+        [AISLE 7]──────[JUNCTION C]──────[AISLE 6]
+             │              │                │
+        [AISLE 8]──────[JUNCTION B]──────[AISLE 5]───[COFFEE]
+                            │
+        [TILLS]────────[JUNCTION A]────────[ENTRANCE]
+```
+
+### 5.2 Chokepoints and articulation points
+
+On graph build, Karen precomputes the **articulation points** — nodes whose removal disconnects
+the graph. These are the places where standing still, or dropping a crate wall, cuts the store in
+half. Standard DFS lowpoint algorithm, computed once, recomputed when the maze mutates.
+
+This is why Karen's blockades feel intelligent rather than random: it isn't picking a corridor, it
+is picking *the* corridor, and it can tell you why.
+
+### 5.3 Herding by min-cut
+
+To push you toward a region (the back room, the dark half, the dead end near the tills), Karen
+solves a small max-flow/min-cut on the aisle graph: source = your belief peak, sink = everywhere
+you'd rather be. The **min-cut edges are its shopping list of things to block** — with its own
+body, a crate wall, a locked door, or a spill you won't want to cross.
+
+It rarely blocks all of them. Blocking all but one and standing near the last is how you build a
+funnel, and a funnel the player walks into voluntarily is far better than a scripted corridor.
+
+### 5.4 Influence maps
+
+A cheap secondary layer painted over the graph: *danger* (where Karen has been recently, where the
+noise came from) and *desire* (where the player's unfinished tasks are). Karen can read the
+difference to predict your route, and — for herding — it can raise danger somewhere without ever
+going there, using a PA burst or a light flicker.
+
+### 5.5 Maze mutation
+
+The shelving is on castors. Between shifts (later, *during* them), Karen may relocate a
+`ShelfUnit`, seal a door, or open a staff passage. Effects:
+
+- Player route memory is invalidated on a schedule, so mastery decays and the store stays a maze
+- Articulation points move, so the player's learned safe pockets stop being safe
+- It's a **legible** escalation: you walk in on shift 7 and the store is *wrong*
+
+The rule that keeps this fair: mutation never lengthens the shortest path from the entrance to
+any required task object by more than a factor (≈1.4), and never creates a dead end with no
+second exit while a chase is possible.
+
+---
+
+## 6. Thinking: the deliberation loop
+
+### 6.1 The tick
+
+Nothing here runs every frame except the cheap parts. Everything is amortised and budgeted, so
+one Karen costs less than the ~40 customers already in the scene.
+
+| Stage | Rate | Budget | What it does |
+|---|---|---|---|
+| **Sense** | every frame | 0.05 ms | cone test, drain the `NoiseBus`, trace triggers |
+| **Believe** | 10 Hz, sliced | 0.2 ms | predict + correct over ⅓ of the grid per tick |
+| **Appraise** | 5 Hz | 0.05 ms | recompute threat/entropy/containment, read Panic Index |
+| **Decide** | 2 Hz **or on event** | 0.3 ms | score every goal, pick one |
+| **Plan** | on goal change only | 1–3 ms | HTN decomposition, anytime |
+| **Act** | every frame | 0.05 ms | run the behaviour tree leaf, steer the agent |
+
+"On event" matters: a gunshot-loud noise re-decides immediately rather than waiting up to 500 ms.
+That's the difference between reactive and sluggish.
+
+### 6.2 Appraisal
+
+Turn raw state into the handful of scalars the decision layer actually uses:
+
+```csharp
+struct Appraisal
+{
+    public float Confidence;     // max belief         → hunt vs search
+    public float Entropy;        // how lost            → flush vs sweep
+    public float Staleness;      // seconds since sight → give up?
+    public float Containment;    // is the funnel closed?
+    public float Panic;          // Director's estimate of the player (§7.4)
+    public float Pressure;       // Director's setpoint error (§7.5)
+    public float Tension;        // budget available for big tactics
+    public float TaskLoad;       // how close the player is to clocking out
+}
+```
+
+`TaskLoad` is read straight from the existing `TaskManager` — `MopQuotaMet`, `ShelvesStocked`,
+`TrashEmpty`, `AllCustomersServed`. **When you are one task from freedom, Karen's incentive to
+break something spikes.** That's a one-line utility term and it produces the whole late-shift
+panic.
+
+### 6.3 Goal selection: utility, not states
+
+The current `AIState` enum becomes a set of **goals**, each scored continuously. Highest score
+wins, with hysteresis so it doesn't flap.
+
+| Goal | Roughly wants | Peaks when |
+|---|---|---|
+| `Patrol` | maintain coverage, refresh negative info | nothing else scores |
+| `Investigate` | resolve a specific observation | confidence mid, staleness low |
+| `Sweep` | reduce entropy systematically | entropy high, no leads |
+| `Flush` | *create* evidence (blackout, sweep a shelf, PA) | entropy high, staleness high |
+| `Deny` | break the task the player is closest to finishing | `TaskLoad` high |
+| `Herd` | close min-cut edges, shrink the player's world | containment achievable |
+| `Ambush` | pre-position and go silent at a place they must come to | route prior confident |
+| `Stalk` | be seen, then leave | panic *below* setpoint |
+| `Pursue` | close distance | confidence very high |
+| `Withdraw` | deliberately disengage and let them breathe | panic *above* setpoint |
+| `Assist` | help the player, sincerely, near burnout | energy < 0.15 (§10.3) |
+
+```
+U(g) = w_conf ·Confidence(g)
+     + w_stress·ExpectedPanicDelta(g)      ← from the Ledger, per-player
+     + w_task  ·TaskLeverage(g)
+     + w_novel ·Novelty(g)                 ← anti-repetition
+     - w_cost  ·(TensionCost(g) / Tension)
+     - w_risk  ·ExposureRisk(g)            ← being seen is a real cost
+     × Permission(g)                       ← Director gate: 0 or 1
+```
+
+`Withdraw` scoring highly is not a bug. An antagonist that knows when to leave is the rarest and
+most memorable thing in the genre.
+
+**In 0.2.0** goals are now **actions**, renamed so that none shares a name with a trick: Roam
+(was Patrol), Check (Investigate), Search (Sweep), Flush, Disrupt (Deny), Corner (Herd), Lie in
+wait (Ambush), Loom (Stalk), Hunt (Pursue), Back off (Withdraw) and Lure (Assist). They're in
+`Actions.cs` (was `Goals.cs`). [§16.3](#163-actions-and-the-hunt).
+
+### 6.4 Planning: HTN over a tactic library
+
+A goal is abstract. An HTN planner decomposes it into primitive tasks the Body can execute:
+
+```
+Goal: Deny(Restock)
+  └─ Method: SabotageShelvesFarFromPlayer            [pre: Confidence < 0.4]
+       ├─ SelectShelf(maximise walk time from belief peak, minimise own exposure)
+       ├─ NavigateTo(shelf, cover-weighted path)
+       ├─ Wait(until player noise is not adjacent)   ← don't get caught doing it
+       ├─ EjectSlots(count = 4, spacing = 0.4 s)     ← ShelfSlot.Eject(), already exists
+       └─ RetreatTo(nearest low-visibility node)
+```
+
+Two properties worth having:
+
+- **Anytime.** If the planning budget expires, use the best partial plan. Karen never stalls.
+- **Reactive replanning.** Plans carry preconditions; a violated precondition (you walked into
+  the aisle it was sabotaging) aborts to the BT's interrupt branch, not to a frozen agent.
+
+Every method and primitive is a **ScriptableObject asset**. Adding a new scare is authoring an
+asset with preconditions, cost, tension price, cooldown, and expected-panic prior — not editing
+a switch statement. That's the extensibility story, and it's what makes the tactic library in §8
+open-ended rather than fixed.
+
+### 6.5 Execution
+
+A small behaviour tree per primitive, with a global interrupt branch (`SeeingPlayerAtRange`,
+`LoudNoiseAdjacent`, `PlanPreconditionViolated`). The BT is deliberately dumb; all the
+intelligence lives upstream. That separation is what keeps it debuggable.
+
+### 6.6 The thought log — explainability as a feature
+
+Every decision appends one human-readable line to a ring buffer:
+
+```
+[212.4] BELIEF   peak=Aisle6 p=0.34 H=2.81 stale=19.2s  (noise: DroppedItem@Aisle6, 0.7)
+[212.4] GOAL     Deny(0.71) > Sweep(0.62) > Investigate(0.55) > Patrol(0.10)
+[212.4]   why    TaskLoad=0.75 (3/4 tasks clear) · tension=0.8 · novelty(Deny)=0.9
+[212.5] PLAN     SabotageShelvesFarFromPlayer → Shelf_A2 (walk 22 s from peak, exposure 0.12)
+[229.1] SENSE    NEGATIVE sweep Aisle6 → belief redistributed to Aisle7/BackRoom
+[231.0] GOAL     Ambush(0.80) > Deny(0.66)
+[231.0]   why    route prior: player reaches TrashContainer via BackRoom in 81% of shifts
+[231.0] PLAN     Ambush(BackRoom door) · go silent · abort if panic > 0.85
+```
+
+Three uses, in increasing order of value:
+
+1. **Debug.** An on-screen overlay with the belief grid rendered as a heatmap and the top three
+   goal scores. You can watch it think.
+2. **Design.** Tuning a utility weight is guesswork until you can read why a choice lost.
+3. **Player-facing.** The post-shift screen prints a redacted version as Karen's *performance
+   review of you*: "Employee took 4 min 12 s to restore lighting. Employee's preferred
+   concealment: Aisle 8, north end. Noted." Being outplayed is only fun when you can see the play.
+
+---
+
+## 7. Adaptability
+
+"Adaptive AI" usually means one of these three things and pretends to mean all of them. Karen does
+all three, at explicitly different timescales, with different mechanisms.
+
+| Timescale | Mechanism | Feels like |
+|---|---|---|
+| **Seconds** — reactive | Bayes filter + utility + replanning | *"it's actually looking for me"* |
+| **Minutes** — a shift, online | multi-armed bandit + panic setpoint control | *"it changed tactics on me"* |
+| **Shifts** — persistent, offline | the Ledger: player model, route priors, calibration | *"it learned me"* |
+
+### 7.1 The player model
+
+Serialised to disk, updated continuously, never reset by death. Roughly 40 floats.
+
+| Group | Features |
+|---|---|
+| **Movement** | sprint fraction · crouch fraction · mean speed · look-behind rate (yaw reversal frequency) · time-to-flee after a sighting |
+| **Space** | per-node dwell histogram · concealment spots used (node + count) · preferred route between each task pair · panic-flight destinations |
+| **Work** | task completion order · mean time per task type · whether they batch or interleave · how far they carry the mop before dropping it |
+| **Economy** | coffee usage timing · burnout level at clock-out · whether they hoard energy or run it to zero |
+| **Response** | measured panic delta per tactic · habituation curve per tactic · recovery time after a chase · whether they investigate noises or avoid them |
+| **Skill** | shifts survived · caught count · mean shift duration vs. par · counter-play used (cameras unplugged, PA jammed, traps spotted) |
+
+The two that matter most in play: **preferred route** and **concealment spots**. Those two turn
+`Ambush` from a gimmick into the scariest goal in the list.
+
+### 7.2 Tactic selection as a bandit
+
+Each tactic in §8 is an arm. Karen doesn't know in advance whether *you* find darkness scarier
+than being followed — it finds out, cheaply, and stops wasting the ones that don't land.
+
+```
+score(a) = Q̂(a)                                  ← learned mean panic delta
+         + c · sqrt( ln(t) / n(a) )               ← UCB exploration: try the untried
+         - λ · exp( -(t - tLast(a)) / τ )         ← habituation: recency is a penalty
+         + prior(a, shiftNumber)                  ← authored pacing prior
+```
+
+Three notes on why this specific shape:
+
+- **`Q̂` is per-player, not global.** Its update is `Q̂ ← Q̂ + α(observedPanicDelta - Q̂)`, with the
+  observation window starting at the tactic's execution and running for ~20 s.
+- **The habituation term is the horror design.** A jumpscare works once. A tactic used two minutes
+  ago is penalised heavily and decays back over `τ ≈ 4 min`. Variety is *emergent* from this term
+  rather than enforced by a shuffle.
+- **The authored prior is not optional.** Pure bandits produce week-one chaos. The prior carries
+  the intended escalation curve (§10.2) and its weight decays as `n(a)` grows. Designed early,
+  learned late.
+
+Optionally: Thompson sampling instead of UCB, keeping a Beta posterior per arm. Smoother, less
+jittery early, and it makes the "Karen is uncertain about you" phase read better.
+
+**In 0.2.0**, on rung E, the bandit also sees her last trick. A trick started while another is
+still in play is scored by what that pair has paid, and pairs that pay are written into a
+**combo room**. [§16.5](#165-the-combo-room).
+
+### 7.3 The Panic Index — the reward signal
+
+You cannot learn what scares a player without measuring fear. You can't measure fear. You *can*
+measure its motor consequences, and horror players leak them constantly.
+
+| Proxy | Read from | Weight |
+|---|---|---|
+| Sprint burst rate | `PlayerMotor.IsSprinting()` transitions/min | 0.20 |
+| Yaw jitter | camera angular velocity variance — looking behind you | 0.20 |
+| Path inefficiency | actual path ÷ optimal path to your apparent goal | 0.15 |
+| Task abandonment | starting a `Dirt` hold-interaction and releasing early | 0.15 |
+| Freeze | standing still, not interacting, > 2 s | 0.10 |
+| Drop events | `Q` presses that aren't near a snap point | 0.10 |
+| Burnout slope | `BurnoutSystem.energy` derivative | 0.10 |
+
+Normalised per-player against their own baseline (measured in the first calm 60 s of shift 1 —
+some people just play twitchy), combined, then run through an asymmetric EMA: **fast attack,
+slow decay**, because fear spikes and drains slowly.
+
+```
+Panic ∈ [0,1],  τ_attack ≈ 0.4 s,  τ_decay ≈ 25 s
+```
+
+This single scalar is the reward for the bandit, the input to the pacing controller, and the
+best telemetry the project will have.
+
+### 7.4 Pacing as control theory
+
+The Director holds a **setpoint**, not a maximum:
+
+```
+        panic
+          1 ┤                    ╭─╮
+            │         ╭─╮       ╱   ╲        ╭──╮
+   setpoint ┼ ─ ─ ─ ─╱─ ─╲─ ─ ─╱─ ─ ─╲─ ─ ─ ╱─ ─ ╲ ─ ─ ─
+            │   ╭───╯     ╰───╯       ╰────╯      ╰──╮
+          0 ┤───╯                                    ╰──
+            └──────────────────────────────────────────► time
+              settle    build    spike   recover   build
+```
+
+```
+e        = setpoint(phase, shiftNumber) - Panic
+pressure = Kp·e + Ki·∫e dt
+```
+
+- `pressure > 0` → raise `Permission` on escalating tactics, shorten cooldowns, allow search bias
+- `pressure < 0` → gate the big tactics off, boost `Withdraw`'s utility, let the store go quiet
+
+The integral term is what stops Karen from letting a *consistently* calm player coast: a long
+stretch below setpoint accumulates and eventually forces an event. And a player pinned at 0.95 for
+two minutes gets genuine silence, which is when the next scare gets its power back.
+
+The setpoint itself rises across the career and dips right after any chase — a guaranteed
+recovery window (§9).
+
+### 7.5 Route denial and spot blacklisting
+
+The two most personal-feeling adaptations, both straight reads of the Ledger:
+
+**Route denial.** Your preferred path from tills → back room is stored as a node sequence. Once
+Karen has ≥5 samples with low variance, `Herd` starts scoring the min-cut against *that specific
+path*. Blocking the corridor you always use, on the shift after you established the habit, is
+the moment players say the AI is learning. It is also completely explainable in the thought log.
+
+**Concealment blacklisting.** Every time you break line of sight and stop, the node is recorded.
+Frequently-used spots get:
+1. a permanent bump to the belief prior (Karen checks there first),
+2. `Sweep` ordering that visits them early rather than by distance,
+3. eventually, physical denial — a crate stack, or a camera bolted to that exact shelf.
+
+The counter has to exist, and it does: spots decay out of the blacklist if unused, so *changing
+your habits actually works*. The player learns that the correct response to an adaptive AI is to
+stop being predictable. That's the whole game in one loop.
+
+### 7.6 Counter-adaptation — the player's side of the table
+
+Non-negotiable per pillar 3. Every Karen capability has an attack surface:
+
+| Karen capability | Player counter | Its cost |
+|---|---|---|
+| CCTV network | unplug nodes (4 s hold) | dead cameras draw investigation |
+| PA system | jam it at the powerbox | uses a breaker slot you may want for lights |
+| Customer testimony | serve and clear the store | but `AllCustomersServed` is also required to leave |
+| Trace: footprints | mop your own trail | costs mop time and counts against nothing |
+| Trace: dropped items | tidy up behind you | slow, and standing still is loud |
+| Route priors | vary your route | slower routes cost burnout |
+| Concealment blacklist | rotate hiding spots | you have to *find* new ones, in the dark |
+| Ambush | listen — an ambushing Karen is silent, and silence is a tell | requires noticing absence |
+| Traps | spot the tell and disarm | time, always time |
+
+Everything costs time, and time costs energy, and energy is the fail state. That's the pressure
+that holds the whole design together.
+
+---
+
+## 8. The tactic library
+
+Every entry is a ScriptableObject: preconditions, tension cost, cooldown, expected-panic prior,
+the tell it must emit, and the *chore it generates*. Grouped by which sense it attacks.
+
+**In 0.3.0** this list is the original design. What each trick does now, which are live, and
+the nine removed (Mirror-black, Task falsification, the five PA tricks, Silence, The witness) are
+in [§17](#17-karen-030-the-tricks-come-back).
+
+**In 0.2.0** most of this library is now **drafts**, kept in the code but off in play until
+they're reworked or removed. Live are Ask the customers, Bin tamper, Ambush, Blackout (lights
+only) and the new Cut and Throw, plus each action's own move. A trick's "tell" below may still
+sound as it acts, but no trick waits for it any more. [§16.4](#164-the-tricks).
+
+### 8.1 Attacking sight
+
+**Blackout** — trips breakers at the powerbox; the store goes to emergency lighting or fully dark.
+- **The chore:** get the flashlight from the break room, cross the maze to the powerbox, reset
+  three breakers in sequence, each with a distinct hum (audio puzzle in the dark).
+- **The trade:** the flashlight is a battery-limited cone that raises your own `lightLevel` term.
+  Light means seeing and being seen. Karen's sight is unaffected by darkness — it *prefers* it.
+- **Escalation:** partial blackouts (one wing), rolling blackouts, and eventually killing the
+  lights **behind you as you walk**, so the dark is a wave you're staying ahead of.
+- **Tell:** a ballast whine and a two-second flicker before the cut.
+
+**Fog** — sabotages a freezer, flooding an aisle with cold vapour. Kills your visibility, not its.
+
+**Camera bolt-on** — physically installs a camera covering your favourite hiding spot. Silent,
+permanent, and unmistakably personal.
+
+**Mirror-black** — kills a single light directly above you, leaving the rest of the store lit.
+Cheap, purely psychological, no chore. The one it uses when panic is just *slightly* under target.
+
+### 8.2 Attacking your work
+
+**Shelf sweep** — the existing `ShelfSlot.Eject()` scaled up: a whole `ShelfUnit` stripped, four
+items at a time.
+- **The chore:** `ShelvesStocked` flips false, the unit lights up yellow, you fetch the crate.
+- **The double purpose:** loose items on the floor are a **noise carpet**. Walking over them
+  emits a `NoiseEvent`. It just built itself an alarm across the aisle you use most.
+- **Learned targeting:** the sweep goes where you *aren't*, so the fix costs maximum walking.
+
+**Spill** — kicks over the mop bucket at a chokepoint.
+- **The chore:** a new `Dirt` instance and a 3-second stationary hold to clear it.
+- **The trap:** walking through it un-mopped leaves a **wet trail** Karen can read for 45 seconds.
+  You either spend the time, or you wear a tracking beacon.
+
+**Bin tamper** — re-fills a `Trashcan` you just emptied, or splits a bag so it must be re-bagged.
+- Targets `TrashEmpty` — the task with the longest travel time, out back, away from everything.
+
+**Task falsification** — *the best one.* Karen writes to your HUD.
+- Adds a task that doesn't exist, un-checks a completed one, or greys one out as done when it
+  isn't. `TaskListUI` is fed by Karen, not by `TaskManager`, and can disagree with it.
+- **The chore:** you have to physically verify. The HUD stops being ground truth.
+- **The tell (mandatory):** a one-frame flicker and a faint CRT tick when a line is falsified,
+  so an attentive player can catch it. Without a tell this is unfair; with one it's a skill.
+- **The escalation:** it starts falsifying *correctly* — adding a task you really do have to do.
+  Now you can't dismiss the HUD either.
+
+**Tool theft** — takes the mop from its `ToolSnapPoint` and hides it. Learned placement: it goes
+in the node you visit *last*.
+
+**The overtime** — refuses the `Puncher`. The clock-out is rejected, `TimeRemaining` gets minutes
+added, and the PA thanks you for your flexibility. This is the thesis of the game as a mechanic.
+
+### 8.3 Attacking sound and trust
+
+**The PA system.** Karen owns the tannoy, and it is not obliged to be truthful.
+- Reads your task list back at you, slightly wrong
+- Calls you by the name you entered at the start
+- Announces a cleanup in an aisle it is not in (audio decoy — it wants you to go and look)
+- Plays footsteps, its own, from somewhere else
+- Announces your position "for customer convenience" — and the customers all turn to look
+- Counts down your remaining shift time when you're behind
+
+**Phantom chime.** Triggers the `AutoDoubleDoor` with nobody there. You have to check. It's free.
+
+**Silence.** The Body stops emitting footstep audio entirely for a stretch. Players habituated to
+tracking it by ear lose their tracker, and only notice the absence after several seconds.
+
+### 8.4 Attacking space
+
+**Crate wall** — stacks crates across a min-cut edge. Not permanent, but clearing it is loud and
+takes 6 seconds standing still.
+
+**Door lock** — seals a door on the aisle graph. Recomputed articulation points make one blockade
+worth three.
+
+**Shelf relocation** — moves a `ShelfUnit` and changes the maze. Loud, slow, and you can hear it
+happening somewhere you can't see (§5.5).
+
+**Funnel** — the composite: block all min-cut edges but one, position near the survivor, and let
+you walk into it. No scripting, just §5.3 executed properly.
+
+### 8.5 Attacking the social layer
+
+**Mimicry.** Karen takes over a `CustomerNPC`. That shopper stops shopping. It doesn't queue. It
+walks at exactly your speed, one aisle over, and faces you when you look. Everything else in the
+store is a real customer, which is what makes this work — the maze is full of ambiguity and Karen
+just weaponised it.
+- **The tell:** possessed customers don't have a `IsWaitingToBeServed` state and never generate a
+  till queue. A player who's paying attention can prove it. A player who isn't just feels wrong.
+
+**The witness.** Herds a real customer into the aisle you're hiding in — free testimony, and you
+can't tell it to leave.
+
+**The understudy.** From shift ~8: a "new hire" NPC that follows you "to learn the job". It is a
+mobile sensor with a name badge. It is unfailingly polite.
+
+### 8.6 Attacking the player directly
+
+**Stalk-and-withdraw.** Appears at the end of an aisle, holds for two seconds, and leaves. Does
+not pursue. Cheapest, most re-usable dread in the library, and the bandit will find out fast
+whether it lands on this particular player.
+
+**Ambush.** Pre-positions at a place the route prior says you must come to, then goes fully
+silent — no pathing, no audio, no highlight. Waits up to 90 s. Aborts if panic exceeds 0.85
+(pillar 4). This is where the Ledger cashes out.
+
+**The chase.** Rare and expensive. Costs almost the whole tension budget, has a guaranteed
+recovery window afterwards, and drains burnout via the existing `SetChaseState(true)`. **Her
+touch kills** (changed 2026-10-16): the screen goes black and the shift starts again from the
+beginning. What she has learnt about you stays in the Ledger. The one exception is the favour
+below: a touch while she's bringing you something isn't an attack.
+
+**The favour.** Below `energy < 0.15`, Karen turns helpful: it brews you a coffee, it mops a spill,
+it tells you where the mop is, and it means it. A burnt-out employee who stays is the outcome it
+was optimising for the whole time. Nothing about this is a trick, and that's the horror.
+
+---
+
+## 9. The fairness contract
+
+An adaptive antagonist is one bad decision away from feeling like a cheater. These are hard
+constraints, enforced in code, asserted in tests.
+
+1. **No omniscient body.** The Body may not read the player transform. Ever. Enforce it by not
+   giving `KarenBody` a reference — perception writes to the belief grid and nothing else can.
+2. **Bounded Director hinting.** Search bias may shift belief mass toward the player's true
+   region by at most `+0.15` per minute, may never exceed `0.5` of total mass, and may never
+   trigger while the player is in line of sight of the Body's current path.
+3. ~~**Every tactic has a tell**, ≥ 0.8 s of lead time.~~ **Removed in 0.2.0** (the
+   [build plan](../archive/0.2.0-build-plan.md), decision Q17): a trick's sound may still play as it
+   acts, but nothing waits for it and the audit no longer times it. Kept as rule 3, not
+   renumbered, so old logs and results still read.
+4. **Recovery windows are guaranteed.** After a chase (a catch now ends the shift): ≥ 45 s at reduced
+   setpoint, no major tactics, no ambush.
+5. **Never deny a nearly-finished task.** No sabotage of a task above 80% completion — that reads
+   as spite, not tension. (Exception: the final shift of the career, deliberately, once.)
+6. **Never make a shift unwinnable.** Before executing, every tactic checks that a path to
+   `AllComplete` still exists within `TimeRemaining` plus a margin. Blocking the last route to
+   the last task is a bug, not a difficulty setting.
+7. **Adaptation is reversible.** Every learned prior decays without reinforcement. Changing your
+   behaviour must visibly work within two shifts, or the learning is a punishment ratchet.
+8. **Determinism on demand.** Seeded RNG and a replayable decision log, so any "that was
+   bullshit" moment can be replayed and adjudicated. This is a QA feature and a trust feature.
+9. **Hands-on tricks happen at her hands** (0.3.0, [§17.3](#173-the-new-fairness-rules)).
+10. **No new chore once the doors close** (0.3.0, the owner's call of 8 November;
+    [§17.3](#173-the-new-fairness-rules)). Rule 6 for closing time: the clock-out waits for every
+    chore, so a chore made after closing can keep a shift from ever ending.
+
+---
+
+## 10. Game flow
+
+### 10.1 Anatomy of a shift
+
+```
+  CLOCK IN ──► SETTLE ──► BUILD ──► SPIKE ──► RECOVER ──► CRUNCH ──► CLOCK OUT
+   Puncher      ~60s      2-3min    ~30s      ~45s       last 90s     Puncher
+      │           │          │        │          │           │           │
+      │      baseline   tactics    the big   guaranteed   TaskLoad   blocked until
+      │      panic      escalate   one       quiet        spikes     AllComplete
+      │      measured   with       (§8)      (§9.4)       utility    (+ maybe
+      │                 pressure                                     refused, §8.2)
+      ▼
+   customers begin arriving (CustomersAllowed = true)
+```
+
+The phases are not scripted timings — they're **setpoint segments** for the controller in §7.4.
+A player who is calm through BUILD gets a bigger SPIKE; a player who panics in SETTLE gets a
+gentler one. Same curve shape, different amplitude, every time.
+
+Meanwhile the honest pressure never stops: `ShiftManager.TimeRemaining` runs down, customers keep
+queueing, `BurnoutSystem.energy` drains (twice as fast when you run), and `TaskManager` refuses
+to let you leave until the store is clear. Karen doesn't have to create the stress. It only has to
+lean on it.
+
+### 10.2 The career
+
+Escalation is carried by the authored `prior(a, shiftNumber)` term (§7.2), so it's a designed
+curve that the bandit is free to deviate from once it knows you.
+
+| Shift | Introduced | Intent |
+|---|---|---|
+| 1 | Patrol, Sabotage (existing behaviour) | teach the job; measure baseline panic |
+| 2 | Stalk-and-withdraw, Phantom chime | it is *aware* of you |
+| 3 | **Blackout** + flashlight + powerbox | the first real chore-scare; teaches light↔visibility |
+| 4 | Spill traps, wet-footprint traces | teaches that the world remembers you |
+| 5 | PA lies, audio decoys | teaches that information is not trustworthy |
+| 6 | **Mimicry** — a customer that isn't | teaches that *people* are not trustworthy |
+| 7 | **Maze mutation** — the store is wrong today | destroys route mastery |
+| 8 | Ambush from route priors, the understudy | it has learned you specifically |
+| 9 | **Task falsification** — the HUD lies | destroys the last trusted surface |
+| 10 | The overtime — clock-out refused | the thesis |
+| 11+ | Full library, learned weights, rising setpoint | it is just better at this than you |
+
+Each row is a **new verb for the player**, not just a bigger number. That's the Hello Neighbor
+lesson done right: escalation that teaches instead of escalation that grinds.
+
+### 10.3 The endgame
+
+Three ways a career ends, and the AI is complicit in all three:
+
+- **You quit.** Clock out enough shifts, walk out. Karen's performance review is your ending text.
+- **You burn out.** Energy hits zero repeatedly and the shifts stop being survivable. Karen's
+  `Assist` goal ramps up as you decline — it becomes *kind*. The last thing that happens is that
+  it makes you a coffee. This is the title of the game.
+- **You break it.** Full counter-play: cameras down, PA jammed, routes randomised, traps read.
+  Karen's confidence collapses, its thought log goes to high entropy, and it starts making
+  visibly worse decisions. **A player who defeats the AI should be able to watch it lose.**
+
+---
+
+## 11. Scenarios
+
+Four traces of the system running, with the thought log interleaved. These are the acceptance
+criteria — if the implementation can't produce these, it isn't done.
+
+### Scenario A — "The lights, and the long way back"
+
+Shift 4. Two tasks left: three spills and a half-empty aisle. Panic sits at 0.28, below setpoint
+0.45, and the integral term has been accumulating for ninety seconds.
+
+```
+[188.0] DIRECTOR pressure=+0.31 (below setpoint 92s) → permit tier-2 tactics
+[188.2] BELIEF   peak=Aisle3 p=0.51 H=1.9  (mop noise, sustained, 0.5)
+[188.2] GOAL     Flush(0.74) > Deny(0.61) > Stalk(0.44)
+[188.2]   why    player stationary & audible; Blackout novelty=0.8, Q̂=+0.24, last used 6m ago
+[188.3] PLAN     Blackout(full) · tell=ballast whine 1.2s · then Ambush(Breakroom door)
+```
+
+The lights flicker, hum, and die. You are mid-mop in aisle 3 with no flashlight — it's in the
+break room, and the break room is four junctions away through a maze you now can't see.
+
+Panic jumps to 0.71. Karen doesn't chase. It walks to the break room door and stops making noise.
+
+```
+[201.4] SENSE    NEGATIVE sweep Aisle3 → mass redistributed
+[201.4] GOAL     Ambush(0.83) > Sweep(0.51)
+[201.4]   why    route prior: Breakroom reached via Junction B in 7/8 prior shifts (conf 0.88)
+[201.5] PLAN     Ambush(Junction B) · silent · abort if panic > 0.85
+```
+
+You take Junction B, because you always take Junction B. It's standing in the dark.
+
+You didn't get caught — it withdrew at 0.85 as the contract requires. But you now know that the
+route you always use is *known*, and the rest of that shift you take the long way, which costs
+you forty seconds and a chunk of energy you needed. **The scare converted into overtime.**
+
+### Scenario B — "The shelf that fixed itself"
+
+Shift 9. You're one task from clocking out: restock. You fix aisle 6, and the HUD ticks over to
+all-clear. You walk to the puncher.
+
+```
+[402.1] APPRAISE TaskLoad=0.94 (1 task remaining, 88% complete)
+[402.1] GOAL     Deny(0.88) > Herd(0.40)
+[402.1]   why    denying the final task maximises expected shift extension (+2.4 min est.)
+[402.1] CHECK    fairness rule 5 — task at 88% > 80% → Deny(Restock) VETOED
+[402.2] GOAL     Deny(0.62) [alt target] > Herd(0.40)
+[402.2] PLAN     TaskFalsification(Restock → show complete) · tell=1 frame flicker + tick
+```
+
+The HUD says you're done. `TaskManager.ShelvesStocked` says otherwise, because while you were
+walking, four items came off aisle 2 — quietly, at the far end, out of earshot.
+
+You press E on the puncher. It refuses. There is no explanation on screen, because the screen is
+the thing that's lying.
+
+Rule 5 held: it did not sabotage the task you were finishing. It sabotaged your *knowledge* of a
+different one. And the tell was there — one frame — for a player who's learned to watch for it.
+
+### Scenario C — "The customer who didn't shop"
+
+Shift 6, busy. Eleven customers in the maze, three queued at the till, and Karen has no idea where
+you are — entropy 2.9, staleness 40 s.
+
+```
+[95.0]  BELIEF   H=2.91 stale=40.2s conf=0.09 → LOST
+[95.0]  GOAL     Flush(0.69) > Sweep(0.55)
+[95.0]    why    high entropy: prefer tactics that generate observations over tactics that consume them
+[95.1]  PLAN     Mimicry(Customer_07) — nearest to belief centroid; cost 0.3 tension
+```
+
+Customer_07 stops browsing. It doesn't go to the till. It walks the aisles at a constant pace and
+turns to face you every time you're in its cone.
+
+You can't be sure. Everything else in the store is genuinely a shopper. If you run, you generate
+noise and confirm yourself. If you keep working, it stands three metres away and watches you mop.
+
+```
+[131.6] SENSE    Testimony(Customer_07) → sighting Aisle8, conf 0.95
+[131.6] BELIEF   peak=Aisle8 p=0.77 → hunting
+```
+
+The flush worked, and it worked because the *player* had to decide whether an ambiguity was a
+threat. That's the design goal: Karen's best plays are the ones where you defeat yourself.
+
+### Scenario D — "The quiet shift"
+
+Shift 12. Panic has been above setpoint for four minutes — a blackout, a chase, a bagged bin
+split open in the back room. Then:
+
+```
+[540.0] DIRECTOR panic=0.91 sustained 240s, setpoint=0.55, pressure=-0.36
+[540.0] DIRECTOR → habituation risk HIGH · gating tiers 2-4 · setpoint → 0.30 for 90s
+[540.1] GOAL     Withdraw(0.77) > Patrol(0.30)
+[540.1]   why    diminishing returns: Q̂(Chase) fell 0.31→0.12 over last 3 uses
+```
+
+Karen walks to the far end of the store and patrols like it's shift 1. The PA plays hold music.
+The lights stay on. Nothing happens for a minute and a half.
+
+It is the worst ninety seconds of the game, and Karen spent tension budget to buy it. Then panic
+decays to 0.34, the setpoint climbs back, and everything it does next works again.
+
+---
+
+## 12. Implementation map
+
+Nothing here throws away what's built. `EnemyAI.cs` becomes the execution layer at the bottom of
+a stack, and the existing systems become Karen's sensors and levers.
+
+### 12.1 What already exists and what it becomes
+
+| Existing | Role under Karen |
+|---|---|
+| `EnemyAI.cs` | → `KarenBody` — keeps `NavMeshAgent` handling, loses `playerTransform`, loses the FSM |
+| `EnemyAI.CanSeePlayer()` | → `SightSensor`, returns a graded score, not a bool |
+| `ShelfSlot.Eject()` / `ShelfUnit.FillAll()` | the `ShelfSweep` tactic's primitives — already correct |
+| `ShelfSlot.All` registry | O(1) target selection, no scene scans — already correct |
+| `TaskManager` (`MopQuotaMet`, `ShelvesStocked`, `TrashEmpty`, `AllCustomersServed`) | the `TaskLoad` appraisal input and the `Deny` goal's target list |
+| `TaskListUI` | the surface `TaskFalsification` writes to |
+| `BurnoutSystem.SetChaseState()` | already wired; extend with `Assist` and the movement-budget read |
+| `PlayerMotor.IsSprinting()` | motion salience, noise loudness, and a Panic Index proxy |
+| `CustomerNPC` | testimony sensors; `Mimicry`'s puppets |
+| `Dirt` + `IHoldInteractable` | the spill trap and the wet-trace source |
+| `Trashcan` / `TrashBag` / `TrashContainer` | the `BinTamper` tactic |
+| `HighlightInteractable` / `OutlineHighlight` | tells and trap affordances |
+| `ShiftManager` | phase clock for the pacing setpoint |
+| `AutoDoubleDoor` / `HingeDoor` | door control, phantom chime, region-transition sensing |
+
+### 12.2 New files
+
+```
+_Game/AI/Scripts/
+  Core/
+    KarenBody.cs                 execution: agent, BT runner, interrupts
+    KarenDirector.cs             panic estimate, setpoint PI controller, tension budget
+    KarenLedger.cs               serialised player model, bandit state, save/load
+    KarenBlackboard.cs           the appraisal struct, shared read-only snapshot
+  Perception/
+    Sensorium.cs                fuses channels → Observation stream
+    SightSensor.cs              graded detection
+    NoiseBus.cs                 static event bus (+ NoiseEvent, NoiseKind)
+    TraceRegistry.cs            decaying physical evidence
+    TestimonyCollector.cs       polls nearby CustomerNPC memories
+    CustomerMemory.cs           on CustomerNPC: lastSawEmployeeAt / when / confidence
+  Belief/
+    BeliefGrid.cs               occupancy filter: predict / correct / normalise
+    AisleGraph.cs               nodes, edges, articulation points, min-cut
+    InfluenceMap.cs             danger / desire layers
+  Decision/
+    GoalSet.cs                  utility scoring + hysteresis
+    HtnPlanner.cs               anytime decomposition
+    Tactic.cs                   ScriptableObject base
+    Tactics/                    one asset + script per entry in §8
+  Debug/
+    ThoughtLog.cs               ring buffer + formatting
+    KarenDebugOverlay.cs         belief heatmap, goal scores, plan tree
+```
+
+### 12.3 Phasing
+
+Each phase is shippable and playable on its own. Do not build this in order of interestingness.
+
+| Phase | Deliverable | Why first |
+|---|---|---|
+| **1** | `NoiseBus` + `SightSensor` + `BeliefGrid`, driving the *existing* FSM | The single biggest felt improvement: search stops being a straight line to `lastPlayerPosition`. Ship this before anything else. |
+| **2** | `AisleGraph`, negative information, `ThoughtLog` + overlay | Search becomes systematic and you can finally see why it does things |
+| **3** | `GoalSet` utility layer replacing the FSM; `Deny` reading `TaskManager` | Behaviour becomes situational; the "administrative horror" pillar comes online |
+| **4** | Tactic ScriptableObjects: Blackout, ShelfSweep, Spill, Stalk | The first content wave; needs the flashlight + powerbox props |
+| **5** | `KarenDirector`: Panic Index, setpoint control, tension budget | Pacing stops being random |
+| **6** | `KarenLedger`: player model, bandit, route priors, `Ambush` | The part that makes people talk about it |
+| **7** | Mimicry, task falsification, maze mutation, the endgame | Requires everything above to land properly |
+
+### 12.4 Budget
+
+One Karen, worst case, on a mid-range machine: **< 0.7 ms/frame**, with belief updates sliced
+across three ticks and planning happening only on goal change. For scale, the store already runs
+~40 `CustomerNPC` agents; Karen should cost less than three of them. Everything expensive
+(min-cut, articulation points, graph bake) is precomputed or amortised.
+
+---
+
+## 13. Tuning, telemetry, evaluation
+
+The claim "adaptive AI" is worth nothing without a way to check it. Three things to build
+alongside:
+
+**1. Simulated players.** Three scripted bot profiles — *Efficient* (optimal routes, low panic),
+*Skittish* (over-reacts, hides constantly), *Reckless* (sprints everywhere, ignores noise) — and a
+fourth, *Cautious*, held out: never used to tune her, only to test whether what she learns
+carries over. Since 2026-10-16 they react to her. They sense what a person would (her tells, the
+PA, blackouts, her blink dash), get frightened each in their own way (`Eval/Scripts/BotFear.cs`),
+and show it through the body: looking round, sprinting, freezing, abandoning jobs, detouring,
+dropping things, hiding. All of them back away when she's close, as her touch kills. Those are the signals the Panic Index reads (`tools/eval/README.md`).
+Run 200 headless shifts each. The Ledger should converge to visibly different tactic distributions
+per profile. If it doesn't, the bandit isn't learning anything and the reward signal is broken.
+This is the cheapest possible proof that adaptation is real.
+
+**2. Determinism + replay.** Seeded RNG, decision log persisted per shift. Any "that was unfair"
+report is reproducible, and rule violations from §9 can be asserted in automated tests.
+
+**3. Live telemetry.** Panic Index over time, setpoint tracking error, per-tactic `Q̂` and usage
+counts, time-to-detect, chase frequency, mean shift overrun. The single healthiest metric is
+**setpoint tracking error** — if the Director can hold panic near its target across wildly
+different players, the whole system is working.
+
+Sanity checks that fail loudly in CI:
+
+- The Body never dereferences the player transform (assembly-level assertion)
+- No tactic fires without emitting a tell ≥ 0.8 s prior
+- After any chase, ≥ 45 s of reduced setpoint with no tier-2+ tactics
+- Every shift remains completable: a path to `AllComplete` exists at every tick
+
+---
+
+## 14. Open questions
+
+- **How much should Karen's learning transfer to a new save?** Fully persistent is scarier;
+  fully reset is fairer to a returning player. Probably: persist skill calibration, reset habits.
+- **Does the player ever get told there's a learning AI?** Hello Neighbor advertises it up front;
+  Alien Isolation says nothing. Saying nothing and letting a player *notice* is stronger — and
+  the post-shift performance review is the reveal.
+- **Two bodies?** A second Karen unit doubles the sensor coverage and halves the safe space.
+  Probably a late-career escalation rather than a base feature.
+- **Should mimicked customers be provably distinguishable?** Currently yes (§8.5). Removing the
+  tell late in the career is tempting and probably a mistake.
+- **How far does `Assist` go?** A Karen that genuinely does your job for you, so that you stay
+  another shift, is the darkest version of this game and possibly the best one.
+
+---
+
+## 15. Implementation status
+
+Everything in §§2–13 is built, though since 0.2.0 most of §8's tricks are drafts, off in play
+([§16.4](#164-the-tricks)). This section maps the design onto the code and says where the code
+departs from the plan above. Results of the ablation ladder are in
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md); how to run things is in [`tools/eval/README.md`](../../../tools/eval/README.md).
+
+### Where each part lives (`Assets/!_Project/_Game/`)
+
+| Design | Code |
+|---|---|
+| §2 three minds | `AI/Scripts/Core/KarenBody.cs`, `KarenDirector.cs` (+ `PanicIndex`), `KarenLedger.cs`, tied together by `KarenBrain.cs` |
+| §3 Sensorium | `AI/Scripts/Perception/` — `SightSensor`, `NoiseBus`, `TraceRegistry`, `CustomerMemory` (testimony), `Sensorium` (+ infrastructure feed, absence sweeps, `EnergyBelief`), `PlayerPresence` (what the senses can pick up) |
+| §4 belief | `AI/Scripts/Belief/BeliefGrid.cs` — predict/correct over the store map's cells, desire/habit/danger layers (the §5.4 influence maps live here) |
+| §5 the maze as a graph | `Map/Scripts/StoreMap.cs` — cells, regions, doorways, articulation points, Edmonds–Karp min-cut; the short version in [`STORE.md`](../store/STORE.md#karens-map) |
+| §6 thinking | `AI/Scripts/Decision/` — `Actions.cs` (utility + hysteresis, HTN planner; `Goals.cs` until 0.2.0), `Tactic.cs` (anytime `PlanBuilder`, `PlanTree`), `Primitives.cs`, `KarenContext.cs` (the blackboard), `RoutePredictor.cs` (her guesses at your route, 0.2.0) |
+| §6.6 thought log | `AI/Scripts/Diagnostics/ThoughtLog.cs` (ring buffer → `karen_logs/shift_###_seed.jsonl`), `KarenDebugOverlay.cs`, `PerformanceReview.cs` |
+| §7 adaptation | bandit (UCB or Thompson, habituation, authored prior) and player model in `KarenLedger.cs`, with the combo room in `ComboRoom.cs` (0.2.0); Panic Index and PI pacing in `KarenDirector.cs` |
+| §8 tactic library | `AI/Scripts/Decision/Tactics/` — 36 tactics, of which 13 are live in 0.2.0 and 23 are drafts (`TacticLibrary.IsDraft`); live tricks fill tiers 0–3 |
+| §8 the building's levers | `AI/Scripts/World/` — `KarenWorld` (the one place effects are requested), `PaSystem`, `LightsAndBreakers`, `KarenProps`, `HudAndPuppets`, `MazeMutation`, `Consequences`, `ProceduralAudio` (every trick's sound, synthesised), `KarenArea` (her part of the NavMesh, 0.2.0), `Projectile` (Throw, 0.2.0) |
+| §9 fairness | `AI/Scripts/Core/FairnessGuard.cs` + the rules asserted in `_Tests/Editor/KarenTests.cs` |
+| §13 evaluation | `Eval/Scripts/` — `KehaiEnv`, `SimulatedPlayers` (+ `BotFear`), `AblationRunner`, `EnvServer`, `HuntMetrics` (0.2.0's measurements); see `IDEAS.md` (the agent test environment, ablation) |
+| blink channel | `Blink/Scripts/` + `tools/blink/` (the signal); `AI/Scripts/Decision/BlinkDash.cs` (what she does with it: the dash, in waves — see `IDEAS.md`, the blink mechanic) |
+| rung F, a trained tactic chooser | `AI/Scripts/Decision/Policy/` (the seam, observation, mask, reward; the ML-Agents agent) + `_Core/Editor/KehaiRl.cs` + `tools/rl/` |
+
+Karen is installed from code when the store loads (`KarenBootstrap`), since the scene is not in
+version control. `-nokaren`, `-karen-rung <A-F>` and `-karen-seed <n>` work on the command line, and
+rung F adds `-karen-shield on|off` and `-karen-policy <model>` (`tools/rl/README.md`).
+`-karen-combo off` (0.2.0) gives rung E's bandit without her last trick, for paired comparisons.
+`-kehai-no-records` turns off shift records, replays and clip markers for long training runs.
+
+### Keys
+
+Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). Karen's:
+
+| Key | What |
+|---|---|
+| Esc | settings: restart the shift, volume by kind of sound (Karen's own slider included), mouse, the webcam |
+| F3 | in the editor and development builds only: her footsteps and floor cone, on or off (0.2.0; players don't get them) |
+| F1 | live map of the store (you, Karen, her guess, customers, sounds, jobs) and a plain-words story of what Karen is doing; **H** adds her belief heat map, **T** the technical view |
+| F2 | replay of the shift so far on the same map: drag the timeline, Space plays, 1/2/3 speed, ←/→ jump 5 s, O opens the full report |
+| F8 | blink channel consent panel (webcam path stays off until you agree); starts the camera helper |
+| F9 | guided blink calibration (~12 s): eyes open, closed until the beep, then three blinks it counts |
+| F10 | blink test panel: a checklist of consent → helper → signal → calibration, and a live open/closed meter and graph; R restarts the helper, V switches camera, M switches between Apple Vision and MediaPipe |
+| B | keyboard blink — hold to keep your eyes shut |
+| O | after a shift: open the shift report in the browser |
+| Enter / Q | after a shift: continue / hand in your notice (from shift 5) |
+
+### Her speed
+
+**When she hunts, she sprints at 7.5 m/s against your 6.5** (0.2.0; it was 6.8). `KarenBootstrap`
+sets her speeds from the player's actual ones:
+- **run:** your sprint × `sprintsFasterThanPlayer` (7.5 ÷ 6.5), so she gains a metre a second;
+- **hurry:** your walk × 1.05 (`fasterThanPlayer`), so 4.2 m/s against your 4;
+- **her rounds:** a walk at 3.4 m/s, and a sneak at 2.
+
+From 12 m behind, she catches you in about 12 s of straight running, so a corner or a door still
+has to save you: breaking her line of sight is how you get away. Her blink dash isn't movement
+at all — it's a jump while your eyes are shut (`IDEAS.md`, the blink mechanic).
+
+### Her body
+
+A black capsule the size of the player (and the shoppers): `KarenBootstrap` reads the player's
+own `CharacterController` and builds her to its height and radius. A silhouette, with nothing
+to read in it but where she is. Her gaze still shows, as the spot light and on the floor.
+
+### Her gaze on the floor
+
+`KarenFloorCone` paints her field of view on the floor: the same range and angle as her
+`SightSensor`, cut short by shelves and walls, brightest where her eyes weigh a sighting most
+(close and straight ahead). Blue while she walks her rounds, orange when she's noticed
+something, red when she's hunting; it pulses red while she can actually see you. Her spotlight
+says the same, but a spotlight is hard to read in a lit store.
+
+**Since 0.2.0 the cone is for the developer only:** it's drawn only in the editor and development
+builds, while F3's switch (`KarenFx`) is on, together with her footsteps. Players, bots and
+replays get neither, and the cone is no longer in Settings.
+
+### Shift records
+
+`ShiftRecorder` records every shift: where you, Karen and each customer were five times a
+second (and what each customer was doing, including the shelf they asked for), every sound
+with how far it carried, every job, and Karen's story in plain words. At the end of a shift it
+writes `shift_NN_<date>.json` and a self-contained `shift_NN_<date>.html` report to
+`<persistentDataPath>/shift_records/` (on a Mac, `~/Library/Application Support/TokenLimit/Kehai/shift_records/`).
+The report replays the shift on the floor plan and adds `ShiftAnalysis`: jobs, time per area,
+how often and where Karen spotted you, the closest she got, chases, warnings, and what she
+tried most. The floor plan itself (`StoreFloorPlan`) comes from the NavMesh, the shelves and
+the wall colliders, so the map is the store as it actually is.
+
+### Where the code departs from this document
+
+- **Tactics are C# classes, not ScriptableObjects.** The repository holds scripts only, so data
+  that would live in assets is authored in code. Each tactic is one class with its tell, chore,
+  tier, cooldown and prior, registered in `TacticLibrary`.
+- **`AisleGraph`, `InfluenceMap` and `KarenBlackboard` were folded** into `StoreMap`, `BeliefGrid`
+  and `KarenContext`/`Appraisal` respectively; `TestimonyCollector` is the `poll_witnesses` tactic
+  plus `CustomerMemory`.
+- **Walls come from physics, not the NavMesh.** The store's walls are 3 cm boxes the NavMesh bake
+  missed, so `StoreMap` builds connectivity from physics sweeps, and `NavMeshWalls` carves each thin
+  wall into the runtime NavMesh at load. Before that, every NavMesh path — shoppers' and Karen's —
+  could run through walls.
+- **Doors.** `HingeDoor.Use(from, author)` is the one way a door opens: the E key, Karen (who opens
+  doors in her way, audibly, and whose own passage doesn't trip her door sensor) and the eval agent
+  all go through it. A door now swings away from whoever opens it, and its panel is carved out of
+  the NavMesh while it stands open.
+- **Maze mutation rebakes from physics colliders**, not render meshes: the store's floor is a
+  statically combined mesh that can't be read at runtime in a build (or headless), and a bake from
+  render meshes came back without a floor. People are kept out of the bake, and the few props with
+  non-readable mesh colliders stand in as boxes while it runs.
+- **Tell accounting** (removed in 0.2.0, with rule 3). Until then the fairness guard checked each
+  effect against its own plan's latest tell, timed on the clock. Across the 216-shift ablation,
+  and the 300 shifts of its 2026-10-16 rerun with reacting players (`KAREN_RESULTS.md`), it
+  recorded no violation. The guard still checks pacing (rule 4) on every rung.
+- **A catch ends the shift** (since 2026-10-16; it used to be a written warning and a lecture).
+  In play the store loads again with the same shift; in the eval harness the episode ends,
+  counted as neither clocked out nor timed out.
+- **The blink dash isn't a rung.** It used to be: rung F added acting inside a blink. It's now
+  part of the Director's waves on every rung from C. The trained-policy rung that was G is now F.
+- **Learning scope per rung** follows the ablation table in `IDEAS.md` exactly: C uses the authored prior, D learns
+  within a shift, E keeps what it learnt (with the decay that makes changed behaviour visible within
+  two shifts), and since 0.2.0 also learns which pairs of tricks pay (§16.5). F is E with the bandit's final pick handed to a policy
+  trained by PPO (Unity ML-Agents): the arms still learn, feed goal utility and order the
+  fallbacks, and the policy starts by imitating them. Its action mask is the planner's candidate
+  list, so with the shield on it can only pick what the Director allows; with it off,
+  `FairnessGuard.CheckPacing` (rule 4, checked on every rung) counts what gets through.
+- **The endless maze** is built in a scene of its own and parked; Karen isn't in it yet
+  (`DECISIONS.md`).
+- **Not built:** a second Karen body (§14), and the Sentis in-engine
+  blink model is written but only compiles once the `com.unity.ai.inference` package is added and
+  `KAREN_SENTIS` is defined.
+
+### The CI sanity checks from §13
+
+`_Tests/Editor/KarenTests.cs` (22 edit-mode tests; `Unity -batchmode -runTests -testPlatform EditMode`):
+the body, belief and decision code never read the player (source scan), she sprints a metre a
+second faster than you, every tactic leaves a chore and says what it attacks, every tier has a
+live trick, the bandit learns and habituates and explores, the Ledger forgets within two shifts,
+the Director gates big tactics while settling, seeds are deterministic, the map reaches every
+region from the time clock, belief collapses on a sighting and spreads again, sweeps remove mass,
+the search bias is capped, and the thought log, eval wire format and blink packets parse. The
+"every tactic has a tell of at least 0.8 s" check went with rule 3 in 0.2.0. The whole EditMode
+suite is 262 tests in 26 files; 0.2.0's own are listed in §16.7.
+
+---
+
+## 16. Karen 0.2.0
+
+What the 0.2.0 redesign changed, where each change lives, and how it's checked. The decisions
+are in the [build plan](../archive/0.2.0-build-plan.md), and the reasoning and sources in the
+[design notes](../archive/0.2.0-design-notes.md). Measured results are in
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md). **The ablation against `main` (6 November) found her far
+deadlier than before:** she catches the simulated player in 94–100% of shifts, against 28–54%,
+and sees it within about 9 s instead of 32–61 s, the held-out player included. A summary is in [§16.7](#167-tests-the-ablation-and-whats-not-measured-yet).
+
+| Area | Before | 0.2.0 |
+|---|---|---|
+| Her eyes | 120°, 18 m, half strength at 8 m | 150°, 36 m, half strength at 16 m; faster where she expects you; a 0.5 s grace |
+| Where she works | the whole map, outside included | the building, the backstreet and the pavement; outside is one cell |
+| Goals | Patrol, Investigate, Pursue… | actions: Roam, Check, Hunt… (no name shared with a trick) |
+| The chase | the chase and Follow, at 6.8 m/s | Hunt, at 7.5 m/s, which keeps running on her guesses after losing you |
+| Prediction | her belief grid only | plus 3–6 guesses at your route, with time windows |
+| Tricks | 34, all of them in play | 36: 14 live, 22 drafts; Cut and Throw are new, Block door rebuilt |
+| Warnings | every trick warned ≥ 0.8 s ahead | removed (rule 3) |
+| Combos | welded into tricks (Blackout's wait, Funnel) | none built in; a combo room she fills herself |
+| Her footsteps and floor cone | for everyone | for the developer only (F3) |
+
+### 16.1 Her eyes
+
+The numbers and the walk-by results are in [§3.1](#31-sight--graded-not-binary). Where they live:
+- `KarenBody.ConfigureEye` sets her eye in one place. The cameras and possessed shoppers keep the
+  old one: 120°, 18 m, half strength at 8 m, a floor of 0.02 (tested).
+- `SightSensor.Detect` is the score without the rays, and `Visibility` its eye part, which the
+  sweep shares. `Integrate` fills the meter, holds it for the grace, then drains it.
+- `BeliefGrid.Expectation` says how much more than an even spread her belief puts on your cell and
+  the cells next to it: 0 at even, 1 at four times that or more. Her eye asks only about a spot
+  where it sees you, and rungs without the belief grid don't get it.
+- **The gain is close to as low as it can go:** a tenth lower misses a target (tested).
+- **"Moving at you" is worked out, not timed:** "seen", plus her appraisal (5 times a second),
+  plus two frames, at worst. The ablation times it in play.
+
+### 16.2 Where she works
+
+**Her area** is the building (sales floor, stockroom, staff room, office and WC), the backstreet,
+and the pavement to z −106, the edge of `Entrance_Pedestrian_Apron_01` (`StoreMap.KarenWorksIn`,
+`CellIsKarens`). Her grid, her body and every spot she picks stop there.
+
+| Part | What it does | Code |
+|---|---|---|
+| Her grid | Belief on her cells only, about 2,000–2,700 of them, plus one outside cell. The outside starts at 0.2%, not 0: zero times any likelihood is zero, so a sighting in the parking lot could never have moved her belief out there | `BeliefGrid` |
+| Exits | Cut into 9 m stretches of edge, so where along the pavement you left still counts. Belief reaches another exit only after the walk round: about 13 s at a sprint from the middle of the pavement, 7.7 s from its west end down the west alley | `BeliefGrid.ExitDelay` |
+| Her body | Everything outside her area is marked as its own NavMesh area (area 3, unnamed, so `ProjectSettings` stays untouched), and her agent's mask leaves it out. Every maze rebake keeps the marks. As a last line, `MoveTo` sends her to her nearest point instead of anywhere outside | `KarenArea`, `StoreRebake`, `KarenBody.MoveTo` |
+| Spots she picks | Roam, Check, Search, Back off and Hunt only pick her cells. With her belief mostly outside, the place to look is the exit you most likely left by | `TacticHelpers.LookRegion` |
+| Landmarks | The coffee machine and the radio snap to the staff room, not the alley | `StoreMap` |
+
+**She never hunts you outside.** With her belief mostly outside, Hunt's score and permission are
+0. A running hunt hands over, she stops at the edge of her area, and Check goes to the exit you
+took, ready for your return.
+
+### 16.3 Actions and the Hunt
+
+**Actions.** The goals are renamed actions ([§6.3](#63-goal-selection-utility-not-states)). Each
+action without a live trick has its own move, titled after it: Roam, Check, Search, Back off and
+Hunt. Loom and Lure have neither until their drafts return (a test pins that list); Corner has
+Block door. The
+enum keeps the old order, so rung F's observation keeps its layout, and the thought log's record
+kind stays "GOAL" because the tools read it.
+
+**Hunt** takes over the chase and Follow, which are gone.
+- **Speed:** she sprints at 7.5 m/s against your 6.5 ([§15](#her-speed)).
+- **While she sees you,** she runs at you, leading you a little.
+- **After she loses you,** she runs to her best guess at where you're going (below), so she keeps
+  hunting on belief instead of stopping where she last saw you.
+- **She hands over to Search** when she gets there and you're not, after 6 s with nothing new
+  (`huntMemorySeconds`), in a recovery, or with you outside. Hunt's score fades over those 6 s
+  (`Pursue.HandOver`).
+- **The Director paces it** (`KarenDirector.HuntAllowed`): refused while you settle in and during
+  a recovery; 0.6 tension; a 90 s cooldown; a recovery when it ends. That's one cost and one
+  cooldown for the action, whichever of its moves runs: the run, Cut or Throw.
+
+**Her guesses at your route** (decision D1, `RoutePredictor`, owned by the brain as
+`KarenBrain.Predictor`).
+- **What it is:** a few guesses at the route you might be on, each with a weight and a time
+  window, kept alongside her belief grid instead of a second grid.
+- **How Kehai uses it:**
+  - **Built** when a hunt loses you, refreshed 4 times a second, and kept for 30 s afterwards so
+    Ambush can use them.
+  - **Where it looks:** your jobs and the time clock, the breaker box while the lights are out,
+    and her exits. It keeps the four that best fit your heading and distance, plus two that are
+    always there: "turned back" and "hiding close by".
+  - **Time windows:** for each spot on a route, when you could get there: earliest at your
+    sprint (6.5 m/s), likely at your walk (4.0), latest crouching (2.5). She looks at most 8 s
+    ahead.
+  - **Weights:** each guess's prior, times her belief along its route inside its window. So "she
+    looked and you weren't there" lowers a guess the way it lowers her grid.
+  - **Hunt's run** goes to the best guess. Cut and Ambush read them too.
+  - **Replays keep them.** The recording stores her guesses twice a second (`.krec` version 2,
+    `ReplayData.RoutesAt`), so a replay shows what she guessed then, not a guess made again
+    later.
+- **Real-world example:** a sat-nav guessing which turn you'll take and re-routing when you miss
+  it. Radar does the same for many aircraft at once, a method called multiple hypothesis
+  tracking ([Reid, 1979](https://doi.org/10.1109/TAC.1979.1102177)).
+
+### 16.4 The tricks
+
+**Live tricks, by tier:**
+
+| Tier | Trick | Notes |
+|---|---|---|
+| 0 | Ask the customers | skips shoppers who are outside |
+| 1 | Bin tamper | |
+| 1 | **Cut** (new) | Hunt's: go to where you'll be, by a shorter way |
+| 2 | Ambush | from shift 3 (was 8); waits where your guessed routes pass |
+| 2 | **Throw** (new): flour, oil, a tin | Hunt's, from shift 3; each item is its own choice for the learner |
+| 2 | Block door | rebuilt (below); live again since sync 2 |
+| 3 | Blackout | lights only: its wait went with the combos |
+| 4 | — | empty |
+
+**Cut** (`Tactics/Cut.cs`, `CutTactic`, `CutRun`):
+- **How it runs:** on her best guess's route, once that guess holds 30% of the weight, she picks
+  the first spot she can reach at least 1 s before your earliest time. She runs there by her own
+  shortest way, waits through your window, and then drops or keeps the guess by what she saw. She
+  re-plans 4 times a second, and goes back to sprinting at you if she sees you.
+- **What the tests found, honestly:**
+  - **Cut usually doesn't fire.** On a 25 m dash she's never a second ahead anywhere.
+  - **On a 45–60 m run it helps sometimes:** never worse, clearly closer in 1 of 8 starts (3.4 m
+    against 13.4 m), and 11.3 m against the sprint's 12.5 m on average.
+  - **The first version did worse than the sprint** (11.0 m against 8.0), because it picked spots
+    on routes she doubted. That's why she now waits for a 30% guess.
+
+**Throw** (`Tactics/Throw.cs`, `World/Projectile.cs`):
+- **When:** she must see you, with a clear line. One throw per Hunt, a 30 s cooldown, and 0.2
+  tension.
+- **How:** an arc under gravity, aimed at where you'll be when it lands. Walls stop it, and it
+  finds you only by hitting your body, so you can dodge it.
+- **The items** (`ThrownItems`, tested):
+
+  | Item | Effect | From |
+  |---|---|---|
+  | Flour or powder | blurs your vision for 4 s | 8–15 m |
+  | Oil or detergent | slows you by 25% for 2 s | 10–15 m |
+  | A tin | stuns you for 1 s | 15–20 m |
+
+- **The rule: an item alone never makes a catch certain.** The ranges come from it. Take a stun
+  from 15 m: she covers 7.5 m during that second and is still 7.5 m away, so you have 7.5 s of
+  straight running to break her line of sight.
+- **The effects** are `PlayerEffects` (`Slow`, `Stun`, `Blur`, and `Changed` for the screen), on
+  the player's motor. The bots drive the same motor, so they feel them too.
+- **For the other builder:** `ThrowEvents` (thrown, landed, hit) drives the visuals.
+
+**Block door** (`Tactics/BlockDoor.cs`, `DoorBlock.cs`, rebuilt by the second builder):
+- **What it does:** she takes a restock box that's resting in its slot and puts it against a
+  closed door, so the door won't open. You pick the box up and carry it off, and the door works
+  again; the box is the same one, with its home slot.
+- **Fairness:** a blocked door counts in her closures (`KarenBrain.ClosedRegions`) until the box
+  moves, so rule 6 checks every job and the time clock stays reachable with it shut. It isn't
+  one of her timed closures: it lasts until someone moves the box.
+- **The prompt:** the box and the door's handle both say "Move box to unblock door".
+- **It ends** when the box is picked up, recalled home or moved, and at the end of the shift
+  (`KarenWorld.ClearShift` calls `DoorBlock.ClearAll`).
+
+**Removed or renamed:**
+- the chase and Follow, merged into Hunt;
+- Funnel, deleted;
+- Blackout's wait, so Blackout is lights only;
+- the favour, renamed Peace offering, and a draft;
+- Door lock, renamed Block door and rebuilt around a restock box (above).
+
+The Ledger drops records of removed tricks when it loads.
+
+**No more warnings.** Rule 3 is removed ([§9](#9-the-fairness-contract)). A trick's `Tell` plays
+its sound and the plan goes straight on, and the audit no longer times it. The blink dash's eye
+flicker went too, so a wave starts with no cue; dashes are still spaced by their cooldown.
+
+**The drafts** (`TacticLibrary.IsDraft`, listed in the build plan's §6) stay in the code but are
+never a candidate (tested). They're a short-term list to rework or remove, not parked for good.
+
+### 16.5 The combo room
+
+No trick has a combo built into it any more. Instead she finds her own.
+
+**The learner is a contextual bandit.**
+- **What it is:** a bandit (try options, keep doing what pays, as in [§7.2](#72-tactic-selection-as-a-bandit))
+  that also looks at the situation before it chooses, and learns what pays in each situation.
+- **How Kehai uses it:** the situation is her last trick, while it's still in play. So Ambush
+  right after a Blackout is scored apart from Ambush on its own. A pair that pays clearly better
+  than its second trick alone is "found" and written into the **combo room**.
+- **Real-world example:** a music app choosing the next song by the one you just played, not
+  just by what you like in general.
+
+**The rules** (`ComboRoom.cs`, `KarenLedger.cs`):
+
+| | |
+|---|---|
+| In play | her last trick, for 20 s, or as long as its effect runs (`Tactic.EffectRunning`): Blackout's while any lights are out; Block door's while a box still blocks a door |
+| Scoring | right after another trick, a trick is scored by what that pair has paid. Until the pair has a few uses, that's pulled toward what the trick pays alone (a shrink of 2 uses), and it's explored by the pair's own count |
+| Reward | a chained use's reward goes to the pair only, so "alone" stays alone |
+| Found | after 3 uses, if it pays at least 0.1 more panic change than its second trick alone; written down with the shift |
+| Fading | each shift, uses × 0.8 and the value drifts 15% back to the second trick's own; below a third of a use, it's forgotten |
+| The gate | a pair is never run as one move. Each part passes the gate on its own (tier, cooldown, budget) and pays its own tension, so the tension adds up. The room only reorders what the gate passed (tested) |
+
+**Her action choice reads it too:** an action's expected panic uses the pair's value, so after a
+Blackout, Lie in wait looks better once Blackout → Ambush has paid.
+
+**Where you see it:** `COMBO` lines in the thought log and the performance review, the narrator
+("Karen found a combo: …"), `KarenStats.ChainsFound`, and the shift record's `chains` list, which
+the shift report will show (B4.1).
+
+**Checked in a planted world** (`ComboTests`, results in `KAREN_RESULTS.md`): she finds a chain
+that's planted there, finds none where none pays, and earns more than the same learner without
+her last trick. Whether real chains exist in the store, and pay, is the ablation's question.
+`-karen-combo off` gives rung E without it, for that comparison.
+
+### 16.6 Fairness
+
+- **Rule 3 is removed;** rules 1, 2 and 4–8 hold, and the guard still checks pacing on every rung.
+- **Pillar 2 is reworded:** the Director never gives the Body your *exact location*. Its bounded
+  hint stays: after 45 s with no clue, at most 0.15 of her belief a minute toward your real
+  region, never past half, and never while you can see her path (`KarenDirector.MaybeBias`).
+- **Her footsteps and floor cone are for the developer only** (F3, `KarenFx`): players, bots and
+  replays never get them.
+- **The bots still know her only through what a person would see.** A throw reaches them as
+  `EnvWorld.ThrowSeen` (in view, nothing in the way, on a line that passes within 1.5 m), never as
+  the projectile, and `Players_NeverReadKaren` still passes.
+- **Throw can't make a catch certain** (§16.4, tested).
+
+### 16.7 Tests, the ablation, and what's not measured yet
+
+**The EditMode suite: 290 tests, all passing** (6 November, on an APFS clone, with everything
+both builders made).
+0.2.0's own:
+
+| File | What it checks |
+|---|---|
+| `KarenAreaTests` (new) | every room's name; her part of the building; her grid; the walk round; seen outside, she won't hunt; her body never walks round the building; every place she looks is hers |
+| `KarenActionsTests` (new) | no action shares a trick's name; drafts are never candidates; the live list; the removed tricks; Ambush on shift 3; Hunt's pacing and hand-over rules; the forecast; the guesses (keep going, turn back, ruled out); Cut beats the sprint and stays in her part; no throw makes a catch certain; the effects |
+| `AwarenessTests` (new) | the walk-by set and the targets; the cameras' eye; the sweep's coverage and cost in the store |
+| `ComboTests` (new) | the planted check; no false finds; the paired gain; the room's memory and fading; what counts as in play; the gate stays in charge |
+| `BotFearTests` | the bots turn back, dodge, and step the right way |
+| `KarenTests` | updated: the sprint, the tiers, no tell check |
+| `DoorBlockTests` (new, the second builder's) | the box blocks the door and frees it when picked up, stowed, recalled, moved or destroyed; a full inventory leaves it; resets; placement; highlights; her closures and the handle's prompt |
+| `PresentationTests` (new, the second builder's) | the thrown products exist; the screen effects clear; the throw art has no collider and leaves the RNG alone |
+| `KrecTests` | plus her route guesses: written, read back and found by time |
+| `RouteLayerTests` (new, the second builder's) | the replay's routes layer: seeking, weights and windows from the recording, hiding guesses, plain-text names, old files, no cone, materials freed |
+
+**The ablation against `main`** (6 November; the full tables, caveats included, are in
+[`KAREN_RESULTS.md`](../results/KAREN_RESULTS.md#the-ablation-results-6-november)):
+
+| | Result |
+|---|---|
+| Catches per shift | 0.94–1.00, against 0.28–0.54 on `main`, for every player, the held-out one included; a bot finished its shift in 1 of 144 shifts, against 18 on `main` |
+| First detection | 8–9 s, against 32–61 s |
+| Seconds outside her area | 0 on every shift |
+| Fairness violations | 0 in all 379 shifts run |
+| Catches you never saw coming | more of them, but about the same share of catches (32% against 28%) |
+| Setpoint error | lower, but explained by shorter shifts: not shown to be better pacing |
+| Cut | never fired in 144 shifts |
+| Throw | 20 throws, 5 hits; the bots saw 7 and dodged 2 |
+| The bots turning back | 183 times in 144 shifts: they react in play |
+| The combo learner | no combo found; no effect on setpoint error shown |
+
+**Still not measured:**
+- **the gap 5 s after she loses you** (primary): 0 pairs, because she almost never loses you
+  before she catches you;
+- **seconds to "moving at you" in play:** `HuntMetrics` doesn't record it;
+- **whether real chains exist in the store,** with shifts long enough to chain two tricks;
+- **the sweep's cost during play.**
+
+**Her guesses, drawn** (the second builder's B3.3): F1 has a "Routes — her guesses" button that
+draws each live guess on the floor plan, numbered, with its weight and when you could reach its
+end. Replays have a `routes` layer drawn only from the recording, so seeking back shows what she
+guessed then. Recordings from before version 2 show none.
+
+---
+
+## 17. Karen 0.3.0: the tricks come back
+
+The owner's 21 items of 7 November, built from
+[`docs/agents/archive/0.3.0-build-plan.md`](../archive/0.3.0-build-plan.md), by one builder (Claude).
+
+### 17.1 The list
+
+| | Count |
+|---|---|
+| Tactics in the library | 27 (nine removed) |
+| Live tricks | 15, 17 choices for the learner (Throw has three): Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy, the overtime |
+| Drafts that stay | 5: Crate wall, Shelf relocation, Mimicry, Stalk-and-withdraw, Peace offering |
+
+**What's put into the store at load** (`KarenFixtures`, data in C# since the scene isn't in git):
+the WC mop's rack, the fridge control box beside the breaker box, the PA box beside the time
+clock, two-way doors, the fog's look and wall clocks whose hands run and stop. The props use the
+Blender models once they're imported (**Kehai → Props → Import Karen's Props**), and their own
+boxes until then.
+
+**Removed:** Mirror-black, Task falsification, PA decoy, PA: your position, PA: your task list,
+PA: countdown, PA: her footsteps, Silence, The witness. Old Ledgers that learned about them load
+and forget them. Their warning sounds keep their numbers in `TellKind`, because replays store
+sounds by number.
+
+### 17.2 Each trick
+
+| Trick | What she does | Your chore |
+|---|---|---|
+| Fog | Floods the room she thinks you're in (if it has fridges) from its fridges. Everyone in it sees 2 m (`KarenConfig.fogVisibility`): you, her, her cameras, Kenji, shoppers | Reset the fridge control box in the backstreet |
+| Camera bolt-on | Stands a camera in a shelf slot, turned and tilted to see where you usually are (`CameraPlacement`). At most two. It beeps while it sees you | Unplug it (hold E), or keep out of its view |
+| Shelf sweep | Stands at a full bay on your way and knocks 5–15 products off. The task list names the aisle | Restock the bay |
+| Spill | Drops the shoppers' dirt at her feet, on a neck you're likely to cross | Mop it, or leave wet footprints |
+| Bin tamper | Refills a bin she's standing at, in her part of the building | Bag it, take it out back |
+| Tool theft | Takes the WC mop (never the staff room's), carries it off, leaves it where you go least | Find it, carry it back to its rack |
+| The overtime | In the shift's last 2 minutes, stops the time clock: the countdown freezes | Restart the clock at the staff room |
+| Phantom chime | The front doors near you open and shut, chiming, for 20 s, with nobody there. Her own ears ignore it | Check them, or don't |
+| Block door | A box on a floor frame behind a door, on the far side from you. No timer. Every door swings both ways | Go round, pick the box up |
+| The understudy | Kenji, the new hire, shadows you at 10–20 m and tells her where you are. Welcomed over the PA only if it's on | Walk up and send him to the tills |
+
+The **PA box** in the staff room switches the PA off: no announcements and no sounds through it.
+
+**Every trick from shift 1, for now** (the owner, 8 November): the career table is off while the
+tricks are tested. Each trick keeps its unlock shift in the code, and `KarenConfig.careerTable`
+(or `-karen-career-table on`) brings the lock back.
+
+### 17.3 The new fairness rules
+
+- **Rule 9, hands-on tricks happen at her hands.** Spill, Bin tamper, Shelf sweep, Tool theft,
+  Camera bolt-on, Block door and the overtime land only while her body is within 2 m of the spot,
+  across the floor (`HandsOn` step). `FairnessGuard.CheckHandsOn` counts anything that lands
+  further as a violation. The building's tricks (Blackout, Fog, Phantom chime) stay remote.
+- **Every chore says where it is** (`Tactic.FixAt`): the breaker box, the fridge box, the clock,
+  the mop, the box's side of a door, Kenji, the camera. Ambush waits on your way to it, so Tool
+  theft then Ambush is a combo she can learn.
+- **Rule 10, no new chore once the doors close** (the owner's call, 8 November, after the
+  ablation found shifts that couldn't end).
+  - From closing on, the gate refuses every trick that leaves a chore (`Tactic.LeavesChore`). It
+    refuses on every rung, rung F's shield or not.
+  - The 11 tricks: Shelf sweep, Spill, Bin tamper, Tool theft, the overtime, Fog, Camera bolt-on,
+    Phantom chime, Block door, the understudy and Blackout.
+  - A chore trick that hasn't landed anything by closing stops (`PlanTree`). One that has landed
+    finishes, so she never walks off holding the WC mop.
+  - She can still hunt, Cut, throw and wait in ambush by a chore that's already open.
+- **She finishes what she starts** (the owner's call, 8 November, after the second ablation found
+  her hands-on tricks rarely landed).
+  - Once a hands-on trick is under way, neither her next decision nor a loud noise drops it. She
+    used to re-decide on the walk to its spot and drop it: Spill landed once in 55 starts.
+  - Only a hunt wins (`KarenBrain.FinishesFirst`, `IgnoresNoise`).
+  - Its own steps can still fail, and rule 10 still stops it if the doors close first.
+  - After 60 s she decides as usual (`CommitSeconds`), so a trick that can't finish doesn't hold
+    her.
+  - In a 60-shift check, Spill then landed 39 of 42 times and Shelf sweep 48 of 48.
+
+### 17.4 How she learns, after 0.3.0
+
+**Placement memory**, a new term:
+- *What it is:* for each trick, a score per place: how well doing it *there* paid before. She
+  mostly picks the best place she knows, and sometimes tries the one she knows least.
+- *How Kehai uses it:* each trick lists candidate places (from your habits and the map) with a
+  guess for each; the memory sorts them (`PlacementMemory`, in the Ledger). When a trick lands, it
+  leaves a watch on its place (`PlaceRewards`), and the answer pays the place: how long the bay
+  stayed short, the mop stayed lost, the camera saw you, the door held you; whether you walked
+  through the spill; how much the fog rattled you; whether you went to look at the doors.
+- *Elsewhere:* Google Maps preferring the route you actually take, or YouTube mixing a new kind of
+  video in with the ones you've liked.
+
+It fades over shifts like everything else she learns (rule 7), and it is saved per player in the
+Ledger. Learning from all players comes with the learning plan (PR #76).
+
+**Your answers:** every chore you fix is recorded with how long it took (`fog_reset`,
+`clock_restarted`, `mop_returned`, `box_moved`, `understudy_sent_away`, `pa_off`, and
+`camera_unplugged`). The shift report lists them and her best places.
+
+### 17.5 The test players and the checks
+
+- The bots see her chores (`karen_chores`) and answer each one: `reset_fog`, `restart_clock`,
+  `find_tool`, `unblock_door`, `send_kenji`, `unplug_camera`. They're blinded by fog too.
+- `-kehai-trick-check` (`TrickCheck`) plays a long shift on the real store, forces each trick in
+  turn and writes down whether it started, landed, showed its chore, and was fixed, and whether
+  the shift still ended.
+- Replays (version 3) record fogged rooms and the stopped clock, and show the fog on playback.
+
+### 17.6 Not in 0.3.0
+
+The five drafts above; learning from all players and Panic's calibration (PR #76); the two
+Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
+
+### 17.7 The ablation (7 November)
+
+240 shifts against `main`, paired by seed ([KAREN_RESULTS.md](../results/KAREN_RESULTS.md#karen-030-the-ablation-7-november)):
+- **Fair:** 0 violations.
+- **Her tricks run:** 3.6 a shift against 1.1, Spill and Shelf sweep most.
+- **No stronger:** catches 0.02–0.10 a shift lower, fewer hunts, setpoint error 0.01–0.04 worse.
+- **13 stuck shifts against 2.** Mostly, she made chores after the doors closed faster than they
+  could be cleared, and nobody clocks out with a chore open. Rule 10 now stops that (§17.3; the
+  owner's call, 8 November).
+- **Never ran:** the understudy, the overtime and Cut.
+- **Also found:**
+  - the test player falling through Aisle 4/B's floor;
+  - 0.3.0 running 3.6 times slower;
+  - a fog warning that flooded the log (fixed).
+
+**The second run** (8 November: rule 10, every trick from shift 1):
+- 0 fairness violations, and 0 chores after closing.
+- 9 stuck shifts against the first run's 13 and `main`'s 2. The stuck shifts now come from the
+  test player: it can't get close enough to a bay or the tills, or its own fear interrupts it.
+- **It found two bugs:**
+  - The understudy and the overtime were on cooldown for the first 25 hours of play, so they
+    never ran. Fixed.
+  - **Her hands-on tricks rarely land in play.** She re-decides on the walk to the spot, and the
+    trick is dropped. Spill landed 1 time in 55 starts, and Bin tamper, Tool theft, Camera bolt-on
+    and Block door never did. The building's tricks always land.
+- Shelf sweep's bay lookup is now cached: 14% faster.
+

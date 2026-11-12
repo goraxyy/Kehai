@@ -4,7 +4,7 @@
 The scene (`SampleScene.unity`) isn't in git, so this map is how the repository knows the layout.
 It reads the scene's text YAML directly, without Unity:
 
-    python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/store/SCENE_MAP.md
+    python3 tools/scene/scene_map.py "Assets/!_Project/_Core/Scenes/SampleScene.unity" > docs/agents/store/SCENE_MAP.md
 
 Positions are world metres, composed from each transform's local position, rotation and scale.
 A prefab instance whose root keeps the prefab's own transform is placed from the scene's
