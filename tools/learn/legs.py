@@ -46,7 +46,7 @@ def from_choices(s: records.Shift) -> list:
     for i, c in enumerate(cs):
         t1 = cs[i + 1].t if i + 1 < len(cs) else (pts[-1][0] if pts else c.t)
         metres, _ = walked(pts, c.t, t1)
-        legs.append({"player": s.player, "shift": s.shift, "t0": c.t, "t1": t1, "from": at(pts, c.t), "to": [c.x, c.z],
+        legs.append({"player": s.player, "seed": s.seed, "agent": s.persona_name, "shift": s.shift, "t0": c.t, "t1": t1, "from": at(pts, c.t), "to": [c.x, c.z],
                      "what": c.what, "how": c.how, "ok": c.ok, "metres": metres, "speed": metres / max(1e-6, t1 - c.t), "found": "logged"})
     return legs
 
@@ -72,7 +72,7 @@ def from_track(s: records.Shift) -> list:
     for c in cuts + [pts[-1][0]]:
         metres, _ = walked(pts, start, c)
         if metres >= MIN_METRES and c > start:
-            legs.append({"player": s.player, "shift": s.shift, "t0": start, "t1": c, "from": at(pts, start), "to": at(pts, c),
+            legs.append({"player": s.player, "seed": s.seed, "agent": s.persona_name, "shift": s.shift, "t0": start, "t1": c, "from": at(pts, start), "to": at(pts, c),
                          "what": jobs.get(round(c, 2), "stop"), "how": "", "ok": True, "metres": metres,
                          "speed": metres / (c - start), "found": "track"})
         start = c

@@ -104,7 +104,23 @@ namespace Kehai.Eval
             which = Open(which, (int)choice.Which);
             Step(inputs, what, how, which);
             showing = false;
+            CountRecorded();
         }
+
+        // Recording demonstrations: once there are enough, close the file and stop the run.
+        int recorded;
+        void CountRecorded()
+        {
+            if (recorder == null || recorder.NumStepsToRecord <= 0 || ++recorded < recorder.NumStepsToRecord) return;
+            recorder.Close();
+            Debug.Log($"{name}: {recorded} demonstrations recorded; stopping");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.Exit(0);
+#else
+            Application.Quit();
+#endif
+        }
+
 
         static bool[] Open(bool[] mask, int i)
         {

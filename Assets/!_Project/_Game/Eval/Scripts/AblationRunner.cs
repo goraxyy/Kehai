@@ -362,6 +362,7 @@ namespace Kehai.Eval
             if (shadows != null) BeliefShadows.Requested = shadows.Split(',').Select(x => x.Trim().ToLowerInvariant()).Where(x => x.Length > 0).ToArray();
             BeliefTrace.Folder = Str(args, "-belief-trace", null);
             BeliefShadows.OtherLedgerPath = Str(args, "-belief-other-ledger", null);
+            LeagueRunner.OtherLedgers = Str(args, "-league-other-ledgers", null);
 
             for (int i = 0; i < args.Length; i++)
             {

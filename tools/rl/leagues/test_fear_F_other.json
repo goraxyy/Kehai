@@ -42,7 +42,7 @@
     {
       "brain": "basic",
       "rung": "E",
-      "ledger": "other",
+      "ledger": "other:test_fear_F",
       "share": 1
     }
   ]

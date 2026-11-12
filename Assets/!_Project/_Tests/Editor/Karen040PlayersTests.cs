@@ -245,4 +245,46 @@ public class Karen040PlayersTests
         Assert.Less(EmployeeReward.Pay(w, new EmployeeOutcome { Caught = true }), 0f);
         Assert.IsFalse(EvalSplits.InCarefulCorner(s), "pace 0.5: not a careful-corner persona, so Vital may spar with it");
     }
+
+    // ---- the league files (C5.6, C1.5): nothing held out is ever drawn where it mustn't be ----------
+
+    [Test]
+    public void EveryLeagueFile_DrawsNothingHeldOut()
+    {
+        string folder = Path.Combine(Application.dataPath, "..", "tools", "rl", "leagues");
+        string[] files = Directory.GetFiles(folder, "*.json");
+        Assert.Greater(files.Length, 15);
+        foreach (string file in files)
+        {
+            LeagueSpec spec = LeagueSpec.Parse(File.ReadAllText(file));
+            int lessons = System.Math.Max(1, spec.lessons.Count);
+            for (int lesson = 0; lesson < lessons; lesson++)
+                for (int i = 0; i < 2000; i++)
+                {
+                    LeagueCareer c = LeagueDraw.Career(spec, i, spec.lessons.Count > 0 ? lesson : -1);
+                    string where = $"{Path.GetFileName(file)} career {i}: {EvalSplits.Describe(c.Seed, c.Persona)}";
+                    Assert.AreEqual(spec.split, EvalSplits.Of(c.Seed), where);
+                    if (spec.split == Split.Test) continue;
+                    Assert.AreNotEqual(PlayerProfile.Cautious, c.Persona.Scripted, "the cautious profile is held out of everything: " + where);
+                    if (spec.learner != "employee") Assert.IsFalse(EvalSplits.InCarefulCorner(c.Persona), "the careful corner never reaches Karen's side: " + where);
+                    if (spec.KarenLearns) Assert.IsTrue(c.Karen == null || c.Karen.learner || c.Karen.brain != spec.learner, where);
+                }
+        }
+    }
+
+    [Test]
+    public void TheTestLeagues_PlayEachGroupExactly()
+    {
+        LeagueSpec spec = LeagueSpec.Parse(File.ReadAllText(Path.Combine(Application.dataPath, "..", "tools", "rl", "leagues", "test_fear_E.json")));
+        Assert.AreEqual(EvalSplits.TestCareersPerGroup * EvalSplits.TestGroups.Length, spec.careers);
+        var counts = new Dictionary<string, int>();
+        for (int i = 0; i < spec.careers; i++)
+        {
+            LeagueCareer c = LeagueDraw.Career(spec, i);
+            string g = c.Player.kind + ":" + c.Player.profile + ":" + (i % EvalSplits.TestGroups.Length);
+            counts[g] = counts.TryGetValue(g, out int n) ? n + 1 : 1;
+        }
+        Assert.AreEqual(EvalSplits.TestGroups.Length, counts.Count);
+        Assert.IsTrue(counts.Values.All(n => n == EvalSplits.TestCareersPerGroup));
+    }
 }

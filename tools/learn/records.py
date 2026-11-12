@@ -47,6 +47,7 @@ class Shift:
     frames: list
     events: list
     answers: list = field(default_factory=list)
+    seed: int = 0
 
     def col(self, name):
         i = FRAME[name]
@@ -86,7 +87,7 @@ def load(path: str) -> Shift:
     bot = d.get("bot") or ""
     return Shift(path=path, player=bot or d.get("player", "?"), is_bot=bool(bot), shift=int(d.get("shift", 0)),
                  length=float(d.get("length", 0)), clocked_out=bool(d.get("clockedOut", False)),
-                 frames=d.get("frames", []), events=d.get("events", []), answers=d.get("answers", []))
+                 frames=d.get("frames", []), events=d.get("events", []), answers=d.get("answers", []), seed=int(d.get("seed", 0)))
 
 
 def find(paths) -> list:

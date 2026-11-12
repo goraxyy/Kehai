@@ -32,6 +32,9 @@ import kernels  # noqa: E402
 import replay  # noqa: E402
 import trace as tr  # noqa: E402
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "learn"))
+import unity_meta  # noqa: E402
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GENERATED = os.path.join(ROOT, "Assets", "!_Project", "_Game", "AI", "Scripts", "Belief", "Generated")
 
@@ -132,7 +135,9 @@ def stage1(legs: list, traces: list) -> dict:
             hdr = tr.header(path)
             began = hdr.get("t", 0.0)               # trace times are the game clock; legs' are the shift's
             ops = [o for o in tr.ops(path) if o["op"] == "features"]
-            mine = [l for l in legs if l.get("shift") == hdr.get("shift") and l.get("found") == "logged"]
+            # A leg belongs to the trace of its own career: the same seed, player and shift.
+            mine = [l for l in legs if l.get("found") == "logged" and l.get("shift") == hdr.get("shift")
+                    and l.get("seed") == hdr.get("seed") and l.get("agent") == hdr.get("agent")]
             for leg in mine:
                 prior = [o for o in ops if o["t"] - began <= leg["t0"]]
                 if not prior:
@@ -253,6 +258,8 @@ def write_weights(out: str, name: str, numbers: dict, card: dict, builder: str):
         f.write(f"# Model card: {name}\n\n| | |\n|---|---|\n" + "".join(f"| {k} | {v} |\n" for k, v in card.items()))
     with open(os.path.join(out, name + ".g.cs"), "w") as f:
         f.write(builder)
+    for ext in (".g.cs", ".card.md", ".part.json"):
+        unity_meta.write_meta(os.path.join(out, name + ext))
 
 
 def sense_cs(fits: dict, card: dict) -> str:

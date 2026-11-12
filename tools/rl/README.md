@@ -9,6 +9,12 @@
 > | `KarenVital` | Vital: paid for catching, pacing off | `karen_vital.yaml` | `vital_r2.json`, `vital_r4.json` |
 > | `KarenBasic` | Basic, the game's: paid for pacing your fear, pacing on | `karen_basic.yaml` | `basic_r2.json`, `basic_r4.json` |
 >
+> **Until the training player connects** (12 November: it floods TextMeshPro errors on the null graphics
+> device and never reaches the trainer), use the editor scripts, one copy each:
+> `tools/rl/record_demos_editor.sh employee|vital|basic 20000` and
+> `tools/rl/train_editor.sh <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> With a working player:
+>
 > ```bash
 > tools/rl/record_demos.sh employee 20000                 # the warm starts: the scripted players' choices,
 > tools/rl/record_demos.sh vital 20000                    # and the planner's (action, trick) picks

@@ -108,10 +108,26 @@ namespace Kehai.Karen
             action = -1;
             RequestDecision();
             Academy.Instance.EnvironmentStep();
+            CountRecorded();
             if (action < 0) return false;
             string name = outputs[action];
             for (int i = 0; i < legal.Count; i++) if (legal[i].Key == name) index = i;
             return index >= 0;
+        }
+
+
+        // Recording demonstrations: once there are enough, close the file and stop the run.
+        int recorded;
+        void CountRecorded()
+        {
+            if (recorder == null || recorder.NumStepsToRecord <= 0 || ++recorded < recorder.NumStepsToRecord) return;
+            recorder.Close();
+            Debug.Log($"{name}: {recorded} demonstrations recorded; stopping");
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.Exit(0);
+#else
+            Application.Quit();
+#endif
         }
 
         public override void CollectObservations(VectorSensor sensor) => sensor.AddObservation(inputs ?? new float[BrainObservation.Size]);

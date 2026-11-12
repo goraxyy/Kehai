@@ -79,6 +79,10 @@ namespace Kehai.Karen
             if (Override != null) brain.config = Override.Clone();
             ApplyCommandLine(brain.config);
             MatchPlayer(brain.config);
+            // The general model's numbers for this Karen (0.4.0, C3.7): -karen-pack <file>, else the
+            // newest good pack in model_packs/, else the build's own. Chosen here, before she starts,
+            // so never during a shift.
+            ModelPack.Select(brain.config.modelPack);
             if (!NoRecords)
             {
                 root.AddComponent<ShiftRecorder>();

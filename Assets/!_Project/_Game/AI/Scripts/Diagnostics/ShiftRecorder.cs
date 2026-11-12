@@ -148,6 +148,7 @@ namespace Kehai.Karen
             r.Length = r.LengthAt(Time.time - shiftStartedAt);
             r.ClockedOut = clockedOut;
             r.Bot = BotLabel ?? "";
+            r.Seed = RunSeed;
             KarenBrain brain = KarenBrain.Instance;
             if (brain != null && brain.Stats != null) r.Chains.AddRange(brain.Stats.ChainsFound);
             if (brain != null)
@@ -324,6 +325,7 @@ namespace Kehai.Karen
         // Who played, when a simulated player did (its persona): the scorecard groups by it (0.4.0).
         // Null for a person.
         public static string BotLabel;
+        public static int RunSeed;      // the eval's seed for this career (0 in play): legs find their trace by it
 
         public static void Annotate(string kind, string text, Vector3 at)
         {

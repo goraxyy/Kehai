@@ -26,6 +26,9 @@ import sys
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import unity_meta  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 GENERATED = os.path.join(ROOT, "Assets", "!_Project", "_Game", "AI", "Scripts", "Decision", "Policy", "Generated")
@@ -233,6 +236,8 @@ def export(state, name: str, card: dict, out_dir: str, namespace: str = "Kehai.K
         fh.write(card_md(name, card, diff))
     with open(os.path.join(out_dir, name + ".part.json"), "w") as fh:
         json.dump(part_json(name, net, card), fh)
+    for ext in (".g.cs", ".card.md", ".part.json"):
+        unity_meta.write_meta(os.path.join(out_dir, name + ext))
     return {"net": net, "parity": diff}
 
 

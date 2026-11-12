@@ -79,6 +79,7 @@ namespace Kehai.Karen
         public float Length;
         public bool ClockedOut;
         public string Bot = "";         // a simulated player's persona (0.4.0); empty for a person
+        public int Seed;                // the eval's seed (0.4.0); 0 for a person
         public readonly List<ShiftFrame> Frames = new List<ShiftFrame>();
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
@@ -243,6 +244,7 @@ namespace Kehai.Karen
               .Append("\",\"length\":").Append(N(Length))
               .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false");
             if (!string.IsNullOrEmpty(Bot)) sb.Append(",\"bot\":\"").Append(MiniJson.EscapeInner(Bot)).Append('"');
+            if (Seed != 0) sb.Append(",\"seed\":").Append(Seed);
             if (plan != null) sb.Append(",\"plan\":").Append(plan.ToJson());
             if (analysis != null) sb.Append(",\"analysis\":").Append(analysis.ToJson());
 

@@ -29,6 +29,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dataset as ds  # noqa: E402
 import tricks  # noqa: E402
+import unity_meta  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GENERATED = os.path.join(HERE, "..", "..", "Assets", "!_Project", "_Game", "AI", "Scripts", "Core", "Generated")
@@ -145,6 +146,8 @@ def write(start: dict, out: str, version: str) -> None:
         f.write("\n".join(lines))
     with open(os.path.join(out, "LedgerStart.part.json"), "w") as f:
         json.dump(start, f, sort_keys=True, separators=(",", ":"))
+    for name in ("LedgerStart.g.cs", "LedgerStart.part.json", "LedgerStart.card.md"):
+        unity_meta.write_meta(os.path.join(out, name))
     with open(os.path.join(out, "LedgerStart.card.md"), "w") as f:
         f.write(f"# Model card: the starting Ledger\n\n| | |\n|---|---|\n| Version | {version} |\n| Players | {start['players']} (one player, one vote) |\n"
                 f"| Tricks | {len(start['tricks'])} |\n| Kinds | {len(start['kinds'])} |\n| Answers timed | {len(start['answers'])} |\n"

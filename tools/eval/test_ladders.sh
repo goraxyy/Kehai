@@ -9,7 +9,10 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; root="$(cd "$here/../.." && pwd)"
 out="${1:-$HOME/Library/Application Support/TokenLimit/Kehai/kehai_eval/test040}"
-for arm in catch_hunter catch_vital ref_planner fear_C fear_E fear_F fear_F_wiped fear_F_other; do
+for arm in catch_hunter catch_vital ref_planner fear_C fear_E fear_F fear_F_wiped; do
   "$root/tools/belief/run_unity.sh" "$root/tools/rl/leagues/test_$arm.json" "$out/$arm${KEHAI_ARM_SUFFIX:-}" -karen-learning on
 done
+# Someone else's Ledger: at each shift, the one the next career of the F run had by then.
+"$root/tools/belief/run_unity.sh" "$root/tools/rl/leagues/test_fear_F_other.json" "$out/fear_F_other${KEHAI_ARM_SUFFIX:-}" -karen-learning on \
+  -league-other-ledgers "$out/fear_F${KEHAI_ARM_SUFFIX:-}/kehai_eval"
 python3 "$here/analyze_ladders.py" "$out"

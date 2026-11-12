@@ -111,7 +111,9 @@ namespace Kehai.Eval
         public float share = 1f;
         public bool learner;                          // the trainer picks for her (set by the runner)
         // Her memory of you (§11's fear ladder): "own" (default), "wiped" (every shift), or
-        // "other" (she reads a different career's Ledger: the one before, in the same run).
+        // "other:<league>": at every shift she reads the Ledger that the next career of that
+        // league's run had built by the same shift (-league-other-ledgers <its eval folder>): someone
+        // else's, with as much experience, never mixed with this player's.
         public string ledger = "own";
 
         public static KarenSpec From(Dictionary<string, object> o) => new KarenSpec
@@ -185,9 +187,14 @@ namespace Kehai.Eval
 
             if (spec.split != Split.Test)
             {
-                if (spec.KarenLearns) EvalSplits.AssertKarenTraining(seed, persona);
-                else if (spec.learner == "employee" && !EvalSplits.PlayersMayTrainOn(seed, persona))
-                    throw new System.InvalidOperationException("held out of the players' training: " + EvalSplits.Describe(seed, persona));
+                if (spec.learner == "employee")
+                {
+                    if (!EvalSplits.PlayersMayTrainOn(seed, persona))
+                        throw new System.InvalidOperationException("held out of the players' training: " + EvalSplits.Describe(seed, persona));
+                }
+                else if (!EvalSplits.KarenMayTrainOn(seed, persona, spec.split))
+                    // Karen's training, and the recordings any part of her is fitted or chosen on.
+                    throw new System.InvalidOperationException("held out of Karen's training: " + EvalSplits.Describe(seed, persona));
             }
             return new LeagueCareer { Index = index, Seed = seed, Persona = persona, Player = player, Karen = karen };
         }
@@ -200,10 +207,12 @@ namespace Kehai.Eval
                 case "corner": return EvalSplits.DrawCorner(random, "corner-" + index);
                 case "persona":
                 case "employee":
-                    // Karen's side never meets the careful corner in training; the bots' side may.
-                    return spec.KarenLearns || spec.split != Split.Training
-                        ? EvalSplits.DrawForKaren(random, spec.ranges, p.kind + "-" + index)
-                        : Persona.Draw(random, spec.ranges, p.kind + "-" + index);
+                    // Only the bots' own training may meet the careful corner; every other league
+                    // feeds some part of Karen (a brain, the recordings her senses, mirror and
+                    // prediction model are fitted on) or judges her, and draws outside it.
+                    return spec.learner == "employee" && spec.split == Split.Training
+                        ? Persona.Draw(random, spec.ranges, p.kind + "-" + index)
+                        : EvalSplits.DrawForKaren(random, spec.ranges, p.kind + "-" + index);
                 default:
                     return Persona.Of(p.profile);
             }
@@ -256,27 +265,31 @@ namespace Kehai.Eval
         }
 
         // §11's arms "F, Ledger wiped every shift" and "F, someone else's Ledger".
-        string lastLedgerCopy;
+        public static string OtherLedgers;   // -league-other-ledgers: the eval folder of the run to borrow from
 
-        static void PrepareLedger(KarenSpec karen, string other, int shift)
+        void PrepareLedger(KarenSpec karen, int career, int shift)
         {
             KarenBrain brain = KarenBrain.Instance;
             if (karen == null || brain == null) return;
-            if (karen.ledger == "wiped") brain.Ledger.Wipe();
-            else if (karen.ledger == "other" && other != null && shift == 0 && File.Exists(other))
-            {
-                File.Copy(other, brain.Ledger.SavePath, true);
-                brain.Ledger.Load();
-            }
+            if (karen.ledger == "wiped") { brain.Ledger.Wipe(); return; }
+            if (!karen.ledger.StartsWith("other")) return;
+            string league = karen.ledger.Contains(":") ? karen.ledger.Substring(karen.ledger.IndexOf(':') + 1) : Spec.name;
+            string from = Path.Combine(OtherLedgers ?? KehaiEnv.EvalDirectory, LedgerCopyName(league, (career + 1) % Mathf.Max(1, Spec.careers), shift));
+            if (!File.Exists(from)) { Debug.LogWarning("league: no other Ledger at " + from + "; she reads her own"); return; }
+            File.Copy(from, brain.Ledger.SavePath, true);
+            brain.Ledger.Load();
         }
 
-        void KeepLedgerCopy(int career)
+        public static string LedgerCopyName(string league, int career, int shift) => $"league_ledger_{league}_{career}_{shift}.json";
+
+        // Her Ledger as each shift begins, for another arm to borrow.
+        void KeepLedgerCopy(int career, int shift)
         {
             KarenBrain brain = KarenBrain.Instance;
-            if (brain == null || !File.Exists(brain.Ledger.SavePath)) return;
-            string copy = Path.Combine(KehaiEnv.EvalDirectory, $"league_ledger_{Spec.name}_{career}.json");
-            File.Copy(brain.Ledger.SavePath, copy, true);
-            lastLedgerCopy = copy;
+            if (brain == null) return;
+            brain.Ledger.Save();
+            if (!File.Exists(brain.Ledger.SavePath)) return;
+            File.Copy(brain.Ledger.SavePath, Path.Combine(KehaiEnv.EvalDirectory, LedgerCopyName(Spec.name, career, shift)), true);
         }
 
         IEnumerator Execute(KehaiEnv env)
@@ -303,12 +316,12 @@ namespace Kehai.Eval
                 yield return env.ResetEpisode(config);
 
                 var memory = new BotMemory();
-                string otherLedger = karen?.ledger == "other" ? lastLedgerCopy : null;
                 IEmployeeMind mind = c.Player.mind == "trainer" ? trainerMind : EmployeeMinds.Create(c.Player.mind);
                 for (int s = 0; s < Spec.shifts; s++)
                 {
                     if (!env.Metrics.Started) break;
-                    PrepareLedger(karen, otherLedger, s);
+                    PrepareLedger(karen, career, s);
+                    KeepLedgerCopy(career, s);
                     Progress = $"{Spec.name}: career {career + 1}/{Spec.careers}, shift {s + 1}/{Spec.shifts}, {EvalSplits.Describe(c.Seed, c.Persona)} against {karen?.brain ?? "no Karen"}";
                     var bot = new SimulatedPlayer(env, c.Persona, c.Seed * 31 + s, true, memory, mind) { CareerOver = s == Spec.shifts - 1 };
                     yield return bot.PlayShift();
@@ -316,7 +329,6 @@ namespace Kehai.Eval
                     if (log.TryAppend(m, out _)) Results.Add(m);
                     if (s < Spec.shifts - 1) yield return env.ClockIn();
                 }
-                KeepLedgerCopy(career);
                 yield return null;   // a frame between careers, whatever happened
             }
             KehaiEnv.KarenSetup = null;

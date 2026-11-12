@@ -176,6 +176,7 @@ namespace Kehai.Eval
             };
             if (KarenBootstrap.TryParseRung(Config.rung, out KarenRung rung)) karen.rung = rung;
             KarenSetup?.Invoke(karen);   // the league's say: which brain she runs this career (0.4.0)
+            ShiftRecorder.RunSeed = Config.seed;
             KarenBootstrap.Override = karen;
             if (Config.freshLedger) new KarenLedger(karen) { Persistent = true }.Wipe();
 
