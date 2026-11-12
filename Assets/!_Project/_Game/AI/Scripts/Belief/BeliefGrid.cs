@@ -59,6 +59,10 @@ namespace Kehai.Karen
         // A copy of the belief, and a way to set one (shadow filters and the trace's replay checks).
         public float[] Snapshot() => (float[])b.Clone();
         public float[] Prior => prior;
+        // The outside's exit lines, for the belief trace's start state (C4.2).
+        public float[][] ExitLines => line;
+        public float ExitLineClock => lineClock;
+        public int LastExitIndex => lastExit;
         public int OutsideCellCount => outsideCells;
         public static int ExitLineSeconds => LineSeconds;
         public static float ExitSpanMetres => ExitSpan;

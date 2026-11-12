@@ -122,3 +122,22 @@ def test_fit_mirror_reads_the_answer_sheet(tmp_path):
     mw = train.fit_mirror([str(tmp_path)])
     assert mw["samples"] == 200
     assert mw["sight_per_metre"] > 0, "noticing her falls with distance"
+
+
+def test_a_trace_starts_from_its_state_line(tmp_path):
+    m, d = store()
+    (tmp_path / "map.json").write_text(json.dumps(d))
+    g = kernels.Grid(m)
+    rng = np.random.default_rng(2)
+    g.prior = rng.uniform(0.5, 1.5, m.n)
+    g.prior /= g.prior.sum()
+    g.b = rng.uniform(0, 1, m.n)
+    g.b /= g.b.sum()
+    lines = [{"op": "start", "t": 0}, {"op": "state", "t": 0, "b": g.b.tolist(), "prior": g.prior.tolist(), "lines": [], "line_clock": 0, "last_exit": 0}]
+    for i in range(50):
+        g.predict(0.1, 4.0)
+        lines.append({"op": "predict", "t": i, "dt": 0.1, "speed": 4.0})
+    lines.append({"op": "check", "t": 50, "b": g.b.tolist()})
+    (tmp_path / "trace_1_1_x.jsonl").write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+    res = replay.parity(str(tmp_path))
+    assert res[0][3], f"largest difference {res[0][2]}"

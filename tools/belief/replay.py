@@ -59,6 +59,13 @@ class Replay:
         g = self.grid
         if kind == "layers":
             self.layers(op)
+        elif kind == "state":
+            g.b = np.asarray(op["b"], float)
+            g.prior = np.asarray(op["prior"], float)
+            if op.get("lines"):
+                g.line = np.asarray(op["lines"], float).reshape(g.line.shape)
+            g.line_clock = float(op.get("line_clock", 0.0))
+            g.last_exit = int(op.get("last_exit", 0))
         elif kind == "reset":
             if op["sigma"] <= 0:
                 g.reset_to_prior()

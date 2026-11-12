@@ -58,7 +58,20 @@ namespace Kehai.Eval
             predicts = 0;
             desireHash = habitHash = int.MinValue;
             Layers();
+            State();
             Check();
+        }
+
+        // Where her belief already stands when the trace starts (the shift began a moment before):
+        // the belief, the prior it leaks back to, and the outside's exit lines. The replay starts here.
+        void State()
+        {
+            BeliefGrid g = brain.Belief;
+            var sb = new StringBuilder();
+            sb.Append("\"b\":[").Append(string.Join(",", g.Snapshot().Select(N))).Append("],\"prior\":[").Append(string.Join(",", g.Prior.Select(N)))
+              .Append("],\"lines\":[").Append(g.ExitLines == null ? "" : string.Join(",", g.ExitLines.Select(l => "[" + string.Join(",", l.Select(N)) + "]")))
+              .Append("],\"line_clock\":").Append(N(g.ExitLineClock)).Append(",\"last_exit\":").Append(g.LastExitIndex);
+            Line("state", sb.ToString());
         }
 
         public void End()
