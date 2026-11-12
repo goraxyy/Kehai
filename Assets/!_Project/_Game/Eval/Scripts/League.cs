@@ -292,7 +292,8 @@ namespace Kehai.Eval
                 int lesson = Lesson != null ? Lesson() : Spec.lessons.Count > 0 ? 0 : -1;
                 LeagueCareer c = LeagueDraw.Career(Spec, career, lesson);
                 KarenSpec karen = c.Karen;
-                KehaiEnv.KarenSetup = cfg => karen?.Apply(cfg);
+                KehaiEnv.KarenSetup = cfg => { karen?.Apply(cfg); cfg.trapFences = true; };
+                AgentDriver.FenceFalls = true;
                 var config = new EnvConfig
                 {
                     seed = c.Seed, rung = karen?.rung ?? "C", karen = karen != null && karen.brain != "none",

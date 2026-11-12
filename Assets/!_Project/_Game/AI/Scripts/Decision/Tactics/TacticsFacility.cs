@@ -458,7 +458,7 @@ namespace Kehai.Karen
             foreach (Region r in c.Map.Regions)
             {
                 if (!r.IsChokepoint || r.IsDoor || !TacticHelpers.Hers(c.Map, r)) continue;
-                if (System.Array.IndexOf(NoSpill, r.Name) >= 0) continue;
+                if (c.Config != null && c.Config.trapFences && System.Array.IndexOf(NoSpill, r.Name) >= 0) continue;
                 float walk = TacticHelpers.WalkFromBelief(c, r.Centroid);
                 if (walk < MinWalk || walk > MaxWalk) continue;
                 if (reach && !TacticHelpers.CanReach(c, TacticHelpers.OnFloor(r.Centroid), 1f)) continue;
@@ -487,7 +487,7 @@ namespace Kehai.Karen
             plan.Add(new Tell(TellKind.BucketClank, k => k.Body.Position, 1f));
             plan.Add(new HandsOn("kick over a bucket at " + plan.Target, _ => at, k =>
             {
-                Dirt dirt = k.World.Spill(TacticHelpers.WhereYouCanMop(k.Body.Position));
+                Dirt dirt = k.World.Spill(k.Config != null && k.Config.trapFences ? TacticHelpers.WhereYouCanMop(k.Body.Position) : k.Body.Position);
                 Left = dirt;
                 LeftKey = key;
                 if (dirt == null) return;

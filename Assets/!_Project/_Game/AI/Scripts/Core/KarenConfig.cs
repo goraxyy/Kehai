@@ -202,6 +202,9 @@ namespace Kehai.Karen
         public bool brainFromTrainer;
         [Tooltip("Basic's catch dial (§5.4): paid for a catch in a tense phase. Starts at +0.15; turned between rounds until her catch rate sits in 0.20–0.35 a shift. May go below zero.")]
         public float catchDial = 0.15f;
+        [Tooltip("C0.2's fences for the two known traps: no spill at Office/G, a spill only where your floor reaches, and a fallen test player put back where it stood. " +
+                 "Off by default, so a shift plays as today's; the league turns it on (a stuck episode poisons training).")]
+        public bool trapFences;
         [Tooltip("Write one learning record per decision (Diagnostics/LearningRecord.cs).")]
         public bool learningRecords;
         [Tooltip("Where the learning records go. Empty: <persistent data>/learning/learning_<launch>.jsonl.")]

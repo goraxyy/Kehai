@@ -555,6 +555,44 @@ to run, and primary metric 2 can't be measured. How far to turn her down, and wi
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
 
+## Karen 0.4.0: what the build measured (11–12 November)
+
+**Nothing is trained yet.** These are the build's own checks, on clones of the owner's project, before
+any recording, training or test run (each waits for the owner's go). The primary metrics are the
+plan's §11, written before any run and unchanged. Negative results first.
+
+**What didn't work, or isn't known yet:**
+- **A batch shift doesn't repeat itself, run to run, on the same build.** One shift, rung E, the
+  efficient player, seed 1000: four runs gave 183, 200, 200 and 263 s, two of them the same code. The
+  likely cause is older than 0.4.0: the blink channel times blinks with the wall clock
+  (`Time.unscaledTime`) while the eval runs a fixed step, and blinks feed the Panic Index and the
+  blink dash. So "every decision matches today's" is shown by bit-for-bit unit tests, not by
+  replaying a shift; and paired comparisons share a start, not every step (§13 of the plan says so).
+- **The training player doesn't reach the trainer.** Built from a clone, it floods TextMeshPro
+  `NullReferenceException`s on the null graphics device (400,000 in ten minutes) and the trainer
+  times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
+  two copies, and C0.3's two-copy speed, wait for the player.
+- **The first real belief trace failed the parity gate** (largest difference 0.05): it had no start
+  state. With a `state` line (her belief, the prior, the exit lines) a fresh trace passes:
+  largest difference **5.5e-6** over 25 checks of the whole belief (the gate is 1e-3).
+
+**What holds:**
+
+| Check | Result |
+|---|---|
+| EditMode suite on a clone | TESTS_LINE |
+| Today's predict step behind `IMotionModel` | bit for bit against a frozen copy of the old loop, with and without the outside cell (200 steps) |
+| The C# filter against the Python replay, synthetic map | to 1e-5 on every cell, every step, for P0, P1 and P2 |
+| The C# network against ML-Agents' own actor | to 4 decimals (largest difference 5e-5 allowed) on 1,000 inputs; the smoke exports matched to 1e-9 |
+| The model pack | identical numbers from a pack; tampered, old-inputs and unknown-trick packs refused; a pack signed in Python verified by the game; the gate passes better and refuses worse |
+| The four scripted players, built from personas | the same reflexes, field for field, four seeds each |
+| Training never meets a held-out seed or persona | 5,000 draws; the league stops if a file asks for one |
+| Smoke runs | the Employee (400 decisions), Vital and Basic (300 each) trained through the editor and exported |
+| Trick check, each brain (untrained, so the planner decides; Vital with pacing off) | TRICKS_LINE |
+
+**Where a batch frame's time goes** (C0.2, `-kehai-timing`; one shift each):
+TIMING_LINES
+
 ## Karen 0.3.0: the ablation (7 November)
 
 0.3.0 rebuilds her tricks ([Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back)). The plan
