@@ -21,11 +21,12 @@ trap cleanup EXIT
 rm -rf "$clone"; cp -Rc ~/Developer/Kehai "$clone"; rm -rf "$clone/Temp" "$clone/.claude/worktrees"
 (cd "$root" && git archive HEAD) | tar -x -C "$clone"
 sed -i '' 's/^  productName: .*/  productName: Kehai-verify/' "$clone/ProjectSettings/ProjectSettings.asset"
-mkdir -p "$out"
+mkdir -p "$out"; status=0
 mode=("${mode[@]/CLONE/$clone}")
 "$unity" -batchmode -nographics -projectPath "$clone" -executeMethod EvalBatch.Play "${mode[@]}" \
-  -eval-timeout-min "${KEHAI_TIMEOUT_MIN:-600}" -logFile "$out/unity.log" "$@"
+  -eval-timeout-min "${KEHAI_TIMEOUT_MIN:-600}" -logFile "$out/unity.log" "$@" || status=$?
 data="$HOME/Library/Application Support/TokenLimit/Kehai-verify"
 [ -d "$data/shift_records" ] && cp -R "$data/shift_records" "$out/"
 [ -d "$data/kehai_eval" ] && cp -R "$data/kehai_eval" "$out/"
-echo "done: $out"
+echo "done: $out (Unity exit ${status:-0})"
+exit "${status:-0}"
