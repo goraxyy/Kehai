@@ -231,18 +231,19 @@ public class MotionModelTests
     [Test]
     public void Senses_S0IsTodaysNumbers()
     {
-        // Each expected value is stored in a float first, as Sensorium's locals always were.
+        // Compared as the game uses them: every one of these goes into an Observation's float fields
+        // before anything reads it, so both sides are rounded to a float there (the runtime may keep
+        // a local at double precision).
         SenseModel s = SenseModel.For("s0");
-        for (float a = 0f; a <= 1f; a += 0.05f) { float sigma0 = Mathf.Lerp(3f, 0.8f, a); Assert.AreEqual(sigma0, s.SightSigma(a), 0f); }
+        float F(float v) => new Observation(SenseChannel.Hearing, Vector3.zero, Mathf.Clamp01(v), 1f, "t").Confidence;
+        float G(float v) => new Observation(SenseChannel.Hearing, Vector3.zero, 0.5f, v, "t").Sigma;
+        for (float a = 0f; a <= 1f; a += 0.05f) Assert.AreEqual(G(Mathf.Lerp(3f, 0.8f, a)), G(s.SightSigma(a)), 0f);
         for (float d = 0f; d < 20f; d += 0.7f)
         {
-            float confidence = Mathf.Sqrt(1f - d / 25f) * 0.9f;
-            float hearing = 1f + d * 0.12f;
-            Assert.AreEqual(confidence, s.HearingConfidence(d, 25f), 0f);
-            Assert.AreEqual(hearing, s.HearingSigma(d, d * 0.5f, true), 0f, "S0 ignores walls and the dark");
+            Assert.AreEqual(F(Mathf.Sqrt(1f - d / 25f) * 0.9f), F(s.HearingConfidence(d, 25f)), 0f);
+            Assert.AreEqual(G(1f + d * 0.12f), G(s.HearingSigma(d, d * 0.5f, true)), 0f, "S0 ignores walls and the dark");
         }
-        float testimony = 2.5f + 12f * 0.25f;
-        Assert.AreEqual(testimony, s.TestimonySigma(12f), 0f);
+        Assert.AreEqual(G(2.5f + 12f * 0.25f), G(s.TestimonySigma(12f)), 0f);
         s.Trace(TraceKind.WetFootprint, 0.5f, 3f, out float conf, out float sigma);
         Assert.AreEqual(0.55f * 0.5f, conf, 0f);
         Assert.AreEqual(3f, sigma, 0f);

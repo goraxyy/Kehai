@@ -73,7 +73,7 @@ public class Karen040MeasureTests
         string brain = File.ReadAllText(Path.Combine(AiRoot, "Core/KarenBrain.cs"));
         string record = Regex.Match(brain, @"void RecordDecision\(.*?\n        }", RegexOptions.Singleline).Value;
         Assert.IsNotEmpty(record);
-        StringAssert.Contains("PolicyObservation.Build(", record, "the record's inputs are the brain's observation");
+        StringAssert.Contains("BrainObservation.Build(", record, "the record's inputs are the brain's observation (version 2, under Decision/)");
         StringAssert.DoesNotContain("TruePlayerPosition", record);
         StringAssert.DoesNotContain("PlayerPresence", record);
         Assert.IsTrue(Karen040Files.UnderTheRule(AiRoot).Any(f => f.EndsWith("LearningRecord.cs")), "the source scan covers the record");
