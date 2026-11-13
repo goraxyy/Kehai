@@ -146,6 +146,8 @@ namespace Kehai.Karen
                 case "blackout": return "cutting the power to the whole store";
                 case "fog": return "filling the cold room or the stockroom with fog";
                 case "camera_bolt_on": return "fitting a camera into a shelf, aimed where you go";
+                case "camera_watch": return "watching the store's cameras from the office";
+                case "camera_break": return "breaking the store's cameras";
                 case "shelf_sweep": return "knocking a shelf's stock onto the floor";
                 case "spill": return "dropping a spill on your way";
                 case "bin_tamper": return "tipping rubbish back into a bin";
