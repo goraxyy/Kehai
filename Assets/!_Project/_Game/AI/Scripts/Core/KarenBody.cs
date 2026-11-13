@@ -306,6 +306,16 @@ namespace Kehai.Karen
             if (Agent.velocity.sqrMagnitude < 0.05f) return;
             HingeDoor door = HingeDoor.ClosedAhead(transform.position, Agent.velocity, 1.8f);
             if (door != null && !door.Locked) door.OpenFor(transform.position, NoiseAuthor.Karen);
+
+            // The automatic doors too (0.4.1): they open as she nears, from further off the
+            // faster she comes, and she doesn't step between panels that are still sliding.
+            AutoDoubleDoor auto = AutoDoubleDoor.Ahead(transform.position, Agent.velocity);
+            if (auto == null) return;
+            auto.OpenForKaren();
+            if (auto.Openness >= 0.6f || !Agent.isOnNavMesh) return;
+            Vector3 to = auto.transform.position - transform.position;
+            to.y = 0f;
+            if (to.magnitude < config.bodyRadius + 0.9f) Agent.velocity = Vector3.zero;   // wait at the glass
         }
 
         void Footsteps()
