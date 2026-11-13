@@ -92,6 +92,13 @@ public class PlayerInteract : MonoBehaviour
     }
     public bool IsHolding => holdTarget != null;
 
+    // The hold in progress, 0 to 1, and how long is left of it: for the hold ring (InteractHud).
+    public float HoldProgress01 => holdTarget == null ? 0f : Mathf.Clamp01(holdTimer / Mathf.Max(0.01f, holdTarget.HoldDuration));
+    public float HoldSecondsLeft => holdTarget == null ? 0f : Mathf.Max(0f, holdTarget.HoldDuration - holdTimer);
+
+    // What the crosshair is on can be held right now, though E isn't down yet.
+    public bool CanHoldTarget => currentTarget is IHoldInteractable hold && hold.CanHold(this);
+
     public IInteractable CurrentTarget => currentTarget;
 
     void Awake()

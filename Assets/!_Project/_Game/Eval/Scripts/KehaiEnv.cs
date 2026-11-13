@@ -726,6 +726,14 @@ namespace Kehai.Eval
             if (target == null) { r.Fail($"no breaker '{a.target}'"); yield break; }
             yield return Approach(target.transform.position, 1.5f, a, r);
             if (r.Finished) yield break;
+            // 0.4.1: a tripped breaker comes back by holding the box for 20 s, all three at once.
+            BreakerPanel panel = BreakerPanel.Instance;
+            if (panel != null && panel.box is IHoldInteractable hold && hold.CanHold(Driver.Hands))
+            {
+                yield return HoldOn(panel.box, target.transform.position, hold.HoldDuration + 2f, () => !hold.CanHold(Driver.Hands));
+                if (hold.CanHold(Driver.Hands)) r.Fail("the breakers are still tripped"); else r.Pass("breakers reset");
+                yield break;
+            }
             yield return Tap(target, target.transform.position);
             r.Pass("thrown");
         }

@@ -106,11 +106,12 @@ namespace Kehai.Karen
         }
     }
 
-    // The breaker box out in the backstreet, rebuilt as a puzzle (Karen.md §8.1, §3.5).
+    // The breaker box out in the backstreet (Karen.md §8.1, §3.5).
     //
-    // Three light circuits, each with its own hum when you look at it. After a blackout
-    // they have to go back on in rising pitch — low, middle, high — in the dark, by ear.
-    // Get it wrong and everything you'd already thrown trips again.
+    // Three light circuits, each with its own hum when you look at it. After a blackout they
+    // come back together when the box is held for twenty seconds (ElectricBox, BackstreetFix:
+    // 0.4.1). Until then they were a puzzle, thrown back one by one in rising pitch; a tripped
+    // switch can't be tapped on any more, though a live one can still be thrown off.
     //
     // Until 0.3.0 a fourth switch jammed the PA at the cost of a light circuit. The PA has its
     // own off switch in the staff room now (PaBox), and it costs nothing.
@@ -132,6 +133,28 @@ namespace Kehai.Karen
         public event System.Action<float> BlackoutResolved;   // seconds it took
 
         public bool IsOn(LightCircuit c) => on[(int)c];
+
+        // How far a hold on the box has got, 0 to 1: the switches light up in turn to show it.
+        public float Progress { get; private set; }
+
+        public void ShowProgress(float normalised)
+        {
+            float p = Mathf.Clamp01(normalised);
+            if (Mathf.Approximately(p, Progress)) return;
+            Progress = p;
+            RefreshVisuals();
+        }
+
+        // Whether a switch shows lit: it's on, or the hold has reached it (a third each).
+        public bool ShownOn(int index) => on[index] || Progress >= (index + 1) / 3f;
+
+        // The box was held to the end: every circuit back on, and the mains with them.
+        public void ResetAll()
+        {
+            for (int i = 0; i < 3; i++) on[i] = true;
+            Progress = 0f;
+            Settle();
+        }
 
         void Awake()
         {
@@ -235,29 +258,15 @@ namespace Kehai.Karen
                 on[index] = false;
                 OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), at);
             }
-            else if (IsNextInOrder(index))
-            {
-                on[index] = true;
-                OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), at);
-            }
             else
             {
-                // Wrong order: everything already thrown trips again.
-                for (int i = 0; i < 3; i++) on[i] = false;
+                // A tripped one doesn't go back with a tap (0.4.1): the box is held for that.
                 Mistakes++;
                 OneShotAudio.PlayAt(ProceduralAudio.ErrorBuzz(), at);
             }
 
             NoiseBus.Emit(at, 0.5f, NoiseKind.Environmental, NoiseAuthor.Player);
             Settle();
-        }
-
-        // Only the circuits that are still off have to go in rising pitch among themselves.
-        bool IsNextInOrder(int index)
-        {
-            for (int i = 0; i < 3; i++)
-                if (!on[i] && pitch[i] < pitch[index]) return false;
-            return true;
         }
 
         // Once all three light circuits are back, the mains come back.
@@ -287,6 +296,7 @@ namespace Kehai.Karen
         public void ResetForShift()
         {
             for (int i = 0; i < 3; i++) on[i] = true;
+            Progress = 0f;
             BlackoutStarted = -1f;
             Mistakes = 0;
             LightControl.Instance?.ApplyCircuits();
@@ -296,7 +306,7 @@ namespace Kehai.Karen
         public string Prompt(int index)
         {
             string name = ((LightCircuit)index).ToString().ToLowerInvariant();
-            return on[index] ? $"Throw the {name} lights off" : $"Throw the {name} lights on";
+            return on[index] ? $"Throw the {name} lights off" : $"The {name} lights are tripped: hold the breaker box";
         }
     }
 
@@ -330,7 +340,7 @@ namespace Kehai.Karen
         public void Refresh()
         {
             if (lamp == null) return;
-            bool on = panel.SwitchOn(index);
+            bool on = panel.ShownOn(index);
             lamp.material.color = on ? colour : colour * 0.25f;
             transform.localScale = new Vector3(0.16f, on ? 0.24f : 0.18f, 0.08f);
         }
