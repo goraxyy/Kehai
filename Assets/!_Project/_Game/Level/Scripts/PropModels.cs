@@ -1,7 +1,8 @@
 using UnityEngine;
 
 // Karen's 0.3.0 props as models (build plan B6.1): her camera, the fridge control box and the
-// PA box. The Blender models live on the Mac (~/Desktop/KehaiRelated/Props), never in git; the
+// PA box. 0.4.1 adds the PA microphone, the camera box, the store's cameras and the office
+// screen. The Blender models live on the Mac (~/Desktop/KehaiRelated/Props), never in git; the
 // editor menu Kehai/Props/Import Karen's Props copies them into Resources/KarenProps, which git
 // ignores. Until then — and in tests and batch runs on a clean checkout — every prop builds
 // its own boxes, so nothing depends on the art being there.
@@ -9,6 +10,10 @@ public static class PropModels
 {
     public const string Folder = "KarenProps";
     public const string Camera = "karen_camera", FogBox = "fridge_control_box", PaBox = "pa_box";
+    public const string ClosingMic = "pa_microphone", CameraBox = "camera_box", StoreCamera = "store_camera", CctvScreen = "cctv_screen";
+
+    // Every model, for the importer and the tests.
+    public static readonly string[] All = { Camera, FogBox, PaBox, ClosingMic, CameraBox, StoreCamera, CctvScreen };
 
     // Whether the model has been imported.
     public static bool Has(string name) => Resources.Load<GameObject>(Folder + "/" + name) != null;

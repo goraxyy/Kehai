@@ -19,6 +19,7 @@ public static class KarenFixtures
     public const float BoxHeight = 1.45f;      // centre of a wall box above the floor, metres
     public const float FogBoxGap = 0.15f;      // between the breaker box and the fridge box
     public const float PaBoxBeside = 0.65f;    // from the time clock to the PA box, along the wall
+    public const float MicBeside = 0.45f;      // from the PA box on to the PA microphone (0.4.1)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void OnLoad()
@@ -37,6 +38,8 @@ public static class KarenFixtures
         WcRack(outline);
         if (Object.FindAnyObjectByType<FogBox>() == null) PlaceFogBox(outline);
         if (Object.FindAnyObjectByType<PaBox>() == null) PlacePaBox(outline);
+        if (Object.FindAnyObjectByType<ClosingMic>() == null) PlaceClosingMic(outline);
+        StoreCameras.Install(outline);
         TwoWayDoors();
         FogVisuals.Ensure();
         WallClockHands.Ensure();
@@ -96,6 +99,24 @@ public static class KarenFixtures
         Vector3 at = clock.transform.position + across * PaBoxBeside;
         at.y = FloorY(clock.transform.position) + BoxHeight;
         PaBox.Build(Wall(at, facing), facing, outline);
+    }
+
+    // ---- the PA microphone (0.4.1) ----------------------------------------------------------
+
+    // On the same wall as the time clock and the PA box, one step further along: you clock in,
+    // and at closing time you say so, in the same corner.
+    static void PlaceClosingMic(Material outline)
+    {
+        Puncher clock = Object.FindAnyObjectByType<Puncher>();
+        if (clock == null) return;
+        Vector3 facing = TowardFloor(clock.transform.position);
+        Vector3 across = Vector3.Cross(Vector3.up, facing).normalized;
+        Vector3 at = clock.transform.position + across * (PaBoxBeside + MicBeside);
+        // If that end of the wall is taken (a corner, a door frame), go the other side of the clock.
+        if (Physics.CheckSphere(at + facing * 0.25f, 0.12f, ~0, QueryTriggerInteraction.Ignore))
+            at = clock.transform.position - across * PaBoxBeside;
+        at.y = FloorY(clock.transform.position) + BoxHeight;
+        ClosingMic.Build(Wall(at, facing), facing, outline);
     }
 
     // ---- doors (B4.1) -----------------------------------------------------------------------

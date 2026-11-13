@@ -176,6 +176,28 @@ namespace Kehai.Karen
             return a;
         }
 
+        // Somebody else on the microphone (0.4.1: you, closing the store). The chime, then the
+        // words, through the speakers nearest the listener and on screen under the speaker's
+        // name. It isn't one of Karen's announcements: it doesn't join her queue or raise her
+        // events, so her log and her fairness audit never take your voice for hers. False with
+        // the PA switched off.
+        public bool SayAs(string speaker, string text)
+        {
+            if (!Powered || string.IsNullOrEmpty(text)) return false;
+            PositionVoices();
+            Play(ProceduralAudio.PaChime());
+            StartCoroutine(Words(text));
+            KarenScreen.Ensure().Subtitle($"<color=#{UiTheme.Hex(UiTheme.Good)}>{speaker}</color> <size=70%>(store PA)</size>\n{text}",
+                                          ChimeSeconds + text.Length * 0.06f + 1.5f);
+            return true;
+        }
+
+        System.Collections.IEnumerator Words(string text)
+        {
+            yield return new WaitForSeconds(ChimeSeconds);
+            if (Powered) Play(ProceduralAudio.Voice(text));
+        }
+
         // A sound through the speaker nearest a point — her footsteps from the wrong side of
         // the store, a crackle, hold music.
         public void PlayNear(Vector3 point, AudioClip clip, float gain = 1f)

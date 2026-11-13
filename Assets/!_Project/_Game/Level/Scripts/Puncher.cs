@@ -33,7 +33,7 @@ public class Puncher : HighlightInteractable, IHoldInteractable
         if (shiftManager == null) return "Punch in";
         if (shiftManager.IsFrozen) return "Hold E to restart the clock";
         if (!shiftManager.IsShiftActive) return "Clock in";
-        return shiftManager.CanClockOut ? "Clock out" : "Finish your tasks first";
+        return shiftManager.CanClockOut ? "Clock out" : shiftManager.ClockOutBlocker;
     }
 
     // ---- restarting the clock she stopped ------------------------------------------------

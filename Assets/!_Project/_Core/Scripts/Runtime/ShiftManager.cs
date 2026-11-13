@@ -2,8 +2,12 @@ using System;
 using UnityEngine;
 
 // A shift runs from clocking in at the puncher to clocking out again.
-// The clock stops letting customers in once the shift time is up, but the shift itself
-// only ends when the player punches out.
+//
+// 0.4.1: when the shift's time is up it's closing time, and nothing more: customers keep
+// coming until you announce over the PA that the store is closed (the PA microphone in the
+// staff room, ClosingMic). The announcement closes the doors. Until it's made, the shift
+// can't be ended while a customer is in the store. Before 0.4.1 the doors closed by
+// themselves when the countdown reached zero.
 public class ShiftManager : MonoBehaviour
 {
     [Header("Shift Settings")]
@@ -59,27 +63,81 @@ public class ShiftManager : MonoBehaviour
     void Update()
     {
         if (IsShiftActive && IsFrozen) FrozenSeconds += Time.deltaTime;
-        if (!IsShiftActive || !CustomersAllowed || IsFrozen) return;
+        if (!IsShiftActive || !CustomersAllowed || IsFrozen || TimeRemaining <= 0f) return;
 
         TimeRemaining -= Time.deltaTime;
-        if (TimeRemaining <= 0f) CloseDoors();
+        if (TimeRemaining <= 0f) ReachClosingTime();
     }
 
-    // The countdown has run out: the doors are closed to customers, and the shift waits for the
-    // clock-out. From then on Karen makes no new chores (0.3.0, the owner's call of 8 November).
+    // ---- closing (0.4.1) ---------------------------------------------------------------------
+
+    // The countdown has run out. Customers still come in until the announcement.
+    public bool ClosingTime => IsShiftActive && TimeRemaining <= 0f;
+
+    // The store was announced closed over the PA this shift.
+    public bool ClosingAnnounced { get; private set; }
+
+    // Closing time, and nobody has said so yet: the task list asks for the announcement.
+    public bool AwaitingAnnouncement => ClosingTime && !ClosingAnnounced;
+
+    // The doors are closed to customers: the announcement has been made, and the shift waits
+    // for the clock-out. From then on Karen makes no new chores (0.3.0, the owner's call of 8
+    // November).
     public bool DoorsClosed => IsShiftActive && !CustomersAllowed;
 
-    // The doors close: what the countdown does when it reaches zero. Public for tests.
+    // What the countdown does when it reaches zero: closing time starts. Public for tests.
+    public void ReachClosingTime()
+    {
+        if (!IsShiftActive || closingTold) return;
+        TimeRemaining = 0f;
+        closingTold = true;
+        if (taskManager != null) taskManager.NotifyChanged();
+        ShiftStateChanged?.Invoke();
+    }
+    bool closingTold;
+
+    // The announcement, from the PA microphone: the store is closed, no more customers come in.
+    // Only at closing time, and once. False when it isn't time, or it's been said.
+    public bool AnnounceClosing()
+    {
+        if (!AwaitingAnnouncement) return false;
+        CloseDoors();
+        return true;
+    }
+
+    // The doors close: what the announcement does. Public for tests, and for anything that
+    // has to close the store without the microphone.
     public void CloseDoors()
     {
         if (!IsShiftActive || !CustomersAllowed) return;
         TimeRemaining = 0f;
+        closingTold = true;
+        ClosingAnnounced = true;
         SetCustomersAllowed(false);      // doors close; shift ends when the player punches out
+        if (taskManager != null) taskManager.NotifyChanged();
         ShiftStateChanged?.Invoke();
     }
 
-    // The shift can't be closed with spills on the floor, a full bin, or gaps on the shelves.
-    public bool CanClockOut => !IsShiftActive || taskManager == null || taskManager.AllComplete;
+    // Customers in the store right now, from every spawner.
+    public static int CustomersInStore => CustomerSpawner.InStore;
+
+    // Until the store is announced closed, the shift can't end with a customer inside.
+    public bool CustomersHoldTheShift => IsShiftActive && !ClosingAnnounced && CustomersInStore > 0;
+
+    // The shift can't be closed with spills on the floor, a full bin, or gaps on the shelves;
+    // nor, before the closing announcement, with a customer in the store (0.4.1).
+    public bool CanClockOut => !IsShiftActive || (taskManager == null || taskManager.AllComplete) && !CustomersHoldTheShift;
+
+    // Why the time clock refuses, in the clock's own words.
+    public string ClockOutBlocker
+    {
+        get
+        {
+            if (CanClockOut) return string.Empty;
+            if (taskManager != null && !taskManager.AllComplete) return "Finish your tasks first";
+            return AwaitingAnnouncement ? "Announce closing on the PA first" : "Customers are still in the store";
+        }
+    }
 
     // Called by the puncher.
     public void ToggleShift()
@@ -105,6 +163,8 @@ public class ShiftManager : MonoBehaviour
         IsShiftActive = true;
         SetFrozen(false);
         FrozenSeconds = 0f;
+        ClosingAnnounced = false;
+        closingTold = false;
         TimeRemaining = shiftDurationSeconds;
         SetCustomersAllowed(true);
 
@@ -162,6 +222,8 @@ public class ShiftManager : MonoBehaviour
         IsShiftActive = false;
         SetFrozen(false);
         TimeRemaining = 0f;
+        ClosingAnnounced = false;
+        closingTold = false;
         SetCustomersAllowed(false);
 
         if (taskManager != null)
@@ -187,8 +249,8 @@ public class ShiftManager : MonoBehaviour
         appliedDuration = shiftDurationSeconds;
         TimeRemaining = Mathf.Max(0f, TimeRemaining + delta);
 
-        if (TimeRemaining > 0f && !CustomersAllowed) SetCustomersAllowed(true);
-        if (TimeRemaining <= 0f && CustomersAllowed) SetCustomersAllowed(false);
+        // Extended past closing time: the doors open again and the announcement is owed again.
+        if (TimeRemaining > 0f && !CustomersAllowed) { ClosingAnnounced = false; closingTold = false; SetCustomersAllowed(true); }
 
         ShiftStateChanged?.Invoke();
     }
