@@ -15,8 +15,27 @@ namespace Kehai.Store
     // StoreMap is the store as Karen reasons about it — 1.5 m cells and a graph. This is the
     // store as it looks from above, for the F1 map, the replay and the shift report.
     // Coordinates are world X (right) and world Z (up the page: north).
+    //
+    // 0.4.1: the drawing is of the building. It used to be fitted round every walkable
+    // triangle, so the street and the parking lot took the top half of the page and the store
+    // was small under them. Now it's fitted round the rooms (Zones), and each room and each
+    // aisle of the sales floor has its own colour and its own label.
     public sealed class StoreFloorPlan
     {
+        // A place with a name: a room, or one aisle of the sales floor. Its floor is painted its
+        // own colour and its name is written on it.
+        public sealed class Zone
+        {
+            public string Name;         // "Stockroom", "Aisle 7"
+            public string Detail = "";  // what the aisle sells: "Noodles, Pasta & Rice"
+            public bool Aisle;
+            public Color Colour;
+            public Vector2 LabelAt;
+            public readonly List<Vector2> Cells = new List<Vector2>();   // the middles of its 1.5 m cells
+        }
+
+        public readonly List<Zone> Zones = new List<Zone>();
+
         public enum ShapeKind { Wall, Shelf, Fixture, Door, AutoDoor }
 
         public sealed class Shape
@@ -81,6 +100,7 @@ namespace Kehai.Store
             plan.AddWallsAndFixtures();
             plan.AddDoors();
             plan.AddRooms(map);
+            plan.AddZones(map);
             foreach (Landmark l in map.Landmarks)
                 plan.Pins.Add(new Pin { Kind = l.Kind, Name = l.Name, At = Flat(l.Position) });
             plan.FitBounds();
@@ -172,6 +192,47 @@ namespace Kehai.Store
             }
         }
 
+        // The rooms, and the sales floor aisle by aisle, from Karen's map: every region that
+        // isn't a doorway and is part of the building (StoreMap.KarenWorksIn: indoors, the
+        // backstreet, the pavement out front; not the street, the parking lot or the alleys).
+        void AddZones(StoreMap map)
+        {
+            var byName = new Dictionary<string, Zone>();
+            foreach (Region r in map.Regions)
+            {
+                if (r.IsDoor || string.IsNullOrEmpty(r.Area) || !StoreMap.KarenWorksIn(r.Area)) continue;
+                bool aisle = r.Area == "Sales floor";
+                string name = aisle ? StoreMap.ShortSign(r.Section) : r.Area;
+                if (!byName.TryGetValue(name, out Zone zone))
+                {
+                    zone = new Zone { Name = name, Aisle = aisle, Colour = ZoneColour(name), Detail = aisle ? SignDetail(r.Section) : "" };
+                    byName[name] = zone;
+                    Zones.Add(zone);
+                }
+                foreach (int cell in r.Cells) zone.Cells.Add(Flat(map.CellPosition[cell]));
+            }
+            foreach (Zone zone in Zones)
+            {
+                if (zone.Cells.Count == 0) continue;
+                Vector2 mean = Vector2.zero;
+                foreach (Vector2 c in zone.Cells) mean += c;
+                mean /= zone.Cells.Count;
+                zone.LabelAt = zone.Cells.OrderBy(c => (c - mean).sqrMagnitude).First();
+            }
+            Zones.RemoveAll(z => z.Cells.Count == 0);
+        }
+
+        // "Aisle 7 · Noodles, Pasta & Rice" → "Noodles, Pasta & Rice".
+        public static string SignDetail(string sign)
+        {
+            if (string.IsNullOrEmpty(sign)) return "";
+            int dot = sign.IndexOf('·');
+            return dot >= 0 ? sign.Substring(dot + 1).Trim() : "";
+        }
+
+        // How far past the building the drawing goes, in metres.
+        public const float Margin = 3f;
+
         void FitBounds()
         {
             bool any = false;
@@ -182,9 +243,11 @@ namespace Kehai.Store
                 minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x);
                 minY = Mathf.Min(minY, p.y); maxY = Mathf.Max(maxY, p.y);
             }
-            foreach (Vector2[] t in Floor) foreach (Vector2 p in t) Grow(p);
+            // The building first (0.4.1). A level with no named rooms falls back to all its floor.
+            foreach (Zone z in Zones) foreach (Vector2 p in z.Cells) Grow(p);
+            if (!any) foreach (Vector2[] t in Floor) foreach (Vector2 p in t) Grow(p);
             if (!any) foreach (Shape s in Shapes) foreach (Vector2 p in s.Corners) Grow(p);
-            Bounds = Rect.MinMaxRect(minX - 2f, minY - 2f, maxX + 2f, maxY + 2f);
+            Bounds = Rect.MinMaxRect(minX - Margin, minY - Margin, maxX + Margin, maxY + Margin);
 
             // Anything wholly outside the walkable area (scenery across the road) isn't drawn.
             Rect keep = Bounds;
@@ -243,16 +306,37 @@ namespace Kehai.Store
 
         // ---- colours shared by the in-game map and the report ---------------------------
 
+        // A shelf's colour: its aisle's, brighter, so the shelves stand out on their own floor.
         public static Color SectionColour(string section)
         {
             if (string.IsNullOrEmpty(section)) return new Color(0.55f, 0.52f, 0.47f);
-            unchecked
+            Color.RGBToHSV(ZoneColour(StoreMap.ShortSign(section)), out float hue, out _, out _);
+            return Color.HSVToRGB(hue, 0.4f, 0.78f);
+        }
+
+        // A zone's floor colour: soft, and different from its neighbours'. The rooms have their
+        // own; the aisles step round the colour wheel by the golden ratio, in aisle order, so
+        // aisles side by side never get near-identical colours.
+        public static Color ZoneColour(string name)
+        {
+            switch (name)
             {
-                int h = 17;
-                foreach (char ch in section) h = h * 31 + ch;
-                float hue = Mathf.Abs(h % 360) / 360f;
-                return Color.HSVToRGB(hue, 0.45f, 0.72f);
+                case "Lobby": return Color.HSVToRGB(0.11f, 0.30f, 0.50f);
+                case "Staff room": return Color.HSVToRGB(0.47f, 0.32f, 0.44f);
+                case "Office": return Color.HSVToRGB(0.74f, 0.26f, 0.50f);
+                case "WC": return Color.HSVToRGB(0.57f, 0.30f, 0.50f);
+                case "Stockroom": return Color.HSVToRGB(0.05f, 0.36f, 0.48f);
+                case "Cold storage": return Color.HSVToRGB(0.53f, 0.22f, 0.60f);
+                case "Backstreet": return Color.HSVToRGB(0.36f, 0.16f, 0.36f);
+                case "Pavement": return Color.HSVToRGB(0.25f, 0.08f, 0.34f);
             }
+            int n = 0;
+            bool numbered = false;
+            foreach (char ch in name ?? "")
+                if (char.IsDigit(ch)) { n = n * 10 + (ch - '0'); numbered = true; }
+            if (!numbered) unchecked { foreach (char ch in name ?? "") n = n * 31 + ch; n = Mathf.Abs(n % 97); }
+            float hue = Mathf.Repeat(0.02f + n * 0.61803f, 1f);
+            return Color.HSVToRGB(hue, 0.34f, n % 2 == 0 ? 0.46f : 0.54f);
         }
 
         // ---- JSON, for the shift report ------------------------------------------------
