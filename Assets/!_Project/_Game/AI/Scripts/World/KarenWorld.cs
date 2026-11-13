@@ -358,6 +358,7 @@ namespace Kehai.Karen
             foreach (GameObject go in placed) if (go != null) Destroy(go);
             placed.Clear();
             DoorBlock.ClearAll();
+            StoreCameras.Instance?.ResetForShift();   // 0.4.1: the store's cameras work again
             FogState.Reset();
             StopPhantom();
             Pa.Clear();
