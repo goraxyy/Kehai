@@ -110,3 +110,7 @@ Assets/ML-Agents.meta
 # Karen 0.3.0 props imported from the Blender pipeline (Kehai/Props/Import Karen's Props): art stays on the Mac
 /Assets/!_Project/_Game/Level/Props/
 /Assets/!_Project/_Game/Level/Props.meta
+
+# Kehai 0.4.1: the trick videos shown in the Esc menu's TRICKS tab (tools/tricks/record_tricks.sh). Media stays on the Mac.
+/Assets/StreamingAssets/TrickVideos/
+/Assets/StreamingAssets/TrickVideos.meta

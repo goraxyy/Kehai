@@ -148,15 +148,15 @@ namespace Kehai.Karen
             int size = FontSize;
             if (body == null)
             {
-                body = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true };
+                body = UiTheme.Soften(new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true });
                 heading = new GUIStyle(body) { fontStyle = FontStyle.Bold };
                 small = new GUIStyle(body);
             }
             body.fontSize = size;
             heading.fontSize = Mathf.RoundToInt(size * 1.3f);
             small.fontSize = Mathf.RoundToInt(size * 0.8f);
-            body.normal.textColor = heading.normal.textColor = new Color(0.94f, 0.94f, 0.92f);
-            small.normal.textColor = new Color(0.75f, 0.77f, 0.8f);
+            body.normal.textColor = heading.normal.textColor = UiTheme.Text;
+            small.normal.textColor = UiTheme.Dim;
         }
 
         void OnGUI()
@@ -166,9 +166,7 @@ namespace Kehai.Karen
             if (painter == null) painter = new MapPainter(StoreFloorPlan.Current);
             Styles();
 
-            GUI.color = new Color(0.04f, 0.045f, 0.06f, 0.94f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            UiTheme.Fill(new Rect(0, 0, Screen.width, Screen.height), UiTheme.Ink);
 
             if (showScrubber) DrawReplay();
             else DrawLive();
@@ -193,6 +191,9 @@ namespace Kehai.Karen
             MapPainter.Legend(new Rect(margin, painter.Area.yMax + margin, mapWidth - margin, legendH), size);
 
             var panel = new Rect(mapWidth + margin, margin, Screen.width - mapWidth - margin * 2f, Screen.height - margin * 2f);
+            // The story sits on a card of its own, beside the map.
+            UiTheme.Fill(panel, UiTheme.Panel, size * 0.8f);
+            panel = new Rect(panel.x + size * 0.9f, panel.y + size * 0.7f, panel.width - size * 1.8f, panel.height - size * 1.4f);
             GUILayout.BeginArea(panel);
             routeScroll = GUILayout.BeginScrollView(routeScroll);
             if (showRoutes) RouteList();
@@ -389,8 +390,7 @@ namespace Kehai.Karen
 
             // The timeline, with the moments that matter marked on it.
             var bar = new Rect(margin, Screen.height - timelineH, Screen.width - margin * 2f, size * 1.2f);
-            GUI.color = new Color(0.2f, 0.22f, 0.27f);
-            GUI.DrawTexture(bar, Texture2D.whiteTexture);
+            UiTheme.Fill(bar, UiTheme.Raised, size * 0.35f);
             foreach (ShiftEvent e in r.Events)
             {
                 Color c;

@@ -37,9 +37,13 @@ public sealed class MainMenu : MonoBehaviour
         return choices;
     }
 
-    static readonly Color Crimson = new Color32(0xDC, 0x14, 0x3C, 0xFF);
-    static readonly Color SoftBlack = new Color32(0x15, 0x15, 0x18, 0xFF);
-    static readonly Color Paper = new Color(0.96f, 0.96f, 0.95f);
+    // The theme's (0.4.1): the crimson is its coral now, the black its charcoal, the white warm.
+    static readonly Color Crimson = UiTheme.Accent;
+    static readonly Color SoftBlack = new Color32(21, 22, 27, 255);
+    static readonly Color Paper = UiTheme.Text;
+
+    // The rounded face for everything but the title, which keeps its heavy one.
+    public static TMP_FontAsset Soft => UiTheme.TmpFont ?? GameFonts.Body;
     static readonly Color Grey = new Color(0.66f, 0.66f, 0.71f);
     static readonly Color DimGrey = new Color(0.5f, 0.5f, 0.55f);
 
@@ -321,9 +325,9 @@ public sealed class MainMenu : MonoBehaviour
     {
         confirming = true;
         ClearList();
-        var question = MakeText(list, "Question", GameFonts.Body, 38f, Paper, new Vector2(0f, ListTop - 4f), new Vector2(760f, 60f));
+        var question = MakeText(list, "Question", MainMenu.Soft, 38f, Paper, new Vector2(0f, ListTop - 4f), new Vector2(760f, 60f));
         question.text = career.over ? "Start a new career?" : "Start a new career? This one ends here.";
-        var detail = MakeText(list, "Detail", GameFonts.Body, 24f, Grey, new Vector2(0f, ListTop - 64f), new Vector2(700f, 100f));
+        var detail = MakeText(list, "Detail", MainMenu.Soft, 24f, Grey, new Vector2(0f, ListTop - 64f), new Vector2(700f, 100f));
         detail.text = GameNames.Antagonist + " forgets everything she has learned about you: where you hide, the routes you take, and which of her tricks work on you. Your settings stay.";
         AddButton("Yes, start over", ListTop - 190f, StartOver);
         AddButton("No, go back", ListTop - 190f - RowHeight, ShowChoices);
@@ -419,17 +423,17 @@ public sealed class MainMenu : MonoBehaviour
         TextMeshProUGUI title = MakeText(column, "Title", GameFonts.Heading, 156f, Paper, new Vector2(-4f, -232f), new Vector2(820f, 190f));
         title.characterSpacing = 8f;
         title.text = GameNames.Game.ToUpperInvariant();
-        MakeText(column, "Tagline", GameFonts.Body, 30f, Grey, new Vector2(2f, -418f), new Vector2(820f, 46f)).text = "The sense that someone is there.";
+        MakeText(column, "Tagline", MainMenu.Soft, 30f, Grey, new Vector2(2f, -418f), new Vector2(820f, 46f)).text = "The sense that someone is there.";
         Image rule = Box(column, "Rule", new Vector2(4f, -482f), new Vector2(72f, 4f)).gameObject.AddComponent<Image>();
         rule.color = Crimson;
         rule.raycastTarget = false;
-        status = MakeText(column, "Status", GameFonts.Body, 24f, Grey, new Vector2(2f, -508f), new Vector2(820f, 36f));
+        status = MakeText(column, "Status", MainMenu.Soft, 24f, Grey, new Vector2(2f, -508f), new Vector2(820f, 36f));
 
         list = Box(column, "List", Vector2.zero, new Vector2(820f, 0f));
 
-        MakeText(root, "Version", GameFonts.Body, 20f, DimGrey, new Vector2(ColumnX, 56f), new Vector2(1200f, 30f), new Vector2(0f, 0f))
+        MakeText(root, "Version", MainMenu.Soft, 20f, DimGrey, new Vector2(ColumnX, 56f), new Vector2(1200f, 30f), new Vector2(0f, 0f))
             .text = $"v{Application.version}      Arrows or mouse to choose  ·  Enter to select";
-        TextMeshProUGUI phones = MakeText(root, "Headphones", GameFonts.Body, 20f, DimGrey, new Vector2(-80f, 56f), new Vector2(700f, 30f), new Vector2(1f, 0f));
+        TextMeshProUGUI phones = MakeText(root, "Headphones", MainMenu.Soft, 20f, DimGrey, new Vector2(-80f, 56f), new Vector2(700f, 30f), new Vector2(1f, 0f));
         phones.alignment = TextAlignmentOptions.BottomRight;
         phones.text = "Best played with headphones";
 
@@ -567,12 +571,17 @@ public sealed class MenuButton : Button
         barRt.SetParent(rt, false);
         barRt.anchorMin = barRt.anchorMax = barRt.pivot = new Vector2(0f, 0.5f);
         barRt.anchoredPosition = new Vector2(0f, 0f);
-        barRt.sizeDelta = new Vector2(5f, size.y * 0.58f);
+        barRt.sizeDelta = new Vector2(7f, size.y * 0.58f);
         button.bar = barRt.gameObject.AddComponent<Image>();
-        button.bar.color = new Color32(0xDC, 0x14, 0x3C, 0x00);
+        button.bar.sprite = UiTheme.Rounded;
+        button.bar.type = Image.Type.Sliced;
+        button.bar.pixelsPerUnitMultiplier = 6f;
+        Color accent = UiTheme.Accent;
+        accent.a = 0f;
+        button.bar.color = accent;
         button.bar.raycastTarget = false;
 
-        button.label = MainMenu.MakeText(rt, "Label", GameFonts.Body, 40f, Idle, Vector2.zero, size);
+        button.label = MainMenu.MakeText(rt, "Label", MainMenu.Soft, 40f, Idle, Vector2.zero, size);
         button.label.alignment = TextAlignmentOptions.Left;   // by the font's line, so every row sits the same
         button.label.textWrappingMode = TextWrappingModes.NoWrap;
         button.label.text = text;
@@ -608,7 +617,7 @@ public sealed class MenuButton : Button
         if (label == null) return;
         float e = Mathf.SmoothStep(0f, 1f, lit);
         label.rectTransform.anchoredPosition = new Vector2(Mathf.Lerp(0f, 26f, e), 0f);
-        label.color = Color.Lerp(Idle, Color.white, e);
+        label.color = Color.Lerp(Idle, UiTheme.Text, e);
         Color c = bar.color;
         c.a = e;
         bar.color = c;
