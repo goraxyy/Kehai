@@ -11,8 +11,11 @@ using UnityEngine.UI;
 //
 // Closed01 is the whole interface: 0 is wide open, 1 is shut. Blink, Close and Open are
 // conveniences over it. Anything else can drive it directly instead — a cutscene, passing
-// out from burnout, or a webcam tracking the player's real eyes — without touching this
-// script, because nothing here decides *when* the eyes close, only what that looks like.
+// out from burnout — without touching this script, because nothing here decides *when* the
+// eyes close, only what that looks like.
+//
+// The player's own eyes come in through SetShut (0.4.1): two states, open and shut, with the
+// trip between them at a real eyelid's speed (BlinkLids).
 public class Eyelids : MonoBehaviour
 {
     [Header("State")]
@@ -55,6 +58,11 @@ public class Eyelids : MonoBehaviour
     public bool IsFullyClosed => closed >= 0.999f;
     public bool IsFullyOpen => closed <= 0.001f;
 
+    // The player's eyes, as two states: see BlinkLids. Only moves the lids while it's in use.
+    readonly BlinkLids blink = new BlinkLids();
+    bool blinkDriven;
+    public BlinkLids BlinkState => blink;
+
     Canvas canvas;
     RectTransform topLid;
     RectTransform bottomLid;
@@ -66,6 +74,7 @@ public class Eyelids : MonoBehaviour
     void LateUpdate()
     {
         if (testBlinkKey != KeyCode.None && Input.GetKeyDown(testBlinkKey)) Blink();
+        if (blinkDriven) StepBlink(Time.unscaledDeltaTime);
 
         // Applied every frame rather than only on change, so an external driver can just
         // write to `closed` and never call anything.
@@ -80,6 +89,30 @@ public class Eyelids : MonoBehaviour
         StopRunning();
         closed = Mathf.Clamp01(amount);
         Apply(closed);
+    }
+
+    // The player's eyes: shut or open, nothing between (0.4.1). Call it every frame or only on
+    // a change; it does nothing while the state asked for is the one it already has, so it
+    // doesn't fight a cutscene that's closing the eyes for its own reasons.
+    public void SetShut(bool shut)
+    {
+        if (!blinkDriven)
+        {
+            if (!shut) return;                 // open and asked to be open: nothing to do
+            StopRunning();
+            blink.Snap(false);
+            blinkDriven = true;
+        }
+        blink.Set(shut);
+    }
+
+    // One step of the eyes' trip. LateUpdate drives it; public so a test can.
+    public void StepBlink(float dt)
+    {
+        if (!blinkDriven) return;
+        blink.Step(dt);
+        closed = blink.Closed01;
+        if (!blink.WantShut && blink.IsOpen) blinkDriven = false;   // back open: hand the lids back
     }
 
     public void Blink() => Blink(blinkDuration);
@@ -139,6 +172,7 @@ public class Eyelids : MonoBehaviour
 
     void StopRunning()
     {
+        blinkDriven = false;
         if (running == null) return;
         StopCoroutine(running);
         running = null;
