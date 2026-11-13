@@ -9,4 +9,8 @@ out="${1:-$HOME/Library/Application Support/TokenLimit/Kehai/kehai_eval/ablation
 KEHAI_TIMEOUT_MIN=240 "$root/tools/belief/run_unity.sh" --ablation "$out" -ablation-rungs CE \
   -ablation-profiles efficient,skittish,reckless,cautious -ablation-careers 3 -ablation-shifts 10 -ablation-start 1 \
   -ablation-seconds 150 -ablation-seed 1000 -kehai-timing
-python3 "$root/tools/eval/analyze_ablation.py" "$out"/kehai_eval/ablation_*.jsonl
+# The clone's data folder can hold older runs' files too: take the newest by name (the names are times).
+run="$(ls "$out"/kehai_eval/ablation_2*.jsonl | sort | tail -1)"
+python3 "$root/tools/eval/analyze_ablation.py" "$run" > "$out/results.md"
+python3 "$root/tools/eval/tricks030.py" "$run" > "$out/tricks.md"
+echo "$run → $out/results.md, $out/tricks.md"

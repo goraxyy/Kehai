@@ -12,7 +12,7 @@ lock=~/TokenLimit/marketing/state/heavy.lock
 clone="${KEHAI_CLONE:-/private/tmp/kehai-verify-run}"
 if pgrep -f "Unity.app/Contents/MacOS/Unity" >/dev/null; then echo "Unity is open: close the editor first." >&2; exit 1; fi
 mkdir "$lock" 2>/dev/null || { echo "the heavy-work lock is held: $(cat $lock/job 2>/dev/null)" >&2; exit 1; }
-echo $$ > "$lock/pid"; echo "kehai 0.4.0: $(basename "$league")" > "$lock/job"
+echo $$ > "$lock/pid"; echo "kehai 0.4.0: $(basename -- "$league")" > "$lock/job"
 cleanup() {
   for k in LastUsedProjectPath kProjectBasePath kWorkspacePath; do defaults write com.unity3d.UnityEditor5.x "$k" "$HOME/Developer/Kehai" 2>/dev/null || true; done
   rm -rf "$clone" "$HOME/Library/Application Support/TokenLimit/Kehai-verify"; rm -f "$HOME/Library/Preferences/unity.TokenLimit.Kehai-verify.plist"; rm -rf "$lock"

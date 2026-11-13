@@ -599,6 +599,62 @@ plan's §11, written before any run and unchanged. Negative results first.
 
 **Where a batch frame's time goes** (C0.2, `-kehai-timing`, one shift): her belief update 13–16%, her decisions 7–10%, her plan's steps 1–2%, the eval's metrics 1%; the rest is outside her code and not broken down.
 
+### The baseline: 0.3.0's ablation, run again (12 November)
+
+C0.1's gated half, on the owner's go. It's 0.3.0's last ablation, and 0.4.0's baseline.
+
+**How it ran:**
+- The build branch at `d36db99`, every switch at its default (planner, mirror K0, senses S0, the
+  trap fences off). That plays today's shift as `main` does (above), so it stands for `main`.
+- 0.3.0's arguments: rungs C and E; four players, the cautious one held out; 3 careers of shifts
+  1–10; 150 s shifts; seed 1000. 240 shifts in 66 minutes, on a clone, silent.
+- **No pairs against `main`:** the 7 November `main` run's file was in a clone since deleted. So the
+  numbers below are this run's own, set beside 0.3.0's earlier runs, not paired with them.
+- Command: `tools/eval/ablation_030_rerun.sh`; tables by `analyze_ablation.py` and `tricks030.py`.
+
+**0.3.0's primary metrics** ([its plan §7](../archive/0.3.0-build-plan.md#7-tests-and-metrics)), unchanged:
+
+| # | Metric | Result |
+|---|---|---|
+| 1 | Every live trick works end to end | **Not judged here:** it's the trick check's, which passed on this branch (above). In the ablation every trick but Cut ran; Cut ran in 0 of 240 shifts again |
+| 2 | Fairness violations: 0 | **Pass:** 0 in 240 shifts |
+| 3 | No stuck shifts | **Fail:** 12 of 240 (`main` on 7 November: 2; 0.3.0's first run 13, second 9). 4 of 180 for the training players, **8 of 60 for the held-out player** |
+| 4 | Setpoint error against `main` | **Not measured:** no `main` run to pair with. On its own: 0.25 ± 0.01 (C, training), 0.26 ± 0.01 (E, training), 0.29 ± 0.01 (C, held out), 0.28 ± 0.01 (E, held out). 0.3.0's first run had 0.25, 0.25, 0.24 and 0.26 |
+
+**What didn't work:**
+- **Stuck shifts are still a fail, mostly the held-out player's.** In the 12, the bot reached
+  closing with 1–13 bays to restock and up to 8 spills, and failed its actions two ways:
+  "interrupted" (its fear) and "couldn't get close enough". The spill spots in the office failed
+  most: Office/G 21 times in three held-out shifts (14 in one), Office/H 9 times. C0.2's fence for
+  Office/G was off in this run (it's off by default, above).
+- **Held-out setpoint error is a little higher than 0.3.0's first run** (0.28–0.29 against
+  0.24–0.26). Unpaired, so not a measured change.
+- **Cut never ran,** as before.
+
+**The rest:**
+
+| | Training players (180) | Held out (60) |
+|---|---|---|
+| Catches per shift, rung C / E | 0.98 ± 0.02 / 0.97 ± 0.02 | 0.90 ± 0.06 / 0.83 ± 0.07 |
+| Tricks started per shift | 4.2 | 5.7 |
+| Shift length | 153 s | 222 s |
+| Shifts that ran past 150 s | 86 | 42 |
+| Median time to catch (Kaplan–Meier), C / E | 160 s / 157 s (all players) | |
+
+- **The tricks land.** Of tricks with a world effect, landed against started per shift (training,
+  rung C): Shelf sweep 1.01 of 1.06, Spill 0.48 of 0.52, Fog 0.46 of 0.56, Phantom chime all,
+  Blackout all, the understudy all. Ambush and Poll witnesses have no world effect, so they never
+  record a landing (0 is "not recorded", not "failed").
+- **Catches:** 70% (C) and 64% (E) came in a hunt, all seen in the last 3 s; 18–22% within 10 m of the
+  time clock (the clock-camp guard's line is 50%). About a quarter came while a room was fogged.
+- **Belief, out of view:** 17.1 ± 0.9 m (C) and 19.1 ± 1.0 m (E) from her likeliest cell to the
+  player. Against remembering the last sighting, the grid is 16–17 m closer, but no better in log p
+  (+0.04 ± 0.08 at C).
+- **Rung E against C, paired:** about the same (catches −0.03 ± 0.03, setpoint +0.001 ± 0.008); out
+  of view she's a little further off at E (+2.0 ± 1.2 m).
+- **Speed:** 0.097 s of real time per simulated second, as in 0.3.0's second run (0.099); `main` on
+  7 November was 0.044.
+
 ## Karen 0.3.0: the ablation (7 November)
 
 0.3.0 rebuilds her tricks ([Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back)). The plan
