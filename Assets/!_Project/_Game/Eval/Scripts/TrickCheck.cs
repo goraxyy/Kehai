@@ -43,6 +43,10 @@ namespace Kehai.Eval
         sealed class Row
         {
             public string Id, Started = "—", Landed = "—", Showed = "—", Fixed = "—", Note = "";
+            // For the trick videos (0.4.1, tools/tricks/record_tricks.sh): the replay it's in,
+            // and when in that shift it started and first landed (-1: it didn't).
+            public string Krec = "";
+            public float StartedAt = -1f, LandedAt = -1f;
         }
 
         readonly List<Row> rows = new List<Row>();
@@ -161,8 +165,15 @@ namespace Kehai.Eval
             if (!started) { row.Started = "no"; row.Note = why ?? "the shift ended"; yield break; }
             row.Started = "yes";
             float startedAt = brain.ShiftTime;
+            row.StartedAt = startedAt;
+            row.Krec = Kehai.Replay.ReplayRecorder.Instance != null ? Kehai.Replay.ReplayRecorder.Instance.CurrentFile ?? "" : "";
             try { yield return Follow(brain, t, row, startedAt, over); }
-            finally { row.Note += Thoughts(brain, id, startedAt); }
+            finally
+            {
+                ThoughtRecord landed = brain.Log.Records.FirstOrDefault(r => r.Kind == "EFFECT" && r.T >= startedAt - 0.01f);
+                if (landed != null) row.LandedAt = landed.T;
+                row.Note += Thoughts(brain, id, startedAt);
+            }
         }
 
         // What she thought about it, for the report: her plan, its checks and its effects.
@@ -258,6 +269,13 @@ namespace Kehai.Eval
             Directory.CreateDirectory(dir);
             ReportPath = Path.Combine(dir, "trick_check_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture) + ".md");
             File.WriteAllText(ReportPath, sb.ToString());
+
+            // The same, as tab-separated lines a script can read: where each trick is on film.
+            var film = new StringBuilder("id\tstarted\tlanded\tkrec\n");
+            foreach (Row r in rows)
+                film.Append(r.Id).Append('\t').Append(r.StartedAt.ToString("0.00", CultureInfo.InvariantCulture)).Append('\t')
+                    .Append(r.LandedAt.ToString("0.00", CultureInfo.InvariantCulture)).Append('\t').Append(r.Krec).Append('\n');
+            File.WriteAllText(Path.ChangeExtension(ReportPath, ".tsv"), film.ToString());
             Debug.Log("TrickCheck report " + ReportPath + "\n" + sb);
         }
     }

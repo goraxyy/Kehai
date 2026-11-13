@@ -6,8 +6,9 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-// Brings Karen's 0.3.0 props in from the Blender pipeline (~/Desktop/KehaiRelated/Props, or
-// KEHAI_PROPS): her camera, the fridge control box and the PA box (build plan B6.1, C6.1).
+// Brings Karen's props in from the Blender pipeline (~/Desktop/KehaiRelated/Props, or
+// KEHAI_PROPS): her camera, the fridge control box and the PA box (0.3.0 build plan B6.1, C6.1),
+// and 0.4.1's PA microphone, camera box, store camera and office screen (PropModels.All).
 //
 //   Level/Props/Resources/KarenProps/<name>.fbx   the models; PropModels loads them by name
 //   Level/Props/Materials/M_*.mat                 URP Lit, from the same colours as the Blender
@@ -20,7 +21,7 @@ public static class PropImport
     public const string Root = "Assets/!_Project/_Game/Level/Props";
     const string ModelsFolder = Root + "/Resources/" + PropModels.Folder;
     const string MaterialsFolder = Root + "/Materials";
-    static readonly string[] Models = { PropModels.Camera, PropModels.FogBox, PropModels.PaBox };
+    static readonly string[] Models = PropModels.All;
 
     // name → colour (sRGB), smoothness, metallic, emission (black for none). As build_props.py.
     static readonly (string name, Color colour, float smooth, float metal, Color emit)[] Palette =
@@ -44,6 +45,13 @@ public static class PropImport
         ("M_LampGreen", new Color(0.05f, 0.45f, 0.1f), 0.8f, 0f, new Color(0.1f, 0.9f, 0.2f) * 1.5f),
         ("M_LampRedDim", new Color(0.45f, 0.04f, 0.04f), 0.75f, 0f, Color.black),
         ("M_Lever", new Color(0.06f, 0.06f, 0.06f), 0.7f, 0f, Color.black),
+        // Kehai 0.4.1
+        ("M_CamBoxSteel", new Color(0.24f, 0.27f, 0.33f), 0.45f, 0.35f, Color.black),
+        ("M_CamBoxSeam", new Color(0.19f, 0.22f, 0.27f), 0.4f, 0.3f, Color.black),
+        ("M_TalkRed", new Color(0.78f, 0.2f, 0.2f), 0.65f, 0f, Color.black),
+        ("M_MicFoam", new Color(0.13f, 0.13f, 0.14f), 0.05f, 0f, Color.black),
+        ("M_ScreenCase", new Color(0.07f, 0.07f, 0.08f), 0.55f, 0f, Color.black),
+        ("M_ScreenGlass", new Color(0.02f, 0.025f, 0.03f), 0.92f, 0f, Color.black),
     };
 
     static string SourceFolder

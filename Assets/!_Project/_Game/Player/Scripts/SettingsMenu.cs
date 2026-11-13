@@ -179,6 +179,9 @@ public sealed class SettingsMenu : MonoBehaviour
         DrawBar(new Rect(inner.x, inner.yMax - size * 1.9f, inner.width, size * 1.9f));
     }
 
+    // A page by number (0 settings, 1 keys, 2 tricks): for the picture-taking check.
+    public void ShowTab(int index) => Go((Tab)UnityEngine.Mathf.Clamp(index, 0, 2));
+
     void Go(Tab to)
     {
         tab = to;

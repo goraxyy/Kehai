@@ -449,7 +449,10 @@ public sealed class CctvWall : MonoBehaviour
         screen.transform.SetParent(transform, false);
         screen.transform.localPosition = local;
 
-        if (PropModels.Place(PropModels.CctvScreen, screen.transform) == null)
+        GameObject model = PropModels.Place(PropModels.CctvScreen, screen.transform);
+        // The screens face their −z side (as the old monitors did); a model is made facing −z too.
+        if (model != null) model.transform.localRotation = Quaternion.identity;
+        else
         {
             GameObject bezel = KarenProps.Box("Bezel", screen.transform.position, new Vector3(Screen.x, Screen.y, 0.07f), new Color(0.07f, 0.07f, 0.08f), screen.transform, collider: false);
             bezel.transform.localPosition = Vector3.zero;
