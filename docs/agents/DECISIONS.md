@@ -151,6 +151,16 @@ shoppers, Karen and tasks in it; aisle signs; a floating origin for very long wa
   away.
 - **Her touch kills** (changed 2026-10-16), and the shift starts again, so she can't catch you
   again straight away.
+- **Cover is eye to eye** (0.4.1, the owner's call). An eye sees you only along a clear line to
+  your eyes. Before, any of three rays (feet, chest, head) would do, so feet showing under a rack
+  gave you away and nobody could say what "hidden" meant. One rule a player can reason about:
+  can she see my eyes?
+- **The store's cameras are screens, not eyes** (0.4.1). They report to her only while she
+  stands at the office screens (Camera watch). Always-on, they would have been six permanent
+  eyes and the trick would mean nothing.
+- **Her eyes were doubled without a test** (0.4.1, the owner's call: "still improve her eyes,
+  even with no tests yet"): 72 m, half strength at 32 m, gain 3.3. 0.3.0's ablation baseline and
+  0.4.0's fitted senses used the old eyes. Open until an ablation runs with the new ones.
 
 **Why:** the game is about being sensed, not seen through walls. It also makes the AI tests
 honest: an agent that beats her beats a fair opponent.

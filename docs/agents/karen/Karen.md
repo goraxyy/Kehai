@@ -17,6 +17,11 @@ all of that maps onto the systems that already exist in this project.
 >
 > **Karen 0.3.0** (the `0.3.0` branch) brings the owner's tricks back, rebuilt end to end, and
 > removes nine for good. [§17](#17-karen-030-the-tricks-come-back) lists what each one does now.
+>
+> **Kehai 0.4.1** (12 November 2026) changes her eyes (eye to eye, twice the radius, twice as
+> quick), gives the store six cameras and her two tricks with them, limits Fog to the cold room
+> and the stockroom, makes the backstreet's fixes 20 s holds, and has you announce closing time.
+> [§19](#19-kehai-041-her-eyes-the-stores-cameras-closing-time) lists it all.
 
 ---
 
@@ -189,6 +194,9 @@ The targets, and how she does on the walk-by set (`AwarenessTests`):
 
 With a 36 m cone, long aisles stop being safe: she sees down most of the sales floor in 1–2 s.
 The falloff is `1 / (1 + (d / 16)²)`. More in [§16.1](#161-her-eyes).
+
+**In 0.4.1** the cone is 72 m with half strength at 32 m, the gain is 3.3, and `exposure` is
+judged eye to eye: [§19.1](#191-her-eyes) has the numbers and the new walk-by table.
 
 ### 3.2 Hearing — an event bus, not a physics query
 
@@ -879,7 +887,9 @@ constraints, enforced in code, asserted in tests.
 9. **Hands-on tricks happen at her hands** (0.3.0, [§17.3](#173-the-new-fairness-rules)).
 10. **No new chore once the doors close** (0.3.0, the owner's call of 8 November;
     [§17.3](#173-the-new-fairness-rules)). Rule 6 for closing time: the clock-out waits for every
-    chore, so a chore made after closing can keep a shift from ever ending.
+    chore, so a chore made after closing can keep a shift from ever ending. Since 0.4.1 the doors
+    close when you announce it on the PA, not when the countdown ends
+    ([§19.5](#195-closing-time)).
 
 ---
 
@@ -1723,4 +1733,164 @@ Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
     trick is dropped. Spill landed 1 time in 55 starts, and Bin tamper, Tool theft, Camera bolt-on
     and Block door never did. The building's tricks always land.
 - Shelf sweep's bay lookup is now cached: 14% faster.
+
+---
+
+## 19. Kehai 0.4.1: her eyes, the store's cameras, closing time
+
+The owner's 17 items of 12 November 2026, built as one pull request. This section is what
+changed in Karen and in what she can touch; the rest (the map, the UI, the eyelids) is in
+[`CHANGELOG.md`](../CHANGELOG.md). §18 is Karen 0.4.0's, on its own build branch.
+
+### 19.1 Her eyes
+
+Three calls by the owner, all in `SightSensor` and `KarenConfig`.
+
+| | 0.2.0 – 0.3.0 | 0.4.1 |
+|---|---|---|
+| Cone | 150°, 36 m | 150°, **72 m** |
+| Half strength at | 16 m | **32 m** |
+| Gain | 1.65 | **3.3** |
+| Cover | three rays (feet, chest, head); any one would do | **eye to eye**: no clear line to your eyes, nothing seen |
+| "Nothing here" sweep | 120 cells a tick | **240** (the cone is twice as long) |
+
+**Eye to eye.** One rule for cover: an eye sees you only along a clear line from it to your eyes
+(your camera).
+
+| You are | Before | Now | Why |
+|---|---|---|---|
+| Standing behind a short shelf, your head over it | seen (a third of you) | **seen** (half speed) | her eyes have a line to yours over it |
+| Crouched under a stockroom rack, boards between her eyes and yours | **seen** (your feet showed) | **not seen** | no line to your eyes, however clear the floor |
+| Under the same rack, but she's far enough off to look in under the boards | seen | seen | a line under the board is a line |
+| Behind a wall | not seen | not seen | |
+
+- `exposure` is now `SightSensor.ExposureOf(eyes, chest, feet)`: 0 without the eyes; with them,
+  0.5, and 0.25 more each for the chest and the feet. It was a third a ray.
+- Every ray starts at the eye (hers is 15 cm under the top of her body, about your own eye
+  height) and stops at anything solid on any layer. Triggers, your own body, the eye's own body
+  and loose stock don't block it. That part is unchanged.
+- The same rule holds for every eye: her cameras, the store's cameras, Kenji, a possessed shopper.
+
+**Twice as far, twice as quick.** The walk-by set again (`AwarenessTests`):
+
+| You | 0.2.0 | 0.4.1 | Target now |
+|---|---|---|---|
+| Walking 10 m away in a lit aisle | 0.67 s | **0.27 s** | within 0.35 s |
+| 15 m away, 45° off-centre | 1.40 s | **0.47 s** | within 0.75 s |
+| Walking 36 m away | 2.88 s | **0.55 s** | |
+| Walking 72 m away | out of range | **1.45 s** | |
+| Crouched in the dim, only your eyes over cover, 10 m, 45° off | never (a third showing) | **2.2 s** | |
+| Crouched in the dim, no line to your eyes | never | **never** | never |
+
+- The targets are 0.2.0's halved. 0.2.0's third target, "crouched in the dim, never", is replaced
+  by the eye-to-eye rule: hiding is breaking the line between her eyes and yours.
+- She sees as well at twice the distance as 0.2.0's eye did (tested), and twice the gain halves
+  the time to "seen" at every distance (tested).
+- Her gaze light stays a torch's (26 m). `FogState.Open` went from 60 m to 120 m, or fog
+  anywhere would have cut her eye back to 60.
+- **Not measured.** This turns her up while the tuning plan's questions (Q2–Q5) are open. 0.3.0's
+  ablation baseline, run on 12 November, was measured with the old eyes, and 0.4.0's fitted
+  senses were fitted to them. No ablation has run with the new eyes.
+
+### 19.2 The store's cameras
+
+`StoreCameras` (in `Level/Scripts`), put in at load as data like the rest of `KarenFixtures`.
+
+| Camera | Room (`StoreMap.AreaAt`) | Looks at |
+|---|---|---|
+| COLD ROOM | Cold storage | the cold room's floor from its east wall |
+| STOCKROOM | Stockroom | the racks from the west wall |
+| LOBBY | Lobby | the lobby from its east end |
+| STAFF ROOM | Staff room | the room from its west wall |
+| STORE FRONT | Pavement | along the pavement from the facade |
+| BACKSTREET | Backstreet | down the backstreet |
+
+- Each hangs 3 m up (or just under a lower ceiling) on the wall its spot names, found with rays
+  at load (`StoreCameras.Mount`). A scene with no floor under a spot gets no camera there.
+- **The office screens** (`CctvWall`): six, 1.3 m wide, three by two, standing in front of the
+  security desk's old monitors (those are modelled into the desk, 0.94 m wide, and showed
+  nothing). Each shows its camera live, with the camera's name under it.
+- The pictures are drawn one at a time, about 1.4 times a second each, and only while you're
+  within 14 m of the screens. Not in batch mode.
+- **A camera is a `SightSensor`** like any other eye (30 m, 84°, half strength at 14 m, gain
+  1.1). It runs **only while she is at the screens** (`StoreCameras.Watching`). At any other
+  time the cameras tell her nothing: they aren't six more eyes, they're screens somebody has to
+  be looking at.
+- A sighting reaches her as an `Observation` on the infrastructure channel, once a second while
+  the camera's awareness is over its glimpse level, at 0.65 of that awareness: exactly how her
+  own bolt-on camera reports. Nothing under `Belief/` changed.
+
+### 19.3 Two tricks
+
+Appended to `TacticLibrary` (29 entries now), so every older trick keeps its number.
+
+| | Camera watch | Camera break |
+|---|---|---|
+| Id | `camera_watch` | `camera_break` |
+| What she does | walks to the office, stands at the screens for 25 s; a camera that sees you tells her where | shorts the cameras out: all six dark, the screens show static, for you and for her |
+| Action | Search | Disrupt, Corner |
+| Hands-on | yes: within 3.5 m of the screens (`WatchReach`) | no: the building's own, like the lights |
+| Tier, cost, cooldown | 1, 0.05, 120 s | 2, 0.15, 240 s |
+| Sound | the screens hum (`MonitorHum`) | a camera fizzes (`CameraFizz`), at the one nearest where she thinks you are |
+| Your chore | none: keep out of the cameras' view | hold the **camera box** in the backstreet for 20 s |
+| Not available when | no cameras, no screens, broken, already watching | no cameras, already broken, she's watching, no box |
+| After the doors close | allowed | refused (rule 10: it leaves a chore) |
+
+- The watch is one step (`CameraWatchTactic.WatchCameras`). It turns the cameras' eyes on when
+  it begins and off however it ends: done, cut short by a hunt, or the cameras breaking under
+  her.
+- Because Camera watch is hands-on, she finishes the walk to the screens (`FinishesFirst`).
+- Broken cameras are a task ("Fix the store's cameras") and hold the clock-out, like the
+  stopped clock. `Tactic.FixAt` is the camera box, so Ambush can wait on your way to it.
+- Live tricks: **17** (19 choices for the learner).
+
+### 19.4 Fog, and the backstreet's fixes
+
+- **Fog's rooms** are the cold room and the stockroom (`KarenWorld.FogRooms`). They were the
+  sales floor, cold storage and the staff room, and the sales floor is most of the building.
+- The stockroom has no fridges, so its fog pours in at the doorways it shares with the cold room
+  (`KarenWorld.FogSources`).
+- **You see fog only from inside its room** (`FogVisuals.Shows`). The clouds used to be drawn for
+  everyone; the distance fog was already per room. Her eyes were always per room (`FogState`).
+- **A fix in the backstreet is a 20 s hold** (`BackstreetFix`): the breaker box, the fridge
+  control box (3 s until now) and the new camera box. Let go and it starts again.
+- **The breaker puzzle is gone.** The three switches were thrown back one by one, low hum to
+  high. Now the box is held, the switches light in turn to show how far along you are, and all
+  three circuits come back together. A live switch can still be thrown off with a tap.
+- A hold bar under the crosshair says what holding does and counts the seconds down
+  (`InteractHud`). Until 0.4.1 no prompt was ever drawn.
+
+### 19.5 Closing time
+
+- When the countdown reaches zero it's **closing time** and nothing more
+  (`ShiftManager.ReachClosingTime`). Customers keep coming.
+- You **announce it on the PA microphone** (`ClosingMic`), a box on the staff room wall beside
+  the PA box: press E. The doors close to customers from then (`AnnounceClosing`).
+- Until it's announced, **the shift can't be ended while a customer is in the store**
+  (`CustomersHoldTheShift`). After it, the ones still shopping don't hold the shift; the ones at
+  the till or asking for help still do, as before.
+- The announcement is a task from closing time. It needs the PA on. It isn't one of Karen's
+  announcements: it doesn't join her queue or reach her log (`PaSystem.SayAs`). She hears the
+  microphone as a noise where it is.
+- `DoorsClosed` still means what rule 10 needs: no more customers. It's now true from the
+  announcement.
+
+### 19.6 Doors
+
+- **The automatic doors open for her.** She used to walk through the shut panels: her only
+  collider is her touch trigger, and the sensor ignores triggers. Her body now asks as it nears
+  (`AutoDoubleDoor.Ahead`, `OpenForKaren`), from further off the faster she comes (at a run,
+  about 6 m), and she waits at the glass until the panels are 60% open. The chime is authored
+  hers, so her own ears ignore it. You hear it.
+- **E on a swinging door turns it round** (`HingeDoor.Use`), as the fridge and locker doors do.
+  Only the player: she and the test players wait for a door to finish, as before.
+
+### 19.7 The test players and the checks
+
+- The test players announce closing first (`announce_closing`), hold the breaker box instead of
+  tapping breakers, and fix broken cameras (`fix_cameras`).
+- The trick check forces `camera_watch` and `camera_break` too, and writes a `.tsv` beside its
+  report saying when each trick started and landed, for the trick videos
+  ([`tools/tricks`](../../../tools/tricks/README.md)).
+- New EditMode tests: `Kehai041Tests`, `Kehai041SightAndDoorsTests`, `Kehai041InTheStoreTests`.
 

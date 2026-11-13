@@ -6,6 +6,13 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-13 | Where 0.4.1 and 0.4.0 touch the same files, you decide each one later from a list of questions; neither is merged into the other | the 0.4.1 pull request |
+| 2026-11-12 | Her eyes: twice the radius, twice as quick, and cover judged eye to eye (a low shelf doesn't hide you if she sees your eyes; under a rack she doesn't see you without that line). Built with no test yet | [Karen.md §19.1](../agents/karen/Karen.md#191-her-eyes) |
+| 2026-11-12 | Six store cameras shown on the office screens; two tricks, Camera watch and Camera break | [Karen.md §19.2](../agents/karen/Karen.md#192-the-stores-cameras) |
+| 2026-11-12 | Closing time is announced on the PA. Until then customers keep coming, and the shift can't end with one inside | [Karen.md §19.5](../agents/karen/Karen.md#195-closing-time) |
+| 2026-11-12 | Fixing things in the backstreet (lights, fridges, cameras) takes a 20 s hold | [Karen.md §19.4](../agents/karen/Karen.md#194-fog-and-the-backstreets-fixes) |
+| 2026-11-12 | Fog only in the cold room and the stockroom, seen only from inside | same |
+| 2026-11-12 | The eyelids are open or shut, at a real blink's speed. The look is softer. The F1 map shows the building. The README has no controls and no build section | [CHANGELOG.md](../agents/CHANGELOG.md) |
 | 2026-11-11 | The docs are split by reader: `docs/you/` for you, `docs/agents/` for agents | [RULES.md](../agents/RULES.md) |
 | 2026-11-11 | Build Karen 0.4.0. Add fitted senses, a map of what you know about her, and a central model that keeps improving | [0.4.0 plan](plans/0.4.0-build-plan.md) |
 | 2026-11-11 | No language-model layer in the 0.4.0 plan. A style vector and learned pacing stay ideas | [IDEAS.md](IDEAS.md) |

@@ -31,7 +31,13 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 What we may claim is in [`facts.json`](../../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
 
-**0.3.0 wording (branch, not released):** fifteen live tricks, with three Throw choices
+**0.4.1 wording (branch, not released):** seventeen live tricks, with three Throw choices
+(nineteen learner choices in all). New: the store has six cameras you can watch from the office;
+she can watch them too (Camera watch) or break them (Camera break). You announce closing time on
+the PA. Her eyes reach further and judge cover eye to eye; no test has measured the new eyes, so
+don't claim she is fairer or harder.
+
+**0.3.0 wording (merged):** fifteen live tricks, with three Throw choices
 (seventeen learner choices in all). Five drafts are not playable features. The overtime is live:
 in a shift's last two minutes she can stop the time clock; don't call it her signature.
 
