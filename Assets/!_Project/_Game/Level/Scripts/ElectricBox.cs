@@ -35,7 +35,7 @@ public class ElectricBox : HighlightInteractable, IHoldInteractable
 
     public override string GetPrompt()
     {
-        if (PowerSystem.Instance == null) return string.Empty;
+        if (PowerSystem.Instance == null && BreakerPanel.Instance == null) return string.Empty;
         return NeedsFix ? BackstreetFix.Prompt("reset the breakers") : idlePrompt;
     }
 

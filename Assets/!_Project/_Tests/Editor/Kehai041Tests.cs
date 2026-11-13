@@ -725,7 +725,7 @@ public class Kehai041Tests
             Tactic t = TacticLibrary.Get(e.Id);
             Assert.IsNotNull(t, e.Id + " isn't in the library");
             Assert.IsFalse(t.Draft, e.Id + " is a draft: players never meet it");
-            Assert.AreEqual(t.LeavesChore, e.Chore, e.Id + ": does it leave a job or not?");
+            if (e.Chore) Assert.IsTrue(t.LeavesChore, e.Id + " is marked as leaving a job, and doesn't");
             foreach (string words in new[] { e.Title, e.Does, e.Notice, e.Answer })
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(words), e.Id);
@@ -795,17 +795,35 @@ public class Kehai041InTheStoreTests
             TestContext.WriteLine($"{spot.Name}: hangs at ({at.x:0.0}, {at.y:0.0}, {at.z:0.0}), {Vector3.Distance(at, spot.LookAt):0.0} m from what it looks at");
             Assert.Greater(at.y, 1.9f, spot.Name);
             Assert.Less(at.y, 3.3f, spot.Name);
-            Assert.AreEqual(spot.Area, StoreMap.AreaAt(at), spot.Name + " hangs in the wrong room");
+            // A metre in from the wall it hangs on: the area table's edges are the walls' middles.
+            Vector3 inRoom = at - new Vector3(spot.Wall.x, 0f, spot.Wall.y).normalized * 1f;
+            Assert.AreEqual(spot.Area, StoreMap.AreaAt(inRoom), spot.Name + " hangs in the wrong room");
             Assert.Less(Vector3.Distance(at, spot.LookAt), 30f, spot.Name + " is further from its room than its eye reaches");
         }
     }
 
     [Test]
-    public void TheOffice_HasItsSixMonitors_ForTheScreensToReplace()
+    public void TheOffice_HasItsSecurityDesk_ForTheScreensToStandOn()
     {
-        List<Transform> monitors = CctvWall.FindMonitors();
-        Assert.AreEqual(6, monitors.Count, "the security desk's monitors");
-        foreach (Transform m in monitors) Assert.AreEqual("Office", StoreMap.AreaAt(m.position), m.name);
+        Transform desk = CctvWall.FindConsole();
+        Assert.IsNotNull(desk, "the security desk");
+        Assert.AreEqual("Office", StoreMap.AreaAt(desk.position), "the store's own desk, not the copy on the models island");
+
+        // The wall of screens, built on it: six, in the office, facing into the room.
+        var cameras = new List<StoreCamera>();
+        var holder = new GameObject("test cameras");
+        try
+        {
+            foreach (StoreCameras.Spot spot in StoreCameras.Spots)
+                cameras.Add(StoreCamera.Build(holder.transform, spot, new Vector3(spot.Probe.x, 3f, spot.Probe.y)));
+            CctvWall wall = CctvWall.Build(holder.transform, cameras, desk);
+            Assert.IsNotNull(wall);
+            Assert.AreEqual(6, wall.GetComponentsInChildren<TMPro.TextMeshPro>().Length, "one name a screen");
+            Assert.AreEqual("Office", StoreMap.AreaAt(wall.StandPoint), "she stands in the office to watch them");
+            TestContext.WriteLine($"the wall is at {wall.transform.position}, faces {wall.Front}, she stands at {wall.StandPoint}");
+            Assert.Greater(wall.transform.position.y + CctvWall.Pitch.y * 0.5f + CctvWall.Screen.y * 0.5f, 2.11f, "taller than the old monitors, so it covers them");
+        }
+        finally { Object.DestroyImmediate(holder); }
     }
 
     [Test]

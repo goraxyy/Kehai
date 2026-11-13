@@ -123,7 +123,7 @@ namespace Kehai
                     px[y * size + x] = new Color32(255, 255, 255, a);
                 }
                 tex.SetPixels32(px);
-                tex.Apply(false, true);
+                tex.Apply(false, false);
                 rounded = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
                     SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
                 rounded.name = "UiTheme rounded";

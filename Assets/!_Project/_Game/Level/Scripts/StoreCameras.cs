@@ -11,9 +11,10 @@ using UnityEngine.Rendering;
 //   - Six cameras, one each in the cold room, the stockroom, the lobby, the staff room, in
 //     front of the store and in the backstreet (Spots). Each is hung at the top of the nearest
 //     wall, found with rays, and aimed at its room.
-//   - The six monitors on the office's security desk were decoration. They're replaced by a
-//     wall of six bigger screens (CctvWall), each showing one camera live. From the office you
-//     can see into six rooms: where Karen is, where the shoppers are.
+//   - The six monitors on the office's security desk were decoration (they're modelled into
+//     the desk itself). A wall of six bigger screens stands in front of them (CctvWall), each
+//     showing one camera live. From the office you can see into six rooms: where Karen is,
+//     where the shoppers are.
 //   - A camera box on the backstreet wall, by the breaker box and the fridge box (CameraBox):
 //     hold E for twenty seconds to fix the cameras when she has broken them.
 //
@@ -56,7 +57,13 @@ public sealed class StoreCameras : MonoBehaviour
     public const int FeedWidth = 384, FeedHeight = 216;
     public const float ReportEvery = 1f;         // a watched camera's sighting reaches her once a second
 
-    public static StoreCameras Instance { get; private set; }
+    // Unity's own null check, so a destroyed one (a scene unloaded, a test torn down) reads as none.
+    static StoreCameras instance;
+    public static StoreCameras Instance
+    {
+        get => instance != null ? instance : null;
+        private set => instance = value;
+    }
 
     readonly List<StoreCamera> cameras = new List<StoreCamera>();
     public IReadOnlyList<StoreCamera> Cameras => cameras;
@@ -365,13 +372,17 @@ public sealed class StoreCamera : MonoBehaviour
     }
 }
 
-// The office's screens (0.4.1): six, one a camera, where the security desk's six small monitors
-// stood. Bigger than those were (1.3 m wide against 0.94), in the same three-by-two. Each shows
-// its camera live and the camera's name under it; with the cameras broken, grey static and
-// NO SIGNAL.
+// The office's screens (0.4.1): six, one a camera, on the security desk where its six small
+// monitors are. Those are part of the desk's own model (one mesh), so they can't be switched
+// on or made bigger; the new screens stand just in front of them and cover them. Bigger than
+// those (1.3 m wide against 0.94), in the same three-by-two. Each shows its camera live and the
+// camera's name under it; with the cameras broken, grey static and NO SIGNAL.
 public sealed class CctvWall : MonoBehaviour
 {
-    public const string MonitorName = "CCTV monitor";               // what the office builder calls the old ones
+    public const string ConsoleName = "Security workstation";       // the office builder's name for the desk
+    // The old monitors, in the desk's own frame (OfficeRoomModels, "SecurityConsole"): three
+    // across, two up, their glass on the −z side, the lower row's foot 0.88 m up, 0.21 m back.
+    public const float OldBottom = 0.88f, OldDepth = 0.21f;
     public static readonly Vector2 Screen = new Vector2(1.3f, 0.78f);   // one screen's case, metres
     public static readonly Vector2 Glass = new Vector2(1.22f, 0.686f);  // its picture: 16 by 9
     public static readonly Vector2 Pitch = new Vector2(1.36f, 0.86f);   // centre to centre
@@ -390,43 +401,28 @@ public sealed class CctvWall : MonoBehaviour
     // Where someone stands to watch them: a step and a half back from the middle of the wall.
     public Vector3 StandPoint => new Vector3(transform.position.x, 0f, transform.position.z) + Front * 1.6f;
 
-    // The old monitors of the store's own security desk (not the copy on the models island).
-    public static List<Transform> FindMonitors()
+    // The store's own security desk (not the copy on the models island), by the name the office
+    // builder gave it. Null in a scene without one.
+    public static Transform FindConsole()
     {
-        var found = new List<Transform>();
-        foreach (Transform t in FindObjectsByType<Transform>())
-        {
-            if (t.name != MonitorName && SceneObjectNames.Original(t) != MonitorName) continue;
-            bool inStore = false;
-            for (Transform p = t; p != null; p = p.parent) if (p.name == "Supermarket") { inStore = true; break; }
-            if (inStore) found.Add(t);
-        }
-        return found;
+        GameObject desk = SceneObjectNames.Find(ConsoleName);
+        return desk != null ? desk.transform : null;
     }
 
-    public static CctvWall Build(Transform parent, IReadOnlyList<StoreCamera> cameras)
-    {
-        List<Transform> old = FindMonitors();
-        if (old.Count == 0 || cameras == null || cameras.Count == 0) return null;
+    public static CctvWall Build(Transform parent, IReadOnlyList<StoreCamera> cameras) => Build(parent, cameras, FindConsole());
 
-        // The middle of the old six, and the way they faced (their glass is on their −z side).
-        Vector3 centre = Vector3.zero;
-        float lowest = float.MaxValue;
-        foreach (Transform m in old)
-        {
-            centre += m.position;
-            lowest = Mathf.Min(lowest, m.position.y);
-        }
-        centre /= old.Count;
-        Quaternion facing = old[0].rotation;
-        foreach (Transform m in old) m.gameObject.SetActive(false);
+    public static CctvWall Build(Transform parent, IReadOnlyList<StoreCamera> cameras, Transform console)
+    {
+        if (console == null || cameras == null || cameras.Count == 0) return null;
 
         var root = new GameObject("CCTV_Screen_Wall");
         root.transform.SetParent(parent, false);
         int rows = Mathf.CeilToInt(cameras.Count / 3f);
-        // The bottom row sits where the old bottom row did, a little above the desk.
-        float bottom = lowest + Screen.y * 0.5f + 0.06f;
-        root.transform.SetPositionAndRotation(new Vector3(centre.x, bottom + (rows - 1) * Pitch.y * 0.5f, centre.z), facing);
+        // The bottom row's foot is where the old bottom row's was; the wall stands just in front
+        // of the old monitors, facing the way they face.
+        float middle = OldBottom + Screen.y * 0.5f + (rows - 1) * Pitch.y * 0.5f;
+        root.transform.SetPositionAndRotation(console.TransformPoint(new Vector3(0f, middle, OldDepth - 0.085f)), console.rotation);
+        Quaternion facing = console.rotation;
         var wall = root.AddComponent<CctvWall>();
         wall.cameras = cameras;
         wall.Front = -(facing * Vector3.forward);

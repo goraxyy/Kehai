@@ -322,7 +322,7 @@ namespace Kehai.Store
             switch (name)
             {
                 case "Lobby": return Color.HSVToRGB(0.11f, 0.30f, 0.50f);
-                case "Staff room": return Color.HSVToRGB(0.47f, 0.32f, 0.44f);
+                case "Staff room": return Color.HSVToRGB(0.44f, 0.42f, 0.40f);
                 case "Office": return Color.HSVToRGB(0.74f, 0.26f, 0.50f);
                 case "WC": return Color.HSVToRGB(0.57f, 0.30f, 0.50f);
                 case "Stockroom": return Color.HSVToRGB(0.05f, 0.36f, 0.48f);

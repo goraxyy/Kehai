@@ -80,7 +80,12 @@ namespace Kehai.Karen
             go.transform.position = position;
             go.transform.localScale = size;
             go.GetComponent<Renderer>().sharedMaterial = Lit(colour);
-            if (!collider) Object.Destroy(go.GetComponent<Collider>());
+            if (!collider)
+            {
+                // Destroy in play; in an editor test there's no end of frame to wait for.
+                if (Application.isPlaying) Object.Destroy(go.GetComponent<Collider>());
+                else Object.DestroyImmediate(go.GetComponent<Collider>());
+            }
             return go;
         }
     }
