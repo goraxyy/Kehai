@@ -89,14 +89,17 @@ public sealed class StoreCameras : MonoBehaviour
 
     // Called by KarenFixtures.Install. Skips what's there, and does nothing in a scene that
     // isn't the store (no floor under a spot: no camera there).
-    public static StoreCameras Install(Material outline)
+    public static StoreCameras Install(Material outline) => InstallAt(Spots, outline);
+
+    // The same for any list of spots: a test hangs one camera in a room made of boxes.
+    public static StoreCameras InstallAt(IReadOnlyList<Spot> spots, Material outline)
     {
         if (Instance != null) return Instance;
         var root = new GameObject("Store_Cameras");
         var all = root.AddComponent<StoreCameras>();
         Instance = all;
 
-        foreach (Spot spot in Spots)
+        foreach (Spot spot in spots)
         {
             if (!Mount(spot, out Vector3 at)) continue;
             all.cameras.Add(StoreCamera.Build(root.transform, spot, at));
@@ -105,7 +108,7 @@ public sealed class StoreCameras : MonoBehaviour
         {
             // Not the store: leave nothing behind.
             Instance = null;
-            if (Application.isPlaying) Destroy(root); else DestroyImmediate(root);
+            CctvWall.Drop(root);
             return null;
         }
 
@@ -203,13 +206,20 @@ public sealed class StoreCameras : MonoBehaviour
 
     void Update()
     {
-        if (Watching && !Broken) Watch(Time.deltaTime);
+        Step(Time.deltaTime);
         if (!Broken) DrawFeeds();
+    }
+
+    // One step of the cameras as her eyes: only while she's at the screens and they work.
+    // Update drives it; public so a test can.
+    public void Step(float dt)
+    {
+        if (Watching && !Broken) Watch(dt);
     }
 
     // The cameras' eyes, while she's at the screens. Each is a SightSensor like any other eye:
     // it sees you only along a clear line, in its cone, lit enough, and not through her fog.
-    public void Watch(float dt)
+    void Watch(float dt)
     {
         WatchedSeconds += dt;
         foreach (StoreCamera cam in cameras)

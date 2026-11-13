@@ -118,8 +118,12 @@ public class ShiftManager : MonoBehaviour
         ShiftStateChanged?.Invoke();
     }
 
-    // Customers in the store right now, from every spawner.
-    public static int CustomersInStore => CustomerSpawner.InStore;
+    // Customers in the store right now, from every spawner (unless a test says otherwise).
+    public static System.Func<int> CountCustomers = () => CustomerSpawner.InStore;
+    public static int CustomersInStore => CountCustomers();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => CountCustomers = () => CustomerSpawner.InStore;
 
     // Until the store is announced closed, the shift can't end with a customer inside.
     public bool CustomersHoldTheShift => IsShiftActive && !ClosingAnnounced && CustomersInStore > 0;
