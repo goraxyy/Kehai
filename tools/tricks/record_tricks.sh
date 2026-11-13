@@ -53,7 +53,7 @@ if [ "$CHECK" = 1 ]; then
   if pgrep -f "Unity.app/Contents/MacOS/Unity" >/dev/null; then echo "record_tricks: a Unity is running; close it first" >&2; exit 3; fi
   mkdir "$LOCK" 2>/dev/null || { echo "record_tricks: another heavy job holds the lock ($(cat "$LOCK/job" 2>/dev/null))" >&2; exit 75; }
   echo $$ > "$LOCK/pid"; echo "record_tricks trick check" > "$LOCK/job"
-  args=(-batchmode -nographics -projectPath "$PROJECT" -executeMethod EvalBatch.Play -kehai-trick-check -trick-check-seed "$SEED" -logFile "$DATA/trick_check.log")
+  args=(-batchmode -nographics -projectPath "$PROJECT" -executeMethod EvalBatch.Play -kehai-trick-check -trick-check-seed "$SEED" -eval-timeout-min 60 -logFile "$DATA/trick_check.log")
   [ -n "$ONLY" ] && args+=(-trick-check-only "$ONLY")
   mkdir -p "$DATA"
   echo "record_tricks: running the trick check (about ten minutes)…"
