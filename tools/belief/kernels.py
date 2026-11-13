@@ -7,12 +7,18 @@ Doubles throughout; the C# uses floats, which is why the gate allows 1e-3.
 """
 from __future__ import annotations
 
+import collections
 import heapq
 import math
 
 import numpy as np
 
 # ---- the map --------------------------------------------------------------------------------------
+
+
+def add_at(a, idx, v):
+    """np.add.at, by bincount: the same sums, many times faster on the predict step's edges."""
+    a += np.bincount(idx, weights=v, minlength=len(a))
 
 
 class Map:
@@ -54,9 +60,29 @@ class Map:
     def within(self, x: float, z: float, radius: float) -> np.ndarray:
         return (self.x - x) ** 2 + (self.z - z) ** 2 <= radius * radius
 
+    DISTANCE_CACHE = 512            # maps kept (about 19 MB at today's 4,708 cells)
+
     def distances(self, sources, max_distance=math.inf, blocked=None) -> np.ndarray:
-        """StoreMap.Distances / DistancesFrom: Dijkstra, stopping once past max_distance, so a cell
-        just beyond it may carry the distance it was reached at (as in the C#)."""
+        """StoreMap.Distances / DistancesFrom, remembered: the fits replay the same traces hundreds
+        of times, and a trace asks for the same few places' distances again and again. The array
+        returned is read-only (it's shared); copy it to change it."""
+        key = (int(sources) if isinstance(sources, (int, np.integer)) else tuple(int(s) for s in sources),
+               float(max_distance), None if blocked is None else np.asarray(blocked, bool).tobytes())
+        cache = self.__dict__.setdefault("_distance_cache", collections.OrderedDict())
+        d = cache.get(key)
+        if d is not None:
+            cache.move_to_end(key)
+            return d
+        d = self._distances(sources, max_distance, blocked)
+        d.setflags(write=False)
+        cache[key] = d
+        if len(cache) > self.DISTANCE_CACHE:
+            cache.popitem(last=False)
+        return d
+
+    def _distances(self, sources, max_distance=math.inf, blocked=None) -> np.ndarray:
+        """Dijkstra, stopping once past max_distance, so a cell just beyond it may carry the
+        distance it was reached at (as in the C#)."""
         d = np.full(self.n, math.inf)
         heap = []
         for s in ([sources] if isinstance(sources, (int, np.integer)) else sources):
@@ -224,25 +250,23 @@ class Grid:
         self.sync_lines()
 
     def step_outside(self, dt, scratch, inflow):
+        # One array step over every exit's line and every second of it (the same sums as
+        # BeliefGrid's loops: a line's mass is returned first, then this step's inflow joins it).
         m = self.m
         k_exits = len(m.exits)
         back = min(1.0, max(0.0, m.c["outside_return"] * dt))
         returning = np.zeros(k_exits)
-        for k in range(k_exits):
-            line = self.line[k]
-            for a in range(m.line_seconds):
-                mass = line[a]
-                if mass <= 0:
-                    continue
-                r = mass * back
-                line[a] = mass - r
-                age = a + self.line_clock
-                open_ = [j for j in range(k_exits) if j == k or age >= m.exit_delay[k, j]]
-                for j in open_:
-                    returning[j] += r / len(open_)
-            if inflow[k] > 0:
-                line[0] += inflow[k]
-                self.last_exit = k
+        if k_exits:
+            pos = self.line > 0
+            r = np.where(pos, self.line * back, 0.0)
+            self.line -= r
+            ages = np.arange(self.line.shape[1]) + self.line_clock
+            open_ = (ages[None, :, None] >= m.exit_delay[:, None, :]) | np.eye(k_exits, dtype=bool)[:, None, :]
+            returning = np.einsum("kl,klj->j", r / open_.sum(-1), open_)
+            ks = np.flatnonzero(inflow > 0)
+            if len(ks):
+                self.line[ks, 0] += inflow[ks]
+                self.last_exit = int(ks[-1])
         for j in range(k_exits):
             if returning[j] > 0:
                 border = m.exits[j]
@@ -302,29 +326,34 @@ class HandMotion:
             speed *= gains.get("speed", 1.0)
         mobility = min(0.8, max(0.0, speed * dt / m.cell_size)) * moving
         src, dst = m.edge_from, m.edge_to
-        here, there = g.desire[src], g.desire[dst]
-        finite = ~np.isinf(here) & ~np.isinf(there)
-        w = np.ones(len(dst))
-        delta = np.where(finite, here, 0.0) - np.where(finite, there, 0.0)
-        w = np.where(finite, w * (1.0 + desire_gain * 0.5 * np.clip(delta / m.cell_size, -1.0, 1.0)), w)
-        w = w * (1.0 + habit_gain * g.habit[dst])
-        w = w * (1.0 - danger_avoid * np.clip(g.danger[dst], 0.0, 1.0))
-        w = np.maximum(0.02, w)
-        degree = np.diff(m.edge_start)
+        # The edges' weights change only with the layers (each is replaced, never edited, so the
+        # arrays themselves are the key) and the gains: worked out once for each.
+        key = (g.desire, g.habit, g.danger, m, desire_gain, habit_gain, danger_avoid)
+        cached = getattr(self, "_weights", None)
+        if cached is None or any(a is not b for a, b in zip(cached[0][:4], key[:4])) or cached[0][4:] != key[4:]:
+            here, there = g.desire[src], g.desire[dst]
+            finite = ~np.isinf(here) & ~np.isinf(there)
+            w = np.ones(len(dst))
+            delta = np.where(finite, here, 0.0) - np.where(finite, there, 0.0)
+            w = np.where(finite, w * (1.0 + desire_gain * 0.5 * np.clip(delta / m.cell_size, -1.0, 1.0)), w)
+            w = w * (1.0 + habit_gain * g.habit[dst])
+            w = w * (1.0 - danger_avoid * np.clip(g.danger[dst], 0.0, 1.0))
+            w = np.maximum(0.02, w)
+            self._weights = cached = (key, w, np.bincount(src, weights=w, minlength=m.n), np.diff(m.edge_start))
+        _, w, total, degree = cached
         active = m.hers & (b > 0)
         stay = active & (degree == 0)
         scratch[stay] += b[stay]
         moving_cells = active & (degree > 0)
         leaving = np.where(moving_cells, b * mobility, 0.0)
         scratch[moving_cells] += b[moving_cells] - leaving[moving_cells]
-        total = np.bincount(src, weights=w, minlength=m.n)
         share = leaving[src] * w / np.where(total[src] > 0, total[src], 1.0)
         share = np.where(moving_cells[src], share, 0.0)
         inside = m.hers[dst]
-        np.add.at(scratch, dst[inside], share[inside])
+        add_at(scratch, dst[inside], share[inside])
         out = ~inside & (share > 0)
         if out.any():
-            np.add.at(inflow, m.exit_of[src[out]], share[out])
+            add_at(inflow, m.exit_of[src[out]], share[out])
 
 
 class DestinationMotion:
@@ -349,15 +378,15 @@ class DestinationMotion:
         scratch[moves] += b[moves] * (1.0 - leaving[moves])
         flow = self.rate * scale[src]
         inside = m.hers[dst]
-        np.add.at(scratch, dst[inside & (flow > 0)], flow[inside & (flow > 0)])
+        add_at(scratch, dst[inside & (flow > 0)], flow[inside & (flow > 0)])
         out = ~inside & (flow > 0)
         if out.any():
-            np.add.at(inflow, m.exit_of[src[out]], flow[out])
+            add_at(inflow, m.exit_of[src[out]], flow[out])
         ex = moves & (self.exit_rate > 0)
         if ex.any():
             has_exit = m.exit_of[ex] >= 0
             cells = np.flatnonzero(ex)
-            np.add.at(inflow, m.exit_of[cells[has_exit]], (self.exit_rate * scale)[cells[has_exit]])
+            add_at(inflow, m.exit_of[cells[has_exit]], (self.exit_rate * scale)[cells[has_exit]])
             scratch[cells[~has_exit]] += (self.exit_rate * scale)[cells[~has_exit]]
 
 

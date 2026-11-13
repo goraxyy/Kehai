@@ -85,16 +85,31 @@ def gate(folders):
             sys.exit(f"train: the parity gate failed on {folder} ({len(bad)} of {len(res)} shifts); nothing is trained")
 
 
+# Shifts replay on their own, so a fit's pass shares them among worker processes (the editor is
+# closed for C4.10; each worker keeps its maps' distances between passes). Results come back in
+# shift order, so the score is the same with any number of workers. KEHAI_FIT_WORKERS=1: no pool.
+WORKERS = int(os.environ.get("KEHAI_FIT_WORKERS", "0")) or min(4, os.cpu_count() or 1)
+_pool = None
+
+
+def _score(task):
+    folder, path, out_of_view, kw = task
+    r = replay.Replay(tr.load_map(folder), use_hint=False, **kw).run(path)
+    return r.log_p(out_of_view)
+
+
 def mean_log_p(folders, out_of_view=False, **kw):
     """Mean over shifts of the replay's log p of the true cell (one shift, one number)."""
-    scores = []
-    for folder in folders:
-        m = tr.load_map(folder)
-        for path in tr.shifts(folder):
-            r = replay.Replay(m, use_hint=False, **kw).run(path)
-            lp = r.log_p(out_of_view)
-            if not math.isnan(lp):
-                scores.append(lp)
+    global _pool
+    tasks = [(folder, path, out_of_view, kw) for folder in folders for path in tr.shifts(folder)]
+    if WORKERS > 1 and len(tasks) > 1:
+        if _pool is None:
+            import multiprocessing
+            _pool = multiprocessing.get_context("spawn").Pool(WORKERS)
+        lps = _pool.map(_score, tasks, chunksize=1)
+    else:
+        lps = [_score(t) for t in tasks]
+    scores = [lp for lp in lps if not math.isnan(lp)]
     return float(np.mean(scores)) if scores else float("nan")
 
 

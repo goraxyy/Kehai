@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# C4.10: fit, choose and export (a few hours on the CPU, your go; no Unity). In this order: her
+# C4.10: fit, choose and export (about 4–5 h on the CPU with 4 workers, your go; no Unity, editor closed). In this order: her
 # senses (S1, S2), frozen; the mirror map's numbers; P1; P2 and P3 (stage 1 from legs, stage 2
 # through the filter). Each is chosen on the validation traces. Writes SenseWeights.g.cs,
 # MirrorWeights.g.cs, PredictionWeights.g.cs, their cards and pack parts (Belief/Generated/).

@@ -8,9 +8,18 @@ import os
 import kernels
 
 
+_maps: dict = {}
+
+
 def load_map(folder: str) -> kernels.Map:
-    with open(os.path.join(folder, "map.json")) as f:
-        return kernels.Map(json.load(f))
+    """The folder's map, read once while its file is unchanged: the fits replay a folder hundreds
+    of times, and the map keeps the distances it has worked out (kernels.Map.distances)."""
+    path = os.path.abspath(os.path.join(folder, "map.json"))
+    key = (path, os.stat(path).st_mtime_ns)
+    if key not in _maps:
+        with open(path) as f:
+            _maps[key] = kernels.Map(json.load(f))
+    return _maps[key]
 
 
 def ops(path: str):
