@@ -578,6 +578,21 @@ plan's §11, written before any run and unchanged. Negative results first.
   TextMeshPro `NullReferenceException`s on the null graphics device (400,000 in ten minutes; `main`'s
   own player, built the same way, 7,600 in two minutes and no shift played) and the trainer times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
   two copies, and C0.3's two-copy speed, wait for the player.
+- **C4.9's first recording failed the parity gate** (5 of 144 training traces, 1.1e-3 to 7.5e-3). StoreMap
+  finds its doors with an unsorted `FindObjectsByType`, so its 13 doorway regions (numbers 0–12) come out
+  numbered differently on most map builds: in 138 of 144 shifts, against the run's map.json. The same cells,
+  other numbers; every other region keeps its number. The Director's hint names a region by number, so when
+  it landed in a doorway the replay put it in another doorway (in one shift, 54 m away). Each trace now
+  writes its own region table, and the second recording passed: 192 traces, largest difference 3.7e-5.
+  **The game has the same problem:** the Ledger keys what it learns of a doorway by its number (`door_<n>`),
+  so a doorway's dwell and a doorway trick's places are mixed between shifts. Not fixed: sorting the doors
+  changes play against `main`, so it's the owner's call.
+- **C4.10's fits would have taken two to three days,** not a few hours: about 1 ms of replay per trace line,
+  hundreds of passes. Array steps, remembered distances and 4 workers bring it to about 4–5 hours, with the
+  same numbers (3e-16).
+- **The senses fit couldn't move** (found by a smoke run on 3 traces): the slopes per metre and per second
+  shared the spreads' 0.5 floor, above today's 0.12 and 0.25, so every step was clipped and S1 and S2 would
+  have come out as S0. Fixed, with a test.
 - **The first real belief trace failed the parity gate** (largest difference 0.05): it had no start
   state. With a `state` line (her belief, the prior, the exit lines) a fresh trace passes:
   largest difference **5.5e-6** over 25 checks of the whole belief (the gate is 1e-3).
