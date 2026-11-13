@@ -382,6 +382,8 @@ namespace Kehai.Eval
                 case "flip_breaker": return "Breakers";
                 case "reset_fog": return "Fog";
                 case "restart_clock": return "Clock";
+                case "announce_closing": return "Closing";
+                case "fix_cameras": return "Cameras";
                 case "find_tool": return "LostTool";
                 case "unblock_door": return "Door";
                 case "send_kenji": return "Kenji";
@@ -423,6 +425,8 @@ namespace Kehai.Eval
                 case "sidestep": return Sidestep(a, r);
                 case "reset_fog": return ResetFog(a, r);
                 case "restart_clock": return RestartClock(a, r);
+                case "announce_closing": return AnnounceClosing(a, r);
+                case "fix_cameras": return FixCameras(a, r);
                 case "find_tool": return FindTool(a, r);
                 case "unblock_door": return UnblockDoor(a, r);
                 case "send_kenji": return SendKenji(a, r);
@@ -801,6 +805,38 @@ namespace Kehai.Eval
                 Shift.Unfreeze();
             }
             if (Shift.IsFrozen) r.Fail("the clock's still stopped"); else r.Pass("clock restarted");
+        }
+
+        // 0.4.1: closing time. Walk to the PA microphone and press it. With the PA switched off
+        // the microphone is dead, so the PA goes back on first, as a person would work out.
+        IEnumerator AnnounceClosing(EnvAction a, ActionResult r)
+        {
+            if (Shift == null || !Shift.AwaitingAnnouncement) { r.Pass("nothing to announce"); yield break; }
+            ClosingMic mic = ClosingMic.Instance;
+            if (mic != null)
+            {
+                yield return Approach(mic.transform.position, 1.5f, a, r);
+                if (r.Finished) yield break;
+                PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;
+                if (pa != null && !pa.Powered) pa.SetPowered(true);
+                yield return Tap(mic, mic.transform.position);
+                if (Shift.AwaitingAnnouncement) mic.Announce();
+            }
+            if (Shift.AwaitingAnnouncement) Shift.AnnounceClosing();   // a scene with no microphone: the same outcome
+            if (Shift.AwaitingAnnouncement) r.Fail("the store's still open"); else r.Pass("store closed");
+        }
+
+        // 0.4.1: the cameras she broke. Hold the camera box in the backstreet for its 20 s.
+        IEnumerator FixCameras(EnvAction a, ActionResult r)
+        {
+            StoreCameras cams = StoreCameras.Instance;
+            if (cams == null || !cams.Broken) { r.Pass("the cameras work"); yield break; }
+            CameraBox box = cams.Box;
+            if (box == null) { cams.Fix(); r.Pass("cameras fixed"); yield break; }
+            yield return Approach(box.transform.position, 1.5f, a, r);
+            if (r.Finished) yield break;
+            yield return HoldOn(box, box.transform.position, box.HoldDuration + 2f, () => !cams.Broken);
+            if (cams.Broken) r.Fail("the cameras are still broken"); else r.Pass("cameras fixed");
         }
 
         IEnumerator FindTool(EnvAction a, ActionResult r)

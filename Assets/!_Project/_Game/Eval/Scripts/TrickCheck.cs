@@ -34,7 +34,7 @@ namespace Kehai.Eval
             // Ambush straight after Blackout: with the lights out it waits on your way to the
             // breaker box (FixAt), which is the 0.3.0 combo path.
             "shelf_sweep", "spill", "bin_tamper", "phantom_chime", "door_lock", "blackout", "ambush", "fog",
-            "camera_bolt_on", "tool_theft", "understudy", "overtime",
+            "camera_bolt_on", "camera_watch", "camera_break", "tool_theft", "understudy", "overtime",
         };
 
         public const float StartWithin = 30f, PlanWithin = 130f, FixWithin = 240f, EndWithin = 420f;
