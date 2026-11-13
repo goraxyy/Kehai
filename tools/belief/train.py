@@ -49,6 +49,10 @@ def nelder_mead(f, x0, step=0.2, iters=60, lo=None, hi=None):
     x0 = np.asarray(x0, float)
     n = len(x0)
     clip = (lambda x: np.clip(x, lo, hi)) if lo is not None else (lambda x: x)
+    if lo is not None and (np.any(x0 < lo) or np.any(x0 > hi)):
+        # A start outside the bounds makes every clipped step look worse than it: the search
+        # would return the start without moving.
+        raise ValueError(f"nelder_mead: the start {x0.tolist()} is outside [{np.asarray(lo).tolist()}, {np.asarray(hi).tolist()}]")
     pts = [x0] + [clip(x0 + step * np.eye(n)[i] * max(abs(x0[i]), 0.1)) for i in range(n)]
     vals = [f(p) for p in pts]
     for _ in range(iters):
@@ -113,6 +117,15 @@ def mean_log_p(folders, out_of_view=False, **kw):
     return float(np.mean(scores)) if scores else float("nan")
 
 
+def sense_bounds(names):
+    """A spread (sigma0, far, near) is at least 0.5 m; a spread's growth (per metre, per second)
+    can be 0. The slopes once shared the spreads' 0.5 floor, which put every step of the search
+    above today's slopes (0.12, 0.25), so the search never left today's numbers."""
+    lo = np.array([0.0 if "_per_" in k else 0.5 if "sigma" in k else 0.0 for k in names])
+    hi = np.array([2.0 if "_per_" in k else 20.0 if "sigma" in k else 3.0 for k in names])
+    return lo, hi
+
+
 def fit_senses(train, val, sid):
     names = SENSE_NAMES + (S2_EXTRA if sid == "s2" else [])
     x0 = np.array([kernels.S0[k] for k in names])
@@ -120,8 +133,7 @@ def fit_senses(train, val, sid):
     def loss(x, folders=train):
         return -mean_log_p(folders, motion="p0", senses=sid, sense_numbers=dict(zip(names, x)))
 
-    lo = np.array([0.5 if "sigma" in k else 0.0 for k in names])
-    hi = np.array([20.0 if "sigma" in k else 3.0 for k in names])
+    lo, hi = sense_bounds(names)
     x, _ = nelder_mead(loss, x0, lo=lo, hi=hi)
     return dict(zip(names, map(float, x))), -loss(x, val), -loss(x0, val)
 

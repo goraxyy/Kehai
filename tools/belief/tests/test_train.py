@@ -66,3 +66,15 @@ def test_stage1_learns_where_the_legs_go_and_matches_its_own_trace(tmp_path):
     assert w["kind"][feat.KINDS.index("Clock")] > w["kind"][feat.KINDS.index("Job")]
     w2, val = train.stage2(w, [str(tmp_path)], [str(tmp_path)], {"id": "s0"})
     assert not math.isnan(val)
+
+
+def test_todays_sense_numbers_sit_inside_the_search_bounds():
+    # The search starts at today's numbers; a bound that clips them makes every step it tries
+    # worse than the start, and the fit silently returns today's numbers.
+    import kernels
+    import train
+    names = train.SENSE_NAMES + train.S2_EXTRA
+    lo, hi = train.sense_bounds(names)
+    for k, a, b in zip(names, lo, hi):
+        v = kernels.S0[k]
+        assert a <= v <= b, f"{k} = {v} outside [{a}, {b}]"
