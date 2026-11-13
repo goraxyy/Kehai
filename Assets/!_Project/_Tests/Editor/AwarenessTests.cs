@@ -9,12 +9,17 @@ using UnityEngine;
 
 // Karen 0.2.0, phase 4: how fast she sees you.
 //
-// The walk-by set times her own eye (KarenBody.ConfigureEye: 150°, 36 m, half strength at
-// 16 m, gain 1.65, floor 0.04, 0.5 s grace) through scripted passes: you walk round her at
-// each pass's distance and angle, and the meter is stepped at 60 frames a second from the
-// eye's own score. No rays: the passes are in the open, or as much of you as the pass says
-// shows past cover. The targets are the owner's (build plan §2): walking 10 m away in a lit
-// aisle, seen within 0.7 s; 15 m and off-centre, within 1.5 s; crouched in the dim, never.
+// The walk-by set times her own eye (KarenBody.ConfigureEye: 150°, floor 0.04, 0.5 s grace)
+// through scripted passes: you walk round her at each pass's distance and angle, and the
+// meter is stepped at 60 frames a second from the eye's own score. No rays: the passes are in
+// the open, or as much of you as the pass says shows past cover.
+//
+// 0.4.1, the owner's calls: twice the radius (72 m, half strength at 32 m: was 36 and 16),
+// twice as quick to notice (gain 3.3: was 1.65), and cover judged eye to eye. So 0.2.0's
+// targets are halved: walking 10 m away in a lit aisle, seen within 0.35 s (was 0.7); 15 m
+// and off-centre, within 0.75 s (was 1.5). And 0.2.0's third target, "crouched in the dim,
+// never", is replaced by the eye-to-eye rule: with no line to your eyes, never; with one, she
+// does see you, slowly.
 public class AwarenessTests
 {
     const float Frame = 1f / 60f;
@@ -35,11 +40,20 @@ public class AwarenessTests
     // The six cases of the design notes (§3), and the second target.
     static readonly Pass TenCentre = Walk("walking, 10 m, dead centre, lit", 10f, 0f);
     static readonly Pass FifteenOff = Walk("walking, 15 m, 45° off-centre, lit", 15f, 45f);
+    // Crouched in the dim with only your eyes over cover (SightSensor.ExposureOf: a half), and
+    // the same with no line to your eyes at all.
     static readonly Pass Crouched = new Pass
     {
-        Name = "crouched, a third of you showing, 10 m, 45° off, dim",
-        Distance = 10f, Angle = 45f, Light = Dim, Salience = Crouching, Exposure = 1f / 3f,
+        Name = "crouched, only your eyes showing, 10 m, 45° off, dim",
+        Distance = 10f, Angle = 45f, Light = Dim, Salience = Crouching, Exposure = SightSensor.ExposureOf(true, false, false),
     };
+    static readonly Pass Hidden = new Pass
+    {
+        Name = "crouched, no line to your eyes, 10 m, 45° off, dim",
+        Distance = 10f, Angle = 45f, Light = Dim, Salience = Crouching, Exposure = SightSensor.ExposureOf(false, true, true),
+    };
+
+    public const float TenTarget = 0.35f, FifteenTarget = 0.75f;   // seconds: half of 0.2.0's 0.7 and 1.5
 
     static readonly Pass[] WalkBy =
     {
@@ -49,7 +63,9 @@ public class AwarenessTests
         FifteenOff,
         Walk("walking, 25 m, dead centre, lit", 25f, 0f),
         Walk("walking, 36 m, dead centre, lit", 36f, 0f),
+        Walk("walking, 72 m, dead centre, lit", 72f, 0f),
         Crouched,
+        Hidden,
     };
 
     GameObject go;
@@ -101,24 +117,36 @@ public class AwarenessTests
                                   $"seen {Show(seen)}, moving at you by {Show(seen + moving)}; where she expects you {Show(expected)}");
         }
 
-        Assert.LessOrEqual(SecondsToSeen(eye, TenCentre), 0.7f, TenCentre.Name);
-        Assert.LessOrEqual(SecondsToSeen(eye, FifteenOff), 1.5f, FifteenOff.Name);
-        Assert.IsTrue(float.IsInfinity(SecondsToSeen(eye, Crouched)), Crouched.Name + ": seen");
+        Assert.LessOrEqual(SecondsToSeen(eye, TenCentre), TenTarget, TenCentre.Name);
+        Assert.LessOrEqual(SecondsToSeen(eye, FifteenOff), FifteenTarget, FifteenOff.Name);
+        Assert.IsTrue(float.IsInfinity(SecondsToSeen(eye, Hidden)), Hidden.Name + ": seen");
     }
 
     static string Show(float seconds) => float.IsInfinity(seconds) ? "never" : $"{seconds:0.00} s";
 
     [Test]
-    public void CrouchedInTheDim_StaysUnseen_EvenWhereSheExpectsYou()
+    public void WithNoLineToYourEyes_YouStayUnseen_EvenWhereSheExpectsYou()
     {
-        // The floor is on the score, so more gain never finds the best hiding.
-        Assert.Less(eye.Detect(Crouched.Angle, Crouched.Distance, Crouched.Light, Crouched.Salience, Crouched.Exposure), config.sightFloor);
-        Assert.IsTrue(float.IsInfinity(SecondsToSeen(eye, Crouched, 1f)));
+        // Eye to eye (0.4.1): chest and feet in plain view count for nothing without it.
+        Assert.AreEqual(0f, eye.Detect(Hidden.Angle, Hidden.Distance, Hidden.Light, Hidden.Salience, Hidden.Exposure));
+        Assert.IsTrue(float.IsInfinity(SecondsToSeen(eye, Hidden, 1f)));
 
-        // Show a little more of yourself, and she does.
-        Pass more = Crouched;
-        more.Exposure = 2f / 3f;
-        Assert.IsFalse(float.IsInfinity(SecondsToSeen(eye, more)), "two thirds showing should be seen");
+        // Your eyes over the cover, and she does see you: slower than in the open.
+        float peeking = SecondsToSeen(eye, Crouched);
+        Pass open = Crouched;
+        open.Exposure = 1f;
+        Assert.IsFalse(float.IsInfinity(peeking), "a line to your eyes should be seen");
+        Assert.Greater(peeking, SecondsToSeen(eye, open), "only your eyes showing should take longer than all of you");
+    }
+
+    [Test]
+    public void Exposure_IsNothingWithoutTheEyes_AndHalfWithThemAlone()
+    {
+        Assert.AreEqual(0f, SightSensor.ExposureOf(false, true, true));
+        Assert.AreEqual(0f, SightSensor.ExposureOf(false, false, false));
+        Assert.AreEqual(0.5f, SightSensor.ExposureOf(true, false, false));
+        Assert.AreEqual(0.75f, SightSensor.ExposureOf(true, true, false));
+        Assert.AreEqual(1f, SightSensor.ExposureOf(true, true, true));
     }
 
     [Test]
@@ -127,20 +155,42 @@ public class AwarenessTests
         foreach (Pass p in WalkBy.Where(p => p.Salience == Walking))
             Assert.IsFalse(float.IsInfinity(SecondsToSeen(eye, p)), p.Name);
 
-        Pass standing = Walk("standing, 36 m, dead centre, lit", 36f, 0f);
+        Pass standing = Walk("standing, 72 m, dead centre, lit", 72f, 0f);
         standing.Salience = 0.05f;
         Assert.IsFalse(float.IsInfinity(SecondsToSeen(eye, standing)), standing.Name);
     }
 
     [Test]
-    public void TheGain_IsAsLowAsStillHitsTheTargets()
+    public void SheNoticesYouTwiceAsFast_AndFromTwiceAsFar_As020()
     {
-        // Option A was set last and low, because more gain weakens hiding everywhere: a tenth
-        // less and a target is missed.
-        eye.gain = config.sightGain * 0.9f;
-        bool missed = SecondsToSeen(eye, TenCentre) > 0.7f || SecondsToSeen(eye, FifteenOff) > 1.5f;
-        Assert.IsTrue(missed, $"gain {eye.gain:0.00} still hits both targets: lower {nameof(KarenConfig.sightGain)}");
-        Assert.Less(config.sightGain, 2.2f, "with the wider cone the gain went down from 2.2, not up");
+        // The owner's calls (0.4.1), against 0.2.0's eye: 36 m, half strength 16 m, gain 1.65.
+        Assert.AreEqual(72f, config.sightRange);
+        Assert.AreEqual(32f, config.sightHalfStrength);
+        Assert.AreEqual(3.3f, config.sightGain, 1e-4f);
+
+        // Twice the gain alone halves the time to "seen", pass by pass.
+        foreach (Pass p in WalkBy.Where(p => p.Salience == Walking))
+        {
+            float now = SecondsToSeen(eye, p);
+            eye.gain = config.sightGain * 0.5f;
+            float atHalfGain = SecondsToSeen(eye, p);
+            eye.gain = config.sightGain;
+            Assert.AreEqual(atHalfGain / 2f, now, 2f * Frame, p.Name);
+        }
+
+        // Twice the radius: she sees as well at twice the distance as 0.2.0's eye did.
+        var old = new GameObject("0.2.0's eye").AddComponent<SightSensor>();
+        try
+        {
+            KarenBody.ConfigureEye(old, config);
+            old.range = 36f;
+            old.halfStrengthAt = 16f;
+            foreach (float d in new[] { 5f, 10f, 18f, 36f })
+                Assert.AreEqual(old.Visibility(20f, d, Lit), eye.Visibility(20f, d * 2f, Lit), 1e-5f, $"{d} m then, {d * 2f} m now");
+            Assert.AreEqual(0f, old.Visibility(0f, 40f, Lit), "0.2.0's eye stopped at 36 m");
+            Assert.Greater(eye.Visibility(0f, 70f, Lit), 0f, "hers reaches 72 m");
+        }
+        finally { Object.DestroyImmediate(old.gameObject); }
     }
 
     // ---- D and E -------------------------------------------------------------------------
@@ -189,8 +239,8 @@ public class AwarenessTests
             Assert.AreEqual(0f, other.expectedBoost);
             Assert.AreEqual(18f, other.range);
 
-            // Hers works at half strength twice as far away.
-            Assert.AreEqual(0.5f, eye.Falloff(16f), 1e-5f);
+            // Hers works at half strength four times as far away (twice, until 0.4.1).
+            Assert.AreEqual(0.5f, eye.Falloff(32f), 1e-5f);
             Assert.AreEqual(0.5f, other.Falloff(8f), 1e-5f);
         }
         finally { Object.DestroyImmediate(other.gameObject); }
@@ -237,8 +287,8 @@ public class AwarenessInTheStoreTests
 
     // At spots all over her store, facing four ways: how many ticks between two looks at the
     // same cell in view. Before 0.2.0 the sweep went round every cell within 18 m, 70 a
-    // tick, and skipped those outside her 120°; now it goes round the cells inside her 150°,
-    // 36 m cone, 120 a tick.
+    // tick, and skipped those outside her 120°; now it goes round the cells inside her 150°
+    // cone: 36 m and 120 a tick in 0.2.0, 72 m and 240 a tick since 0.4.1.
     [Test]
     public void TheSweep_ChecksEachCellInViewAboutAsOftenAsBefore_AndItsCostIsMeasured()
     {

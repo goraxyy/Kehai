@@ -14,7 +14,7 @@ namespace Kehai.Karen
     // `thinSeconds` once someone resets the fridge control box.
     public static class FogState
     {
-        public const float Open = 60f;            // what "no fog" means for a sight limit, in metres
+        public const float Open = 120f;           // what "no fog" means for a sight limit, in metres: further than any eye (hers is 72 m since 0.4.1)
         public const float SpreadSeconds = 8f;
         public const float ThinSeconds = 3f;
 

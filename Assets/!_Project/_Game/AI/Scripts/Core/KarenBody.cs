@@ -136,7 +136,7 @@ namespace Kehai.Karen
             gazeGo.transform.localPosition = new Vector3(0f, height - 0.15f, radius * 0.5f);
             Light gaze = gazeGo.AddComponent<Light>();
             gaze.type = LightType.Spot;
-            gaze.range = config.sightRange * 0.7f;
+            gaze.range = Mathf.Min(26f, config.sightRange * 0.7f);   // the light stays a torch's; her eye goes further (0.4.1)
             gaze.spotAngle = Mathf.Min(90f, config.sightFov * 0.6f);
             gaze.intensity = 6f;
             gaze.shadows = LightShadows.None;
