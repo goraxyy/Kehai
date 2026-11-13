@@ -43,6 +43,11 @@ SENSE_NAMES = ["sight_sigma_far", "sight_sigma_near", "hear_confidence", "hear_s
 S2_EXTRA = ["wall_gain", "dark_gain"]
 
 
+def progress(msg):
+    import time
+    print(time.strftime("%H:%M:%S"), msg, file=sys.stderr, flush=True)
+
+
 # ---- a small Nelder–Mead (no scipy on this Mac) ------------------------------------------------------
 
 def nelder_mead(f, x0, step=0.2, iters=60, lo=None, hi=None):
@@ -55,7 +60,9 @@ def nelder_mead(f, x0, step=0.2, iters=60, lo=None, hi=None):
         raise ValueError(f"nelder_mead: the start {x0.tolist()} is outside [{np.asarray(lo).tolist()}, {np.asarray(hi).tolist()}]")
     pts = [x0] + [clip(x0 + step * np.eye(n)[i] * max(abs(x0[i]), 0.1)) for i in range(n)]
     vals = [f(p) for p in pts]
-    for _ in range(iters):
+    for it in range(iters):
+        if it % 10 == 0:
+            progress(f"  search step {it}/{iters}: best {min(vals):.4f}")
         order = np.argsort(vals)
         pts, vals = [pts[i] for i in order], [vals[i] for i in order]
         centre = np.mean(pts[:-1], axis=0)
@@ -323,6 +330,21 @@ def prediction_numbers(w: dict) -> dict:
     return out
 
 
+def load_report(path):
+    if path and os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
+
+
+def save_report(path, report):
+    if path:
+        tmp = path + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(report, f, indent=1, sort_keys=True)
+        os.replace(tmp, path)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("what", choices=["senses", "mirror", "p1", "p2", "all"])
@@ -331,44 +353,74 @@ def main(argv=None):
     ap.add_argument("--legs")
     ap.add_argument("--out", default=GENERATED)
     ap.add_argument("--version", default="fit")
+    ap.add_argument("--report", help="a JSON file each stage adds to, so the stages can run one at a time and a "
+                                     "stopped run keeps what it finished (train_all.sh)")
     a = ap.parse_args(argv)
-    gate(a.train + a.val)
-    report = {}
-    senses = {"id": "s0"}
+    report = load_report(a.report)
+    if not report.get("gate"):
+        gate(a.train + a.val)
+        report["gate"] = True
+        save_report(a.report, report)
+    senses = dict(report["senses"]["values"], id=report["senses"]["chosen"]) if "senses" in report else {"id": "s0"}
     if a.what in ("senses", "all"):
-        fits = {}
-        base = None
+        fits, scores = {}, {}
         for sid in ("s1", "s2"):
+            progress(f"senses {sid}")
             nums, val_score, base = fit_senses(a.train, a.val, sid)
             fits[sid] = nums
-            report[sid] = val_score
-        report["s0"] = base
-        best = max(("s1", "s2"), key=lambda s: report[s])
-        senses = dict(fits[best], id=best)
-        card = {"version": a.version, "validation": json.dumps({k: round(v, 4) for k, v in report.items()}), "chosen": best}
+            scores[sid] = val_score
+            scores["s0"] = base
+        best = max(("s1", "s2"), key=lambda s: scores[s])
+        card = {"version": a.version, "validation": json.dumps({k: round(v, 4) for k, v in scores.items()}), "chosen": best,
+                "beats_s0": scores[best] > scores["s0"]}
         write_weights(a.out, "SenseWeights", fits[best], card, sense_cs(fits, card))
+        report["senses"] = {"scores": scores, "chosen": best, "values": fits[best], "all": fits}
+        senses = dict(fits[best], id=best)
+        save_report(a.report, report)
     if a.what in ("mirror", "all"):
+        progress("mirror")
         mw = fit_mirror(a.train)
-        report["mirror"] = mw
         nums = {k: v for k, v in mw.items() if k not in ("samples", "noises")}
         write_weights(a.out, "MirrorWeights", nums, {"version": a.version, "samples": mw["samples"], "noises": mw["noises"]},
                       table_cs("MirrorWeights", "MirrorWeights", nums, a.version))
+        report["mirror"] = mw
+        save_report(a.report, report)
     if a.what in ("p1", "all"):
+        progress("p0 baseline")
+        p0 = mean_log_p(a.val, True, motion="p0", senses=senses.get("id", "s0"), sense_numbers=senses)
+        progress("p1")
         gains, val = fit_p1(a.train, a.val, senses)
-        report["p1"] = val
-        w = dict(feat.HAND, p1=gains)
-        write_weights(a.out, "PredictionWeights", prediction_numbers(w), {"version": a.version, "stage": "p1"},
-                      table_cs("PredictionWeights", "PredictionWeights", prediction_numbers(w), a.version))
+        report["motion"] = dict(report.get("motion", {}), p0={"val": p0}, p1={"val": val, "gains": gains})
+        save_report(a.report, report)
     if a.what in ("p2", "all"):
+        motion = report.get("motion", {})
         legs = [json.loads(x) for x in open(a.legs)] if a.legs else []
+        progress("p2 stage 1 (legs)")
         w1 = stage1(legs, a.train)
+        progress("p2 stage 2")
         w2, val2 = stage2(w1, a.train, a.val, senses, "p2")
+        progress("p3 stage 2")
         w3, val3 = stage2(w2, a.train, a.val, senses, "p3")
-        report.update(p2=val2, p3=val3)
-        w = w3 if val3 > val2 else w2
-        write_weights(a.out, "PredictionWeights", prediction_numbers(w), {"version": a.version, "stage": "p2/p3", "legs": w1.get("legs_used", 0)},
-                      table_cs("PredictionWeights", "PredictionWeights", prediction_numbers(w), a.version))
-    print(json.dumps(report, indent=1))
+        motion.update(p2={"val": val2, "weights": w2}, p3={"val": val3, "weights": w3}, legs_used=w1.get("legs_used", 0))
+        report["motion"] = motion
+        save_report(a.report, report)
+    if a.what in ("p2", "all") or (a.what == "p1" and "p2" not in report.get("motion", {})):
+        # Export the predict step that did best on the validation shifts (out of view), against
+        # today's P0. If nothing beats P0 nothing is written: the game keeps today's numbers.
+        motion = report.get("motion", {})
+        vals = {k: motion[k]["val"] for k in ("p0", "p1", "p2", "p3") if k in motion}
+        best = max(vals, key=vals.get) if vals else "p0"
+        motion["chosen"] = best
+        report["motion"] = motion
+        save_report(a.report, report)
+        if best != "p0":
+            p1 = motion.get("p1", {}).get("gains", feat.HAND["p1"])
+            w = dict(motion[best]["weights"] if best in ("p2", "p3") else feat.HAND, p1=p1)
+            card = {"version": a.version, "chosen": best, "validation": json.dumps({k: round(v, 4) for k, v in vals.items()}),
+                    "legs": motion.get("legs_used", 0)}
+            write_weights(a.out, "PredictionWeights", prediction_numbers(w), card,
+                          table_cs("PredictionWeights", "PredictionWeights", prediction_numbers(w), a.version))
+    print(json.dumps(report, indent=1, default=str))
     return 0
 
 
