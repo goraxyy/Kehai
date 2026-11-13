@@ -2,12 +2,13 @@ using Kehai.Karen;
 using UnityEngine;
 
 // The fridge control box (Karen 0.3.0, Fog; build plan B2.1). It hangs on the backstreet wall by
-// the breaker box. While any room is fogged its amber lamp blinks; hold E for three seconds and
-// the fridges reset and the fog thins (FogState.Clear). It's where the fog's chore is fixed, so
+// the breaker box. While any room is fogged its amber lamp blinks; hold E for twenty seconds
+// (BackstreetFix.HoldSeconds, 0.4.1: three until then) and the fridges reset and the fog thins
+// (FogState.Clear). It's where the fog's chore is fixed, so
 // it tells FogState where it is (FogState.ResetBox), for her FixAt and the bots.
 public sealed class FogBox : HighlightInteractable, IHoldInteractable
 {
-    public const float HoldSeconds = 3f;
+    public const float HoldSeconds = BackstreetFix.HoldSeconds;
     public static readonly Vector3 Size = new Vector3(0.40f, 0.50f, 0.14f);   // w, h, d in metres
 
     Renderer lamp;
@@ -85,23 +86,18 @@ public sealed class FogBox : HighlightInteractable, IHoldInteractable
         // A tap does nothing: it's a hold, so it can't be done by accident in passing.
     }
 
-    public override string GetPrompt() => FogState.Any ? "Hold E to reset the fridges" : "Fridge control: all normal";
+    public override string GetPrompt() => FogState.Any ? BackstreetFix.Prompt("reset the fridges") : "Fridge control: all normal";
 
     public bool CanHold(PlayerInteract player) => FogState.Any;
     public float HoldDuration => HoldSeconds;
 
-    public void OnHoldProgress(float normalised)
-    {
-        if (normalised > 0.05f && Random.value < 0.02f)
-            NoiseBus.Emit(transform.position, 0.3f, NoiseKind.Environmental, NoiseAuthor.Player);
-    }
+    public void OnHoldProgress(float normalised) => BackstreetFix.WorkNoise(transform.position, normalised);
 
     public void OnHoldCancelled() { }
 
     public void OnHoldComplete(PlayerInteract player)
     {
         FogState.Clear();   // her Ledger hears of it from FogState.Cleared (fog_reset)
-        OneShotAudio.PlayAt(ProceduralAudio.BreakerThrow(), transform.position);
-        NoiseBus.Emit(transform.position, 0.5f, NoiseKind.Environmental, NoiseAuthor.Player);
+        BackstreetFix.DoneNoise(transform.position);
     }
 }

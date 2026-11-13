@@ -23,7 +23,7 @@ namespace Kehai.Karen
         public override float PanicPrior => 0.3f;
         public override TellKind Tell => TellKind.BallastWhine;
         public override float TellLead => 1.2f;
-        public override string Chore => "find the torch, cross the maze to the breaker box, reset three breakers low hum to high";
+        public override string Chore => "find the torch, cross the maze to the breaker box, hold it for 20 s";
         public override string Attacks => "sight";
 
         public override bool Available(KarenContext c, out string why)
@@ -67,9 +67,11 @@ namespace Kehai.Karen
         }
     }
 
-    // Fog (0.3.0): the fridges of the room she thinks you're in hiss and pour out fog until it
-    // fills the room. Nobody in it sees past the visibility (2 m), her and her cameras included;
-    // her hearing is unchanged. It lasts until you reset the fridge control box in the backstreet.
+    // Fog (0.3.0): the fridges hiss and pour out fog until it fills the room she thinks you're in.
+    // Since 0.4.1 that's the cold room or the stockroom only (KarenWorld.FogRooms), and you see
+    // the fog only from inside the room. Nobody in it sees past the visibility (2 m), her and her
+    // cameras included; her hearing is unchanged. It lasts until you reset the fridge control box
+    // in the backstreet (hold E for 20 s).
     public sealed class FogTactic : Tactic
     {
         public override string Id => "fog";
@@ -82,7 +84,7 @@ namespace Kehai.Karen
         public override float Cooldown => 150f;
         public override float PanicPrior => 0.15f;
         public override TellKind Tell => TellKind.FreezerHiss;
-        public override string Chore => "reset the fridge control box in the backstreet, or cross the room blind";
+        public override string Chore => "hold the fridge control box in the backstreet for 20 s, or cross the room blind";
         public override string Attacks => "sight";
 
         // How sure she has to be that you're in a room to fog it.
@@ -96,7 +98,7 @@ namespace Kehai.Karen
             if (c.World == null) { why = "no building"; return false; }
             if (FogState.Any) { why = "a room is already fogged"; return false; }
             bool any = Rooms(c).Count > 0;
-            why = any ? null : "she doesn't think you're in a room with fridges";
+            why = any ? null : "she doesn't think you're in the cold room or the stockroom";
             return any;
         }
 
@@ -125,7 +127,7 @@ namespace Kehai.Karen
             if (c.World == null || c.Map == null || c.Belief == null) return result;
             foreach (string room in KarenWorld.FogRooms)
             {
-                if (c.World.FridgesIn(room).Count == 0) continue;
+                if (c.World.FogSources(room).Count == 0) continue;
                 float mass = 0f;
                 for (int r = 0; r < c.Map.Regions.Count && r < c.Belief.RegionMass.Length; r++)
                     if (StoreMap.AreaAt(c.Map.Regions[r].Centroid) == room) mass += c.Belief.RegionMass[r];
@@ -145,15 +147,15 @@ namespace Kehai.Karen
             Vector3 believed = TacticHelpers.Believed(c);
             Vector3 hiss = believed;
             float best = float.MaxValue;
-            foreach (Transform f in c.World.FridgesIn(room))
+            foreach (Vector3 source in c.World.FogSources(room))
             {
-                float d = Vector3.Distance(f.position, believed);
-                if (d < best) { best = d; hiss = f.position; }
+                float d = Vector3.Distance(source, believed);
+                if (d < best) { best = d; hiss = source; }
             }
 
             plan.Target = room;
             plan.Add(new Tell(TellKind.FreezerHiss, _ => hiss, 1f));
-            plan.Add(new Effect("flood " + room + " from its fridges", k =>
+            plan.Add(new Effect("flood " + room + " with fog", k =>
             {
                 k.World.FogRoom(room, k.Config.fogVisibility);
                 // Paid by how much it rattled you over the next 25 s, as she reads you.
