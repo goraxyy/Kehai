@@ -30,7 +30,9 @@ namespace Kehai.Karen
         DoorMotor,        // automatic doors about to cycle
         PaChime,          // an announcement
         Footsteps,        // her own steps, from somewhere else
-        RevealSting       // not a warning: the stab as she steps out after a vanish, or gets you
+        RevealSting,      // not a warning: the stab as she steps out after a vanish, or gets you
+        CameraFizz,       // 0.4.1: the store's cameras shorting out (Camera break)
+        MonitorHum        // 0.4.1: the office screens waking as she sits down to watch (Camera watch)
     }
 
     // All of Karen's sounds, synthesised at load. The project keeps audio clips out of the
@@ -132,6 +134,12 @@ namespace Kehai.Karen
                     return PaChime();
                 case TellKind.Footsteps:
                     return Make("farSteps", 3f, t => Footstep(Mathf.Repeat(t, 0.6f)) * 0.8f);
+                case TellKind.CameraFizz:
+                    return Make("camFizz", 1.1f, t => 0.45f * Env(t, 0.005f, 0.35f, 1.1f) *
+                        ((Mathf.Abs(White(t)) > 0.8f ? White(t) : 0f) * 1.6f + Sine(Mathf.Lerp(2400f, 300f, t / 1.1f), t) * 0.35f));
+                case TellKind.MonitorHum:
+                    return Make("monitorHum", 1.4f, t => 0.3f * Env(t, 0.25f, 0.4f, 1.4f) *
+                        (Sine(100f, t) * 0.7f + Sine(15700f, t) * 0.12f + Sine(200f, t) * 0.25f));
                 case TellKind.RevealSting:
                     return Make("sting", 1.4f, t => 0.7f * Env(t, 0.005f, 0.3f, 1.4f) *
                         (Sine(311f, t) * 0.5f + Sine(330f, t) * 0.4f + Sine(659f, t) * 0.3f + White(t) * Mathf.Exp(-t * 9f) * 0.6f));
