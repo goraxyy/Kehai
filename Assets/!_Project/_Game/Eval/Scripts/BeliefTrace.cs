@@ -18,7 +18,9 @@ namespace Kehai.Eval
     //
     //   <folder>/map.json                 the map and the grid's constants, once a run
     //   <folder>/trace_<seed>_<shift>_<agent>.jsonl, one op a line:
-    //     start, reset, layers (desire sources, habit), obs (as applied, with its raw inputs), sweep,
+    //     start, regions (each cell's region: the doorways' numbers can change from one map build to
+    //     the next, so every trace writes its own, and again if the map is rebuilt), reset, layers
+    //     (desire sources, habit), obs (as applied, with its raw inputs), sweep,
     //     bias, features (the destinations' inputs, every 2 s), predict, check (the whole belief,
     //     every 25 predicts: the parity gate), truth (every predict: the player's cell, destination,
     //     what they sensed of her)
@@ -32,6 +34,7 @@ namespace Kehai.Eval
         KarenBrain brain;
         int predicts;
         int desireHash = int.MinValue, habitHash = int.MinValue;
+        int[] tracedRegions;
         float featuresAt = -999f;
 
         public static bool On => !string.IsNullOrEmpty(Folder);
@@ -57,6 +60,7 @@ namespace Kehai.Eval
             NoiseBus.Emitted += OnNoise;
             predicts = 0;
             desireHash = habitHash = int.MinValue;
+            tracedRegions = null;
             Layers();
             State();
             Check();
@@ -161,6 +165,15 @@ namespace Kehai.Eval
         void Layers()
         {
             if (brain == null) return;
+            // StoreMap finds its doors unsorted, so a rebuilt map can number its doorways in another
+            // order than map.json's: the hint (bias) names a region by number. CarveRegions makes a
+            // new array each build, so a changed reference is a changed table.
+            int[] cr = brain.Map.CellRegion;
+            if (cr != null && cr != tracedRegions)
+            {
+                tracedRegions = cr;
+                Line("regions", "\"region\":[" + string.Join(",", cr) + "],\"count\":" + brain.Map.Regions.Count);
+            }
             int dh = Hash(brain.DesireTargets);
             if (dh != desireHash)
             {

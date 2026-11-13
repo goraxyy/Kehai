@@ -41,6 +41,16 @@ class Map:
         self.outside_cells = int(d.get("outside_cells", int((~self.hers).sum())))
         self.region_cells = [np.flatnonzero(self.region == r) for r in range(self.regions)]
 
+    def with_regions(self, region, count: int) -> "Map":
+        """This map with another region table: a trace's own "regions" line (the doorways' numbers
+        can differ between the game's map builds; see BeliefTrace)."""
+        import copy
+        m = copy.copy(self)
+        m.region = np.asarray(region, int)
+        m.regions = int(count)
+        m.region_cells = [np.flatnonzero(m.region == r) for r in range(m.regions)]
+        return m
+
     def within(self, x: float, z: float, radius: float) -> np.ndarray:
         return (self.x - x) ** 2 + (self.z - z) ** 2 <= radius * radius
 

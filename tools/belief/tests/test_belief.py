@@ -141,3 +141,23 @@ def test_a_trace_starts_from_its_state_line(tmp_path):
     (tmp_path / "trace_1_1_x.jsonl").write_text("\n".join(json.dumps(x) for x in lines) + "\n")
     res = replay.parity(str(tmp_path))
     assert res[0][3], f"largest difference {res[0][2]}"
+
+
+def test_a_traces_own_region_table_moves_the_hint():
+    # The game's doorways can be numbered differently from one map build to the next (StoreMap
+    # finds its doors unsorted), so a trace writes its own region table. The replay's hint must
+    # land where that table says, not where map.json's does.
+    m, _ = store()
+    cells_a = [c for c in range(m.n) if m.hers[c]][:3]
+    cells_b = [c for c in range(m.n) if m.hers[c]][-3:]
+    table = np.full(m.n, -1)
+    table[cells_a] = 0
+    table[cells_b] = 1
+    r = replay.Replay(m)
+    r.step({"op": "regions", "region": table.tolist(), "count": 2})
+    before = r.grid.b.copy()
+    r.step({"op": "bias", "region": 1, "amount": 0.1})
+    gained = r.grid.b - before
+    assert all(gained[c] > 0 for c in cells_b)
+    assert all(gained[c] <= 0 for c in cells_a)
+    assert r.m is not m and len(m.region_cells) == m.regions   # map.json's own table is untouched

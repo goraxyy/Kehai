@@ -57,7 +57,10 @@ class Replay:
     def step(self, op):
         kind = op["op"]
         g = self.grid
-        if kind == "layers":
+        if kind == "regions":
+            self.m = self.m.with_regions(op["region"], op["count"])
+            g.m = self.m
+        elif kind == "layers":
             self.layers(op)
         elif kind == "state":
             g.b = np.asarray(op["b"], float)
