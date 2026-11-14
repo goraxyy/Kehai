@@ -1,6 +1,7 @@
 # Practical guide: realistic store, simple products
 
-Part of [0.5.0](../0.5.0-plan.md). Owner's direction, 14 November: realistic surroundings with
+Part of [0.5.0](../0.5.0-plan.md). The Look Lab is now a **separate external project** (option B),
+with matching Unity/URP and selectively copied private fixtures. Setup and modelling remain on hold. Owner's direction, 14 November: realistic surroundings with
 simple low-poly items, especially products. Resources below are official Unity 6 documentation;
 use the project's installed Unity/URP version when following the controls.
 

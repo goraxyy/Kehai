@@ -1,7 +1,7 @@
 # Three versions of the game
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 7. **Discuss first:** the tasks wait on
-Q25–Q27.
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 7. **Choices settled:** one gameplay project produces three editions. A separate external
+visual project is additional, not a fourth game edition. See [storage budgets and opening from an external drive](storage.md).
 
 1. [The memory question](#1-the-memory-question)
 2. [What goes in each version](#2-what-goes-in-each-version)
@@ -12,30 +12,10 @@ Q25–Q27.
 
 ## 1. The memory question
 
-"I don't have a lot of memory, is that a problem?" You meant the disk, "7–8 GB free" (Q25).
-Measured on this Mac on 13 and 14 November:
-
-| | Size | Note |
-|---|---|---|
-| **Disk** | 228 GB, **8.0 GB free** on 14 November (13 GB the day before) | below about 10% free, macOS starts to struggle; it's below that now |
-| Unity 6000.5.10f1 | 11 GB | one copy serves every project |
-| The project's `Library/` (Unity's cache) | 4.2 GB | **one per project copy** |
-| The project's `Assets/` | 161 MB | |
-| Old builds (`Builds/`: macOS 158 MB, Windows 143 MB and its zip 56 MB, the training player 221 MB) | 578 MB | |
-| Test and training data (`kehai_eval`) | 3.3 GB | 0.4.0's recordings live here |
-| **RAM** | 8 GB | the editor in Play with the maze reached about 6 GB |
-
-**What each way of making three versions needs:**
-
-| | Extra disk | RAM | Verdict |
-|---|---|---|---|
-| **One project, three editions** | each build, 150–250 MB; only the ones you keep | one Unity at a time, as now | **fine** |
-| Three projects | about 4–5 GB each for the two extra copies (their own `Library/` and assets): about 9 GB, more than is free | the temptation to open two at once, which 8 GB can't take | **not possible** |
-
-**To give the Mac room** (Y7.1, your yes first): the old builds and the old test data (about
-3.9 GB together) can move to the Windows PC, which has 2 TB free, and come back when needed. That
-nearly doubles the Mac's free space. A second project with the redesign's art (about 7–13 GB) and
-whether a project can live on a flash card are answered in the plan's §16.4.
+See [the storage assessment](storage.md) for measured current sizes, future budgets, the linked
+128 GB drive's USB 2.0 limitation and direct-opening steps. Three editions share one gameplay
+project; the selected external visual project is an additional source/cache copy. No migration
+or project creation occurs until explicitly authorised.
 
 ## 2. What goes in each version
 

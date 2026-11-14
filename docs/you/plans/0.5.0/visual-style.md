@@ -19,7 +19,7 @@ look. Use coherent materials and scale to make both fit together. The style tria
 realistic lighting treatments against today's look; no further cartoon/anime vote is needed.
 See [the hands-on guide and learning resources](scene-lighting-guide.md).
 
-## 1. Six styles (earlier alternatives)
+## 1. Six styles
 
 Named the way the games' makers or reviewers name them. Where a claim isn't backed by a source
 I found, it says so.
@@ -112,10 +112,12 @@ Art never goes into the public repo. Today it reaches the Windows PC through the
 | Disk on this Mac (8 GB free) | almost nothing | another Library, about 4–5 GB | nothing |
 | Can it break the game? | no, if it's never in a build | no | — |
 | Shared how? | the builder script is code (in git); the scene is made by a menu; new art goes to `kehai-assets` | the whole project zipped to `kehai-assets` | **can't**: art isn't in git, so a branch holds nothing of the look |
-| **Verdict** | **your answer** (Q29) | if the game's project ever gets too fragile | not workable |
+| **Verdict** | previous answer (superseded) | **selected: separate external project** | not workable |
 
-**Your answer (Q29): this project.** A second project with the redesign's art would need about
-7–13 GB, more than this Mac has free (the plan's §16.4).
+**Latest answer: option B, a separate external Look Lab project**, replacing the earlier
+same-project choice. Keep the Unity/URP version matched, copy only selected source fixtures,
+and transfer approved private art and code presets back. Its cache is separate. No new project
+or modelling now; the linked USB 2.0 stick is not recommended for active work. See [storage](storage.md).
 
 **The name:** the scene already has a showcase root called `Models_Island`, which also carries the
 store's NavMesh surface. Deleting or moving it breaks navigation, so the new scene is called

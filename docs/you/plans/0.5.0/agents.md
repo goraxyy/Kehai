@@ -1,6 +1,6 @@
 # Bots into agents
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 2. **Your answer (Q9, 14 November):**
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 2. **Confirmed answer (Q9, latest review): A+ adaptive trained bots.**
 better test players, using AI/ML, close to reality, and adaptable. That's option A, made
 adaptable (the plan's §7). **No Claude-played players** (Q10): the panel below is kept only as
 the record of why it was considered.
