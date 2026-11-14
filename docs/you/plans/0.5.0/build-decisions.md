@@ -1,11 +1,11 @@
-# Final choices and implementation hold
+# Final choices and build approval
 
-Latest owner answers, 14 November. **No unanswered scope questions remain. Do not build yet.**
+Latest owner answers, 14 November. **Build authorised by the owner, 14 November 2026.** No unanswered scope questions remain.
 This record overrides earlier alternatives and question prompts in the plan pages.
 
 | Topic | Final choice |
 |---|---|
-| PRs | one future implementation PR for all of 0.5.0, including Karen ML; current PR #82 is documentation only |
+| PRs | one implementation PR for all of 0.5.0, including Karen ML; current PR #82 is documentation only |
 | Training | after 0.5.0; no vertical-slice prerequisite; long runs still manually started |
 | Q8 / tricks | flash sale plus Screen loop, Room lights, Freezer alarm, The complaint |
 | Q9 / item 2 | **A+**: 0.4.0 trained persona bots with memory within a shift and their own record of her across shifts; realistic bodily fear stays scripted; compare against human sessions |
@@ -18,7 +18,7 @@ This record overrides earlier alternatives and question prompts in the plan page
 | Training / layout test split | train on Racetrack/Labyrinth/Fishbone/Brick bond plus today's baseline; Rings/Split held out from training and tuning |
 | Item 8 | **B**: separate external visual project, same Unity/URP version; realistic environment with simple low-poly products; materials wanted |
 | Item 9 | **A**: private summary page, only the owner sees it; no mandatory GitHub Projects board; show PR links in the summary |
-| Shelf joints | engineering proposal below; no modelling authorised; validate a small prototype after a build instruction rather than ask the owner to solve kit geometry |
+| Shelf joints | engineering proposal below; source prototype now authorised; validate the private art after storage is available rather than ask the owner to solve kit geometry |
 | Storage | purchase is contemplated, not completed; linked 128 GB USB 2.0 stick is archive/transfer storage, not the recommended active Unity drive; see [assessment](storage.md) |
 
 ## Shelf proposal, explained more simply
@@ -46,8 +46,8 @@ It needs no new owner questionnaire; later picture review is an ordinary art mil
 
 ## Remaining execution gates, not open design questions
 
-- **Explicit instruction to build.** The owner currently says documentation only. No Unity,
-  modelling, project creation, imports, baking, training or game code now.
+- **Build approved.** Implement code and tooling in one PR. Long training remains deferred.
+  No large external project or private art imports until suitable storage is available.
 - **Suitable storage before active external visual work.** Recommend a 500 GB/1 TB USB 10 Gb/s
   SSD. If only the linked stick is bought, archive/transfer there and keep active visual work on
   Windows SSD; do not silently create an unusably slow Mac project.

@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-14 | Authorise the complete 0.5.0 implementation in one PR, using suitable models and parallel workers; long training remains after 0.5.0 | [build decisions](plans/0.5.0/build-decisions.md) |
 | 2026-11-14 | Reconcile 0.4.1 with `main` now that 0.4.0 is merged, push it and open its PR; then build 0.5.0 | this list; the 0.4.1 pull request |
 | 2026-11-14 | Build first, test later: 0.4.1, then 0.5.0, then the vertical slice and the test build; every test and training run comes after, once ([TESTING.md](TESTING.md)) | [NOW.md](NOW.md#next-in-order) |
 | 2026-11-14 | Confirmed: no yes needed for each published model (the 12 November call), now in 0.4.0's plan too | [0.4.0 plan, D15](plans/0.4.0-build-plan.md#41-defaults-i-picked-change-any) |
