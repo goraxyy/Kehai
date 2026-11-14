@@ -6,6 +6,14 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-14 | 0.5.0 uses adaptive trained bots with within-shift memory and across-shift sensed history; no language-model players or judges | [0.5.0](plans/0.5.0/agents.md) |
+| 2026-11-14 | Escape learning combines consented central refits on Windows with local counts settled at shift end; no local neural training or player warning | [0.5.0](plans/0.5.0/build-decisions.md) |
+| 2026-11-14 | Keep Racetrack, Labyrinth, Fishbone, Rings, Split and Brick bond; train on the first, second, third and sixth; reserve Rings/Split | [0.5.0](plans/0.5.0/maze-and-karen.md) |
+| 2026-11-14 | Four successful shifts; Gameplay Karen absent on shift 1, Testing present; today’s map at 1–2, Labyrinth at 3, Brick bond at 4 | [0.5.0](plans/0.5.0/build-decisions.md) |
+| 2026-11-14 | Flash sale raises only the shopper cap to 4; end it with a 20-second staff-room microphone hold; add screen loop, room lights, freezer alarm and complaint | [0.5.0](plans/0.5.0/tricks.md) |
+| 2026-11-14 | First-shift guidance is text, outlines and prompts only; tired/wry lines, first shift only | [0.5.0](plans/0.5.0/first-shift-lines.md) |
+| 2026-11-14 | One gameplay project produces Training, Testing and Gameplay; the realistic Look Lab is a separate private external project with simple products | [0.5.0](plans/0.5.0/versions.md) |
+| 2026-11-14 | Progress lives on an owner-only private summary; no mandatory Projects board; unavailable accounts remain unavailable | [0.5.0](plans/0.5.0/dashboard.md) |
 | 2026-11-14 | Authorise the complete 0.5.0 implementation in one PR, using suitable models and parallel workers; long training remains after 0.5.0 | [build decisions](plans/0.5.0/build-decisions.md) |
 | 2026-11-14 | Reconcile 0.4.1 with `main` now that 0.4.0 is merged, push it and open its PR; then build 0.5.0 | this list; the 0.4.1 pull request |
 | 2026-11-14 | Build first, test later: 0.4.1, then 0.5.0, then the vertical slice and the test build; every test and training run comes after, once ([TESTING.md](TESTING.md)) | [NOW.md](NOW.md#next-in-order) |

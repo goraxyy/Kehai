@@ -3,6 +3,12 @@
 Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 7. **Choices settled:** one gameplay project produces three editions. A separate external
 visual project is additional, not a fourth game edition. See [storage budgets and opening from an external drive](storage.md).
 
+**Implementation, 14 November:** edition selection, build stamps, the four-shift career and
+first-shift guide are in source. Offline checks pass; no player build or trainer connection has
+been run. The [integration handoff](../../../agents/integration/0.5.0-editions-guide.md) lists
+completed source hooks and deferred runtime verification. The three-version table below remains the target;
+it is not a claim that the Training player's startup or payload has been measured.
+
 1. [The memory question](#1-the-memory-question)
 2. [What goes in each version](#2-what-goes-in-each-version)
 3. [Version control](#3-version-control)
@@ -33,10 +39,11 @@ Your three, as you confirmed them (Q26):
 | **Debug tools** (F1, F2, the trick check) | the trick check, for tests | F1 and F2, the bug report | none (or behind a setting) |
 | **Karen** | the version being trained or tested | the version that shipped last; **there from shift 1** (Q39) | the version that shipped last; **not in the first shift** (Q23) |
 
-**The Training version also fixes a real gap.** 0.4.0's training player never reaches the
-trainer: with no graphics device, its text components throw errors without end. A version with
-no text UI at all is the straightest fix, and it's what lets the Windows PC run many copies at
-once (C7.3).
+**Training addresses a real gap.** 0.4.0's training player never reaches the trainer: with no
+graphics device, its text components throw errors without end. The new build processor removes
+scene text and presentation references before play, while runtime factories must also respect
+the no-UI edition. The headless startup, trainer connection, payload size and number of Windows
+copies that fit in memory still require a real build check (C7.3).
 
 ## 3. Version control
 
@@ -54,11 +61,22 @@ already records its commit.
 ## 4. How a build is made
 
 ```bash
-# planned (C7.2); not working today
+# Implemented entry point (C7.2); run only when a build is authorised
 Unity -batchmode -projectPath . -executeMethod KehaiBuild.Build -edition training -platform windows
 ```
 
-- One commit gives all three; the edition is in the build's `build.txt`, with the commit.
+- One commit gives all three; the edition is in the build's `build.txt`, with the commit,
+  and in `StreamingAssets/edition.txt`. The build compiles an edition stamp into the player;
+  a runtime command-line argument cannot change it.
+- The editor defaults to **Testing**; an editor-only override supports previews and tests.
+  An unstamped player defaults to Gameplay. Use the build entry point for a stamped release.
+- A new human career ends after four successful clock-outs. Death does not advance it.
+  Successful progress and the optional guide skip are saved in `career.json`; the Ledger
+  continues to store Karen's habits and attempt statistics. The guide has no Help replay.
+- Gameplay's recording policy is off by default: its consent flow is not implemented here.
+  The remaining bootstrap integration gate is called out in the handoff. Testing uses the
+  existing playtest consent/upload flow; Training retains learning and shift records,
+  with no replay recording.
 - The Testing build is PR #81's playtest build, plus the guide (C7.4).
 - Builds are made one at a time, under the heavy-work lock, never while your editor is open.
 

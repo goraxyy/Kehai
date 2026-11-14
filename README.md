@@ -13,6 +13,8 @@ where you hide, and she moves when you blink. Her touch kills.
 now is in [`docs/you/NOW.md`](docs/you/NOW.md), and what's left until release in
 [`docs/you/RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md).
 
+**Current work:** [Kehai 0.5.0](docs/you/plans/0.5.0-plan.md), approved for implementation in one PR.
+
 **Karen's full design:** [`docs/agents/karen/Karen.md`](docs/agents/karen/Karen.md). The same on
 one page, in plain words: [`docs/you/HOW_KAREN_WORKS.md`](docs/you/HOW_KAREN_WORKS.md).
 
@@ -25,7 +27,7 @@ She never knows where you are. She senses, guesses, and acts on the guess.
 ```mermaid
 flowchart LR
     S["What she senses<br/>eyes · ears · traces<br/>cameras · customers"] --> B["Where she thinks you are<br/>a chance for every 1.5 m of floor"]
-    B --> D["What she does<br/>roam · check · search · hunt<br/>or one of 17 tricks"]
+    B --> D["What she does<br/>roam · check · search · hunt<br/>or one of 22 tricks"]
     D --> Y["What you do<br/>hide · run · fix what she broke"]
     Y --> S
     P["The Director<br/>paces the tension in waves"] -.-> D
@@ -37,7 +39,7 @@ flowchart LR
 |---|---|
 | Senses | Sight judged eye to eye, hearing along the floor, traces you leave, cameras, what shoppers tell her |
 | The belief map | Spreads while she can't sense you, sharpens when she can, and drops where she looks and finds nothing |
-| Tricks | 17 live: Blackout, Fog, Camera watch, Camera break, Shelf sweep, Spill, Ambush, Block door and more. Most leave you a job |
+| Tricks | 22 live: Blackout, Fog, Camera watch, Camera break, Shelf sweep, Spill, Ambush, Block door and more. Most leave you a job |
 | Fairness | Ten rules in code, checked by tests. She can't read your position, and a shift can always be finished |
 
 ## A shift, in one picture

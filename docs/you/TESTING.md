@@ -27,8 +27,8 @@ Each of these changes what she or the bots would learn:
 | Build | What it changes |
 |---|---|
 | 0.4.1 | her sight, six cameras, two camera tricks, three new chores |
-| 0.5.0 tricks (Phase 1) | the flash sale and the extras you pick: her list of choices |
-| 0.5.0 layouts (Phase 4) | ten store layouts: training draws a layout each career, two are held out |
+| 0.5.0 tricks (Phase 1) | the flash sale and four approved extras: her list of choices |
+| 0.5.0 layouts (Phase 4) | six retained layouts: training draws a layout each career, two are held out |
 | 0.5.0 agents (Phase 2) | who plays against her; see [the agents question](#the-agents-question) |
 | 0.5.0 versions (Phase 7) | the Training version fixes the training player, so Windows can run 8 copies at once |
 | 0.5.0 cheat training (Phase 3) | escape habits in the Ledger, and a refit aimed at the moments after she loses you |
@@ -36,10 +36,10 @@ Each of these changes what she or the bots would learn:
 ## The times
 
 - **The Mac** is measured where it says so, otherwise estimated.
-- **Windows** isn't measured. It assumes a 16-core PC running 8 copies at once, after 0.5.0's
-  Training version (Phase 7) makes the training player connect. The PC's cores, RAM and GPU
-  aren't known yet ([0.5.0 Q3](https://github.com/goraxyy/Kehai/pull/82)).
-- **Across ten layouts, training will take longer** than on one store: how much isn't known.
+- **Windows** is the owner's i9-13900KF, 32 GB RAM, RTX 4090 (24 GB). Throughput is not measured.
+  Start with 8 copies, then measure memory and samples/second before trying 12; 8–12 is a trial
+  range, not a speed promise. Heavy/long runs happen there.
+- **Across the retained layouts, training will take longer** than on one store: how much isn't known.
   The training times below are for one store and are the low end.
 
 ---
@@ -67,7 +67,7 @@ These aren't the testing phase. They're how each PR shows it didn't break anythi
 | 2 | **The new tricks' check** (0.5.0 C1.5): fairness, stuck shifts, each new trick lands in 80% of its starts | 1.5 h | ~45 min | **Yes** | The tricks must work before she learns to use them |
 | 3 | **You play:** 5–10 normal shifts (0.4.0 Y1.1), two with the flash sale forced (0.5.0 Y1.1), one guided first shift (0.5.0 Y6.2). I score them (0.4.0 C1.4) | 1–2 h for you | the same | **Yes** | The only human reference the bots are judged against |
 
-### Stage 2: the bots (training). Holds for the agents decision
+### Stage 2: the bots (training). Choice settled: A+ adaptive ML bots
 
 | # | What | Mac | Windows | Necessary? | Why |
 |---|---|---|---|---|---|
@@ -95,7 +95,7 @@ These aren't the testing phase. They're how each PR shows it didn't break anythi
 |---|---|---|---|---|---|
 | 11 | **The two ladders** (0.4.0 C6.2) on the training layouts, and the **same ladders on the two held-out layouts** (0.5.0 C4.10) | 2 nights + ~1 night | ~1 night + ~half a night | **Yes**, once | The headline results, and whether she copes with a store she never trained in |
 | 12 | **The exploit check** (0.4.0 C6.3): a fresh Survivor trained to beat each frozen Karen | ~3 days each (300,000 decisions at the measured bot speed) | ~10 h each | **Yes** for Vital, nice to have for Basic | One cheap trick that beats her (a spot she never looks) is a failure to fix |
-| 13 | **The agents panel** (0.5.0 C2.4): 3–5 language-model players, one career of six shifts each, against the finished Karen | 1–5 h (the API, not the CPU); about $1–2 on Haiku 5.5 | runs from the Mac | **Yes**, if you build the panel | A player she was never trained or tuned against: the fairest test, and a showpiece |
+| 13 | **Adaptive-bot comparison and benchmark** (0.5.0 C2.4, Phase 5): paired memory/no-memory runs, fixed four-shift careers; compare human realism against consented sessions | not yet measured | Windows | **Yes** | Check adaptation, fairness and realism separately; no language-model players or judges |
 | 14 | **You play both Karens** (0.4.0 Y6.1) and **decide what ships** (Y6.2) | a few shifts each | the same | **Yes** | What it feels like to play against them |
 
 ### Stage 6: real players (after playtest v2 ships)
@@ -129,16 +129,17 @@ These aren't the testing phase. They're how each PR shows it didn't break anythi
 
 ## The agents question
 
-The 0.5.0 plan ([§7](https://github.com/goraxyy/Kehai/pull/82), Q9–Q10) offers five kinds of
-"agent". **Hold Stage 2 onward until you've chosen**, because the choice decides what gets trained:
+**Answered: A+ adaptive ML bots; no outside language-model player or judge.** The bots gain
+within-shift recurrent memory and a fair record of Karen across shifts. Their fear reflexes
+remain scripted. The [benchmark](plans/0.5.0/benchmark.md) fixes metrics and schedules before
+runs; reports show paired standard errors and unavailable human references explicitly.
 
-| If you choose | Employee-1 (#4) | What else changes |
-|---|---|---|
-| **A + B panel** (the plan's suggestion): keep the trained bots, add language-model players as a judge | trained as planned | #13 is added; nothing is redone |
-| **C hybrid:** a language model sets the bot's goal every 20–30 s, the trained mind walks | trained, but to follow given goals: a new curriculum | the bots cost money every shift, so Karen's millions of training decisions can't use it. She still trains against plain bots |
-| **D:** a language model writes the bots' personas between shifts | trained as planned, on more varied personas | pennies a career |
-| **E:** copy people from replays | waits for about 100 real players | Stages 2–5 move after Stage 6 |
-| **B alone** as her opponent | not trained | not possible for training: about $5,000 even on Haiku, and months |
+All careers now have four shifts. Gameplay has no Karen during shift 1; Testing may show her
+from shift 1 for diagnostics. Shifts 3–4 supply the adaptation window after her introduction.
+Train on today's map, Racetrack, Labyrinth, Fishbone and Brick bond. Rings, Split, the cautious
+player and Karen's careful-corner personas remain excluded from training and tuning. Run the
+hidden benchmark once per frozen candidate; preserve negative results.
 
-**Only A and E are fast and cheap enough for her to train against.** So whatever you choose, she
-trains against bots. The agents decide how good those bots are, and who judges her at the end.
+Source compilation and pure-logic/Python tests run while building. Scene checks, trick checks,
+map exports, style timing, long training and the final benchmark remain queued for the agreed
+post-build testing stage. Never read a queued test as a recorded pass.

@@ -1,6 +1,6 @@
 # The benchmark
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 5. **A draft for you to approve** (Y5.2):
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 5. **Implemented definition v1; no game evaluation run yet:**
 you asked for "a proper benchmark, so I could also track her progress", and for it to track all
 four groups below from the start (Q37).
 
@@ -29,7 +29,7 @@ four groups below from the start (Q37).
 
 ## 2. What it scores
 
-A first draft (v1). The [0.4.0 plan's §11](../0.4.0-build-plan.md#11-how-its-judged) already
+The immutable source definition is `tools/benchmark/v1.json` (`kehai-0.5-v1`). The [0.4.0 plan's §11](../0.4.0-build-plan.md#11-how-its-judged) already
 defines most of these; the benchmark fixes them in one place.
 
 | Group | Score | Better is | Example (made up) |
@@ -63,10 +63,10 @@ defines most of these; the benchmark fixes them in one place.
 | **the two held-out layouts** | **never** |
 
 - **Careers like the game:** 4 shifts, no Karen in the first, new layouts at shifts 3 and 4.
-- **Seeds in two halves:** a practice half, used while building; a hidden half, run once per
+- **Seeds in two halves:** a practice half, used for nonlearning checks; a hidden half, run once per
   version of her.
-- **Size and time:** about 400 shifts per version of her. On the Windows PC, with 8–12 copies at
-  once, that's under an hour (an estimate; C5.6 measures it).
+- **Size and time:** 50 careers × 4 shifts × 2 Ledger conditions = 400 shifts per half, 800 across both halves.
+  The current runner is serial; throughput and parallel execution have not been measured.
 
 ## 4. The rules that keep it honest
 
