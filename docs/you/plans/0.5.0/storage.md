@@ -97,3 +97,51 @@ entire Library or blindly overwrite gameplay Packages/ProjectSettings.
 If the owner buys only the linked stick, use it for archives/transfers and defer heavy visual
 project work to the Windows SSD. No asset modelling, new Unity project, imports, file movement,
 cleanup or benchmarking is authorised yet. Documentation work may continue.
+
+## Second candidate: 512 GB Vackiit phone flash drive
+
+The owner also asked about [Amazon B0HKR677TQ](https://www.amazon.com/dp/B0HKR677TQ).
+Read directly from its Amazon listing on 14 November: Vackiit, advertised 512 GB, USB 3.0,
+$29.99 at this check, and an advertised 800 MB/s read value. Its bullets describe roughly three
+minutes per GB on a phone and a 1 GB per-transfer recommendation specifically for phone-to-stick
+copies. Do not interpret that phone limitation as a proven PC limitation or benchmark.
+
+**Capacity:** 512 GB (about 477 GiB before formatting) comfortably covers the planning budgets
+above. **Speed/reliability:** no independent sustained-write or small-file benchmark was verified;
+USB 3.0 and the claimed read value do not establish fast Unity cache access. The phone-focused
+claims and unverified speed are insufficient to recommend this as the sole active project drive.
+MFi marketing concerns Apple accessory compatibility, not a benchmark of editor workloads.
+Use a reputable external SSD for active work; this remains a possible transfer/archive device,
+subject to checking real capacity and write/read integrity after purchase. No product is bought,
+formatted or tested here, and no evidence establishes that this particular item is counterfeit.
+
+## Estimated player install size, separate from development storage
+
+Assumptions: four shifts reuse the same store assets, six layouts mainly change placement data,
+products stay simple, moderate-resolution compressed textures, and no large pre-rendered movies.
+These are budgets for **one platform**, not measured future builds or promises of Steam download size.
+
+| Edition / stage | Estimated installed files | Excludes |
+|---|---:|---|
+| Training player | 0.2–0.5 GB | Python/trainer environment, datasets, checkpoints |
+| Quick-pass Testing build | 1–3 GB as art is added | accumulated tester replays and queued uploads |
+| Art-complete Gameplay build | **2–6 GB working target** | saves/records, patch working space |
+| Higher-resolution art/audio or cinematic-heavy case | 8–15+ GB possible | still not a committed release size |
+
+Today retained old player folders are much smaller (Windows 143 MB, macOS 158 MB; not current
+0.5.0 builds). Future textures, audio and per-layout lighting can dominate; ML inference weights
+are expected to be minor beside art. Six layouts need not duplicate six complete sets of shelf
+and product assets. Compressing a download may reduce size, but no ratio is promised in advance.
+Players normally install only Gameplay, not all three editions or the Unity Editor/Library.
+
+Comparable Steam pages list these **free-space requirements**, not measured downloads:
+
+| Indie horror game | Published free space |
+|---|---:|
+| [The Convenience Store](https://store.steampowered.com/app/1228520/) | 2 GB |
+| [MiSide](https://store.steampowered.com/app/2527500/MiSide/) | 2 GB |
+| [Mouthwashing](https://store.steampowered.com/app/2475490/Mouthwashing/) | 3 GB |
+
+Sources checked 14 November 2026. Kehai's 2–6 GB target is a planning inference from its scope,
+not a claim that these games have identical assets or compression. Measure the first art-bearing
+build using Unity's build report before setting a storefront storage requirement.
