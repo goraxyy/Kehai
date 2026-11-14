@@ -64,8 +64,8 @@ your sight, her guesses for the other sight tricks drop a little too.
 
 **The model pack.** A better "everyone" can reach players without a new build: one signed data
 file. The game checks the signature, that it's made for this build, and that every trick it names
-exists. It's only sent out after it beats the current one on players it never saw, and only on
-your yes. The fairness rules are code, so a bad pack can make her dull, never unfair.
+exists. It's only sent out after it beats the current one on players it never saw and passes every
+check. The fairness rules are code, so a bad pack can make her dull, never unfair.
 
 ---
 

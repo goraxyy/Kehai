@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The publish gate (0.4.0, build plan §6.5, C3.7): a candidate pack goes out only if it beats the
-current one on the held-out players, and only with your yes.
+current one on the held-out players, and passes every check (no yes per model: the owner, 12 November).
 
     python3 tools/learn/publish.py gate candidate_eval.json current_eval.json
     python3 tools/learn/publish.py stage candidate.kpack candidate_eval.json current_eval.json [--to tools/learn/packs]
@@ -15,7 +15,7 @@ standard error. A candidate passes only if:
     fairness violations are 0, and stuck shifts are no more than the current pack's;
     Basic's catch rate is inside your target, 0.20–0.35 catches a shift (Q2).
 `stage` writes a passing pack into a local folder as the next version and points "current" at it
-there. Nothing is uploaded: the server and --publish / --rollback are Phase 7, and wait for your yes.
+there. Nothing is uploaded: the server and --publish / --rollback are Phase 7.
 """
 from __future__ import annotations
 
@@ -109,7 +109,7 @@ def main(argv=None):
         sub.add_parser(flag.strip("-"))
     a = ap.parse_args(argv)
     if a.cmd in ("publish", "rollback"):
-        sys.exit("publish: the server side is Phase 7 (after playtest v2), and each publish waits for your yes")
+        sys.exit("publish: the server side is Phase 7 (after playtest v2)")
     cand, cur = json.load(open(a.candidate)), json.load(open(a.current))
     if a.cmd == "gate":
         ok, lines = gate(cand, cur)
