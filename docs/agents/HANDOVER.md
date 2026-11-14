@@ -160,7 +160,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - 7 test arms × 400 shifts. It starts after PR #68 is merged.
   - Not in 0.2.0. Cut, and Ambush on her guessed routes, now cover part of its first two kill moves, so re-read it against 0.2.0 before building it.
 - **Kehai 0.4.1** (branch `0.4.1`, 12–13 November): the owner's 17 items in one PR. What it changed in Karen: [Karen.md §19](karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time). What players notice: [CHANGELOG.md](CHANGELOG.md).
-  - **It overlaps the 0.4.0 build branch** in Karen's core files and in the docs both edit. The PR lists each overlap as a question for the owner; neither branch has merged the other.
+  - **Reconciled with 0.4.0** on 14 November, after 0.4.0 merged (PR #83): the code merged without conflicts; the docs were combined by hand. 0.4.0's trained-bot options know 0.4.1's two new chores (`EmployeeOptions.WhatOf`).
   - **Her eyes changed with no ablation.** 0.3.0's baseline and 0.4.0's fitted senses used the old eyes.
   - **New models** (`~/Desktop/KehaiRelated/Props`: `pa_microphone`, `camera_box`, `store_camera`, `cctv_screen`) come in with **Kehai → Props → Import Karen's Props**; until then each prop builds its own boxes.
   - **Trick videos** for the Esc menu's Tricks tab are recorded by [`tools/tricks/record_tricks.sh`](../../tools/tricks/README.md) into `Assets/StreamingAssets/TrickVideos/` (git-ignored).

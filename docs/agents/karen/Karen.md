@@ -1855,7 +1855,11 @@ Three calls by the owner, all in `SightSensor` and `KarenConfig`.
   the time to "seen" at every distance (tested).
 - Her gaze light stays a torch's (26 m). `FogState.Open` went from 60 m to 120 m, or fog
   anywhere would have cut her eye back to 60.
-- **Not measured.** This turns her up while the tuning plan's questions (Q2–Q5) are open. 0.3.0's
+- **Against the tuning plan's Q2** (12 November: keep the eye targets, tune reactions rather
+  than weaken her vision): the new eye meets the two timing targets with room to spare. The
+  third, "never seen crouched in the dim", now holds only with no line to your eyes; the owner's
+  later eye-to-eye rule (item 3) decides it.
+- **Not measured.** This turns her up. 0.3.0's
   ablation baseline, run on 12 November, was measured with the old eyes, and 0.4.0's fitted
   senses were fitted to them. No ablation has run with the new eyes.
 
