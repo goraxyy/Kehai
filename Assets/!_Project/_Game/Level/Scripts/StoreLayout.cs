@@ -142,6 +142,7 @@ public static class StoreLayout
 
     static void Dress()
     {
+        StoreLayoutRuntime.EnsureInitial();
         ApplyToScene();
         ShelfDrawer.Ensure();
         AisleSigns.Build();
