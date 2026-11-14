@@ -250,10 +250,16 @@ public class MotionModelTests
         s.Trace(TraceKind.DroppedItem, 1f, 10f, out conf, out sigma);
         Assert.AreEqual(5f + 10f * 0.1f, sigma, 0f);
         Assert.AreEqual(0.85f, s.SweepScale, 0f);
-        SenseModel s2 = SenseModel.For("s2");
+        // Today's numbers with a wall gain, not the cached S2 (changing that would leak into later tests).
+        SenseModel s2 = SenseModel.Hand();
+        s2.Id = "s2";
         s2.WallGain = 0.5f;
         Assert.Greater(s2.HearingSigma(10f, 5f, false), s.HearingSigma(10f, 5f, false), "S2: a noise through a wall gets a wider circle");
-        Assert.IsFalse(SenseModel.For("s1").Trained, "nothing is fitted yet: S1 falls back to today's numbers, and says so");
+        // S1 is the build's fitted table when it has one (SenseWeights.g.cs), else today's numbers, said so.
+        bool fitted = typeof(SenseModel).Assembly.GetType("Kehai.Karen.Generated.SenseWeightsTable") != null;
+        SenseModel s1 = SenseModel.For("s1");
+        Assert.AreEqual(fitted, s1.Trained, "S1 is fitted exactly when the build carries SenseWeights.g.cs");
+        if (!fitted) StringAssert.Contains("no fitted", s1.Version);
     }
 
     // ---- C4.8 the mirror map --------------------------------------------------------------------------

@@ -2,10 +2,13 @@
 """Writes the C# belief parity test's fixture (C4.2, C4.10): a synthetic map, a script of the filter's
 operations, and the beliefs this replay gets after each, with today's step (p0), P1 and P2. The
 C# filter (BeliefGrid with HandMotion / DestinationMotion, MotionFeatures.Compute) must get the
-same, to 1e-5. Rerun after changing kernels.py, features.py or their C# twins:
+same, to 1e-5. P1 and P2 use the numbers the build ships: the fitted PredictionWeights.part.json
+when it exists (what the C# reads through PredictionWeights.Current), else the hand-set ones. Rerun
+after changing kernels.py, features.py, their C# twins or the fitted numbers:
 
     python3 tools/belief/make_fixture.py
 """
+import json
 import os
 import sys
 
@@ -18,6 +21,7 @@ import synthetic  # noqa: E402
 
 COLS, ROWS = 9, 7
 OPEN = [not (r in (2, 4) and 2 <= c <= 6) for r in range(ROWS) for c in range(COLS)]      # two shelves
+GENERATED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Assets", "!_Project", "_Game", "AI", "Scripts", "Belief", "Generated", "PredictionWeights.part.json")
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Assets", "!_Project", "_Tests", "Editor", "BeliefParityFixture.g.cs")
 
 # Each op: kind, then numbers. obs: channel(0 sight, 1 hearing, 3 testimony), x, z, sigma, conf, cell.
@@ -35,7 +39,28 @@ PLACES = [dict(kind="Job", cell=5, waited=10.0, x=0, z=0, answer_s=-1, habit=0),
 FEATURES = dict(thought=[7.5, 7.5], seen=[3.0, 2.0], heading=[1.0, 0.0], time_left=0.5, open=True)
 
 
-def run():
+def shipped_weights(path=GENERATED) -> dict:
+    """The prediction numbers the build ships, as features.HAND's shape: the fitted part's values
+    over the hand-set ones (the C# PredictionWeights.Set reads the same keys)."""
+    w = dict(feat.HAND, kind=list(feat.HAND["kind"]), speed_share=list(feat.HAND["speed_share"]), p1=dict(feat.HAND["p1"]))
+    if not os.path.exists(path):
+        return w
+    with open(path) as f:
+        values = json.load(f)["values"]
+    for k, v in values.items():
+        if k.startswith("p1_"):
+            w["p1"][k[3:]] = v
+        elif k.startswith("kind_"):
+            w["kind"][[n.lower() for n in feat.KINDS].index(k[5:])] = v
+        elif k.startswith("speed_"):
+            w["speed_share"][int(k[6:])] = v
+        else:
+            w[k] = v
+    return w
+
+
+def run(w=None):
+    w = shipped_weights() if w is None else w
     m, d = synthetic.build(COLS, ROWS, OPEN)
     for p in PLACES:
         if p["cell"] >= 0:
@@ -58,11 +83,11 @@ def run():
         elif k == "bias":
             g.bias(op[1], op[2])
         elif k == "motion":
-            g.motion = kernels.HandMotion(feat.HAND["p1"]) if op[1] == "p1" else kernels.DestinationMotion()
+            g.motion = kernels.HandMotion(w["p1"]) if op[1] == "p1" else kernels.DestinationMotion()
         elif k == "danger_from":
-            g.danger = feat.danger(m, [op[1], op[2]], feat.HAND)
+            g.danger = feat.danger(m, [op[1], op[2]], w)
         elif k == "places":
-            rate, exit_rate, _, _ = feat.compute(m, dict(FEATURES, places=PLACES), feat.HAND)
+            rate, exit_rate, _, _ = feat.compute(m, dict(FEATURES, places=PLACES), w)
             g.motion.rate, g.motion.exit_rate = rate, exit_rate
         out.append(g.b.copy())
     return m, out
