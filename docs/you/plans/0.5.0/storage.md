@@ -145,3 +145,55 @@ Comparable Steam pages list these **free-space requirements**, not measured down
 Sources checked 14 November 2026. Kehai's 2–6 GB target is a planning inference from its scope,
 not a claim that these games have identical assets or compression. Measure the first art-bearing
 build using Unity's build report before setting a storefront storage requirement.
+
+## Amazon SSD shortlist and a compact release target
+
+The owner asked for concrete Amazon alternatives and clarified that the game is a compact
+four-shift store, not a cinematic-heavy game. **8–15+ GB above was a hypothetical high-end
+case, not the expected size or a release requirement.** Keep that distinction explicit.
+
+Amazon search results checked 14 November; prices vary by seller/colour and are not guaranteed
+checkout prices. These two actual external SSD models were found:
+
+| Model | Capacity | Advertised sequential read ceiling | Price displayed |
+|---|---:|---:|---:|
+| [Samsung T7, MU-PC1T0T/AM](https://www.amazon.com/dp/B0874XN4D8) | 1 TB | 1,050 MB/s | $219.99 |
+| [Kingston XS1000R, SXS1000R/1000G](https://www.amazon.com/dp/B0D9HJNR5W) | 1 TB | 1,050 MB/s | $194.95 |
+
+Both are the right device class for active projects, but these observed prices are steep;
+this is not a recommendation to buy at any price. Check the exact capacity, seller, return policy
+and included USB-C connection/cable at checkout. A good 500 GB external SSD is also sufficient
+for the present working budget if it costs materially less. No cheaper verified listing is
+promised here. Existing Windows SSD space remains available without another purchase.
+
+**Proposed compact-release goal:** aim for roughly **1–3 GB installed on one platform**, with
+an initial 3 GB budget to investigate if exceeded. This is a goal, not a revised measurement or
+promise; the earlier 2–6 GB allowance reflected unchosen art. Measure the first representative
+art-bearing build before committing to a storefront requirement. Download compression is separate.
+
+### What to omit or shrink before cutting gameplay
+
+| Priority | Action | Cost to the player |
+|---|---|---|
+| 1 | Right-size/compress textures per platform; use 256–512 px for small product faces where readable, 1K for ordinary props, 2K selectively. Compare at actual viewing distance. | potential fine-detail loss only; preserve legible labels |
+| 2 | Share product label sheets and shelf/wall/floor materials; use tiling materials, not a unique large texture per object. | no intended feature loss |
+| 3 | Compress music/ambience/voice appropriately; use mono for positional sounds that do not need stereo. Keep quality for short important cues. | listen for compression artefacts; do not strip atmosphere |
+| 4 | Share shelf, product and NPC assets across all shifts/layouts. Avoid duplicate copies inside separately packed content. | none intended |
+| 5 | Keep lighting data modest and selective per layout; don't ship unnecessarily large lightmaps or reflection captures. | compare shadow/reflection quality and runtime cost |
+| 6 | Exclude Look Lab, training environments/datasets, demonstration clips and unused art packs from Gameplay dependencies. Audit Resources/StreamingAssets and runtime-loaded content. | none: these are development resources |
+| 7 | Release build, appropriate code/shader stripping and only the target platform; don't bundle development symbols in the player download. Keep symbols privately for debugging. | verify dynamic code/shader use still works |
+
+Do **not** remove Karen's inference models, adaptive memory, shifts or tasks to chase tiny code
+savings while textures/audio dominate. A repeated mesh does not become thousands of separate mesh
+assets just because it appears thousands of times. Simple geometry helps runtime performance,
+but low polygon count alone does not guarantee a small download.
+
+Unity's [build-size guide](https://docs.unity.com/en-us/engine/6000.0/manual/building-and-publishing/reducing-filesize)
+explains using the build report to identify large assets. Unity strips most unused assets
+already: deleting random source art is not a reliable size optimisation. Reducing a texture from
+2048² to 1024² cuts its pixel count to one quarter, before format/mipmap differences. Converting
+source PNGs/JPEGs alone is not the same as choosing efficient imported runtime textures.
+
+Fold this into C7.5's edition verification and C8.4's art/performance review: report installed
+bytes and downloaded archive bytes separately, largest included assets, and quality comparisons.
+No build or asset changes are authorised by setting this target.
