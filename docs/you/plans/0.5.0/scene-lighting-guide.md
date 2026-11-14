@@ -109,3 +109,24 @@ numbers as authored C# settings, with any required Unity assets in private `keha
 Show identical camera views and a short walk, with CPU/GPU frame time and memory on the Mac.
 A contact sheet judges lighting/materials; walking judges shimmer, readability and comfort.
 No claim of a supported minimum until a player build has been measured.
+
+## Trying the code presets
+
+Implementation lives in `Look/Scripts/StylePresets.cs`. The external lab's Inspector switches
+between Neutral, Fluorescent Realism and Soft Stylised, with an effects toggle. Bloom and grain
+start subtle; motion blur, lens distortion and colour fringing start at zero. Depth of field
+is off during play so tasks and threats stay readable.
+
+When suitable storage is available, create the separate private Unity project with the **same
+Unity and URP versions**. Put an empty `KEHAI_PRIVATE_LOOK_LAB` file at its root. Select one
+location slice in the game project, then **Kehai → Look Lab → Export selected slice privately**.
+Save outside the public repository and import into the external project. Repeat for rooms,
+parking, backstreet and maze; use one scene per slice. The exporter preserves the store scene,
+exports selected parents only once, and cleans up its temporary scene.
+
+Use **Add style controls to external lab**, enable post-processing on the player camera's URP
+settings, and select the style on `LookLabStyle`. Keep the same camera position and light setup
+when comparing styles. **Capture camera comparison privately** writes three 1280×720 images
+and an HTML comparison outside the public project. This is a visual comparison, not a benchmark.
+Measure frame time and memory separately on the Mac and Windows before adopting a style.
+No second project or imported art has been created by the implementation.
