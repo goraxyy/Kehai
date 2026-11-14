@@ -59,7 +59,7 @@ defines most of these; the benchmark fixes them in one place.
 | Store | Seen in training? |
 |---|---|
 | today's store | yes |
-| the eight training layouts | yes |
+| the four training layouts | yes |
 | **the two held-out layouts** | **never** |
 
 - **Careers like the game:** 4 shifts, no Karen in the first, new layouts at shifts 3 and 4.

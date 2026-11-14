@@ -52,20 +52,20 @@ chokepoint is one already), so they cost nothing to author.
 ## 3. Training across layouts
 
 > **Domain randomisation.** *What:* training on many versions of a world so the learner learns
-> the skill, not one map. *In Kehai:* each training career draws one of the eight training
+> the skill, not one map. *In Kehai:* each training career draws one of the four training
 > layouts. *Elsewhere:* robot hands trained in simulations with random lighting, colours and
 > weights, so they cope with a real kitchen.
 
-- **Eight layouts train, two are held out.** The held-out two are named in `EvalSplits` and no
+- **Four layouts train, two are held out.** The held-out two are named in `EvalSplits` and no
   training or tuning run may draw them, the same rule as the cautious player (C4.9).
 - **What's trained across them:** the bots' trained mind (they must play any store), the two
   Karens' brains, and the fits (S1's senses, P1's gains, the mirror map's numbers). The fits are
   cheap; the brains are the long runs.
 - **The test** (C4.10) is 0.4.0's ladders, run on the two held-out layouts. If she's much worse
-  there than on the training layouts, she memorised the eight.
-- **When:** once, after 0.5.0 and the vertical slice (your answer to Q1), so it's done on the
+  there than on the training layouts, she memorised the four.
+- **When:** once, after 0.5.0 (your answer to Q1), so it's done on the
   layouts from the start, with careers of 4 shifts like the game.
-- **Today's store stays a layout of its own** (the eleventh), so today's results still compare.
+- **Today's store stays a layout of its own** (the seventh), so today's results still compare.
 
 ## 4. A new layout every shift
 

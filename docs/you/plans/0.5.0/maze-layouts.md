@@ -3,7 +3,12 @@
 Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 4. How Karen copes with a new layout is on
 [Karen in a new maze](maze-and-karen.md).
 
-**What to do on this page:** read the logic in §1 and say whether it's right (Q14), then tick or
+**Latest decision (14 November):** keep 1 Racetrack, 2 Labyrinth, 3 Fishbone, 5 Rings, 6 Split,
+and 10 Brick bond. Park 4 Free-flow, 7 Plaza, 8 Switchback, 9 Four rooms. Keep their drawings as
+history, not build tasks. Shelves must be drawn and placed at their measured thickness, not as
+solid 2.5 m squares. See [the shelf remodel](shelf-remodel.md).
+
+**Earlier review instructions (superseded):** read the logic in §1 and say whether it's right (Q14), then tick or
 cross each layout in §3 (Q15). A crossed one, with a line on why, is as useful as a tick.
 
 1. [The logic (check this first)](#1-the-logic-check-this-first)
@@ -52,7 +57,7 @@ says so.
   the aisles are wider than they look.
 - Today's store is drawn at the same scale (not in these symbols) in [STORE.md](../../../agents/store/STORE.md#the-building)'s 2.5 m plan.
 
-**The four numbers under each layout:**
+**The four numbers under each layout (historical schematic counts, not physical validation):**
 
 | Number | What it counts | Why it matters |
 |---|---|---|
@@ -67,7 +72,7 @@ says so.
 
 ### 1. Racetrack
 
-- [ ] **Approve layout 1** (or cross it, with a line on why)
+- [x] **Retained layout 1** (owner, 14 November; topology approved, physical joins still to verify)
 
 A loop about 5 m in from the walls runs round a block of short east–west aisles. Each aisle opens onto the loop at both ends and breaks once in the middle, the breaks staggered.
 
@@ -108,7 +113,7 @@ D.#.#######.#########.#.|#
 
 ### 2. Labyrinth
 
-- [ ] **Approve layout 2** (or cross it, with a line on why)
+- [x] **Retained layout 2** (owner, 14 November; topology approved, physical joins still to verify)
 
 The endless maze's own rules, on the store: a spanning tree that joins every cell, then braided (75% of dead ends knocked through, 12% of the other walls), from seed 7, with doorways all round its edge.
 
@@ -149,7 +154,7 @@ D.#...#.#####.#####.###.|#
 
 ### 3. Fishbone
 
-- [ ] **Approve layout 3** (or cross it, with a line on why)
+- [x] **Retained layout 3** (owner, 14 November; topology approved, physical joins still to verify)
 
 A spine two cells wide runs from the front to the back. Aisles run off both sides; the north three on each side also open onto the side aisle by the wall, the south three are closed at the wall: pockets, each broken once half way.
 
@@ -190,7 +195,7 @@ D.###.#####...#####.###.|#
 
 ### 4. Free-flow
 
-- [ ] **Approve layout 4** (or cross it, with a line on why)
+**Parked layout 4** (owner, 14 November; keep as reference only)
 
 Low tables (1.25 m) instead of tall runs, staggered, with the tall shelving only on the walls.
 
@@ -231,7 +236,7 @@ D.......+++++...+.+++++.|#
 
 ### 5. Rings
 
-- [ ] **Approve layout 5** (or cross it, with a line on why)
+- [x] **Retained layout 5** (owner, 14 November; topology approved, physical joins still to verify)
 
 Three rings, one inside the other, with two ways through each ring, never in line with the next ring's, so the way in winds. A promotion table stands in the middle.
 
@@ -272,7 +277,7 @@ D.#.#################.#.|#
 
 ### 6. Split
 
-- [ ] **Approve layout 6** (or cross it, with a line on why)
+- [x] **Retained layout 6** (owner, 14 November; topology approved, physical joins still to verify)
 
 One wall of shelving runs down the middle, with a single gap half way. With the front and the back aisle, that's three ways across. Each half is a small braided maze of its own.
 
@@ -313,7 +318,7 @@ D.###.###...#...#####.#.|#
 
 ### 7. Plaza
 
-- [ ] **Approve layout 7** (or cross it, with a line on why)
+**Parked layout 7** (owner, 14 November; keep as reference only)
 
 An open square in the middle, about 10 × 10 m, with a promotion table. Four blocks stand round it, with aisles running out of it north, south, east and west.
 
@@ -354,7 +359,7 @@ D.#...###.#...#...#...#.|#
 
 ### 8. Switchback
 
-- [ ] **Approve layout 8** (or cross it, with a line on why)
+**Parked layout 8** (owner, 14 November; keep as reference only)
 
 Five long aisles across the store, each turning at the opposite end from the last, closed at the sides, with two shortcuts through the runs.
 
@@ -395,7 +400,7 @@ D.###################.#.|#
 
 ### 9. Four rooms
 
-- [ ] **Approve layout 9** (or cross it, with a line on why)
+**Parked layout 9** (owner, 14 November; keep as reference only)
 
 A cross of shelving splits the floor into four rooms, with two doorways through each arm of the cross, two from the front and two to the back aisle. Low shelves in the north rooms, tall ones in the south.
 
@@ -436,7 +441,7 @@ D.#.+++++++.#.........#.|#
 
 ### 10. Brick bond
 
-- [ ] **Approve layout 10** (or cross it, with a line on why)
+- [x] **Retained layout 10** (owner, 14 November; topology approved, physical joins still to verify)
 
 Runs of two bays, offset row to row like bricks, with short cross pieces where they don't close a cell.
 

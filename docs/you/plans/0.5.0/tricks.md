@@ -121,4 +121,4 @@ Each builds on something 0.4.0 or 0.4.1 added.
 | A row in the trick check | `TrickCheck` |
 | A name in her learning records, the brains' list of choices and the model pack's known tricks | 0.4.0's learning code |
 | A line in the shift report's "your answers" | `KarenLedger` |
-| **No refresh round:** training happens once, after 0.5.0 and the vertical slice (Q1), so every trick is in first | — |
+| **No refresh round:** training happens once, after 0.5.0 (Q1), so every trick is in first | — |

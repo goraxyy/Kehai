@@ -13,7 +13,13 @@ the redesign: the choice made here is a direction for the style guide of
 
 ---
 
-## 1. Six styles
+**Chosen direction (14 November):** realistic spaces, lighting and surfaces, with simple low-poly
+products and other small items. Low-poly describes geometry complexity, not a compulsory cartoon
+look. Use coherent materials and scale to make both fit together. The style trials compare two
+realistic lighting treatments against today's look; no further cartoon/anime vote is needed.
+See [the hands-on guide and learning resources](scene-lighting-guide.md).
+
+## 1. Six styles (earlier alternatives)
 
 Named the way the games' makers or reviewers name them. Where a claim isn't backed by a source
 I found, it says so.
