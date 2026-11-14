@@ -17,7 +17,7 @@ learning: the answer is where the player really was, or what they really sensed 
 ```bash
 tools/rl/.venv/bin/python -m pytest -q tools/belief/tests     # the tests (no Unity)
 tools/belief/record.sh                                          # C4.9: the recordings (about 3 h, editor closed)
-tools/belief/train_all.sh                                       # C4.10: fit, choose, export (a few hours, CPU)
+tools/belief/train_all.sh                                       # C4.10: fit, choose, export (about 7–8 h, CPU)
 tools/belief/test_run.sh                                        # C4.11: the three tests of §11 (about 3 h, editor closed)
 ```
 

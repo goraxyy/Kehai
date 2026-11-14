@@ -1,13 +1,13 @@
 # Now
 
-Updated 2026-11-12. One page: what's being built, what waits on you, what's next. Agents keep it
+Updated 2026-11-14. One page: what's being built, what waits on you, what's next. Agents keep it
 current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md).
 
 ## Being built
 
 | What | State | Where |
 |---|---|---|
-| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. Built: phases 1–5's code and tests (430 of 430 pass; the game plays as `main` with every switch off). The baseline ablation ran on 12 November: fairness 0, but 12 of 240 shifts stuck. The belief recordings (C4.9) ran on 13 November and pass the parity gate. **Nothing is trained yet**: every recording, training and test run waits for your go, one command each in the plan | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
+| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. Built: phases 1–5's code and tests (430 of 430 pass; the game plays as `main` with every switch off). The baseline ablation ran on 12 November: fairness 0, but 12 of 240 shifts stuck. The belief recordings (C4.9) ran on 13 November and pass the parity gate. **The belief fits (C4.10) ran on 13 November:** fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). The brains and bots aren't trained yet: every run waits for your go, one command each in the plan | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
 | **The docs split** (this layout) | merged into `main` (PR #80) | this page |
 
 The plan on `main` is one step behind: the approved version, with fitted senses, the mirror map
@@ -19,6 +19,8 @@ and the live model, arrives when the 0.4.0 branch merges.
 |---|---|
 | Play 5–10 shifts on today's build (0.4.0 plan, Y1.1) | you're the first human reference for the bots |
 | The go for each 0.4.0 recording, training and test run | "I will do the training later" |
+| Before C4.11 (the belief tests, about 3 h): refit P1 with a wider speed range (about 2 h), and look into why P2 and P3 lost? Or go straight to C4.11 | C4.11 runs once on the held-out players, then the models freeze |
+| Keep the blur in her senses, or play the sharper fitted S1 | S1 trusts every sighting and noise almost fully: she'd play sharper |
 | Yes or no: delete the old 480 MB belief dataset (Q5) | the new recordings replace it |
 | Yes or no: sort the store's doors so a doorway keeps its number (Karen's Ledger mixes up doorways between shifts today) | it changes play against `main` |
 | Yes or no: a new model is published only on your yes each time (0.4.0 plan, D15) | a default I picked; you haven't seen it before |

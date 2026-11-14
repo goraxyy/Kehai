@@ -588,7 +588,7 @@ plan's §11, written before any run and unchanged. Negative results first.
   so a doorway's dwell and a doorway trick's places are mixed between shifts. Not fixed: sorting the doors
   changes play against `main`, so it's the owner's call.
 - **C4.10's fits would have taken two to three days,** not a few hours: about 1 ms of replay per trace line,
-  hundreds of passes. Array steps, remembered distances and 4 workers bring it to about 4–5 hours, with the
+  hundreds of passes. Array steps, remembered distances and 4 workers brought it to 7 h 41 min, with the
   same numbers (3e-16).
 - **The senses fit couldn't move** (found by a smoke run on 3 traces): the slopes per metre and per second
   shared the spreads' 0.5 floor, above today's 0.12 and 0.25, so every step was clipped and S1 and S2 would
@@ -669,6 +669,59 @@ C0.1's gated half, on the owner's go. It's 0.3.0's last ablation, and 0.4.0's ba
   of view she's a little further off at E (+2.0 ± 1.2 m).
 - **Speed:** 0.097 s of real time per simulated second, as in 0.3.0's second run (0.099); `main` on
   7 November was 0.044.
+
+### C4.10: the belief fits (13 November)
+
+The owner's go. `tools/belief/train_all.sh` on C4.9's second recording (144 training traces, 48
+validation; the hand-written employee bot played the persona shifts, so all of this is redone after
+C2.7). 7 h 41 min on the CPU with 4 workers (the estimate was 4–5 h), editor closed. Each stage is
+chosen on the validation traces; the held-out players aren't touched until C4.11. Commit `092641d`;
+the report is `kehai_eval/belief040/fit_report.json`.
+
+**Scores** (mean log p of the player's true cell on the validation traces; nearer 0 is better):
+
+| | Today | Fitted | Chosen |
+|---|---|---|---|
+| Her senses (every tick, P0) | S0 −5.29 | S1 **−4.84**, S2 −4.90 | S1 (+0.45: about 1.6× the chance on the true cell) |
+| The predict step (out of view, S1) | P0 −6.55 | P1 **−6.14**, P2 −6.81, P3 −6.78 | P1 (+0.42 over P0: about 1.5×) |
+
+These choose; they don't test. The §11 tests (95% intervals by career, held-out players) are C4.11's.
+
+**What didn't work:**
+- **P2 and P3 lost, to P1 and to today's P0.** Not over-fitting: on the training traces too their
+  out-of-view loss (6.91, 6.88) is worse than P1's (6.40). So the destination-first step is under-fit
+  or has a defect; it isn't evidence yet that "fitting the hand-written step is enough". Its stage 1
+  used 1,889 of the 4,620 logged legs: a leg counts only if it ends within 3 m of one of the places
+  the trace offered, and 798 legs are back-offs and 525 waits, which aim at no place. Diagnosing P2
+  is a follow-up, before C4.11 if its P2/P3 test is to mean anything.
+- **Most of S1's numbers sit at an edge** (5 of 8). Three are real floors: the near sight spread
+  (0.5 m) and the hearing spread (0.50 m, growing 0 per metre) sit on the 0.5 m floor the filter
+  itself enforces. Two are saturated: hearing confidence (2.99 of 3) and the sweep scale (2.96 of 3)
+  are clamped to 1 downstream, so a higher ceiling changes little. What S1 learned, plainly: every
+  sighting, noise and sweep is nearly exact, so trust it fully (S0 blurred a far sighting 3 m, S1
+  1.1 m; testimony 2.5 m, S1 0.67 m). On a bot's recordings that's expected, since the game's
+  observations come from the player's real position; it would make her play sharper, so whether
+  the blur was a design choice is the owner's call before S1 is played.
+- **P1 sits at three edges:** habit 3 (range 0–3), speed 2 (0–2), and moving 1 (0–1, a probability,
+  so a real limit). A probe past the edges, on the training traces (not validation): habit
+  is flat (out-of-view loss 6.398 fitted, 6.396 at 4, 6.395 at 5), but **speed isn't: 6.338 at 2.5 and
+  6.311 at 3**, still falling. The bound held P1 back; a refit with a wider speed range (about 2 h)
+  is the owner's call, before C4.11 freezes the models.
+- **The mirror map says players notice her far less than the hand-set guess:** at 3 m 58% (hand
+  89%), at 10 m 13% (73%); one of her noises 25% (80%). That's the bots' noticing, so provisional.
+
+**What holds:**
+
+| Check | Result |
+|---|---|
+| EditMode suite on a clone, with the fitted tables in | 430 of 430 |
+| The C# filter against the Python replay | to 1e-5 on every cell and step, now with the numbers the build ships (the fixture used the hand-set ones; `make_fixture.py` reads the fitted part, `518355b`) |
+| Every switch at its default | nothing reads a fitted table (S0, P0, mirror K0, no shadows). One shift (rung E, efficient, seed 1000) against `main` (9eb37cd): the same jobs, tricks, catch and end; 191 steps against 192, the run-to-run jitter `main` shows too |
+
+Two EditMode tests had to change: one expected S1 unfitted, and one changed the cached S2 (it now
+uses a copy of today's numbers). The trick check on this run differed from `main`'s on the same
+seed (two tricks walked to spots they couldn't reach, "Infinity m short"; `main` failed to place its
+door lock), as the trick check does run to run.
 
 ## Karen 0.3.0: the ablation (7 November)
 
