@@ -34,7 +34,8 @@ namespace Kehai.Eval
             // Ambush straight after Blackout: with the lights out it waits on your way to the
             // breaker box (FixAt), which is the 0.3.0 combo path.
             "shelf_sweep", "spill", "bin_tamper", "phantom_chime", "door_lock", "blackout", "ambush", "fog",
-            "camera_bolt_on", "camera_watch", "camera_break", "tool_theft", "understudy", "overtime",
+            "camera_bolt_on", "camera_watch", "camera_break", "tool_theft", "understudy",
+            "flash_sale", "screen_loop", "room_lights", "freezer_alarm", "complaint", "overtime",
         };
 
         public const float StartWithin = 30f, PlanWithin = 130f, FixWithin = 240f, EndWithin = 420f;
@@ -74,7 +75,7 @@ namespace Kehai.Eval
             var config = new EnvConfig
             {
                 seed = seed, rung = "E", shiftSeconds = 900f, fps = 15, render = false, freshLedger = true,
-                startShift = 10, agent = "efficient", syntheticBlinks = true, overtimeCap = 300f,
+                startShift = 4, agent = "efficient", syntheticBlinks = true, overtimeCap = 300f,
             };
             int violationsBefore = FairnessGuard.Violations;
             KarenBrain brain = null;

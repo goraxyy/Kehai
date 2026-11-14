@@ -32,7 +32,8 @@ namespace Kehai.Karen
         Footsteps,        // her own steps, from somewhere else
         RevealSting,      // not a warning: the stab as she steps out after a vanish, or gets you
         CameraFizz,       // 0.4.1: the store's cameras shorting out (Camera break)
-        MonitorHum        // 0.4.1: the office screens waking as she sits down to watch (Camera watch)
+        MonitorHum,       // 0.4.1: the office screens waking as she sits down to watch (Camera watch)
+        FrozenClock, RoomFlicker, FreezerAlarm, AngryWalk // 0.5.0: local physical cues
     }
 
     // All of Karen's sounds, synthesised at load. The project keeps audio clips out of the
@@ -134,6 +135,10 @@ namespace Kehai.Karen
                     return PaChime();
                 case TellKind.Footsteps:
                     return Make("farSteps", 3f, t => Footstep(Mathf.Repeat(t, 0.6f)) * 0.8f);
+                case TellKind.FrozenClock: return Tell(TellKind.CrtTick);
+                case TellKind.RoomFlicker: return Tell(TellKind.Flicker);
+                case TellKind.FreezerAlarm: return FreezerAlarmBeep();
+                case TellKind.AngryWalk: return Tell(TellKind.Footsteps);
                 case TellKind.CameraFizz:
                     return Make("camFizz", 1.1f, t => 0.45f * Env(t, 0.005f, 0.35f, 1.1f) *
                         ((Mathf.Abs(White(t)) > 0.8f ? White(t) : 0f) * 1.6f + Sine(Mathf.Lerp(2400f, 300f, t / 1.1f), t) * 0.35f));
@@ -167,6 +172,8 @@ namespace Kehai.Karen
         public static AudioClip ErrorBuzz() => Make("error", 0.6f, t => 0.35f * Env(t, 0.01f, 0.05f, 0.6f) * Mathf.Sign(Sine(95f, t)));
         public static AudioClip Unplug() => Make("unplug", 0.35f, t => 0.6f * Mathf.Exp(-t * 18f) * (Sine(300f, t) + White(t) * 0.3f));
         // 0.3.0. A camera of hers that can see you: one short, high pip, once a second.
+        public static AudioClip FreezerAlarmBeep() => Make("freezer_alarm", .35f, t =>
+            .55f * Env(t, .01f, .04f, .35f) * Sine(1800f, t));
         public static AudioClip CameraBeep() => Make("cambeep", 0.16f, t => 0.5f * Env(t, 0.004f, 0.04f, 0.16f) * Sine(2600f, t));
         // The time clock stopping: a relay clack and a falling buzz that dies out.
         public static AudioClip ClockStop() => Make("clockstop", 1.1f, t =>

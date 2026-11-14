@@ -27,7 +27,7 @@ public static class StoreLayoutRuntime
         CareerRuntime.CareerPreparing -= OnPreparing;
         CareerRuntime.CareerPreparing += OnPreparing;
     }
-    static void OnPreparing(int shift, int seed, bool training) => Prepare(shift,seed,training || TrainingSchedule,EvaluationLayouts);
+    static void OnPreparing(int shift, int seed, bool training) => Prepare(shift,seed,(training && !CareerRuntime.GameplaySimulation) || TrainingSchedule,EvaluationLayouts);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void Reset()
@@ -40,7 +40,7 @@ public static class StoreLayoutRuntime
         if (activeScene == SceneManager.GetActiveScene()) return;
         activeScene = SceneManager.GetActiveScene();
         root = null; hidden.Clear(); browsing.Clear(); CurrentId = "today";
-        string id = Choose(CareerRuntime.UpcomingShiftNumber, CareerRuntime.Seed, Edition.Training || TrainingSchedule, EvaluationLayouts);
+        string id = Choose(CareerRuntime.UpcomingShiftNumber, CareerRuntime.Seed, (Edition.Training && !CareerRuntime.GameplaySimulation) || TrainingSchedule, EvaluationLayouts);
         if (id != "today") Apply(id);
     }
 
@@ -90,6 +90,7 @@ public static class StoreLayoutRuntime
         foreach (ShelfUnit shelf in UnityEngine.Object.FindObjectsByType<ShelfUnit>())
         {
             Vector3 p = shelf.transform.position;
+            if (StoreLayout.SectionAt(p) == ItemType.Confectionery) continue;
             if (p.x < 25 || p.x > 85 || p.z > -120 || p.z < -175 || shelf.GetComponentInParent<ColdFixture>() != null) continue;
             if (outlineMaterial == null) outlineMaterial = shelf.GetComponent<OutlineHighlight>()?.outlineMaterial;
             hidden.Add(shelf.gameObject);
@@ -112,7 +113,7 @@ public static class StoreLayoutRuntime
     static void MakeCell(StoreLayouts.Layout layout, int row, int col, List<Transform> stands)
     {
         bool west=layout.Shelf(row,col-1), east=layout.Shelf(row,col+1), north=layout.Shelf(row-1,col), south=layout.Shelf(row+1,col);
-        bool tall=layout.At(row,col)=='#';
+        bool tall=layout.At(row,col)!='+';
         var bay = new GameObject($"Bay_{row:00}_{col:00}");
         bay.transform.SetParent(root.transform,false);
         bay.transform.position=layout.Position(row,col);
@@ -123,7 +124,7 @@ public static class StoreLayoutRuntime
         if (vertical || horizontal)
         {
             if(vertical) bay.transform.localRotation=Quaternion.Euler(0,90,0);
-            BuildModule(bay.transform,Vector3.zero,StoreLayouts.Pitch,1f,tall,true,true);
+            BuildModule(bay.transform,Vector3.zero,StoreLayouts.Pitch,1f,tall,true,layout.At(row,col)!='|');
         }
         else
         {

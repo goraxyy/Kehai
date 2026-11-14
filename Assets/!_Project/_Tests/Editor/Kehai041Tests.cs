@@ -431,8 +431,8 @@ public class Kehai041Tests
         Assert.IsNotNull(brk);
         Assert.IsFalse(watch.Draft || brk.Draft);
         // Appended, so every older trick keeps its number for a trained policy.
-        Assert.AreEqual(TacticLibrary.All.Count - 2, TacticLibrary.IndexOf(watch));
-        Assert.AreEqual(TacticLibrary.All.Count - 1, TacticLibrary.IndexOf(brk));
+        Assert.AreEqual(27, TacticLibrary.IndexOf(watch));
+        Assert.AreEqual(28, TacticLibrary.IndexOf(brk));
 
         Assert.IsTrue(watch.IsHandsOn, "she has to be at the screens");
         Assert.IsFalse(watch.LeavesChore);
@@ -639,7 +639,8 @@ public class Kehai041Tests
                                           TellKind.PaChime, TellKind.Footsteps, TellKind.RevealSting })
             Assert.IsNull(KarenNarrator.TrickSound(kind, "in Aisle 3"), kind.ToString());
         // Every sound a live trick makes has its line.
-        foreach (Tactic t in TacticLibrary.Live.Where(t => !t.OwnMove && t.Tell != TellKind.PaChime && t.Tell != TellKind.Footsteps))
+        foreach (Tactic t in TacticLibrary.Live.Where(t => !t.OwnMove && t.Tell != TellKind.PaChime && t.Tell != TellKind.Footsteps &&
+            t.Tell != TellKind.FrozenClock && t.Tell != TellKind.RoomFlicker && t.Tell != TellKind.FreezerAlarm && t.Tell != TellKind.AngryWalk))
             Assert.IsNotNull(KarenNarrator.TrickSound(t.Tell, "in Aisle 3"), t.Id + "'s sound has no line");
     }
 

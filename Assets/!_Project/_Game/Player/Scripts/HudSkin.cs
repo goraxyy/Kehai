@@ -24,7 +24,7 @@ public static class HudSkin
 
     public static void Apply()
     {
-        if (Application.isBatchMode) return;
+        if (!Edition.ShowUI || Application.isBatchMode) return;
         foreach (TaskListUI list in Object.FindObjectsByType<TaskListUI>(FindObjectsInactive.Include)) Dress(list);
         foreach (BurnoutUI bar in Object.FindObjectsByType<BurnoutUI>(FindObjectsInactive.Include)) Dress(bar);
         foreach (InventoryUI slots in Object.FindObjectsByType<InventoryUI>(FindObjectsInactive.Include)) Dress(slots);

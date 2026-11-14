@@ -12,12 +12,12 @@ namespace Kehai.Eval
     //   -league tools/rl/leagues/vital_r2.json
     //
     // A league file says who learns ("employee", "vital" or "basic"), who they meet and in what
-    // shares, and the careers: each is one persona, six shifts, a fresh Ledger. Frozen Karens run
+    // shares, and the careers: each is one persona, four shifts, a fresh Ledger. Frozen Karens run
     // from generated C# (or the planner); frozen players are scripted or run a generated mind.
     //
     //   {
     //     "name": "vital_r2", "learner": "vital", "split": "training",
-    //     "careers": 100000, "shifts": 6, "start_shift": 1, "shift_seconds": 150,
+    //     "careers": 100000, "shifts": 4, "start_shift": 1, "shift_seconds": 150,
     //     "players": [ { "kind": "scripted", "profile": "efficient", "share": 1 },
     //                  { "kind": "persona", "share": 2 },               // drawn from the ranges
     //                  { "kind": "employee", "share": 2 },              // a persona, run by EmployeeBrain
@@ -34,9 +34,11 @@ namespace Kehai.Eval
         public string name = "league";
         public string learner = "employee";          // employee | vital | basic | none (a test run)
         public Split split = Split.Training;
-        public int careers = 1, shifts = 6, startShift = 1, seedOffset;
+        public int careers = 1, shifts = 4, startShift = 1, seedOffset;
         public float shiftSeconds = 150f;
         public int fps = 15;
+        public string layout = "";
+        public bool heldoutLayout;
         public readonly List<PlayerSpec> players = new List<PlayerSpec>();
         public readonly List<KarenSpec> karen = new List<KarenSpec>();
         public readonly List<LessonSpec> lessons = new List<LessonSpec>();
@@ -53,10 +55,12 @@ namespace Kehai.Eval
                 name = o.GetString("name", "league"),
                 learner = o.GetString("learner", "employee").ToLowerInvariant(),
                 careers = (int)o.GetNumber("careers", 1),
-                shifts = (int)o.GetNumber("shifts", 6),
+                shifts = (int)o.GetNumber("shifts", 4),
                 startShift = (int)o.GetNumber("start_shift", 1),
                 shiftSeconds = (float)o.GetNumber("shift_seconds", 150),
                 fps = (int)o.GetNumber("fps", 15),
+                layout = o.GetString("layout", ""),
+                heldoutLayout = o.GetBool("heldout_layout", false),
                 seedOffset = (int)o.GetNumber("seed_offset", 0)
             };
             string split = o.GetString("split", "training");
@@ -75,6 +79,17 @@ namespace Kehai.Eval
                     s.ranges.High[i] = Mathf.Clamp01(System.Convert.ToSingle(high[i], System.Globalization.CultureInfo.InvariantCulture));
                 }
             }
+            if (s.startShift < 1 || s.shifts < 1 || s.startShift + s.shifts - 1 > CareerRules.ShiftCount)
+                throw new System.FormatException("Careers contain four shifts; start_shift + shifts must fit shifts 1–4.");
+            if (!string.IsNullOrEmpty(s.layout))
+            {
+                bool heldout = EvalSplits.HeldOutLayout(s.layout);
+                if (heldout && (!s.heldoutLayout || s.split != Split.Test || s.learner != "none"))
+                    throw new System.FormatException("Held-out layouts require a non-learning final test league.");
+                if (s.layout != "today") StoreLayouts.Find(s.layout);
+            }
+            if (s.heldoutLayout && (s.split != Split.Test || s.learner != "none"))
+                throw new System.FormatException("heldout_layout is only for non-learning final tests.");
             if (s.players.Count == 0) throw new System.FormatException("a league needs players");
             if (s.karen.Count == 0 && s.lessons.Count == 0) s.karen.Add(new KarenSpec());
             return s;
@@ -311,7 +326,9 @@ namespace Kehai.Eval
                 {
                     seed = c.Seed, rung = karen?.rung ?? "C", karen = karen != null && karen.brain != "none",
                     shiftSeconds = Spec.shiftSeconds, fps = Spec.fps, render = false, freshLedger = true,
-                    startShift = Spec.startShift, agent = c.Persona.Name, syntheticBlinks = true
+                    startShift = Spec.startShift, agent = c.Persona.Name, syntheticBlinks = true,
+                    layout = Spec.layout, heldoutLayout = Spec.heldoutLayout,
+                    trainingLayouts = !Spec.heldoutLayout
                 };
                 yield return env.ResetEpisode(config);
 

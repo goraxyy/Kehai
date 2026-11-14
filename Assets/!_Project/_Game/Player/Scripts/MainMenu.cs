@@ -28,7 +28,7 @@ public sealed class MainMenu : MonoBehaviour
     public static List<Choice> ChoicesFor(int shiftsWorked, bool careerOver)
     {
         var choices = new List<Choice>();
-        if (careerOver) choices.Add(Choice.NewCareer);
+        if (careerOver || CareerRules.Complete(shiftsWorked)) choices.Add(Choice.NewCareer);
         else if (shiftsWorked > 0) { choices.Add(Choice.Continue); choices.Add(Choice.NewCareer); }
         else choices.Add(Choice.FirstShift);
         choices.Add(Choice.Settings);
@@ -70,7 +70,7 @@ public sealed class MainMenu : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
-        if (Application.isBatchMode || Instance != null) return;
+        if (!Edition.ShowUI || Application.isBatchMode || Instance != null) return;
         var go = new GameObject("Main menu");
         DontDestroyOnLoad(go);
         go.AddComponent<MainMenu>();
@@ -81,6 +81,7 @@ public sealed class MainMenu : MonoBehaviour
 
     void Awake()
     {
+        if (!Edition.ShowUI) { enabled = false; return; }
         Instance = this;
         Build();
     }
@@ -107,7 +108,7 @@ public sealed class MainMenu : MonoBehaviour
 
     static bool Wanted(bool firstLoad)
     {
-        if (Application.isBatchMode || FindAnyObjectByType<ShiftManager>() == null) return false;
+        if (!Edition.ShowUI || Application.isBatchMode || FindAnyObjectByType<ShiftManager>() == null) return false;
         if (OtherModeRunning || Kehai.Replay.ReplayMode.Arg("-replay") != null || Kehai.Replay.ReplayMode.Rendering) return false;
         foreach (string flag in new[] { "-skip-menu", "-kehai-env", "-kehai-ablation" })
             if (Kehai.Replay.ReplayMode.Flag(flag)) return false;
@@ -222,7 +223,9 @@ public sealed class MainMenu : MonoBehaviour
         if (brain == null && ++framesWaited < 10) return;
 
         LedgerData data = brain != null && brain.Ledger.Persistent ? brain.Ledger.Data : null;
-        career = data == null ? (0, 0, false, null) : (data.shiftsWorked, data.warnings, data.endingReached, data.playerName);
+        int completed = CareerRuntime.ReadCompletedShifts();
+        career = data == null ? (completed, 0, false, null) : (completed, data.warnings, data.endingReached, data.playerName);
+        career.over |= CareerRules.Complete(career.shifts);
         careerRead = true;
         ShowChoices();
     }
@@ -257,6 +260,7 @@ public sealed class MainMenu : MonoBehaviour
     // Karen forgets you. The store loads again, so the Karen in it starts from nothing.
     void StartOver()
     {
+        CareerRuntime.NewCareer();
         KarenBrain brain = KarenBrain.Instance;
         if (brain != null && brain.Ledger != null) brain.Ledger.Wipe();
         else if (File.Exists(KarenLedger.DefaultPath)) File.Delete(KarenLedger.DefaultPath);

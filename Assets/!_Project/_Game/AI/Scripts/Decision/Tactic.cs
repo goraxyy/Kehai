@@ -156,7 +156,9 @@ namespace Kehai.Karen
                 // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
                 new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic(),
                 // the store's cameras (0.4.1), last again for the same reason
-                new CameraWatchTactic(), new CameraBreakTactic()
+                new CameraWatchTactic(), new CameraBreakTactic(),
+                new FlashSaleTactic(), new ScreenLoopTactic(), new RoomLightsTactic(),
+                new FreezerAlarmTactic(), new ComplaintTactic()
             };
         }
 

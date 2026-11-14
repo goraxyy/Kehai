@@ -38,7 +38,11 @@ public sealed class FurnitureDoor : HighlightInteractable
     public override void Interact(PlayerInteract player)
     {
         if (roomDoor != null) roomDoor.Use(player.transform.position, NoiseAuthor.Player);
-        else wantsOpen = !wantsOpen;
+        else
+        {
+            if (GetComponent<FreezerAlarm>() is FreezerAlarm alarm && alarm.Ringing) alarm.Close();
+            else wantsOpen = !wantsOpen;
+        }
     }
     public override string GetPrompt() =>
         roomDoor != null && roomDoor.Blocker != null && roomDoor.Blocker.IsBlocking ? roomDoor.Blocker.PromptFor(PlayerInteract.Local)

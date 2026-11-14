@@ -122,6 +122,7 @@ namespace Kehai.Eval
             GameEvents.BinBagged += OnBin;
             GameEvents.BagDisposed += OnBag;
             GameEvents.CustomerServed += OnServed;
+            CustomerComplaint.Resolved += OnComplaint;
             GameEvents.DirectionsGiven += OnDirections;
             GameEvents.CoffeeDrunk += OnCoffee;
             GameEvents.PunchAttempted += OnPunch;
@@ -153,6 +154,7 @@ namespace Kehai.Eval
             GameEvents.BinBagged -= OnBin;
             GameEvents.BagDisposed -= OnBag;
             GameEvents.CustomerServed -= OnServed;
+            CustomerComplaint.Resolved -= OnComplaint;
             GameEvents.DirectionsGiven -= OnDirections;
             GameEvents.CoffeeDrunk -= OnCoffee;
             GameEvents.PunchAttempted -= OnPunch;
@@ -175,6 +177,14 @@ namespace Kehai.Eval
                 LongestWait = Mathf.Max(LongestWait, w);
                 waitingSince.Remove(c);
             }
+        }
+
+        void OnComplaint(CustomerComplaint complaint,bool heard)
+        {
+            if(!heard) CustomersLost++;
+            // The complaint owns this shopper's till wait, not the normal checkout queue.
+            var customer=complaint!=null?complaint.GetComponent<CustomerNPC>():null;
+            if(customer!=null) waitingSince.Remove(customer);
         }
 
         void OnPunch(bool accepted)

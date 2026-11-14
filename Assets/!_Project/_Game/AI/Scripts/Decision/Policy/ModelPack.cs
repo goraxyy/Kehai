@@ -48,18 +48,39 @@ namespace Kehai.Karen
         public BrainNet Brain(string name) => brains.TryGetValue(name, out BrainNet b) ? b : null;
         public IReadOnlyDictionary<string, float> Weights(string name) => weights.TryGetValue(name, out var w) ? w : null;
 
+        static int selectionPins;
+        static ModelPack pinnedSelection;
+        // A nonlearning benchmark keeps one immutable loaded selection for the whole career.
+        // Pinning neither downloads nor publishes a pack and never changes its weights.
+        public static System.IDisposable PinSelection()
+        {
+            if(selectionPins++==0) pinnedSelection=Current;
+            return new SelectionPin();
+        }
+        sealed class SelectionPin : System.IDisposable
+        {
+            bool disposed;
+            public void Dispose()
+            {
+                if(disposed)return;disposed=true;
+                if(--selectionPins==0) pinnedSelection=null;
+            }
+        }
+
         public static string Folder => Path.Combine(Application.persistentDataPath, "model_packs");
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Current = null;
+            selectionPins=0;pinnedSelection=null;
             LastRefusal = null;
         }
 
         // Picks the numbers for the next shift (never called while one runs).
         public static void Select(string explicitFile)
         {
+            if(selectionPins>0) { Use(pinnedSelection);return; }
             ModelPack chosen = null;
             if (!string.IsNullOrEmpty(explicitFile))
             {

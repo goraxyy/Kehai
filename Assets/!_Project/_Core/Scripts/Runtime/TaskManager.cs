@@ -13,7 +13,7 @@ using UnityEngine;
 public class TaskManager : MonoBehaviour
 {
     // Stored by name in the shift records, and by number nowhere: new kinds go at the end.
-    public enum TaskKind { Mop, Trash, Stock, Serve, Directions, ReturnTool, RestartClock, AnnounceClosing, FixCameras }
+    public enum TaskKind { Mop, Trash, Stock, Serve, Directions, ReturnTool, RestartClock, AnnounceClosing, FixCameras, CallOffSale, RestoreRoomLights, CloseFreezer, HearComplaint }
 
     public readonly struct ShiftTask
     {
@@ -83,9 +83,23 @@ public class TaskManager : MonoBehaviour
     // Closing time, and the store hasn't been announced closed (0.4.1): say so on the PA.
     public bool ClosingSaid => Shift == null || !Shift.AwaitingAnnouncement;
 
+    public bool SaleEnded => !Kehai.Karen.FlashSaleState.Active;
+    public bool RoomsLit
+    {
+        get { foreach (var sw in RoomLightSwitch.All) if (sw != null && sw.IsOff) return false; return true; }
+    }
+    public bool FreezersClosed
+    {
+        get { foreach (var alarm in FreezerAlarm.All) if (alarm != null && alarm.Ringing) return false; return true; }
+    }
+    public bool ComplaintsHeard
+    {
+        get { foreach (var complaint in CustomerComplaint.All) if (complaint != null && complaint.Active) return false; return true; }
+    }
+
     public bool AllComplete => FloorClean && ShelvesStocked && TrashEmpty
                             && AllCustomersServed && AllDirectionsGiven && ToolsHome && ClockRunning
-                            && CamerasWorking && ClosingSaid;
+                            && CamerasWorking && ClosingSaid && SaleEnded && RoomsLit && FreezersClosed && ComplaintsHeard;
 
     // Where a job is, when somebody knows: "Aisle 4" after she swept a bay there. Shown beside
     // the job while it's open, and dropped once the job's done.
@@ -149,6 +163,25 @@ public class TaskManager : MonoBehaviour
             if (!CamerasWorking)
                 yield return new ShiftTask(TaskKind.FixCameras, "Fix the store's cameras",
                     Detail(TaskKind.FixCameras, false, "camera box, backstreet"), false);
+
+            foreach (var chore in PhaseOneChores.Pending())
+            {
+                switch (chore.Kind)
+                {
+                    case "call_off_sale":
+                        yield return new ShiftTask(TaskKind.CallOffSale, "Call off the sale", chore.Where + " · hold E for 20 s", false);
+                        break;
+                    case "restore_room_lights":
+                        yield return new ShiftTask(TaskKind.RestoreRoomLights, "Restore the room lights", chore.Where + " · press E", false);
+                        break;
+                    case "close_freezer":
+                        yield return new ShiftTask(TaskKind.CloseFreezer, "Close the freezer", chore.Where + " · press E", false);
+                        break;
+                    case "hear_complaint":
+                        yield return new ShiftTask(TaskKind.HearComplaint, "Hear the complaint", chore.Where + " · hold E for 20 s", false);
+                        break;
+                }
+            }
 
             // Closing time (0.4.1): customers keep coming until you say the store is closed.
             if (!ClosingSaid)

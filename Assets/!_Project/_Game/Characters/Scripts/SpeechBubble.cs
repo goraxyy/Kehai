@@ -26,6 +26,7 @@ public class SpeechBubble : MonoBehaviour
     public static SpeechBubble Create(Transform anchor, float height, float forwardOffset = 0.75f)
     {
         GameObject root = new GameObject("SpeechBubble");
+        if (!Edition.ShowUI) return root.AddComponent<SpeechBubble>();
 
         Canvas canvas = root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;

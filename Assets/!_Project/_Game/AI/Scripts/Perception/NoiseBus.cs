@@ -73,7 +73,7 @@ namespace Kehai.Karen
 
         public static void Emit(Vector3 position, float loudness, NoiseKind kind, NoiseAuthor author)
         {
-            if (loudness <= 0f) return;
+            if (loudness <= 0f || FreezerAlarm.Masks(position, kind)) return;
 
             var e = new NoiseEvent
             {

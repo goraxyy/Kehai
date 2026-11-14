@@ -84,7 +84,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--out',type=Path)
     args=parser.parse_args();results={}
     if args.out:
-        repo=SOURCE.parents[5].resolve()
+        repo=Path(__file__).resolve().parents[2]
         # Outputs are generated review assets, never committed art.
         out=args.out.resolve()
         if out==repo or repo in out.parents:raise SystemExit('Choose a private output directory outside the repository')

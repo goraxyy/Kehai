@@ -83,7 +83,7 @@ namespace Kehai.Karen
             // newest good pack in model_packs/, else the build's own. Chosen here, before she starts,
             // so never during a shift.
             ModelPack.Select(brain.config.modelPack);
-            if (!NoRecords)
+            if (!NoRecords && Edition.RecordShiftData)
             {
                 root.AddComponent<ShiftRecorder>();
                 if (Edition.RecordReplays)

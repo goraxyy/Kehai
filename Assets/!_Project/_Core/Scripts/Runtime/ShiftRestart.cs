@@ -15,7 +15,7 @@ public static class ShiftRestart
     public static int CompletedShifts()
     {
         ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
-        return shift == null ? -1 : shift.IsShiftActive ? shift.ShiftNumber - 1 : shift.ShiftNumber;
+        return shift == null ? -1 : shift.CompletedShifts;
     }
 
     // Loads the store again (or `scenePath`, if given), with `completedShifts` done once it's
@@ -23,6 +23,7 @@ public static class ShiftRestart
     public static void Reload(int completedShifts, string scenePath = null)
     {
         completed = completedShifts;
+        CareerRuntime.PendingCompletedShifts = completedShifts >= 0 ? completedShifts : (int?)null;
         GamePause.Set(false);
 
         SceneManager.sceneLoaded -= Restore;
@@ -44,6 +45,7 @@ public static class ShiftRestart
     static void Restore(Scene scene, LoadSceneMode mode)
     {
         SceneManager.sceneLoaded -= Restore;
+        CareerRuntime.PendingCompletedShifts = null;
         if (completed < 0) return;
         ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
         if (shift != null) shift.SetShiftNumber(completed);

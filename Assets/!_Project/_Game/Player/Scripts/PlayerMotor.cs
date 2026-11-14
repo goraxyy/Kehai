@@ -207,6 +207,8 @@ public class PlayerMotor : MonoBehaviour
         else if (isCrouching) NoiseBus.Emit(transform.position, 0.1f, NoiseKind.CrouchStep, NoiseAuthor.Player);
         else NoiseBus.Emit(transform.position, 0.35f, NoiseKind.Footstep, NoiseAuthor.Player);
 
+        if (FreezerAlarm.Masks(transform.position)) return;
+
         // What you hear is what she hears: loud when sprinting, barely there when crouched.
         if (feet == null)
         {

@@ -79,6 +79,7 @@ public class GuideMarker : MonoBehaviour
     static GuideMarker Build(string name, Mesh mesh, Color colour, bool onTop)
     {
         GameObject go = new GameObject(name);
+        if (!Edition.ShowUI) return go.AddComponent<GuideMarker>();
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
 
         MeshRenderer renderer = go.AddComponent<MeshRenderer>();

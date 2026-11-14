@@ -48,6 +48,7 @@ namespace Kehai.Karen
 
         void Update()
         {
+            if (!Edition.AllowDebugTools) return;
             if (GamePause.Paused) return;   // the Esc menu is open
             if (Input.GetKeyDown(KeyCode.Escape) && (showOverlay || showScrubber))
             {
@@ -161,6 +162,7 @@ namespace Kehai.Karen
 
         void OnGUI()
         {
+            if (!Edition.AllowDebugTools) return;
             if (!showOverlay && !showScrubber) return;
             if (brain == null || brain.Map == null) return;
             if (painter == null) painter = new MapPainter(StoreFloorPlan.Current);

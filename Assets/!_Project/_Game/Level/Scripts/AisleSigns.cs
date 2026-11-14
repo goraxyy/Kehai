@@ -47,10 +47,11 @@ public static class AisleSigns
     }
 
     public static int Build() =>
-        Build(Flat(BoardColour, 0.2f), Flat(BadgeColour, 0.2f), Flat(WireColour, 0.3f), GameFonts.Rounded, japanese: true);
+        !Edition.ShowUI ? 0 : Build(Flat(BoardColour, 0.2f), Flat(BadgeColour, 0.2f), Flat(WireColour, 0.3f), GameFonts.Rounded, japanese: true);
 
     public static int Build(Material board, Material badge, Material wire, TMP_FontAsset font, bool japanese)
     {
+        if (!Edition.ShowUI) return 0;
         var old = SceneObjectNames.Find(RootName);
         if (old != null)
         {

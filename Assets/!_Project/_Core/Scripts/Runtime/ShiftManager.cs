@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Kehai.Karen;
 
 // A shift runs from clocking in at the puncher to clocking out again.
 //
@@ -31,10 +32,26 @@ public class ShiftManager : MonoBehaviour
     public CustomerSpawner customerSpawner;
     public BurnoutSystem burnoutSystem;
 
-    public bool IsShiftActive { get; private set; }
+    readonly CareerProgress career = new CareerProgress();
+    public bool IsShiftActive => career.IsActive;
+    public int CompletedShifts => career.CompletedShifts;
     public bool CustomersAllowed { get; private set; }
     public float TimeRemaining { get; private set; }
-    public int ShiftNumber { get; private set; }
+    public int ShiftNumber => career.ShiftNumber;
+    public int UpcomingShiftNumber => career.UpcomingShift;
+    public bool CareerComplete => career.Complete;
+    public int CareerSeed => CareerRuntime.Seed;
+    // Raised while inactive, before task setup and before Karen's ShiftStateChanged handler.
+    public event Action<int, int, bool> CareerPreparing;
+    public event Action CareerCompleted;
+    public bool LastShiftCompleted { get; private set; }
+
+    public void PrepareUpcomingShift()
+    {
+        if (IsShiftActive || CareerComplete) return;
+        CareerPreparing?.Invoke(UpcomingShiftNumber, CareerSeed, Edition.Training);
+        CareerRuntime.Prepare(UpcomingShiftNumber, CareerSeed);
+    }
 
     // Karen's overtime (0.3.0): she stops the time clock, and the shift's countdown stops with
     // it. Customers keep coming, and the task list gains "Restart the time clock", until
@@ -49,15 +66,18 @@ public class ShiftManager : MonoBehaviour
 
     void Awake()
     {
+        career.Restore(CareerRuntime.ReadCompletedShifts());
         if (taskManager == null) taskManager = FindAnyObjectByType<TaskManager>();
         if (customerSpawner == null) customerSpawner = FindAnyObjectByType<CustomerSpawner>();
         if (burnoutSystem == null) burnoutSystem = FindAnyObjectByType<BurnoutSystem>();
+        if (Edition.ShowUI && GetComponent<CareerCompletionScreen>() == null) gameObject.AddComponent<CareerCompletionScreen>();
     }
 
     void Start()
     {
         // Nothing runs until the player clocks in.
         SetCustomersAllowed(false);
+        PrepareUpcomingShift();
     }
 
     void Update()
@@ -113,6 +133,7 @@ public class ShiftManager : MonoBehaviour
         TimeRemaining = 0f;
         closingTold = true;
         ClosingAnnounced = true;
+        FlashSaleState.End();
         SetCustomersAllowed(false);      // doors close; shift ends when the player punches out
         if (taskManager != null) taskManager.NotifyChanged();
         ShiftStateChanged?.Invoke();
@@ -161,10 +182,13 @@ public class ShiftManager : MonoBehaviour
 
     public void StartShift()
     {
-        if (IsShiftActive) return;
+        if (IsShiftActive || CareerComplete) return;
 
-        ShiftNumber++;
-        IsShiftActive = true;
+        PrepareUpcomingShift();
+        if (!career.TryStart()) return;
+        LastShiftCompleted = false;
+        PhaseOneFixtures.ResetForShift();
+        if (customerSpawner != null) customerSpawner.maxActiveCustomers = SaleRules.NormalCap;
         SetFrozen(false);
         FrozenSeconds = 0f;
         ClosingAnnounced = false;
@@ -191,7 +215,9 @@ public class ShiftManager : MonoBehaviour
     public void SetShiftNumber(int completed)
     {
         if (IsShiftActive) return;
-        ShiftNumber = Mathf.Max(0, completed);
+        career.Restore(completed);
+        LastShiftCompleted = false;
+        PrepareUpcomingShift();
     }
 
     // Stop the clock. Only during a shift that's still counting down.
@@ -219,11 +245,13 @@ public class ShiftManager : MonoBehaviour
         ShiftStateChanged?.Invoke();
     }
 
-    public void EndShift()
+    public void EndShift(bool completed = true)
     {
         if (!IsShiftActive) return;
 
-        IsShiftActive = false;
+        career.End(completed);
+        LastShiftCompleted = completed;
+        FlashSaleState.End();
         SetFrozen(false);
         TimeRemaining = 0f;
         ClosingAnnounced = false;
@@ -235,6 +263,12 @@ public class ShiftManager : MonoBehaviour
 
         Debug.Log($"Shift {ShiftNumber} ended.");
         ShiftStateChanged?.Invoke();
+        if (completed) CareerRuntime.SaveProgress(CompletedShifts);
+        if (completed && CareerComplete)
+        {
+            CareerCompleted?.Invoke();
+            CareerRuntime.Complete();
+        }
     }
 
 #if UNITY_EDITOR

@@ -83,11 +83,11 @@ public class KarenActionsTests
     };
 
     [Test]
-    public void TheNineRemovedIn030_AreGone_AndTheLibraryHolds29()
+    public void TheNineRemovedIn030_AreGone_AndTheLibraryHolds34()
     {
         foreach (string id in RemovedIn030)
             Assert.IsNull(TacticLibrary.Get(id), $"{id} is still in the library");
-        Assert.AreEqual(29, TacticLibrary.All.Count, "27 after 0.3.0, and 0.4.1's Camera watch and Camera break");
+        Assert.AreEqual(34, TacticLibrary.All.Count, "27 after 0.3.0, two cameras in 0.4.1, five approved tricks in 0.5.0");
     }
 
     // An old save that learned about the removed tricks still loads; it just forgets them.

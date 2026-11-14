@@ -110,6 +110,7 @@ namespace Kehai.Eval
             while (!env.CheckDone())
             {
                 var obs = env.World.Observe(env);
+                Memory.ObserveFair(obs, Time.time);
                 Sense(obs);
 
                 if (reactive && TooClose(obs, out Vector3 threat))
@@ -650,6 +651,11 @@ namespace Kehai.Eval
                 case "clock": return "restart_clock";
                 case "closing": return "announce_closing";
                 case "cameras": return "fix_cameras";
+                case "flash_sale": return "call_off_sale";
+                case "screen_loop": return "reset_screen";
+                case "room_lights": return "restore_room_lights";
+                case "freezer_alarm": return "close_freezer";
+                case "complaint": return "hear_complaint";
                 case "lost_tool": return "find_tool";
                 case "blocked_door": return "unblock_door";
                 case "kenji": return "send_kenji";

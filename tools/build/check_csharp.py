@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 
-def compile_sources(repo, unity, cached_project, output, ml=False):
+def compile_sources(repo, unity, cached_project, output, ml=False, player_edition=None):
     contents = unity / 'Contents' if (unity / 'Contents').is_dir() else unity
     scripting = contents / 'Resources/Scripting'
     sdk = scripting / 'DotNetSdk'
@@ -25,7 +25,8 @@ def compile_sources(repo, unity, cached_project, output, ml=False):
         raise SystemExit('An imported reference project is required; no cache was found')
     sources = [p for p in (repo / 'Assets/!_Project').rglob('*.cs')
                if 'Editor' not in p.parts and '_Tests' not in p.parts]
-    defines = 'UNITY_EDITOR;UNITY_EDITOR_OSX;UNITY_6000_0_OR_NEWER;UNITY_2023_1_OR_NEWER;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER'
+    defines = 'UNITY_6000_0_OR_NEWER;UNITY_2023_1_OR_NEWER;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER'
+    defines += ';KEHAI_' + player_edition.upper() if player_edition else ';UNITY_EDITOR;UNITY_EDITOR_OSX'
     if ml:
         defines += ';KAREN_MLAGENTS'
     output.mkdir(parents=True, exist_ok=True)
@@ -36,6 +37,8 @@ def compile_sources(repo, unity, cached_project, output, ml=False):
     lines += ['"' + str(p) + '"' for p in sources]
     rsp.write_text('\n'.join(lines))
     subprocess.run([str(sdk / 'dotnet'), str(compiler), '@' + str(rsp)], check=True)
+    if player_edition:
+        return
     editor_sources = [p for p in (repo / 'Assets/!_Project').rglob('*.cs') if 'Editor' in p.parts]
     nunit = contents / 'Resources/PackageManager/BuiltInPackages/com.unity.ext.nunit/net472/unity-custom/nunit.framework.dll'
     lines = [line for line in lines if not line.startswith('-out:') and not (line.startswith('"') and line.endswith('.cs"'))]
@@ -52,9 +55,10 @@ def main():
     parser.add_argument('--references', required=True, type=Path, help='Existing imported project (read only)')
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument('--ml', action='store_true')
+    parser.add_argument('--player-edition', choices=['training','testing','gameplay'])
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='kehai-compile-') as output:
-        compile_sources(args.repo, args.unity, args.references, Path(output), args.ml)
+        compile_sources(args.repo, args.unity, args.references, Path(output), args.ml, args.player_edition)
 
 
 if __name__ == '__main__':

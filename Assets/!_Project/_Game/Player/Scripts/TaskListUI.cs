@@ -26,12 +26,14 @@ public class TaskListUI : MonoBehaviour
 
     void Awake()
     {
+        if (!Edition.ShowUI) { enabled = false; return; }
         if (taskManager == null) taskManager = FindAnyObjectByType<TaskManager>();
         if (shiftManager == null) shiftManager = FindAnyObjectByType<ShiftManager>();
     }
 
     void OnEnable()
     {
+        if (!Edition.ShowUI) return;
         if (taskManager != null) taskManager.Changed += Redraw;
         if (shiftManager != null) shiftManager.ShiftStateChanged += Redraw;
         Redraw();
@@ -47,8 +49,9 @@ public class TaskListUI : MonoBehaviour
     {
         if (Input.GetKeyDown(toggleKey) && !GamePause.Paused)
         {
-            visible = !visible;
+            visible = FirstShiftGuide.WantsTaskList || !visible;
             ApplyVisibility();
+            if (visible) GameEvents.RaiseTaskListOpened();
         }
 
         // The clock is the only thing that needs a periodic redraw, and only once a second.
@@ -92,11 +95,11 @@ public class TaskListUI : MonoBehaviour
         }
         else
         {
-            builder.AppendLine($"<b>{headerWhenIdle}</b>");
+            builder.AppendLine(shiftManager != null && shiftManager.CareerComplete ? "<b>CAREER COMPLETE — FOUR NIGHTS DONE</b>" : $"<b>{headerWhenIdle}</b>");
             float full = shiftManager != null ? shiftManager.shiftDurationSeconds : 0f;
             int whole = Mathf.CeilToInt(full);
             builder.AppendLine($"Shift length  {whole / 60:0}:{whole % 60:00}");
-            builder.AppendLine("<i>Clock in at the puncher</i>");
+            builder.AppendLine(shiftManager != null && shiftManager.CareerComplete ? "<i>Return to the main menu for a new career</i>" : "<i>Clock in at the puncher</i>");
         }
 
         builder.AppendLine();

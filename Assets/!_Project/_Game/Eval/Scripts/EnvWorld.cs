@@ -111,11 +111,11 @@ namespace Kehai.Eval
         public static bool CanSee(PlayerPresence me, KarenBrain brain, out float distance)
         {
             distance = 0f;
-            if (me == null || brain == null || brain.Body == null) return false;
+            if (me == null || brain == null || !brain.PresentThisShift || brain.Body == null) return false;
             Vector3 her = brain.Body.Position + Vector3.up * 1.4f;
             Vector3 d = her - me.Head;
             distance = d.magnitude;
-            if (distance > Mathf.Min(35f, FogState.SightLimit(me.Head, her)) || Vector3.Angle(me.Facing, d) > 55f) return false;   // fog blinds you too
+            if (distance > Mathf.Min(PlayerSenses.SightRangeAt(her), FogState.SightLimit(me.Head, her)) || Vector3.Angle(me.Facing, d) > 55f) return false;   // fog blinds you too
             return !Physics.Linecast(me.Head, her, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
                    || hit.collider.transform.IsChildOf(brain.Body.transform);
         }
@@ -312,6 +312,17 @@ namespace Kehai.Eval
                 Add("closing", "pa_microphone", ClosingMic.Instance != null ? ClosingMic.Instance.transform.position : clock?.Position ?? Vector3.zero);
             if (StoreCameras.Instance != null && StoreCameras.Instance.Broken && StoreCameras.Instance.Box != null)
                 Add("cameras", "camera_box", StoreCameras.Instance.Box.transform.position);
+            if (FlashSaleState.Active && ClosingMic.Instance != null)
+                Add("flash_sale", "sale_microphone", ClosingMic.Instance.transform.position);
+            if (StoreCameras.Instance != null && StoreCameras.Instance.Looped && StoreCameras.Instance.Box != null)
+                Add("screen_loop", "camera_box", StoreCameras.Instance.Box.transform.position);
+            foreach (var sw in RoomLightSwitch.All)
+                if (sw != null && sw.IsOff) Add("room_lights", ChoreId(sw,"light_switch"),sw.transform.position);
+            foreach (var alarm in FreezerAlarm.All)
+                if (alarm != null && alarm.Ringing) Add("freezer_alarm", ChoreId(alarm,"freezer"),alarm.transform.position);
+            foreach (var complaint in CustomerComplaint.All)
+                if (complaint != null && complaint.Active)
+                    Add("complaint", ChoreId(complaint,"complaint"),complaint.FixPosition);
             foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
                 if (rack != null && rack.tool != null) Add("lost_tool", ChoreId(rack.tool, "tool"), rack.tool.transform.position);
             foreach (HingeDoor door in HingeDoor.All)
@@ -463,7 +474,7 @@ namespace Kehai.Eval
         {
             var result = new Dictionary<string, object> { ["visible"] = false, ["heard"] = false };
             KarenBrain brain = KarenBrain.Instance;
-            if (brain == null || brain.Body == null || me == null) return result;
+            if (brain == null || !brain.PresentThisShift || brain.Body == null || me == null) return result;
 
             NoiseBus.ReadSince(ref noiseCursor, noises);
             foreach (NoiseEvent n in noises)

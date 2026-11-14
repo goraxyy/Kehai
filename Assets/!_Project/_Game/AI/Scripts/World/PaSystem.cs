@@ -36,6 +36,7 @@ namespace Kehai.Karen
 
         void Build()
         {
+            if (!Edition.ShowUI) return;
             var canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 900;          // under the eyelids (999), over the HUD
@@ -87,23 +88,29 @@ namespace Kehai.Karen
 
         public void Subtitle(string text, float seconds)
         {
+            if (!Edition.ShowUI || subtitle == null) return;
             subtitle.text = text;
             subtitleUntil = Time.unscaledTime + seconds;
         }
 
         public void Banner(string text, float seconds)
         {
+            if (!Edition.ShowUI || banner == null) return;
             banner.font = GameFonts.ForText(text, UiTheme.TmpFont ?? TMP_Settings.defaultFontAsset);
             banner.text = text;
             bannerUntil = Time.unscaledTime + seconds;
         }
 
-        public void SetFade(float alpha) => fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(alpha));
+        public void SetFade(float alpha)
+        {
+            if (Edition.ShowUI && fade != null) fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(alpha));
+        }
 
         void Update()
         {
-            if (subtitle.text.Length > 0 && Time.unscaledTime > subtitleUntil) subtitle.text = string.Empty;
-            if (banner.text.Length > 0 && Time.unscaledTime > bannerUntil) banner.text = string.Empty;
+            if (!Edition.ShowUI) return;
+            if (subtitle != null && subtitle.text.Length > 0 && Time.unscaledTime > subtitleUntil) subtitle.text = string.Empty;
+            if (banner != null && banner.text.Length > 0 && Time.unscaledTime > bannerUntil) banner.text = string.Empty;
         }
     }
 
@@ -141,12 +148,23 @@ namespace Kehai.Karen
             if (!on) Silence();
             PowerChanged?.Invoke(on);
         }
+        public void Cancel(PaAnnouncement announcement)
+        {
+            if (announcement == null || announcement.Done) return;
+            announcement.Jammed = announcement.Done = true;
+            if (current != announcement) return; // queued cancellations are skipped at dequeue
+            foreach (AudioSource voice in voices) if (voice != null) voice.Stop();
+            current = null;
+            phase = 0;
+            Duck(false);
+        }
         public bool Busy => current != null;
         public string CurrentText => current != null ? current.Text : string.Empty;
         public int Announcements { get; private set; }
 
         void Awake()
         {
+            if (Edition.Training) return;
             GameObject root = SceneObjectNames.Find("MallSpeakers");
             if (root != null) foreach (Transform t in root.transform) speakers.Add(t);
             radio = FindAnyObjectByType<MusicBox>();
@@ -185,6 +203,7 @@ namespace Kehai.Karen
         public bool SayAs(string speaker, string text)
         {
             if (!Powered || string.IsNullOrEmpty(text)) return false;
+            if (Edition.Training) return true;
             PositionVoices();
             Play(ProceduralAudio.PaChime());
             StartCoroutine(Words(text));
@@ -196,35 +215,37 @@ namespace Kehai.Karen
         System.Collections.IEnumerator Words(string text)
         {
             yield return new WaitForSeconds(ChimeSeconds);
-            if (Powered) Play(ProceduralAudio.Voice(text));
+            if (Powered && !Edition.Training) Play(ProceduralAudio.Voice(text));
         }
 
         // A sound through the speaker nearest a point — her footsteps from the wrong side of
         // the store, a crackle, hold music.
         public void PlayNear(Vector3 point, AudioClip clip, float gain = 1f)
         {
-            if (!Powered || clip == null) return;
+            if (Edition.Training || !Powered || clip == null) return;
             Transform speaker = NearestSpeaker(point);
             OneShotAudio.PlayAt(clip, speaker != null ? speaker.position : point, gain, SoundKind.Voice);
         }
 
         void Update()
         {
+            if (FlashSaleState.Active) FlashSaleState.Step(FindAnyObjectByType<ShiftManager>());
             if (current == null)
             {
                 if (queue.Count == 0) return;
                 current = queue.Dequeue();
+                if (current.Done) { current = null; return; }
                 if (!Powered) { current.Jammed = true; current.Done = true; current = null; return; }
 
                 current.Started = Time.time;
                 Announcements++;
                 PositionVoices();
                 Duck(true);
-                Play(ProceduralAudio.PaChime());
+                if (!Edition.Training) Play(ProceduralAudio.PaChime());
                 phase = 1;
                 phaseEnds = Time.time + ChimeSeconds;
                 ChimeStarted?.Invoke(current);
-                KarenScreen.Ensure().Subtitle("<color=#" + UiTheme.Hex(UiTheme.Accent) + ">" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
+                if (Edition.ShowUI) KarenScreen.Ensure().Subtitle("<color=#" + UiTheme.Hex(UiTheme.Accent) + ">" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
                                               1.3f + current.Text.Length * 0.06f + 1.5f);
                 return;
             }
@@ -233,11 +254,17 @@ namespace Kehai.Karen
 
             if (phase == 1)
             {
-                AudioClip clip = current.Clip != null ? current.Clip : ProceduralAudio.Voice(current.Text);
-                Play(clip);
+                // Match ProceduralAudio.Voice's duration without allocating a clip in Training.
+                float seconds = current.Clip != null ? current.Clip.length : Mathf.Clamp(current.Text.Length / 3, 4, 90) * .13f + .3f;
+                if (!Edition.Training)
+                {
+                    AudioClip clip = current.Clip != null ? current.Clip : ProceduralAudio.Voice(current.Text);
+                    Play(clip);
+                    seconds = clip.length;
+                }
                 phase = 2;
                 SpeechStarted?.Invoke(current);
-                phaseEnds = Time.time + clip.length;
+                phaseEnds = Time.time + seconds;
                 return;
             }
 
@@ -249,6 +276,7 @@ namespace Kehai.Karen
 
         void Play(AudioClip clip)
         {
+            if (Edition.Training) return;
             foreach (AudioSource v in voices)
             {
                 v.volume = volume * SoundSettings.Get(SoundKind.Voice);
@@ -281,7 +309,7 @@ namespace Kehai.Karen
 
         void Duck(bool on)
         {
-            if (radio == null) return;
+            if (Edition.Training || radio == null) return;
             if (on)
             {
                 if (radioVolume < 0f) radioVolume = radio.volume;
@@ -296,6 +324,7 @@ namespace Kehai.Karen
 
         public void Clear()
         {
+            FlashSaleState.End();
             Silence();
             if (!powered) { powered = true; PowerChanged?.Invoke(true); }
         }

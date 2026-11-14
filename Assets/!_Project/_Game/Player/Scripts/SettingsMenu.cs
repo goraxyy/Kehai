@@ -51,7 +51,7 @@ public sealed class SettingsMenu : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
-        if (Application.isBatchMode || Instance != null) return;
+        if (!Edition.ShowUI || Application.isBatchMode || Instance != null) return;
         var go = new GameObject("Settings");
         DontDestroyOnLoad(go);
         go.AddComponent<SettingsMenu>();
@@ -306,6 +306,11 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void DrawSettings()
     {
+        if (FirstShiftGuide.Instance != null && FirstShiftGuide.Instance.Available)
+        {
+            Heading("FIRST SHIFT");
+            if (GUILayout.Button("Skip first-shift guidance", text)) FirstShiftGuide.Instance.Skip();
+        }
         Heading("SOUND");
         float master = Slider("All sounds", SoundSettings.Master, out bool masterDone);
         if (!Mathf.Approximately(master, SoundSettings.Master)) SoundSettings.Master = master;
@@ -380,7 +385,7 @@ public sealed class SettingsMenu : MonoBehaviour
 
     void DrawKeys()
     {
-        foreach (Controls.Section section in Controls.All)
+        foreach (Controls.Section section in Controls.ForEdition(Edition.Current))
         {
             Heading(section.Title.ToUpperInvariant());
             foreach (Controls.Entry entry in section.Entries)

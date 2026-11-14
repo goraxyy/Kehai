@@ -84,7 +84,7 @@ public static class KehaiRl
             return false;
         }
         string path = TrainingPath(target);
-        BuildReport report = KehaiBuild.Build(target, path, development: false);
+        BuildReport report = KehaiBuild.Build(target, path, development: false, edition: KehaiEdition.Training);
         if (report == null || report.summary.result != BuildResult.Succeeded) return false;
 
         if (target == BuildTarget.StandaloneWindows64)
@@ -118,6 +118,8 @@ public static class KehaiRl
     }
 
     static NamedBuildTarget Standalone => NamedBuildTarget.Standalone;
+
+    public static bool Ready => PackageInstalled() && DefineSet();
 
     static bool DefineSet() => PlayerSettings.GetScriptingDefineSymbols(Standalone).Split(';').Contains(Define);
 
