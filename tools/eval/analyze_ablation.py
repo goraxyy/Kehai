@@ -231,6 +231,66 @@ def paired(w, by_rung, base_rung, rungs):
               f"{pm(d['rmse'], '{:+.3f}')} | {pm(d['jobs'], '{:+.1f}')} | {pm(d['out'], '{:+.2f}')} |")
 
 
+def kaplan_meier(samples):
+    """Time-to-event when some shifts end with no catch (build plan §15).
+
+    samples: (time, happened) pairs; happened False means "not caught yet" when the shift ended.
+    Returns the survival curve as [(time, share not caught yet)] and the median (None if the
+    curve never falls to a half).
+    """
+    samples = sorted(samples, key=lambda x: (x[0], not x[1]))
+    at_risk, s, curve, i = len(samples), 1.0, [], 0
+    while i < len(samples):
+        t = samples[i][0]
+        events = gone = 0
+        while i < len(samples) and samples[i][0] == t:
+            events += 1 if samples[i][1] else 0
+            gone += 1
+            i += 1
+        if events and at_risk:
+            s *= 1 - events / at_risk
+            curve.append((t, s))
+        at_risk -= gone
+    median = next((t for t, v in curve if v <= 0.5), None)
+    return curve, median
+
+
+def catch_samples(rows):
+    out = []
+    for r in rows:
+        t = r.get("time_to_catch_s", -1)
+        out.append((t, True) if t is not None and t >= 0 else (r["sim_seconds"], False))
+    return out
+
+
+def catch_section(by_rung, rungs, w):
+    """0.4.0 (C1.2): what she was doing at each catch, and time to catch (Kaplan–Meier)."""
+    if not any("catch_causes" in r for g in rungs for r in by_rung[g]):
+        return
+    w("\n### Catches: what she was doing, and how soon\n")
+    w("Time to catch counts a shift with no catch as \"not caught yet\" at its end (Kaplan–Meier). "
+      "The clock column is the clock-camp guard (§5.6): above 50% of catches within 10 m of the time clock, "
+      "a rule is added and she's retrained.\n")
+    w("| rung | brain | catches | in Hunt | seen in last 3 s | within 10 m of the clock | median time to catch (s) | caught by 150 s |")
+    w("|---|---|---|---|---|---|---|---|")
+    for g in rungs:
+        rs = [r for r in by_rung[g] if "catch_causes" in r]
+        if not rs:
+            continue
+        causes = [c for r in rs for c in r["catch_causes"]]
+        curve, median = kaplan_meier(catch_samples(rs))
+        by150 = next((1 - v for t, v in reversed(curve) if t <= 150), 0.0)
+        brains = ",".join(sorted({r.get("karen_brain", "planner") for r in rs}))
+        n = len(causes)
+        w(f"| {g} | {brains} | {n} | {pct(sum(c['action'] == 'Hunt' for c in causes), n)} | "
+          f"{pct(sum(bool(c['seen_3s']) for c in causes), n)} | "
+          f"{pct(sum(0 <= c['clock_m'] <= 10 for c in causes), n)} | "
+          f"{'not reached' if median is None else f'{median:.0f}'} | {by150:.0%} |")
+    tactics_at_catch = Counter(c["tactic"] for g in rungs for r in by_rung[g] for c in r.get("catch_causes", []))
+    if tactics_at_catch:
+        w("\nWhat she was running at each catch: " + ", ".join(f"{k} ×{v}" for k, v in tactics_at_catch.most_common(8)) + ".\n")
+
+
 def main(path):
     rows = load(path)
     by_rung = defaultdict(list)
@@ -269,6 +329,7 @@ def main(path):
         paired(w, by_rung, "E", ["F"])
 
     belief_section(rows, rungs, w)
+    catch_section(by_rung, rungs, w)
 
     w("\n### By rung and player profile\n")
     w("| rung | profile | clocked out | detections / shift | catches / shift | mean panic | setpoint RMSE | jobs done / shift |")

@@ -1,0 +1,1 @@
+{"card": {"noises": 1363, "samples": 57819, "version": "fit-20261113"}, "kind": "weights", "name": "MirrorWeights", "values": {"sight_bias": 1.2801268643473744, "sight_per_metre": 0.31695816072971283, "sound_notice": 0.2487160674981658, "spread_speed": 2.5}}

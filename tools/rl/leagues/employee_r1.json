@@ -1,0 +1,75 @@
+{
+  "name": "employee_r1",
+  "learner": "employee",
+  "split": "training",
+  "careers": 100000,
+  "shifts": 6,
+  "start_shift": 1,
+  "shift_seconds": 150,
+  "players": [
+    {
+      "kind": "persona",
+      "mind": "trainer",
+      "share": 3
+    },
+    {
+      "kind": "corner",
+      "mind": "trainer",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "efficient",
+      "share": 0.5,
+      "mind": "trainer"
+    },
+    {
+      "kind": "scripted",
+      "profile": "skittish",
+      "share": 0.5,
+      "mind": "trainer"
+    },
+    {
+      "kind": "scripted",
+      "profile": "reckless",
+      "share": 0.5,
+      "mind": "trainer"
+    }
+  ],
+  "lessons": [
+    {
+      "name": "job",
+      "karen": "none"
+    },
+    {
+      "name": "planner",
+      "karen": [
+        {
+          "brain": "planner",
+          "rung": "C",
+          "share": 1
+        },
+        {
+          "brain": "planner",
+          "rung": "E",
+          "share": 1
+        }
+      ]
+    },
+    {
+      "name": "league",
+      "karen": [
+        {
+          "brain": "planner",
+          "rung": "C",
+          "share": 1
+        },
+        {
+          "brain": "planner",
+          "rung": "E",
+          "share": 1
+        }
+      ]
+    }
+  ]
+}

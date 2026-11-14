@@ -53,8 +53,24 @@ namespace Kehai.Karen
     // Fuses every channel into one stream of Observations for the belief grid, plus the
     // "nothing here" sweep. Owned by the brain; reads the world through Karen's eyes and
     // ears, which are wherever her body is standing.
+    // The raw inputs of one observation, before her sense model's numbers made it a bump (C4.7).
+    public struct SenseRaw
+    {
+        public SenseChannel Channel;
+        public int Kind;                 // NoiseKind or TraceKind; -1 for infrastructure
+        public float Awareness, D, Carry, Straight, Age, Freshness;
+        public bool LightsOut;
+    }
+
     public sealed class Sensorium
     {
+        // Her senses' numbers (0.4.0, C4.7): S0 today's; the brain sets S1 or S2 (-karen-senses).
+        public SenseModel Senses = SenseModel.Hand();
+
+        // What each positive observation was made from, in the same order as Positive: what the
+        // belief trace records so the Python replay can rebuild σ and trust from other numbers.
+        public readonly List<SenseRaw> Raw = new List<SenseRaw>();
+
         public readonly List<Observation> Positive = new List<Observation>();
         public readonly List<int> SweptCells = new List<int>();
         public readonly List<float> SweptProbability = new List<float>();
@@ -114,6 +130,7 @@ namespace Kehai.Karen
         public void Collect(Vector3 bodyPosition, SightSensor sight, Transform bodyRoot)
         {
             Positive.Clear();
+            Raw.Clear();
             SweptCells.Clear();
             SweptProbability.Clear();
             LoudNoiseNearby = false;
@@ -126,6 +143,7 @@ namespace Kehai.Karen
             if (UseTestimony) CollectTestimony(bodyPosition);
             if (UseNegative && !sight.SeesNow) CollectSweep(sight, bodyRoot);
 
+            foreach (Observation o in infrastructure) Raw.Add(new SenseRaw { Channel = o.Channel, Kind = -1 });
             Positive.AddRange(infrastructure);
             infrastructure.Clear();
         }
@@ -135,9 +153,10 @@ namespace Kehai.Karen
             if (!sight.SeesNow || sight.Awareness < sight.glimpseAt) return;
 
             // The more certain the look, the tighter the bump.
-            float sigma = Mathf.Lerp(3f, 0.8f, sight.Awareness);
+            float sigma = Senses.SightSigma(sight.Awareness);
             Positive.Add(new Observation(SenseChannel.Sight, sight.LastSeenPosition, sight.Awareness, sigma,
                                          $"sight({sight.Band}, exposure {sight.Exposure:0.00})"));
+            Raw.Add(new SenseRaw { Channel = SenseChannel.Sight, Awareness = sight.Awareness });
         }
 
         void CollectHearing(Vector3 bodyPosition)
@@ -164,10 +183,13 @@ namespace Kehai.Karen
                 float d = hearingDistance[source];
                 if (float.IsInfinity(d) || d > n.Carry) continue;
 
-                float confidence = Mathf.Sqrt(1f - d / n.Carry) * 0.9f;
-                float sigma = 1f + d * 0.12f;
+                float confidence = Senses.HearingConfidence(d, n.Carry);
+                float straight = FairnessGuard.Flat(n.Position, bodyPosition);
+                bool lightsOut = !PowerSystem.PowerOn;
+                float sigma = Senses.HearingSigma(d, straight, lightsOut);
                 Positive.Add(new Observation(SenseChannel.Hearing, n.Position, confidence, sigma,
                                              $"noise({n.Kind}, {n.Loudness:0.0}, {d:0}m)"));
+                Raw.Add(new SenseRaw { Channel = SenseChannel.Hearing, Kind = (int)n.Kind, D = d, Carry = n.Carry, Straight = straight, LightsOut = lightsOut });
                 HeardThisTick++;
                 LastHeard = n;
 
@@ -200,21 +222,12 @@ namespace Kehai.Karen
 
                 tracesRead.Add(t.Id);
 
-                float confidence, sigma;
-                switch (t.Kind)
-                {
-                    case TraceKind.WetFootprint: confidence = 0.55f * t.Freshness; sigma = 3f; break;
-                    case TraceKind.UndoneSabotage: confidence = 0.6f; sigma = 6f + t.Age * 0.1f; break;
-                    case TraceKind.DroppedItem: confidence = 0.45f; sigma = 5f + t.Age * 0.1f; break;
-                    case TraceKind.DoorOpened: confidence = 0.5f * t.Freshness; sigma = 4f; break;
-                    case TraceKind.MopAway: confidence = 0.4f; sigma = 6f; break;
-                    case TraceKind.BaggedBin: confidence = 0.35f * t.Freshness; sigma = 8f; break;
-                    default: confidence = 0.3f; sigma = 7f + t.Age * 0.1f; break;
-                }
+                Senses.Trace(t.Kind, t.Freshness, t.Age, out float confidence, out float sigma);
                 if (confidence < 0.05f) continue;
 
                 Positive.Add(new Observation(SenseChannel.Trace, t.Position, confidence, sigma,
                                              $"trace({t.Kind}, {t.Age:0}s)", t.Heading));
+                Raw.Add(new SenseRaw { Channel = SenseChannel.Trace, Kind = (int)t.Kind, Age = t.Age, Freshness = t.Freshness });
             }
         }
 
@@ -227,7 +240,8 @@ namespace Kehai.Karen
                 if (polled.TryGetValue(m, out float when) && when >= m.LastSeenTime) continue;
 
                 polled[m] = m.LastSeenTime;
-                Positive.Add(m.ToObservation());
+                Positive.Add(m.ToObservation(Senses));
+                Raw.Add(new SenseRaw { Channel = SenseChannel.Testimony, Age = m.Age, Awareness = m.SightingConfidence });
             }
         }
 
@@ -248,7 +262,7 @@ namespace Kehai.Karen
                 int cell = cone[(sweepOffset + k) % cone.Count];
                 Vector3 p = map.CellPosition[cell] + Vector3.up * 1f;
                 Vector3 d = p - sight.Eye;
-                float p0 = Mathf.Clamp01(sight.Visibility(Vector3.Angle(sight.Forward, d), d.magnitude, LightProbe.LevelAt(map.CellPosition[cell])) * 0.85f);
+                float p0 = Mathf.Clamp01(sight.Visibility(Vector3.Angle(sight.Forward, d), d.magnitude, LightProbe.LevelAt(map.CellPosition[cell])) * Senses.SweepScale);
                 if (p0 < 0.03f) continue;
                 SweepRays++;
                 if (!sight.CanSee(p, bodyRoot)) continue;

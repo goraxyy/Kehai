@@ -16,6 +16,15 @@ namespace Kehai.Karen
     //   -karen-policy <name>  rung F: the model under Resources/KarenPolicy/ to run
     //   -kehai-no-records     write no shift records, replays or clip markers (RL training runs
     //                         thousands of shifts)
+    // 0.4.0 (build plan §5–§8):
+    //   -karen-brain planner|basic|vital   which brain picks her action and trick (default planner)
+    //   -karen-mirror k0|k1|k2   what she assumes you know of where she is (default k0)
+    //   -karen-senses s0|s1|s2   her senses' numbers (default s0, today's)
+    //   -belief-motion p0|p1|p2|p3   her belief's predict step (default p0, today's)
+    //   -karen-hunter on|off     the planner with pacing and the hint off (Vital's baseline)
+    //   -karen-learning on|off   one learning record per decision
+    //   -karen-pack <file>       a model pack to use instead of the build's own numbers
+    //   -karen-set field=value   any KarenConfig field, for one test arm (repeatable)
     public static class KarenBootstrap
     {
         // Set by the eval harness before a scene load to configure the next Karen.
@@ -70,6 +79,10 @@ namespace Kehai.Karen
             if (Override != null) brain.config = Override.Clone();
             ApplyCommandLine(brain.config);
             MatchPlayer(brain.config);
+            // The general model's numbers for this Karen (0.4.0, C3.7): -karen-pack <file>, else the
+            // newest good pack in model_packs/, else the build's own. Chosen here, before she starts,
+            // so never during a shift.
+            ModelPack.Select(brain.config.modelPack);
             if (!NoRecords)
             {
                 root.AddComponent<ShiftRecorder>();
@@ -83,13 +96,25 @@ namespace Kehai.Karen
         }
 
         static string rungArg, seedArg, shieldArg, policyArg, comboArg, careerArg;
+        static string brainArg, mirrorArg, sensesArg, motionArg, hunterArg, learningArg, packArg;
+        static readonly System.Collections.Generic.List<string> setArgs = new System.Collections.Generic.List<string>();
 
         static void ReadCommandLine()
         {
             string[] args = System.Environment.GetCommandLineArgs();
+            setArgs.Clear();
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-nokaren") Disabled = true;
+                bool next = i + 1 < args.Length;
+                if (args[i] == "-karen-brain" && next) brainArg = args[i + 1];
+                if (args[i] == "-karen-mirror" && next) mirrorArg = args[i + 1];
+                if (args[i] == "-karen-senses" && next) sensesArg = args[i + 1];
+                if (args[i] == "-belief-motion" && next) motionArg = args[i + 1];
+                if (args[i] == "-karen-hunter" && next) hunterArg = args[i + 1];
+                if (args[i] == "-karen-learning" && next) learningArg = args[i + 1];
+                if (args[i] == "-karen-pack" && next) packArg = args[i + 1];
+                if (args[i] == "-karen-set" && next) setArgs.Add(args[i + 1]);
                 if (args[i] == "-karen-rung" && i + 1 < args.Length) rungArg = args[i + 1];
                 if (args[i] == "-karen-seed" && i + 1 < args.Length) seedArg = args[i + 1];
                 if (args[i] == "-karen-shield" && i + 1 < args.Length) shieldArg = args[i + 1];
@@ -132,7 +157,46 @@ namespace Kehai.Karen
             if (!string.IsNullOrEmpty(policyArg)) config.policyModel = policyArg;
             if (!string.IsNullOrEmpty(comboArg)) config.comboContext = ParseSwitch(comboArg, config.comboContext);
             if (!string.IsNullOrEmpty(careerArg)) config.careerTable = ParseSwitch(careerArg, config.careerTable);
+            if (!string.IsNullOrEmpty(brainArg) && TryParseBrain(brainArg, out KarenBrainKind brain)) config.brain = brain;
+            if (!string.IsNullOrEmpty(mirrorArg) && TryParseMirror(mirrorArg, out MirrorMode mirror)) config.mirror = mirror;
+            if (!string.IsNullOrEmpty(sensesArg)) config.senses = sensesArg.Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(motionArg)) config.motion = motionArg.Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(hunterArg)) config.hunter = ParseSwitch(hunterArg, config.hunter);
+            if (!string.IsNullOrEmpty(learningArg)) config.learningRecords = ParseSwitch(learningArg, config.learningRecords);
+            if (!string.IsNullOrEmpty(packArg)) config.modelPack = packArg;
+            foreach (string refused in KarenConfigSet.ApplyAll(config, setArgs))
+                Debug.LogError($"{GameNames.Antagonist}: -karen-set refused: {refused}");
+            // Playtest builds keep learning records too (C1.1).
+            if (Kehai.Playtest.PlaytestSession.Instance != null && string.IsNullOrEmpty(learningArg)) config.learningRecords = true;
         }
+
+        // "planner", "basic", "vital" (any case), or "f" for rung F's old name: Basic.
+        public static bool TryParseBrain(string text, out KarenBrainKind brain)
+        {
+            brain = KarenBrainKind.Planner;
+            switch ((text ?? "").Trim().ToLowerInvariant())
+            {
+                case "planner": case "hand": return true;
+                case "basic": case "f": brain = KarenBrainKind.Basic; return true;
+                case "vital": brain = KarenBrainKind.Vital; return true;
+                default: return false;
+            }
+        }
+
+        public static bool TryParseMirror(string text, out MirrorMode mirror)
+        {
+            mirror = MirrorMode.K0;
+            switch ((text ?? "").Trim().ToLowerInvariant())
+            {
+                case "k0": return true;
+                case "k1": mirror = MirrorMode.K1; return true;
+                case "k2": mirror = MirrorMode.K2; return true;
+                default: return false;
+            }
+        }
+
+        // The -karen-set assignments given on the command line, for the run's own record.
+        public static System.Collections.Generic.IReadOnlyList<string> SetArguments => setArgs;
 
         // "on", "off", "true", "false", "1", "0".
         public static bool ParseSwitch(string text, bool fallback)

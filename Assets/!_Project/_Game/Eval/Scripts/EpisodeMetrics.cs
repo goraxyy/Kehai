@@ -55,6 +55,8 @@ namespace Kehai.Eval
         // How well she knew where the player was, scored against where they were.
         public readonly BeliefAccuracy Belief = new BeliefAccuracy();
         public readonly HuntMetrics Hunt = new HuntMetrics();       // 0.2.0's measurements (build plan §5)
+        public readonly BeliefShadows Shadows = new BeliefShadows(); // 0.4.0 (C4.1): -belief-shadows
+        public readonly BeliefTrace Trace040 = new BeliefTrace();    // 0.4.0 (C4.2): -belief-trace
         public bool ComboLearner;                                   // her bandit saw her last trick
         public int ChainsFound;
         // 0.3.0 (build plan §7): the secondary measurements, reported for 0.3.0 alone.
@@ -69,6 +71,13 @@ namespace Kehai.Eval
         public readonly Dictionary<string, int> TricksAfterClose = new Dictionary<string, int>();
         public float ClosedAt = -1f;
         public int BotFalls;              // the test player's body fell through the floor
+        // 0.4.0 (build plan C1.2): every catch with its cause, and the time to the first one.
+        // A shift with no catch is "not caught yet" at SimSeconds (Kaplan–Meier), never missing.
+        public readonly List<CatchCause> CatchCauses = new List<CatchCause>();
+        public float TimeToCatch = -1f;
+        public Dictionary<string, object> Timing;   // -kehai-timing (C0.2): where the wall time went
+        public string Brain = "planner";
+        public readonly List<string> KarenSet = new List<string>();
         int fallsAtStart;
         Dictionary<string, int> countsAtClose;
         ShiftManager shift;
@@ -97,6 +106,12 @@ namespace Kehai.Eval
             fallsAtStart = AgentDriver.FallsTotal;
             Belief.Begin();
             Hunt.Begin();
+            if (KarenBrain.Instance != null)
+            {
+                Shadows.Attach(KarenBrain.Instance);
+                Trace040.Begin(KarenBrain.Instance, seed, shift, agent);
+            }
+            KarenBrain.BeliefRebuilt += OnRebuilt;
             Subscribe();
         }
 
@@ -112,9 +127,27 @@ namespace Kehai.Eval
             GameEvents.PunchAttempted += OnPunch;
         }
 
+        void OnRebuilt(KarenBrain b) => Shadows.Attach(b);
+
+        // Her tricks' bets on your way (C4.6), settled against where you really went.
+        void SettleBets(Vector3 player)
+        {
+            KarenBrain brain = KarenBrain.Instance;
+            if (brain == null) return;
+            foreach (TrickBet b in brain.Stats.Bets)
+            {
+                if (b.Settled) continue;
+                if (FairnessGuard.Flat(player, b.At) <= b.Radius) { b.Settled = b.Won = true; }
+                else if (Time.time - b.T > b.Horizon) b.Settled = true;
+            }
+        }
+
         public void Unsubscribe()
         {
             Hunt.End();
+            Shadows.Detach();
+            Trace040.End();
+            KarenBrain.BeliefRebuilt -= OnRebuilt;
             GameEvents.SpillCleaned -= OnSpill;
             GameEvents.ShelfRestocked -= OnShelf;
             GameEvents.BinBagged -= OnBin;
@@ -157,6 +190,14 @@ namespace Kehai.Eval
         {
             if (player != null) Belief.Tick(Time.deltaTime, player.position);
             if (player != null) Hunt.Tick(Time.deltaTime, player.position);
+            if (player != null)
+            {
+                AgentDriver driver = player.GetComponent<AgentDriver>();
+                Vector3? goal = driver != null && driver.Moving ? driver.Goal : (Vector3?)null;
+                Shadows.Tick(Time.deltaTime, player.position, goal);
+                SettleBets(player.position);
+                Trace040.Tick(player.position, goal);
+            }
 
             foreach (CustomerNPC c in CustomerNPC.All)
             {
@@ -276,6 +317,12 @@ namespace Kehai.Eval
                 AnswerSeconds.Clear();
                 foreach (var g in s.Answers.Where(a => a.seconds >= 0f).GroupBy(a => a.kind))
                     AnswerSeconds[g.Key] = g.Average(a => a.seconds);
+                CatchCauses.Clear();
+                CatchCauses.AddRange(s.CatchCauses);
+                TimeToCatch = CatchCauses.Count > 0 ? CatchCauses[0].T : -1f;
+                Brain = brain.config.brain.ToString().ToLowerInvariant() + (brain.config.hunter ? "+hunter" : "");
+                KarenSet.Clear();
+                KarenSet.AddRange(KarenBootstrap.SetArguments);
             }
 
             FairnessViolations = FairnessGuard.Violations - violationsAtStart;
@@ -312,6 +359,7 @@ namespace Kehai.Eval
             };
             Belief.AddTo(d);
             Hunt.AddTo(d);
+            Shadows.AddTo(d);
             // Which of the test player's actions failed, and how often (0.3.0): a stuck shift says why.
             var failed = new Dictionary<string, object>();
             foreach (var g in Trace.Where(t => !t.Ok).GroupBy(t => t.Verb)) failed[g.Key] = g.Count();
@@ -323,6 +371,21 @@ namespace Kehai.Eval
             d["open_at_end"] = new Dictionary<string, object>(OpenAtEnd);
             d["closed_at_s"] = ClosedAt;
             d["bot_fell_through_floor"] = BotFalls;
+            d["catch_causes"] = CatchCauses.Select(c => (object)c.ToDictionary()).ToList();
+            d["time_to_catch_s"] = TimeToCatch;
+            d["catches_at_clock"] = CatchCauses.Count(c => c.AtClock);
+            d["catches_seen_3s"] = CatchCauses.Count(c => c.SeenWithin3s);
+            d["karen_brain"] = Brain;
+            KarenBrain kb = KarenBrain.Instance;
+            if (kb != null)
+            {
+                d["bets_placed"] = kb.Stats.Bets.Count;
+                d["bets_won"] = kb.Stats.Bets.Count(b => b.Won);
+                d["bets_on_your_way"] = kb.Stats.Bets.Count(b => b.OnYourWay);
+                d["bets_on_your_way_won"] = kb.Stats.Bets.Count(b => b.OnYourWay && b.Won);
+            }
+            d["karen_set"] = KarenSet.Select(x => (object)x).ToList();
+            if (Timing != null) d["timing"] = Timing;
             d["tricks_after_close"] = TricksAfterClose.ToDictionary(p => p.Key, p => (object)p.Value);
             d["catches_in_fog"] = CatchesInFog;
             d["catches_at_chore"] = CatchesAtChore;

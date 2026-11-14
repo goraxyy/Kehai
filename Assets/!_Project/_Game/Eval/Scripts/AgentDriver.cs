@@ -46,6 +46,7 @@ namespace Kehai.Eval
         // Falling through the floor (0.3.0's ablation saw the body drop 53 m in Aisle 4/B): the
         // last place it stood on the NavMesh, and how many times it has fallen, in all.
         public static int FallsTotal { get; private set; }
+        public static bool FenceFalls;   // set with KarenConfig.trapFences (the league)
         CharacterController body;
         Vector3 safe;
         bool hasSafe, falling;
@@ -104,6 +105,15 @@ namespace Kehai.Eval
             string her = karen != null && karen.Body != null ? $"{karen.Body.Position} ({karen.CurrentPlan?.Tactic?.Id ?? "no plan"})" : "absent";
             Debug.LogWarning($"[driver] FELL through the floor: stood at {safe} ({Kehai.Store.StoreMap.Current?.NameAt(safe)}), now {p}. " +
                              $"Under that spot: {under}. Within 1.5 m: {near}Karen: {her}");
+            // The fence (0.4.0, C0.2): back onto the spot it last stood on, so a hole in the floor
+            // costs a moment instead of the whole episode. A stuck episode poisons training. Only
+            // when the fences are on (the league): otherwise the shift plays as today's.
+            if (!FenceFalls && !(Kehai.Karen.KarenBrain.Instance != null && Kehai.Karen.KarenBrain.Instance.config.trapFences)) return;
+            if (body != null) body.enabled = false;
+            transform.position = safe + Vector3.up * 0.05f;
+            if (body != null) body.enabled = true;
+            Physics.SyncTransforms();
+            Stop();
         }
 
         public void Engage()

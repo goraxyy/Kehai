@@ -555,6 +555,174 @@ to run, and primary metric 2 can't be measured. How far to turn her down, and wi
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
 
+## Karen 0.4.0: what the build measured (11–12 November)
+
+**Nothing is trained yet.** These are the build's own checks, on clones of the owner's project, before
+any recording, training or test run (each waits for the owner's go). The primary metrics are the
+plan's §11, written before any run and unchanged. Negative results first.
+
+**What didn't work, or isn't known yet:**
+- **C0.2's two fences changed today's shift, and were moved behind a switch.** A bisect over the
+  branch's commits (one shift, rung E, the efficient player, seed 1000, two runs each) found today's
+  shift (263 s) unchanged through phases 1–2, and changed from the commit that fenced the spill spot
+  at Office/G and put a fallen test player back. With the fences on, the same seed gave 183, 200 or
+  208 s on different runs: today's game has a little run-to-run jitter too (191 or 192 steps), and
+  after the fence's change it tipped the shift one way or another. The fences are now off by default
+  (`KarenConfig.trapFences`), on in the league, and with them off the branch plays today's shift
+  exactly: 263 s, the same jobs and tricks, for the efficient and the skittish players.
+- **0.3.0's slowdown against 0.2.0 wasn't found.** Today a batch frame is 6.1 ms on `main`, 6.4 ms on
+  this branch with learning records off and 7.3 ms with them on (1.05× and 1.2×). Her own code is
+  about a quarter of the frame (her belief update 13–16%, decisions 7–10%); Unity's own markers read
+  nothing in a batch editor (its profiler is off), so the rest isn't broken down.
+- **The training player doesn't reach the trainer, on `main` too.** Built from a clone, it floods
+  TextMeshPro `NullReferenceException`s on the null graphics device (400,000 in ten minutes; `main`'s
+  own player, built the same way, 7,600 in two minutes and no shift played) and the trainer times out. Training works through the batch editor, one copy at a time (`tools/rl/train_editor.sh`);
+  two copies, and C0.3's two-copy speed, wait for the player.
+- **C4.9's first recording failed the parity gate** (5 of 144 training traces, 1.1e-3 to 7.5e-3). StoreMap
+  finds its doors with an unsorted `FindObjectsByType`, so its 13 doorway regions (numbers 0–12) come out
+  numbered differently on most map builds: in 138 of 144 shifts, against the run's map.json. The same cells,
+  other numbers; every other region keeps its number. The Director's hint names a region by number, so when
+  it landed in a doorway the replay put it in another doorway (in one shift, 54 m away). Each trace now
+  writes its own region table, and the second recording passed: 192 traces, largest difference 3.7e-5.
+  **The game has the same problem:** the Ledger keys what it learns of a doorway by its number (`door_<n>`),
+  so a doorway's dwell and a doorway trick's places are mixed between shifts. Not fixed: sorting the doors
+  changes play against `main`, so it's the owner's call.
+- **C4.10's fits would have taken two to three days,** not a few hours: about 1 ms of replay per trace line,
+  hundreds of passes. Array steps, remembered distances and 4 workers brought it to 7 h 41 min, with the
+  same numbers (3e-16).
+- **The senses fit couldn't move** (found by a smoke run on 3 traces): the slopes per metre and per second
+  shared the spreads' 0.5 floor, above today's 0.12 and 0.25, so every step was clipped and S1 and S2 would
+  have come out as S0. Fixed, with a test.
+- **The first real belief trace failed the parity gate** (largest difference 0.05): it had no start
+  state. With a `state` line (her belief, the prior, the exit lines) a fresh trace passes:
+  largest difference **5.5e-6** over 25 checks of the whole belief (the gate is 1e-3).
+
+**What holds:**
+
+| Check | Result |
+|---|---|
+| EditMode suite on a clone | 430 of 430 (360 before 0.4.0) |
+| Today's predict step behind `IMotionModel` | bit for bit against a frozen copy of the old loop, with and without the outside cell (200 steps) |
+| The C# filter against the Python replay, synthetic map | to 1e-5 on every cell, every step, for P0, P1 and P2 |
+| The C# network against ML-Agents' own actor | to 4 decimals (largest difference 5e-5 allowed) on 1,000 inputs; the smoke exports matched to 1e-9 |
+| The model pack | identical numbers from a pack; tampered, old-inputs and unknown-trick packs refused; a pack signed in Python verified by the game; the gate passes better and refuses worse |
+| The four scripted players, built from personas | the same reflexes, field for field, four seeds each |
+| Training never meets a held-out seed or persona | 5,000 draws; the league stops if a file asks for one |
+| Smoke runs | the Employee (400 decisions), Vital and Basic (300 each) trained through the editor and exported |
+| Today's shift, with every switch at its default | the same as `main`: efficient 263 s and skittish 99 s, the same jobs, tricks and catch; still 263 s with all six shadow filters and the belief trace on, and with a refused model pack |
+| Trick check, each brain (untrained, so the planner decides; Vital with pacing off) | every trick that started landed under the planner, as on `main` (twice); under Basic the same; under Vital she caught the test player nine times, so three tricks never got a turn. 0 fairness violations in every run |
+
+**Where a batch frame's time goes** (C0.2, `-kehai-timing`, one shift): her belief update 13–16%, her decisions 7–10%, her plan's steps 1–2%, the eval's metrics 1%; the rest is outside her code and not broken down.
+
+### The baseline: 0.3.0's ablation, run again (12 November)
+
+C0.1's gated half, on the owner's go. It's 0.3.0's last ablation, and 0.4.0's baseline.
+
+**How it ran:**
+- The build branch at `d36db99`, every switch at its default (planner, mirror K0, senses S0, the
+  trap fences off). That plays today's shift as `main` does (above), so it stands for `main`.
+- 0.3.0's arguments: rungs C and E; four players, the cautious one held out; 3 careers of shifts
+  1–10; 150 s shifts; seed 1000. 240 shifts in 66 minutes, on a clone, silent.
+- **No pairs against `main`:** the 7 November `main` run's file was in a clone since deleted. So the
+  numbers below are this run's own, set beside 0.3.0's earlier runs, not paired with them.
+- Command: `tools/eval/ablation_030_rerun.sh`; tables by `analyze_ablation.py` and `tricks030.py`.
+
+**0.3.0's primary metrics** ([its plan §7](../archive/0.3.0-build-plan.md#7-tests-and-metrics)), unchanged:
+
+| # | Metric | Result |
+|---|---|---|
+| 1 | Every live trick works end to end | **Not judged here:** it's the trick check's, which passed on this branch (above). In the ablation every trick but Cut ran; Cut ran in 0 of 240 shifts again |
+| 2 | Fairness violations: 0 | **Pass:** 0 in 240 shifts |
+| 3 | No stuck shifts | **Fail:** 12 of 240 (`main` on 7 November: 2; 0.3.0's first run 13, second 9). 4 of 180 for the training players, **8 of 60 for the held-out player** |
+| 4 | Setpoint error against `main` | **Not measured:** no `main` run to pair with. On its own: 0.25 ± 0.01 (C, training), 0.26 ± 0.01 (E, training), 0.29 ± 0.01 (C, held out), 0.28 ± 0.01 (E, held out). 0.3.0's first run had 0.25, 0.25, 0.24 and 0.26 |
+
+**What didn't work:**
+- **Stuck shifts are still a fail, mostly the held-out player's.** In the 12, the bot reached
+  closing with 1–13 bays to restock and up to 8 spills, and failed its actions two ways:
+  "interrupted" (its fear) and "couldn't get close enough". The spill spots in the office failed
+  most: Office/G 21 times in three held-out shifts (14 in one), Office/H 9 times. C0.2's fence for
+  Office/G was off in this run (it's off by default, above).
+- **Held-out setpoint error is a little higher than 0.3.0's first run** (0.28–0.29 against
+  0.24–0.26). Unpaired, so not a measured change.
+- **Cut never ran,** as before.
+
+**The rest:**
+
+| | Training players (180) | Held out (60) |
+|---|---|---|
+| Catches per shift, rung C / E | 0.98 ± 0.02 / 0.97 ± 0.02 | 0.90 ± 0.06 / 0.83 ± 0.07 |
+| Tricks started per shift | 4.2 | 5.7 |
+| Shift length | 153 s | 222 s |
+| Shifts that ran past 150 s | 86 | 42 |
+| Median time to catch (Kaplan–Meier), C / E | 160 s / 157 s (all players) | |
+
+- **The tricks land.** Of tricks with a world effect, landed against started per shift (training,
+  rung C): Shelf sweep 1.01 of 1.06, Spill 0.48 of 0.52, Fog 0.46 of 0.56, Phantom chime all,
+  Blackout all, the understudy all. Ambush and Poll witnesses have no world effect, so they never
+  record a landing (0 is "not recorded", not "failed").
+- **Catches:** 70% (C) and 64% (E) came in a hunt, all seen in the last 3 s; 18–22% within 10 m of the
+  time clock (the clock-camp guard's line is 50%). About a quarter came while a room was fogged.
+- **Belief, out of view:** 17.1 ± 0.9 m (C) and 19.1 ± 1.0 m (E) from her likeliest cell to the
+  player. Against remembering the last sighting, the grid is 16–17 m closer, but no better in log p
+  (+0.04 ± 0.08 at C).
+- **Rung E against C, paired:** about the same (catches −0.03 ± 0.03, setpoint +0.001 ± 0.008); out
+  of view she's a little further off at E (+2.0 ± 1.2 m).
+- **Speed:** 0.097 s of real time per simulated second, as in 0.3.0's second run (0.099); `main` on
+  7 November was 0.044.
+
+### C4.10: the belief fits (13 November)
+
+The owner's go. `tools/belief/train_all.sh` on C4.9's second recording (144 training traces, 48
+validation; the hand-written employee bot played the persona shifts, so all of this is redone after
+C2.7). 7 h 41 min on the CPU with 4 workers (the estimate was 4–5 h), editor closed. Each stage is
+chosen on the validation traces; the held-out players aren't touched until C4.11. Commit `092641d`;
+the report is `kehai_eval/belief040/fit_report.json`.
+
+**Scores** (mean log p of the player's true cell on the validation traces; nearer 0 is better):
+
+| | Today | Fitted | Chosen |
+|---|---|---|---|
+| Her senses (every tick, P0) | S0 −5.29 | S1 **−4.84**, S2 −4.90 | S1 (+0.45: about 1.6× the chance on the true cell) |
+| The predict step (out of view, S1) | P0 −6.55 | P1 **−6.14**, P2 −6.81, P3 −6.78 | P1 (+0.42 over P0: about 1.5×) |
+
+These choose; they don't test. The §11 tests (95% intervals by career, held-out players) are C4.11's.
+
+**What didn't work:**
+- **P2 and P3 lost, to P1 and to today's P0.** Not over-fitting: on the training traces too their
+  out-of-view loss (6.91, 6.88) is worse than P1's (6.40). So the destination-first step is under-fit
+  or has a defect; it isn't evidence yet that "fitting the hand-written step is enough". Its stage 1
+  used 1,889 of the 4,620 logged legs: a leg counts only if it ends within 3 m of one of the places
+  the trace offered, and 798 legs are back-offs and 525 waits, which aim at no place. Diagnosing P2
+  is a follow-up, before C4.11 if its P2/P3 test is to mean anything.
+- **Most of S1's numbers sit at an edge** (5 of 8). Three are real floors: the near sight spread
+  (0.5 m) and the hearing spread (0.50 m, growing 0 per metre) sit on the 0.5 m floor the filter
+  itself enforces. Two are saturated: hearing confidence (2.99 of 3) and the sweep scale (2.96 of 3)
+  are clamped to 1 downstream, so a higher ceiling changes little. What S1 learned, plainly: every
+  sighting, noise and sweep is nearly exact, so trust it fully (S0 blurred a far sighting 3 m, S1
+  1.1 m; testimony 2.5 m, S1 0.67 m). On a bot's recordings that's expected, since the game's
+  observations come from the player's real position; it would make her play sharper, so whether
+  the blur was a design choice is the owner's call before S1 is played.
+- **P1 sits at three edges:** habit 3 (range 0–3), speed 2 (0–2), and moving 1 (0–1, a probability,
+  so a real limit). A probe past the edges, on the training traces (not validation): habit
+  is flat (out-of-view loss 6.398 fitted, 6.396 at 4, 6.395 at 5), but **speed isn't: 6.338 at 2.5 and
+  6.311 at 3**, still falling. The bound held P1 back; a refit with a wider speed range (about 2 h)
+  is the owner's call, before C4.11 freezes the models.
+- **The mirror map says players notice her far less than the hand-set guess:** at 3 m 58% (hand
+  89%), at 10 m 13% (73%); one of her noises 25% (80%). That's the bots' noticing, so provisional.
+
+**What holds:**
+
+| Check | Result |
+|---|---|
+| EditMode suite on a clone, with the fitted tables in | 430 of 430 |
+| The C# filter against the Python replay | to 1e-5 on every cell and step, now with the numbers the build ships (the fixture used the hand-set ones; `make_fixture.py` reads the fitted part, `518355b`) |
+| Every switch at its default | nothing reads a fitted table (S0, P0, mirror K0, no shadows). One shift (rung E, efficient, seed 1000) against `main` (9eb37cd): the same jobs, tricks, catch and end; 191 steps against 192, the run-to-run jitter `main` shows too |
+
+Two EditMode tests had to change: one expected S1 unfitted, and one changed the cached S2 (it now
+uses a copy of today's numbers). The trick check on this run differed from `main`'s on the same
+seed (two tricks walked to spots they couldn't reach, "Infinity m short"; `main` failed to place its
+door lock), as the trick check does run to run.
+
 ## Karen 0.3.0: the ablation (7 November)
 
 0.3.0 rebuilds her tricks ([Karen.md §17](../karen/Karen.md#17-karen-030-the-tricks-come-back)). The plan

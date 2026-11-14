@@ -91,10 +91,10 @@ namespace Kehai.Karen
         public void MakeJumpy(float seconds) => jumpyUntil = Mathf.Max(jumpyUntil, Time.time + seconds);
 
         // A witness report fades with age: sure of the aisle a moment ago, vague a minute later.
-        public Observation ToObservation()
+        public Observation ToObservation(SenseModel senses = null)
         {
             float decayed = SightingConfidence * Mathf.Clamp01(1f - Age / memorySeconds);
-            float sigma = 2.5f + Age * 0.25f;
+            float sigma = (senses ?? SenseModel.Hand()).TestimonySigma(Age);
             return new Observation(SenseChannel.Testimony, LastSeenAt, decayed, sigma,
                                    $"testimony({name}, {Age:0}s old)");
         }

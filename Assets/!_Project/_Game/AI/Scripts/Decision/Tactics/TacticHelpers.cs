@@ -124,6 +124,26 @@ namespace Kehai.Karen
         public static Vector3 OnFloor(Vector3 p, float radius = 3f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, NavMesh.AllAreas) ? hit.position : p;
 
+        // How much of her route guesses' weight passes through a region: only with the destination
+        // model (P2, P3: C4.6); 0 otherwise, so today's placements are unchanged.
+        public static float OnGuessedRoutes(KarenContext c, Region r)
+        {
+            if (c.Brain == null || !(c.Belief?.Motion is DestinationMotion) || c.Brain.Predictor == null || !c.Brain.Predictor.Active) return 0f;
+            float w = 0f;
+            foreach (RouteGuess g in c.Brain.Predictor.Guesses)
+                foreach (int cell in g.Path)
+                    if (c.Map.CellRegion[cell] == r.Id) { w += g.Weight; break; }
+            return Mathf.Clamp01(w);
+        }
+
+        // A spill goes where your floor reaches (0.4.0, C0.2's fence): on the walkable floor, or the
+        // nearest walkable point within 3 m if she stood over an edge. Where it already is, unchanged.
+        public static Vector3 WhereYouCanMop(Vector3 p)
+        {
+            if (!NavMesh.SamplePosition(p, out NavMeshHit hit, 3f, NavMesh.AllAreas)) return p;
+            return FairnessGuard.Flat(hit.position, p) <= 0.5f ? p : hit.position;
+        }
+
         // The nearest spot on her part of the building's floor (KarenArea), or the point itself.
         public static Vector3 OnHerFloor(Vector3 p, float radius = 1.5f) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, radius, KarenArea.AgentMask) ? hit.position : p;

@@ -52,11 +52,21 @@ namespace Kehai.Karen
             float maxBelief = 1e-6f;
             for (int i = 0; i < c.Belief.CellCount; i++) maxBelief = Mathf.Max(maxBelief, c.Belief[i]);
 
+            // With the destination model (P2, P3), her guessed routes are heat too (C4.6).
+            float[] routes = null;
+            if (c.Belief.Motion is DestinationMotion && c.Brain != null && c.Brain.Predictor != null && c.Brain.Predictor.Active)
+            {
+                routes = new float[c.Map.CellCount];
+                foreach (RouteGuess g in c.Brain.Predictor.Guesses)
+                    foreach (int cell in g.Path) routes[cell] = Mathf.Max(routes[cell], g.Weight);
+            }
+
             var all = new List<HeatCell>();
             for (int i = 0; i < c.Belief.CellCount && i < c.Map.CellCount; i++)
             {
                 if (!c.Map.IsKarens(i)) continue;
                 float w = (habit != null && i < habit.Length ? habit[i] : 0f) + 0.5f * c.Belief[i] / maxBelief;
+                if (routes != null) w += routes[i];
                 if (w < 0.05f) continue;
                 all.Add(new HeatCell(c.Map.CellPosition[i] + Vector3.up * ChestHeight, w));
             }
