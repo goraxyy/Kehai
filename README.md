@@ -134,7 +134,7 @@ long and exact, for coding agents. Start with [`docs/you/NOW.md`](docs/you/NOW.m
 | | [`DECISIONS.md`](docs/you/DECISIONS.md) | The owner's calls, one dated line each |
 | | [`IDEAS.md`](docs/you/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
 | | [`RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md) | Everything left until release, in order |
-| | [`TESTING.md`](docs/you/TESTING.md) | Testing and training left for 0.4.0: in order, Mac and Windows times, what's necessary |
+| | [`TESTING.md`](docs/you/TESTING.md) | Testing and training left for 0.4.0 and 0.5.0: in order, by stage, Mac and Windows times, what's necessary |
 | `you/plans/` | [`0.4.0-build-plan.md`](docs/you/plans/0.4.0-build-plan.md) | Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait for 0.4.1) |
 | | [`playtest-v2.md`](docs/you/plans/playtest-v2.md) | Real players: how their shifts get recorded and uploaded (not built) |
 | | [`0.2.0-tuning-plan.md`](docs/you/plans/0.2.0-tuning-plan.md) | Turning her down: why she catches you, the levers, and the test (open questions) |
