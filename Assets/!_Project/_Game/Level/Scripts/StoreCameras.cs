@@ -47,7 +47,7 @@ public sealed class StoreCameras : MonoBehaviour
         new Spot("STOCKROOM", "Stockroom", new Vector2(15f, -177.5f), new Vector2(-1f, 0f), new Vector3(36f, 0f, -183f)),
         new Spot("LOBBY", "Lobby", new Vector2(83f, -112f), new Vector2(1f, 0f), new Vector3(60f, 0f, -116f)),
         new Spot("STAFF ROOM", "Staff room", new Vector2(12f, -138.5f), new Vector2(-1f, 0f), new Vector3(19f, 0f, -145f)),
-        new Spot("STORE FRONT", "Pavement", new Vector2(30f, -108.5f), new Vector2(0f, -1f), new Vector3(60f, 0f, -107.5f)),
+        new Spot("STORE FRONT", "Pavement", new Vector2(30f, -108.5f), new Vector2(0f, -1f), new Vector3(54f, 0f, -107.5f)),
         new Spot("BACKSTREET", "Backstreet", new Vector2(14.5f, -152.5f), new Vector2(0f, 1f), new Vector3(18.5f, 0f, -168f)),
     };
 
