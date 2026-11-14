@@ -44,6 +44,8 @@ namespace Kehai.Karen
         public PerformanceReview Review { get; private set; }
         public KarenStats Stats { get; } = new KarenStats();
         public BlinkDash Dash { get; } = new BlinkDash();   // her move while you blink (Decision/BlinkDash.cs)
+        public LearningRecorder Learning { get; } = new LearningRecorder();   // one line per decision (0.4.0, C1.1)
+        static readonly string sessionStamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture);
 
         public TaskManager Tasks { get; private set; }
         public ShiftManager Shift { get; private set; }
@@ -110,9 +112,14 @@ namespace Kehai.Karen
                 World = World, Log = Log, Rng = Rng, Config = config, Tasks = Tasks, Shift = Shift
             };
             InstallPolicy();
+            InstallBrain();
+            Learning.Enabled = config.learningRecords;
+            if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
+            PlaceWatch.Placed += OnPlaced;
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
+            NoiseBus.Emitted += OnOwnNoise;
             World.Pa.ChimeStarted += OnPaChime;
             World.Pa.SpeechStarted += OnPaSpeech;
             GameEvents.ShelfRestocked += OnRestocked;
@@ -153,6 +160,7 @@ namespace Kehai.Karen
         void OnDestroy()
         {
             NoiseBus.Emitted -= OnNoise;
+            NoiseBus.Emitted -= OnOwnNoise;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.SpillCleaned -= OnSpillRoute;
             GameEvents.BinBagged -= OnBinRoute;
@@ -169,6 +177,7 @@ namespace Kehai.Karen
             Director?.Dispose();
             if (Shift != null) Shift.ShiftStateChanged -= OnShiftStateChanged;
             Sensorium?.Dispose();
+            Learning.Close();
             if (Instance == this) Instance = null;
         }
 
@@ -178,7 +187,14 @@ namespace Kehai.Karen
             Belief = new BeliefGrid(Map);
             Predictor = new RoutePredictor(Map);
             Sensorium = new Sensorium(Map, Energy);
+            // 0.4.0 (C4.1, C4.7, C4.8): the predict step, her senses' numbers, the mirror map.
+            // p0, s0 and k0 are today's: the same numbers in the same arithmetic.
+            Features = new MotionFeatures();
+            Belief.Motion = MotionModels.Create(config.motion, Features) ?? HandMotion.Today;
+            Sensorium.Senses = SenseModel.For(config.senses);
+            Mirror = new MirrorBelief(Map, config.mirror);
             ApplyRungToSenses();
+            BeliefRebuilt?.Invoke(this);
             if (Ctx != null)
             {
                 Ctx.Map = Map;
@@ -250,6 +266,9 @@ namespace Kehai.Karen
             peakOutstanding.Clear();
             KilledThisShift = false;
             Dash.BeginShift();
+            Learning.BeginShift();
+            biasSeen = Director.BiasApplied;
+            stuck = false;
 
             // Between shifts the store may be rearranged (§5.5). Done before anything reads
             // the map for this shift.
@@ -270,6 +289,8 @@ namespace Kehai.Karen
             Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
             if (clock.HasValue) Belief.ResetTo(clock.Value.Position, 3f);
             else Belief.ResetToPrior();
+            Features.Places.BeginShift();
+            Mirror?.Reset(StartPosition(), Time.time);
 
             Sensorium.ForgetShift();
             Actions.Reset();
@@ -303,6 +324,15 @@ namespace Kehai.Karen
             AbortPlan();
             Director.EndShift();
             Policy?.EndShift();
+            if (BrainPay != null)
+            {
+                BrainPay.EndShift(KilledThisShift, stuck: stuck);
+                PayBrain();
+                BrainPolicy?.EndShift();
+                BrainPay.Reset();
+            }
+            Ledger.ReadBy(BrainPolicy?.Version);
+            Learning.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
             PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
             Ledger.EndShift(ShiftTime, energy, clockedOut);
@@ -324,7 +354,7 @@ namespace Kehai.Karen
             if (Body == null) return;
             float dt = Time.deltaTime;
 
-            Body.Sight.Tick(dt);
+            using (ShiftTiming.Measure("sight")) Body.Sight.Tick(dt);
             if (!ShiftActive)
             {
                 Body.Stop();
@@ -339,17 +369,17 @@ namespace Kehai.Karen
             }
 
             believeTimer += dt;
-            if (believeTimer >= 1f / config.believeHz) { Believe(believeTimer); believeTimer = 0f; }
+            if (believeTimer >= 1f / config.believeHz) { using (ShiftTiming.Measure("believe")) Believe(believeTimer); believeTimer = 0f; }
 
             appraiseTimer += dt;
-            if (appraiseTimer >= 1f / config.appraiseHz) { Appraise(); appraiseTimer = 0f; }
+            if (appraiseTimer >= 1f / config.appraiseHz) { using (ShiftTiming.Measure("appraise")) Appraise(); appraiseTimer = 0f; }
 
-            TickDirector(dt);
-            UpdatePredictor(dt);
+            using (ShiftTiming.Measure("director")) TickDirector(dt);
+            using (ShiftTiming.Measure("predictor")) UpdatePredictor(dt);
 
             // What her tricks' places paid, once a second (0.3.0).
             placeTimer += dt;
-            if (placeTimer >= 1f) { placeTimer = 0f; PlaceWatch.Tick(Ctx, Time.time); }
+            if (placeTimer >= 1f) { placeTimer = 0f; using (ShiftTiming.Measure("places")) PlaceWatch.Tick(Ctx, Time.time); }
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -365,10 +395,10 @@ namespace Kehai.Karen
                 bool forced = decideNow;
                 decideNow = false;
                 decideTimer = 0f;
-                Decide(forced);
+                using (ShiftTiming.Measure("decide")) Decide(forced);
             }
 
-            RunPlan(dt);
+            using (ShiftTiming.Measure("plan")) RunPlan(dt);
             ExpireClosures();
         }
 
@@ -386,12 +416,61 @@ namespace Kehai.Karen
             if (ShiftActive) Stats.SamplePacing(Director.Panic, Director.Setpoint);
             if (ShiftActive) PayPolicy(step);
             SettleRewards();
+            if (ShiftActive && Learning.Enabled)
+            {
+                if (Director.BiasApplied > biasSeen) Learning.HintFired(Director.LastBiasAt);
+                biasSeen = Director.BiasApplied;
+                Learning.Tick(Time.time, Director.Panic);
+            }
         }
+
+        float biasSeen;
+
+        // One learning record (C1.1): what she knew, what she could pick, what she picked. Built
+        // from what Plan already ranked, so it draws nothing and changes nothing.
+        void RecordDecision(PlanTree plan, Tactic tactic)
+        {
+            if (!Learning.Enabled || plan == null || tactic == null) return;
+            List<Tactic> legal = HtnPlanner.LastCandidates;
+            var names = new string[legal.Count];
+            for (int i = 0; i < legal.Count; i++) names[i] = PickKey(plan.Action, legal[i]);
+            Learning.Add(new LearningRecord
+            {
+                Shift = Stats.Shift, Seed = Rng.Seed, Player = Ledger.PlayerName, Rung = config.rung.ToString(),
+                T = ShiftTime, Now = Time.time,
+                Brain = brainPick != null ? config.brain.ToString().ToLowerInvariant() : "planner",
+                BrainVersion = brainPick != null ? BrainPolicy.Version : "hand",
+                Goal = plan.Action.ToString(),
+                Phase = (int)Director.CurrentPhase,
+                InputsVersion = BrainObservation.Version,
+                Inputs = BrainObservation.Build(Ctx, config.brain == KarenBrainKind.Basic),
+                Legal = brainPick != null ? brainPick.Value.legal : names,
+                Pick = PickKey(plan.Action, tactic),
+                Chance = brainPick != null ? brainPick.Value.chance : 1f,
+                Panic = Director.Panic
+            });
+        }
+
+        // The thought log's pick (C3.6): "PICK flush:blackout 41% (everyone +0.12, you +0.01 over 3 → +0.05)".
+        public static string PickLine(string key, float chance, LedgerReading reading) =>
+            $"PICK     {key} {chance:0%} ({reading})";
+
+        // "flush:blackout": an (action, trick) pair by name (build plan §5.5, item 6).
+        public static string PickKey(ActionId action, Tactic tactic) =>
+            action.ToString().ToLowerInvariant() + ":" + (tactic != null ? tactic.Id : "none");
 
         // Rung F's reward (PolicyReward): how close panic sat to the setpoint over this tick,
         // less anything the fairness guard caught since the last one.
         void PayPolicy(float dt)
         {
+            if (BrainPay != null)
+            {
+                float shiftLength = Shift != null ? Shift.shiftDurationSeconds : 300f;
+                BrainPay.Pacing(Director.Panic, Director.Setpoint, dt, shiftLength);
+                int v = FairnessGuard.Violations;
+                if (v > violationsSeen) BrainPay.Violations(v - violationsSeen);
+                violationsSeen = v;
+            }
             if (Policy == null) return;
             float length = Shift != null ? Shift.shiftDurationSeconds : 300f;
             Policy.AddReward(PolicyReward.Pacing(Director.Panic, Director.Setpoint, dt, length));
@@ -410,8 +489,10 @@ namespace Kehai.Karen
             Energy.Tick(dt);
             Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
 
-            foreach (Observation o in Sensorium.Positive)
+            for (int i = 0; i < Sensorium.Positive.Count; i++)
             {
+                Observation o = Sensorium.Positive[i];
+                Sensed?.Invoke(o, i < Sensorium.Raw.Count ? Sensorium.Raw[i] : default);
                 if (Belief.Apply(o)) Note("BELIEF", $"lost the scent — everything ruled out, back to the prior (after {o.Label})");
                 if (o.Channel == SenseChannel.Hearing) heard.Add((Time.time, o.Position));
                 if (o.Channel != SenseChannel.Sight && o.Confidence > 0.3f) NoteSense(o);
@@ -438,6 +519,8 @@ namespace Kehai.Karen
                 Note("SENSE", "NEGATIVE sweep ruled out everything — back to the prior");
 
             Director.MaybeBias(Ctx, dt);
+            UpdateMirror(seeing, dt);
+            RefreshFeatures();
             Belief.Predict(dt, Energy.SpeedEstimate);
 
             int here = Map.RegionAt(Body.Position);
@@ -449,6 +532,58 @@ namespace Kehai.Karen
             while (heard.Count > 0 && Time.time - heard[0].t > 10f) heard.RemoveAt(0);
             if (Sensorium.LoudNoiseNearby && CurrentPlan != null && CurrentPlan.Action != ActionId.Hunt
                 && !IgnoresNoise(CurrentPlan.Tactic, PlanAge)) decideNow = true;
+        }
+
+        // ---- 0.4.0: where you're going, and where you think she is (C4.3–C4.8) ------------------------
+
+        public MotionFeatures Features { get; private set; }
+        public MirrorBelief Mirror { get; private set; }
+        // Told after the belief is rebuilt (a new map), and before each positive observation is
+        // applied: the shadow filters and the belief trace follow her through these.
+        public static event System.Action<KarenBrain> BeliefRebuilt;
+        public event System.Action<Observation, SenseRaw> Sensed;
+        // Set by the eval when shadow filters or the brains want the destinations every 2 s even
+        // while her own step is today's.
+        public static bool FeaturesWanted;
+        public bool MirrorRunning => config.mirror != MirrorMode.K0 || FeaturesWanted;
+
+        bool UsesFeatures => Belief.Motion != HandMotion.Today || FeaturesWanted || config.brain != KarenBrainKind.Planner;
+
+        void RefreshFeatures()
+        {
+            if (!UsesFeatures || !Features.Due(Time.time)) return;
+            Features.HerPosition = Body.Position;
+            Features.SheIsThought = Mirror != null ? Mirror.Thought(Body.Position) : Body.Position;
+            Features.SheIsThoughtStale = Mirror != null ? Mirror.Stale(Time.time) : 0f;
+            Features.LastSeenAt = Body.Sight.LastSeenPosition;
+            Features.LastSeenHeading = Body.Sight.LastSeenVelocity;
+            Features.StoreOpen = Shift == null || Shift.CustomersAllowed;
+            Features.TimeLeft01 = Shift != null && Shift.shiftDurationSeconds > 0f ? Mathf.Clamp01(Shift.TimeRemaining / Shift.shiftDurationSeconds) : 1f;
+            Features.Refresh(Ctx, Time.time);
+            if (Belief.Motion is HandMotion hand && hand.Fitted.HasValue) Features.WriteDanger(Belief.Danger);
+        }
+
+        // Where you think she is (K1, K2): corrected when she thinks you sensed her, spread while
+        // you can't. Her noises reach it through OnOwnNoise.
+        void UpdateMirror(bool seeing, float dt)
+        {
+            if (!MirrorRunning || Mirror == null) return;
+            if (seeing) Mirror.SawEachOther(Body.Position, Vector3.Distance(Body.Position, Body.Sight.LastSeenPosition), Time.time);
+            Mirror.Predict(dt);
+        }
+
+        float lastStepNoiseAt = -99f;
+
+        void OnOwnNoise(NoiseEvent e)
+        {
+            if (!ShiftActive || !MirrorRunning || Mirror == null) return;
+            if (e.Author != NoiseAuthor.Karen && e.Author != NoiseAuthor.Director) return;
+            if (e.Kind == NoiseKind.KarenStep)
+            {
+                if (Time.time - lastStepNoiseAt < 1f) return;   // her steps, once a second
+                lastStepNoiseAt = Time.time;
+            }
+            Mirror.MadeNoise(e.Position, e.Carry, Belief, Time.time, falseCue: e.Kind == NoiseKind.Tell);
         }
 
         float lastSenseNote;
@@ -497,12 +632,18 @@ namespace Kehai.Karen
             }
             if (targets.Count == 0)
             {
+                DesireTargets.Clear();
                 for (int i = 0; i < Belief.DesireDistance.Length; i++) Belief.DesireDistance[i] = float.PositiveInfinity;
                 return;
             }
             float[] field = Map.DistancesFrom(targets);
             System.Array.Copy(field, Belief.DesireDistance, field.Length);
+            DesireTargets.Clear();
+            DesireTargets.AddRange(targets);
         }
+
+        // The cells the desire field was last built from (the belief trace records them, C4.2).
+        public readonly List<int> DesireTargets = new List<int>();
 
         // The same list the fairness guard checks — every open job and the time clock. It
         // names objects in the store, not the employee, so Karen may use it: she wrote it.
@@ -553,7 +694,7 @@ namespace Kehai.Karen
                 Awareness = Body.Sight.Awareness,
                 PeakRegion = Belief.PeakRegion,
                 PeakPosition = Belief.PeakPosition,
-                InRecovery = Director.InRecovery,
+                InRecovery = !config.PacingOff && Director.InRecovery,   // Vital and the hunter: no recovery (C5.4)
                 Blinking = EyesClosed
             };
 
@@ -635,6 +776,7 @@ namespace Kehai.Karen
             // A trick started from the developer overlay runs to its end.
             if (forcedPlan && CurrentPlan != null) return;
             forcedPlan = false;
+            if (DecideByBrain(forced)) return;
 
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
@@ -664,6 +806,13 @@ namespace Kehai.Karen
                 if (plan == null) return;
             }
 
+            Adopt(plan, tactic, options, why);
+        }
+
+        // A plan she's going ahead with: its cost, the record of it, and on (the planner's and the
+        // brain's decisions both end here).
+        void Adopt(PlanTree plan, Tactic tactic, List<ThoughtOption> options, string why)
+        {
             if (tactic.TensionCost > 0f && !Director.TrySpend(tactic.TensionCost))
             {
                 if (HtnPlanner.Shielded(Ctx))
@@ -673,7 +822,7 @@ namespace Kehai.Karen
                 }
                 Note("PLAN", $"PLAN     {tactic.Id} over the tension budget — unshielded, so it goes ahead");
             }
-            FairnessGuard.CheckPacing(tactic, Director);
+            if (!config.PacingOff) FairnessGuard.CheckPacing(tactic, Director);   // with pacing off by design, not a violation
 
             tactic.LastUsed = Time.time;
             tactic.UsesThisShift++;
@@ -695,7 +844,86 @@ namespace Kehai.Karen
             if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
             else if (chasing) SetChasing(false);
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
+            if (tactic.Learnable) Note("PICK", PickLine(PickKey(plan.Action, tactic), brainPick != null ? brainPick.Value.chance : 1f, Ledger.Reading(tactic, LedgerStart.Current, (int)Director.CurrentPhase)));
+            BrainPolicy?.AddReward(0f);
+            if (brainPick != null) BrainPay?.Used(tactic.UsesThisShift - 1);
+            RecordDecision(plan, tactic);
+            brainPick = null;
             NarratePlan(plan);
+        }
+
+        // ---- the two Karens (0.4.0, build plan §5, C5.1) -----------------------------------------
+
+        public IBrainPolicy BrainPolicy { get; private set; }
+        public BrainPay BrainPay { get; private set; }
+        (string[] legal, float chance, bool agreed)? brainPick;
+        public int BrainDecisions { get; private set; }
+        public int BrainAgreed { get; private set; }
+
+        void InstallBrain()
+        {
+            BrainPolicy = BrainPolicies.Create(config, out string why);
+            BrainPay = config.brain != KarenBrainKind.Planner ? new BrainPay(config.brain) { Dial = config.catchDial } : null;
+            if (config.brain == KarenBrainKind.Planner) return;
+            Note("SYSTEM", BrainPolicy != null
+                ? $"brain: {config.brain} — {BrainPolicy.Name} {BrainPolicy.Version}{(BrainPolicy is GeneratedBrain g && g.Warning != null ? " (" + g.Warning + ")" : "")}"
+                : $"brain: {config.brain}, but {why} — the planner decides{(config.PacingOff ? ", with pacing off (the hunter)" : "")}");
+        }
+
+        // The brain answers "which action, which trick" as one pair, at the planner's own decision
+        // moments; the plan's steps stay the planner's. False: the planner decides this time.
+        bool DecideByBrain(bool forced)
+        {
+            if (BrainPolicy == null || !config.Features.Goals) return false;
+            Ctx.A = Appraised();
+            Ctx.Last = LastTrickNow();
+            Tactic running = CurrentPlan?.Tactic;
+            bool finishing = IgnoresNoise(running, PlanAge);
+            if (CurrentPlan != null && !BrainSeam.Asks(forced, true, Time.time - Actions.CommittedAt, config.minCommitSeconds)) return true;
+
+            List<BrainSeam.Pair> legal = BrainSeam.Legal(Ctx);
+            if (finishing) legal.RemoveAll(p => p.Action != ActionId.Hunt);   // finish what she starts, unless she hunts
+            if (legal.Count == 0) return finishing;
+
+            // What the planner would pick: the teacher, and "how often she agrees with the planner".
+            ActionId plannerGoal = Actions.Choose(Ctx, forced, out _, commit: false);
+            List<Tactic> plannerCandidates = HtnPlanner.Candidates(plannerGoal, Ctx, null);
+            Tactic plannerTactic = plannerCandidates.Count > 0 ? HtnPlanner.Rank(plannerCandidates, Ctx)[0].t : null;
+            int plannerPick = legal.FindIndex(p => p.Action == plannerGoal && p.Tactic == plannerTactic);
+
+            PayBrain();
+            float[] inputs = BrainObservation.Build(Ctx, config.brain == KarenBrainKind.Basic);
+            if (!BrainPolicy.Choose(inputs, legal, plannerPick, out int index, out float chance) || index < 0 || index >= legal.Count)
+            {
+                if (plannerPick < 0) return false;
+                index = plannerPick;
+                chance = 1f;
+            }
+            BrainSeam.Pair pick = legal[index];
+            BrainDecisions++;
+            if (index == plannerPick) BrainAgreed++;
+            if (CurrentPlan != null && CurrentPlan.Action == pick.Action && CurrentPlan.Tactic == pick.Tactic && !forced) return true;
+
+            Actions.Commit(pick.Action, Ctx);
+            WriteBelief();
+            AbortPlan();
+            PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
+                                            prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
+            if (plan == null) return false;
+            brainPick = (legal.ConvertAll(p => p.Key).ToArray(), tactic == pick.Tactic ? chance : 0f, index == plannerPick);
+            Adopt(plan, tactic, options, why);
+            return true;
+        }
+
+        // The eval timed the shift out: it couldn't end (Basic's stuck-shift cost, C5.3).
+        bool stuck;
+        public void MarkStuck() => stuck = true;
+
+        // What the brain earned since it was last asked (C5.3), handed over with the next ask.
+        void PayBrain()
+        {
+            if (BrainPay == null || BrainPolicy == null) return;
+            BrainPolicy.AddReward(BrainPay.Take());
         }
 
         void WriteBelief()
@@ -713,7 +941,7 @@ namespace Kehai.Karen
             bool exempt = g == ActionId.Hunt || g == ActionId.Loom || g == ActionId.LieInWait || g == ActionId.Lure || g == ActionId.BackOff;
             // Only when a hunt could actually start: with Hunt cooling down (0.2.0), a sighting
             // would otherwise cut the plan that's already hurrying to you, every tick.
-            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && Director.ActionPermission(ActionId.Hunt, c) > 0f
+            if (!exempt && c.A.Awareness >= Body.Sight.seeAt && BrainSeam.Permission(ActionId.Hunt, c) > 0f
                 && HtnPlanner.Candidates(ActionId.Hunt, c, null).Count > 0)
             {
                 Note("", "  interrupt: SeeingPlayerAtRange");
@@ -860,6 +1088,7 @@ namespace Kehai.Karen
                 if (Time.time - t0 < config.rewardWindow) continue;
                 pendingRewards.RemoveAt(i);
                 float delta = Director.MeanPanic(t0, t0 + config.rewardWindow) - p0;
+                Ledger.RecordEvidence(tactic, delta);   // 0.4.0: what it did to you, for "everyone and you" (C3.1)
                 if (config.Features.Bandit)
                 {
                     ChainStat found = Ledger.Settle(tactic.Id, after, delta);
@@ -1030,6 +1259,9 @@ namespace Kehai.Karen
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
+            Stats.CatchCauses.Add(CauseOfCatch());
+            Learning.Caught(Time.time);
+            BrainPay?.Caught(ShiftTime, Shift != null ? Shift.shiftDurationSeconds : 300f, Director.CurrentPhase);
             if (FogState.Any) Stats.CaughtInFog();
             if (CurrentPlan != null && CurrentPlan.Tactic is AmbushTactic ambush && ambush.AtChore) Stats.CaughtAtChore();
             Ledger.Data.caughtCount++;
@@ -1048,6 +1280,32 @@ namespace Kehai.Karen
             StartCoroutine(Consequences.Death(this, config.deathScreenSeconds));
         }
 
+        // Why this catch happened (C1.2): what she was doing, whether she'd seen you in the last
+        // 3 s, and how far it was from the time clock (the clock-camp guard, §5.6).
+        CatchCause CauseOfCatch()
+        {
+            Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
+            Vector3 at = Body.Position;
+            float toClock = -1f;
+            if (clock.HasValue)
+            {
+                Vector3 d = clock.Value.Position - at;
+                d.y = 0f;
+                toClock = d.magnitude;
+            }
+            return new CatchCause
+            {
+                T = ShiftTime,
+                Action = CurrentPlan != null ? CurrentPlan.Action.ToString() : "none",
+                Tactic = CurrentPlan?.Tactic != null ? CurrentPlan.Tactic.Id : "none",
+                Chasing = chasing,
+                SeenWithin3s = Body.Sight.SeesNow || Body.Sight.Time_SinceSeen() <= 3f,
+                ClockDistance = toClock,
+                Where = Map.Describe(at),
+                Dash = Dash.Lurking
+            };
+        }
+
         public void SetChasing(bool on)
         {
             if (chasing == on) return;
@@ -1063,7 +1321,7 @@ namespace Kehai.Karen
             if (ShiftActive) KarenNarrator.Say(StoryKind.Chase, on ? GameNames.Antagonist + " is chasing you — run!" : GameNames.Antagonist + " gave up the chase.", Body.Position);
             Body.SetMood(on ? KarenBody.Mood.Hunt : KarenBody.Mood.Calm);
             if (on) Stats.Chased();
-            else if (config.Features.Goals && ShiftActive) Director.StartRecovery(config.recoverySeconds, Ctx, "after a chase");
+            else if (config.Features.Goals && ShiftActive && !config.PacingOff) Director.StartRecovery(config.recoverySeconds, Ctx, "after a chase");
         }
 
         public void SuppressPursuit(float seconds) => Director.SuppressPursuit(seconds);
@@ -1079,6 +1337,7 @@ namespace Kehai.Karen
         // has handed over. Seeing you again drops them.
         void UpdatePredictor(float dt)
         {
+            if (Belief.Motion is DestinationMotion) { UpdateModelPredictor(dt); return; }
             if (!chasing && !(Predictor.Active && Time.time - Predictor.SeenAt < 30f))
             {
                 if (Predictor.Active) Predictor.Clear();
@@ -1098,6 +1357,59 @@ namespace Kehai.Karen
                 Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals());
             Predictor.Reweigh(Belief, Time.time);
         }
+
+        // With the destination model (P2, P3: C4.5) her guesses come from the same model, and are
+        // built after any strong sighting (her eyes, a camera, Kenji), not only when a hunt loses
+        // you. Cut, Ambush and Hunt's run read them as they always have. Kept half a minute.
+        float strongSeenAt = -999f;
+
+        void UpdateModelPredictor(float dt)
+        {
+            predictorTimer -= dt;
+            if (predictorTimer > 0f) return;
+            predictorTimer = 0.25f;
+            SightSensor s = Body.Sight;
+            if (s.SeesNow)
+            {
+                if (Predictor.Active) Predictor.Clear();
+                strongSeenAt = Belief.LastStrongObservation;
+                return;
+            }
+            if (Belief.LastStrongObservation > strongSeenAt && Features.Count > 0)
+            {
+                strongSeenAt = Belief.LastStrongObservation;
+                bool ownEyes = Time.time - s.LastSeenTime < 1f;
+                Vector3 at = ownEyes ? s.LastSeenPosition : Belief.PeakPosition;
+                int start = Map.CellAt(at);
+                var goals = new List<(string, Vector3)>();
+                for (int k = 0; k < Features.Count; k++)
+                    if (Features.List[k].Cell >= 0) goals.Add((Features.List[k].Label, Features.List[k].Position));
+                Predictor.Build(at, ownEyes ? s.LastSeenVelocity : Vector3.zero, Belief.LastStrongObservation, goals,
+                    (name, p, kind) => ModelChance(start, name, kind));
+            }
+            if (Predictor.Active && Time.time - Predictor.SeenAt > 30f) Predictor.Clear();
+            if (Predictor.Active) Predictor.Reweigh(Belief, Time.time);
+        }
+
+        // The model's chance, from the sighting's cell, of the place a guess is named after.
+        float ModelChance(int start, string name, GuessKind kind)
+        {
+            if (start < 0) return 0.1f;
+            for (int k = 0; k < Features.Count; k++)
+            {
+                Destination d = Features.List[k];
+                bool match = kind == GuessKind.Goal ? d.Label == name
+                    : kind == GuessKind.TurnedBack ? d.Kind == DestinationKind.TurnBack : d.Kind == DestinationKind.Stay;
+                if (match) return Mathf.Max(1e-4f, Features.Chance(start, k));
+            }
+            return 1e-4f;
+        }
+
+        // A trick put down is a bet that you'll pass within 4 m of here in the next minute (C4.6).
+        // She can't settle it herself: the eval does, against where you really went.
+        void OnPlaced(Tactic trick, string key, float now) =>
+            Stats.Bets.Add(new TrickBet { Trick = trick.Id, Key = key, At = Body.Position, T = now, Radius = 4f, Horizon = 60f,
+                                          OnYourWay = Belief.Motion is DestinationMotion && Predictor.Active });
 
         // Where you might be going: your jobs and the time clock, the breaker box with the
         // lights out, and her ways out of the building.
@@ -1352,6 +1664,37 @@ namespace Kehai.Karen
         }
     }
 
+    // A trick put down on your way (0.4.0, C4.6): won if you pass within Radius before Horizon.
+    public sealed class TrickBet
+    {
+        public string Trick, Key;
+        public Vector3 At;
+        public float T, Radius, Horizon;
+        public bool OnYourWay;            // placed from the destination model's guesses
+        public bool Settled, Won;
+    }
+
+    // One catch, and what led to it (0.4.0, build plan C1.2).
+    public struct CatchCause
+    {
+        public float T;                 // seconds into the shift
+        public string Action, Tactic;   // what she was doing
+        public bool Chasing;
+        public bool SeenWithin3s;       // her own eyes had you in the last 3 s
+        public float ClockDistance;     // metres from the time clock; -1 with no clock
+        public string Where;
+        public bool Dash;               // she was lurking after a vanish
+
+        // Within 10 m of the clock: the clock-camp guard's count (§5.6).
+        public bool AtClock => ClockDistance >= 0f && ClockDistance <= 10f;
+
+        public System.Collections.Generic.Dictionary<string, object> ToDictionary() => new System.Collections.Generic.Dictionary<string, object>
+        {
+            ["t"] = T, ["action"] = Action, ["tactic"] = Tactic, ["chasing"] = Chasing,
+            ["seen_3s"] = SeenWithin3s, ["clock_m"] = ClockDistance, ["where"] = Where, ["dash"] = Dash
+        };
+    }
+
     // What the eval harness and the ablation runner read at the end of a shift.
     public sealed class KarenStats
     {
@@ -1375,6 +1718,8 @@ namespace Kehai.Karen
         public int CatchesInFog { get; private set; }
         public int CatchesAtChore { get; private set; }
         public readonly List<(string kind, float seconds)> Answers = new List<(string, float)>();
+        public readonly List<CatchCause> CatchCauses = new List<CatchCause>();   // 0.4.0 (C1.2)
+        public readonly List<TrickBet> Bets = new List<TrickBet>();              // 0.4.0 (C4.6)
         public void CaughtInFog() => CatchesInFog++;
 
         // How often each trick landed (its plan's first effect), against TacticCounts' starts.
@@ -1403,6 +1748,8 @@ namespace Kehai.Karen
             Detections = Catches = Chases = Overtimes = BlinksSeen = 0;
             CatchesInFog = CatchesAtChore = 0;
             Answers.Clear();
+            CatchCauses.Clear();
+            Bets.Clear();
             CctvCamera.SeenByHers = 0f;
             TacticCounts.Clear();
             TacticLanded.Clear();

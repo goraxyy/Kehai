@@ -148,7 +148,10 @@ public class BotFearTests
     public void Players_NeverReadKaren()
     {
         string dir = Path.Combine(Application.dataPath, "!_Project/_Game/Eval/Scripts");
-        var leaks = new[] { "SimulatedPlayers.cs", "BotFear.cs" }
+        // 0.4.0 (C2.4): the persona, the options, the memory, the mind and its bridge too. Not
+        // League.cs, which must know her: it sets up who she is for each career.
+        var leaks = new[] { "SimulatedPlayers.cs", "BotFear.cs", "Persona.cs", "EmployeeOptions.cs", "BotMemory.cs",
+                            "EmployeeObservation.cs", "EmployeeReward.cs", "EmployeeMind.cs", "MlAgentsEmployee.cs" }
             .SelectMany(f => File.ReadAllLines(Path.Combine(dir, f)).Select((line, i) => (f, i, line)))
             .Where(x => Regex.IsMatch(x.line.Split(new[] { "//" }, System.StringSplitOptions.None)[0], @"\b(KarenBrain|KarenBody|KarenDirector|KarenLedger)\b"))
             .Select(x => $"{x.f}:{x.i + 1}: {x.line.Trim()}")

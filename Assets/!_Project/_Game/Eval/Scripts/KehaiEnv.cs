@@ -119,7 +119,8 @@ namespace Kehai.Eval
         void Update()
         {
             if (!Ready) return;
-            Metrics.Tick(Tasks, Burnout, Driver != null ? Driver.transform : null);
+            ShiftTiming.Frame();
+            using (ShiftTiming.Measure("metrics")) Metrics.Tick(Tasks, Burnout, Driver != null ? Driver.transform : null);
 
             KarenScreen screen = KarenScreen.Instance;
             PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;
@@ -143,6 +144,13 @@ namespace Kehai.Eval
 
         // ---- episodes -----------------------------------------------------------------------
 
+        // The launch, for file names that must not collide between runs.
+        public static readonly string RunStamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture)
+                                                 + (TrainerPort > 0 ? "_" + TrainerPort : "");
+
+        // Set by the league (League.cs) before each career: changes the next Karen's config.
+        public static System.Action<KarenConfig> KarenSetup;
+
         public IEnumerator ResetEpisode(EnvConfig config)
         {
             Ready = false;
@@ -159,11 +167,16 @@ namespace Kehai.Eval
                 seed = Config.seed,
                 writeJsonl = false,
                 planBudgetMs = 0f,      // no wall-clock cut-off: decisions depend on the seed alone
+                // One learning record per decision (0.4.0, C1.1), beside the run's other output.
+                learningRecords = !KarenBootstrap.NoRecords,
+                learningPath = System.IO.Path.Combine(EvalDirectory, "learning", "learning_" + RunStamp + ".jsonl"),
                 ledgerPath = string.IsNullOrEmpty(Config.ledgerPath)
                     ? System.IO.Path.Combine(EvalDirectory, "eval_ledger.json")
                     : Config.ledgerPath
             };
             if (KarenBootstrap.TryParseRung(Config.rung, out KarenRung rung)) karen.rung = rung;
+            KarenSetup?.Invoke(karen);   // the league's say: which brain she runs this career (0.4.0)
+            ShiftRecorder.RunSeed = Config.seed;
             KarenBootstrap.Override = karen;
             if (Config.freshLedger) new KarenLedger(karen) { Persistent = true }.Wipe();
 
@@ -293,6 +306,7 @@ namespace Kehai.Eval
 
             Done = true;
             Metrics.End(clockedOut, timedOut, Burnout, Time.realtimeSinceStartup - wallStartedAt);
+            if (timedOut) KarenBrain.Instance?.MarkStuck();
             if (timedOut && Shift.IsShiftActive) Shift.EndShift();
             return true;
         }

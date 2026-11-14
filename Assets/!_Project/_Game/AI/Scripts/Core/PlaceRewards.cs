@@ -37,7 +37,11 @@ namespace Kehai.Karen
         {
             if (trick == null || string.IsNullOrEmpty(key) || ask == null) return;
             watching.Add(new Watching { Trick = trick, Key = key, Since = now, Ask = ask, AtEnd = atEnd ?? (_ => 0.5f) });
+            Placed?.Invoke(trick, key, now);
         }
+
+        // Each trick put down is a bet on your way (0.4.0, C4.6): the brain logs it where she stands.
+        public event System.Action<Tactic, string, float> Placed;
 
         public void Tick(KarenContext c, float now)
         {

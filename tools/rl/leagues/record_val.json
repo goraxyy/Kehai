@@ -1,0 +1,43 @@
+{
+  "name": "record_val",
+  "learner": "none",
+  "split": "validation",
+  "careers": 8,
+  "shifts": 6,
+  "start_shift": 1,
+  "shift_seconds": 150,
+  "players": [
+    {
+      "kind": "scripted",
+      "profile": "efficient",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "skittish",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "reckless",
+      "share": 1
+    },
+    {
+      "kind": "employee",
+      "mind": "generated:EmployeeBrain",
+      "share": 3
+    }
+  ],
+  "karen": [
+    {
+      "brain": "planner",
+      "rung": "C",
+      "share": 1
+    },
+    {
+      "brain": "planner",
+      "rung": "E",
+      "share": 1
+    }
+  ]
+}

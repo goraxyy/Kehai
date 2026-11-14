@@ -33,6 +33,20 @@ namespace Kehai.Karen
         public int lastShift;
     }
 
+    // What she has seen one kind of thing do to you (0.4.0, build plan §6.2, C3.1): plain counts
+    // and sums, never differences from "everyone", so a new general model doesn't make it wrong.
+    [System.Serializable]
+    public class EvidenceStat
+    {
+        public string key;       // a trick's id, or a kind of trick ("sight", "work"…)
+        public float n;          // how many times (fades each shift, rule 7)
+        public float sum;        // Σ Δpanic over its 20 s window
+        public float sumSq;
+        public int lastShift;
+
+        public float Mean => n > 1e-4f ? sum / n : 0f;
+    }
+
     [System.Serializable]
     public class CounterStat
     {
@@ -75,6 +89,10 @@ namespace Kehai.Karen
         public List<CounterStat> counterplay = new List<CounterStat>();
         public List<ChainStat> chains = new List<ChainStat>();     // the combo room (0.2.0)
         public List<PlaceStat> places = new List<PlaceStat>();     // placement memory (0.3.0)
+        // 0.4.0 (C3.1): your evidence per trick and per kind of trick, and the brain that last read it.
+        public List<EvidenceStat> trickEvidence = new List<EvidenceStat>();
+        public List<EvidenceStat> kindEvidence = new List<EvidenceStat>();
+        public string brainVersion = "";
     }
 
     // The Ledger (Karen.md §2.3, §7). It does not decide what happens; it decides what Karen
@@ -87,6 +105,19 @@ namespace Kehai.Karen
     //   Habits    — where you dwell, where you hide, the routes you take between jobs.
     //   Decay     — every learned prior fades without reinforcement, so changing your
     //               behaviour visibly works within two shifts (fairness rule 7).
+    // One of her guesses about you, with where it came from (§6.2, C3.6's thought log).
+    public struct LedgerReading
+    {
+        public float Everyone, Yours, N, Guess;
+        public float KindGuess;
+        public float YourShare => N / (N + KarenLedger.EveryoneWeight);   // how much of the guess is you
+
+        // "everyone +0.12, you +0.01 over 3 → +0.05"
+        public override string ToString() =>
+            N < 0.05f ? $"everyone {Everyone:+0.00;-0.00} → {Guess:+0.00;-0.00}"
+                      : $"everyone {Everyone:+0.00;-0.00}, you {Yours:+0.00;-0.00} over {N:0.#} → {Guess:+0.00;-0.00}";
+    }
+
     public sealed class KarenLedger
     {
         public LedgerData Data { get; private set; } = new LedgerData();
@@ -164,6 +195,10 @@ namespace Kehai.Karen
             foreach (RegionStat r in Data.regions) regions[r.key] = r;
             Room.Load(Data.chains);
             Places.Load(Data.places);
+            // A trick that was removed drops out of the Ledger (§6.5); its kind's evidence stays.
+            if (Data.trickEvidence == null) Data.trickEvidence = new List<EvidenceStat>();
+            if (Data.kindEvidence == null) Data.kindEvidence = new List<EvidenceStat>();
+            Data.trickEvidence.RemoveAll(e => TacticLibrary.Get(e.key) == null);
         }
 
         // ---- shift boundaries -----------------------------------------------------------
@@ -214,10 +249,97 @@ namespace Kehai.Karen
             }
             Room.Fade(Alone);
             Places.Fade(shift);
+            FadeEvidence(Data.trickEvidence);
+            FadeEvidence(Data.kindEvidence);
 
             if (energyAtEnd <= 0.01f) Data.burnouts++;
             Save();
         }
+
+        // ---- everyone, and you (0.4.0, build plan §6.2, C3.1) ----------------------------------
+
+        // A trick's 20 s result, kept twice: for the trick, and for its kind. Plain evidence.
+        public void RecordEvidence(Tactic t, float delta)
+        {
+            if (t == null || float.IsNaN(delta)) return;
+            Add(Data.trickEvidence, t.Id, delta);
+            Add(Data.kindEvidence, KindOf(t), delta);
+        }
+
+        void Add(List<EvidenceStat> list, string key, float delta)
+        {
+            EvidenceStat e = list.FirstOrDefault(x => x.key == key);
+            if (e == null) list.Add(e = new EvidenceStat { key = key });
+            e.n += 1f;
+            e.sum += delta;
+            e.sumSq += delta * delta;
+            e.lastShift = shift;
+        }
+
+        // Rule 7: evidence fades with the rest; its mean stays, its weight drops.
+        static void FadeEvidence(List<EvidenceStat> list)
+        {
+            if (list == null) return;
+            foreach (EvidenceStat e in list) { e.n *= 0.8f; e.sum *= 0.8f; e.sumSq *= 0.8f; }
+            list.RemoveAll(e => e.n < 0.05f);
+        }
+
+        // "sight", "work", "sound", "social", "space", "you", "coverage", "nothing".
+        public static string KindOf(Tactic t)
+        {
+            string a = t?.Attacks ?? "";
+            int cut = a.IndexOfAny(new[] { ',', ' ' });
+            return (cut > 0 ? a.Substring(0, cut) : a).Trim().ToLowerInvariant();
+        }
+
+        public EvidenceStat TrickEvidence(string id) => Data.trickEvidence.FirstOrDefault(e => e.key == id);
+        public EvidenceStat KindEvidence(string kind) => Data.kindEvidence.FirstOrDefault(e => e.key == kind);
+
+        // The weight "everyone" counts for, in times seen (§6.2: n × yours + 2 × everyone's).
+        public const float EveryoneWeight = 2f;
+
+        public static float Blend(float n, float yours, float everyone) =>
+            (n * yours + EveryoneWeight * everyone) / (n + EveryoneWeight);
+
+        // Her guess for one kind of trick, on you.
+        public LedgerReading KindReading(string kind, LedgerStart everyone, int phase = -1)
+        {
+            float all = everyone.Kind(kind, phase);
+            EvidenceStat e = KindEvidence(kind);
+            float n = e?.n ?? 0f, mine = e?.Mean ?? 0f;
+            return new LedgerReading { Everyone = all, Yours = mine, N = n, Guess = Blend(n, mine, all) };
+        }
+
+        // Her guess for one trick, on you: everyone's number for it, moved by how you differ from
+        // everyone on its kind, then blended with what that trick itself did to you. So a blackout
+        // that barely moved you lowers her guess for the other tricks that attack sight too, and
+        // its own guess most.
+        public LedgerReading Reading(Tactic t, LedgerStart everyone, int phase = -1)
+        {
+            string kind = KindOf(t);
+            LedgerReading k = KindReading(kind, everyone, phase);
+            float prior = everyone.Trick(t.Id, phase) + (k.Guess - k.Everyone);
+            EvidenceStat e = TrickEvidence(t.Id);
+            float n = e?.n ?? 0f, mine = e?.Mean ?? 0f;
+            return new LedgerReading { Everyone = everyone.Trick(t.Id, phase), Yours = mine, N = n, Guess = Blend(n, mine, prior), KindGuess = k.Guess };
+        }
+
+        // How soon you answer one of her chores, in seconds: yours blended with everyone's.
+        public LedgerReading AnswerReading(string kind, LedgerStart everyone)
+        {
+            float all = everyone.AnswerSeconds(kind);
+            CounterStat c = Counterplay(kind);
+            float n = c != null && c.seconds >= 0f ? c.timed : 0f;
+            float mine = c != null && c.seconds >= 0f ? c.seconds : 0f;
+            return new LedgerReading { Everyone = all, Yours = mine, N = n, Guess = Blend(n, mine, all) };
+        }
+
+        // Your habits, as the brain reads them: blended the same way, by shifts seen.
+        public LedgerReading SprintReading(LedgerStart everyone) =>
+            new LedgerReading { Everyone = everyone.SprintShare, Yours = Data.sprintFraction, N = Mathf.Min(Data.shiftsWorked, 20), Guess = Blend(Mathf.Min(Data.shiftsWorked, 20), Data.sprintFraction, everyone.SprintShare) };
+
+        // Which brain last read this Ledger, for the shift record (§6.5).
+        public void ReadBy(string brainVersion) { if (!string.IsNullOrEmpty(brainVersion)) Data.brainVersion = brainVersion; }
 
         // ---- placement memory (0.3.0) ----------------------------------------------------
 

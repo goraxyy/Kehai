@@ -13,7 +13,8 @@ are from the dev Mac (M2, 8 GB), in the editor, at 1080p.
 8. [The pipelines](#8-the-pipelines)
 9. [Reproducible interior models and safe room circulation](#9-reproducible-interior-models-and-safe-room-circulation)
 10. [Karen 0.2.0](#10-karen-020)
-11. [Still open](#11-still-open)
+11. [Karen 0.4.0: the build's own calls](#11-karen-040-the-builds-own-calls)
+12. [Still open](#12-still-open)
 
 ---
 
@@ -242,7 +243,29 @@ the ablation over whole shifts is below the table.
 
 ---
 
-## 11. Still open
+## 11. Karen 0.4.0: the build's own calls
+
+The plan's decisions (D1–D17) and the owner's answers (Q1–Q6) are in
+[the plan, §4](../you/plans/0.4.0-build-plan.md#4-decisions). These are the smaller calls the build
+made where the plan didn't say, each the plan's nearest default (11 November 2026). What was built:
+[Karen.md §18](karen/Karen.md#18-karen-040-two-karens-players-that-feel-real).
+
+| Call | Why | The cost |
+|---|---|---|
+| **Every new part is behind a switch, off by default,** and off is today's arithmetic | The plan's "Done when" lines ask for today's decisions and belief, number for number, with `planner`, `k0`, `s0` | Shift-level runs can't show it (the next row); bit-for-bit unit tests do |
+| **The identity check is made twice:** bit-for-bit unit tests, and the same shift on `main` and here | A shift on `main` repeats itself almost exactly (191 or 192 steps); a bisect over the branch found the one change that moved it | — |
+| **Learning records name picks as "action:trick" from the first version** | One format for the planner and the brains | Version-1 records of the planner list only the chosen action's tricks as legal |
+| **The players' choices go into the shift record** (`choice` events, at the destination) | Legs and the scorecard read bots and people from the same files | A few hundred more lines a shift |
+| **Persona named points keep their profile's tables exactly**; every other persona maps smoothly | The four profiles must play as today, choice for choice | Two code paths for reflexes |
+| **The model pack is signed with RSA (PKCS#1 v1.5, SHA-256)**, in plain Python on the tool side | .NET's RSA verifies it in every Unity player; the tools need no package | No key until the owner makes one (`pack.py keygen`): a build with no key trusts no pack |
+| **Vital's "pacing off" also skips counting pacing as violations** | Tier-2 tricks in a recovery are what pacing off means for her; counting them would make her "violations: 0" impossible by design | Her fairness count covers the fairness rules only, as the plan's table lists them |
+| **"Never a hunt outside" and "nothing off shift" stay on for Vital** | They're fairness rules (her body stays in her part of the building) | — |
+| **Tricks "on your way", the route guesses after any sighting, and the mirror map's placement bonus** only work with the destination model (P2, P3) or the mirror (K1, K2) | With today's settings her placements must not change | They can't be judged until the prediction model is chosen (C4.11) |
+| **C0.2's fences are off by default** (`KarenConfig.trapFences`), on in the league: Spill not at Office/G and only on your floor; a fallen test player put back where it stood | On, they changed today's shift (the bisect); training needs them, because a stuck episode poisons it | Ablations without `-karen-set trapFences=on` can still get stuck there; the causes are in the scene, not in git |
+| **The Employee's trainer side learns the careful corner; Karen's never meets it** | §7.6 says so; the league checks it and stops otherwise | — |
+| **0.4.0 merges as code; its runs wait for 0.4.1** (the owner, 14 November) | 0.4.1 changes her sight, adds cameras, two tricks and three chores: recordings, fits, the brains' outputs and the Employee's actions would all be out of date, and the held-out players are looked at once | C4.10's fits are in the build but off by default; C4.11 onward, C2.7, C5.9–C6.3 and Y1.1 run after 0.4.1 merges |
+
+## 12. Still open
 
 - **Karen 0.2.0 is too deadly against the simulated players.** How far to turn her down, and how,
   is open ([§10](#10-karen-020)); a playtest would show how people fare.

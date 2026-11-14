@@ -10,6 +10,10 @@ namespace Kehai.Karen
     // plain C#, so the tests can check them without the ML-Agents package.
     public static class PolicyObservation
     {
+        // Bumped whenever what's written changes; learning records and exported brains carry it,
+        // and a brain made for another version is refused (BrainNet).
+        public const int Version = 1;
+
         const int Appraised = 13, ShiftClock = 2, PlayerModel = 11, Spatial = 1;
         static readonly int GoalCount = System.Enum.GetValues(typeof(ActionId)).Length;
         static readonly int PhaseCount = System.Enum.GetValues(typeof(KarenDirector.Phase)).Length;

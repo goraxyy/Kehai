@@ -79,7 +79,10 @@ namespace Kehai.Karen
 
         // Builds the guesses from a sighting: where and when she last saw you, which way you
         // were going, and the places you might be going to.
-        public void Build(Vector3 seen, Vector3 velocity, float seenAt, IEnumerable<(string name, Vector3 at)> goals)
+        // `modelPrior` (0.4.0, C4.5): each guess's chance from the prediction model instead of the
+        // hand-set heading fit; given (the goal's name, where it is, its kind), null keeps today's.
+        public void Build(Vector3 seen, Vector3 velocity, float seenAt, IEnumerable<(string name, Vector3 at)> goals,
+                          System.Func<string, Vector3, GuessKind, float> modelPrior = null)
         {
             guesses.Clear();
             Seen = seen;
@@ -99,7 +102,7 @@ namespace Kehai.Karen
                 if (goal < 0 || !map.IsKarens(goal) || float.IsInfinity(fromSeen[goal]) || !taken.Add(map.CellRegion[goal])) continue;
                 RouteGuess g = Route(start, goal, GuessKind.Goal, name);
                 if (g == null) continue;
-                g.Prior = HeadingFit(g, heading) / (1f + g.Length / 40f);
+                g.Prior = modelPrior != null ? modelPrior(name, at, GuessKind.Goal) : HeadingFit(g, heading) / (1f + g.Length / 40f);
                 candidates.Add(g);
             }
             candidates.Sort((a, b) => b.Prior.CompareTo(a.Prior));
@@ -113,16 +116,18 @@ namespace Kehai.Karen
                 RouteGuess turned = backCell >= 0 && backCell != start ? Route(start, backCell, GuessKind.TurnedBack, "turned back") : null;
                 if (turned != null)
                 {
-                    turned.Prior = 0.15f;
+                    turned.Prior = modelPrior != null ? modelPrior(turned.Name, back, GuessKind.TurnedBack) : 0.15f;
                     guesses.Add(turned);
                 }
             }
 
             // Hiding close by: you didn't go anywhere.
-            guesses.Add(new RouteGuess { Name = "hiding close by", Kind = GuessKind.Hiding, Path = new[] { start }, Along = new[] { 0f }, Prior = 0.1f });
+            guesses.Add(new RouteGuess { Name = "hiding close by", Kind = GuessKind.Hiding, Path = new[] { start }, Along = new[] { 0f },
+                                         Prior = modelPrior != null ? modelPrior("hiding close by", seen, GuessKind.Hiding) : 0.1f });
 
             float sum = 0f;
             foreach (RouteGuess g in guesses) sum += g.Prior;
+            if (sum <= 0f) { foreach (RouteGuess g in guesses) g.Prior = 1f; sum = guesses.Count; }
             foreach (RouteGuess g in guesses) g.Weight = g.Prior / sum;
         }
 
