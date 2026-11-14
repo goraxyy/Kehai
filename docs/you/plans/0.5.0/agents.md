@@ -2,7 +2,8 @@
 
 Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 2. **Your answer (Q9, 14 November):**
 better test players, using AI/ML, close to reality, and adaptable. That's option A, made
-adaptable (the plan's §7). The language-model panel below is optional (Q10, rewritten).
+adaptable (the plan's §7). **No Claude-played players** (Q10): the panel below is kept only as
+the record of why it was considered.
 
 1. [What exists](#1-what-exists)
 2. [Five meanings of "agent"](#2-five-meanings-of-agent)
@@ -70,8 +71,7 @@ cap keeps the two apart (Q10).
 - **A, made adaptable** (your answer): the trained bots get a memory within a shift and their own
   record of her across shifts, and the scorecard checks they adapt like people (the plan's
   C2.6–C2.9). Only A (and E, later) are fast and cheap enough for her to train against.
-- **The panel (B) is optional** (Q10). The rest of this section is why it could still be worth
-  a few dollars.
+- **No panel (B)** (Q10, 14 November). The rest of this section is why it was considered.
 - **B becomes a held-out panel:** three to five fixed players, each a short written character
   ("careful, hates the dark, always serves the queue first") matched to a persona. Haiku 5.5 for
   most shifts, Sonnet 5.5 for a few. No part of Karen is ever trained or tuned against them; they

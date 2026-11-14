@@ -24,7 +24,7 @@ no new chore once the doors close (rule 10); a shift can always be won.
 | **Your chore** | go to the PA microphone in the staff room and **hold E for 20 s** (your answer, Q4): "Hold E to call off the sale (20 s)". You announce the sale is over; the shoppers inside finish their lists, and the limit drops back to 2 |
 | **Its tell** | the chime and her voice: the trick announces itself |
 | **Kind** | a building trick, like Blackout: she needn't be there. Attacks your work and your cover among people |
-| **It can't** | start while the PA is switched off at the PA box, or once the doors have closed (rule 10). What switching the PA off does to a running sale is Q6 (rewritten in the plan's §16.2); note that in 0.4.1 the microphone needs the PA on. A sale running at closing ends there, since nobody comes in after closing |
+| **It can't** | start while the PA is switched off at the PA box, or once the doors have closed (rule 10). Switching the PA off doesn't end a running sale (Q6): you switch it back on and hold the microphone, which in 0.4.1 needs the PA on. A sale running at closing ends there, since nobody comes in after closing |
 | **Builds on** | 0.4.1's microphone (`ClosingMic.cs` on `claude/0-4-1-2305a2`) and its 20 s holds; the spawner on `main` |
 | **The bots** | a new chore, `call_off_sale`, and a row in the trick check |
 | **A combo she could learn** | Flash sale, then Ask the customers: more witnesses, and you're stuck at the microphone for 20 s |

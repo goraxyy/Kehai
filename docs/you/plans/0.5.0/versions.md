@@ -39,7 +39,7 @@ whether a project can live on a flash card are answered in the plan's §16.4.
 
 ## 2. What goes in each version
 
-My reading of your three (Q26, rewritten in the plan's §16.2 so it's easier to answer):
+Your three, as you confirmed them (Q26):
 
 | | Training | Testing | Gameplay |
 |---|---|---|---|
@@ -51,7 +51,7 @@ My reading of your three (Q26, rewritten in the plan's §16.2 so it's easier to 
 | **UI** | none (no text components: they're what breaks today's training player) | the game's, plus the bug key and consent | the game's |
 | **Recording** | learning records and shift records; no replays | everything, with consent (PR #81) | crash reports, and play data only with consent |
 | **Debug tools** (F1, F2, the trick check) | the trick check, for tests | F1 and F2, the bug report | none (or behind a setting) |
-| **Karen** | the version being trained or tested | the version that shipped last; not in the first shift if Q39 says so | the version that shipped last; **not in the first shift** (Q23) |
+| **Karen** | the version being trained or tested | the version that shipped last; **there from shift 1** (Q39) | the version that shipped last; **not in the first shift** (Q23) |
 
 **The Training version also fixes a real gap.** 0.4.0's training player never reaches the
 trainer: with no graphics device, its text components throw errors without end. A version with

@@ -81,14 +81,14 @@ each shift's first minutes lost.
 
 | Shift | The store | Karen | What she knows of you |
 |---|---|---|---|
-| 1 | today's store | not there (Q23) | your habits from shift 1, if Q40 says the store still watches |
+| 1 | today's store | not there (Q23; in the Testing version she is, Q39) | your habits from shift 1: the store watches (Q40) |
 | 2 | today's store | there | your exact places, from shift 1 (Q40) and shift 2 |
 | 3 | a new layout | there | your habits by kind of place; exact places start again |
 | 4 | another new layout | there | the same |
 
 The kinds of place (§2) carry what she learned in shifts 1–2 into shifts 3 and 4, which is why
-they matter so much in a 4-shift game. Which two layouts, and whether shifts 1–2 are today's
-store, is Q36. Training careers do the same (C4.11).
+they matter so much in a 4-shift game. Shifts 1–2 are today's store; 3 and 4 are a fixed pair you
+choose (Q36). Training careers do the same, with the pair drawn at random (C4.11).
 
 For a hard mode or the endless-maze idea ([IDEAS.md §2](../../IDEAS.md#2-the-endless-maze)),
 "every shift" is a fair setting to offer later.

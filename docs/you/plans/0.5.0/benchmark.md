@@ -1,7 +1,8 @@
 # The benchmark
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 5. **A draft for you to shape** (Q37): you
-asked for "a proper benchmark, so I could also track her progress".
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 5. **A draft for you to approve** (Y5.2):
+you asked for "a proper benchmark, so I could also track her progress", and for it to track all
+four groups below from the start (Q37).
 
 > **Benchmark.** *What:* a fixed set of tests, run the same way on every version, so the scores
 > compare over time. *In Kehai:* every version of Karen plays the same players, on the same
@@ -53,7 +54,6 @@ defines most of these; the benchmark fixes them in one place.
 | The scripted cautious bot | **never** | held out, as always |
 | Trained personas from the training ranges | yes | the adaptable bots of Phase 2 |
 | Trained personas from the careful corner | **never** | held out |
-| The language-model panel, if Q10 keeps it | **never** | held out |
 | Real players, once there are some | **never** (split by player) | the most important group, later |
 
 | Store | Seen in training? |

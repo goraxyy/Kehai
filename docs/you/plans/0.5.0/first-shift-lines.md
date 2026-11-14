@@ -5,8 +5,8 @@ and "Prompt" columns,** cross out steps you don't want, and add any you do. When
 change the status line to "edited".
 
 > **Status:** draft lines, not yet edited by you. Your answers of 14 November are in: no Karen in
-> the first shift (Q23), and the guide runs on the first shift only (Q24). The voice of the
-> thoughts (Q21) and whether they're read aloud (Q22) are rewritten in the plan's §16.2.
+> the game's first shift (Q23; in the Testing version she's there, Q39); the guide runs on the
+> first shift only (Q24); the thoughts are tired and wry (Q21), as text only (Q22).
 
 **How it works.** The first shift of a new career runs a short script. Each step starts on
 something in the game, makes one or two things blink (their outline pulses), shows one thought
@@ -16,8 +16,8 @@ if you haven't acted after 30 seconds, it shows once more. The pause menu can sw
 runs on the first shift of a new career only, and never again (Q24).
 
 **It never:** runs for bots or in batch runs; names one of her tricks or explains her; says
-anything only by sound. **She isn't in the store on the first shift** (Q23), so nothing here
-needs to dodge her.
+anything only by sound. **In the game she isn't in the store on the first shift** (Q23). In the
+Testing version she is (Q39), and the guide is the same: testers meet her while being guided.
 
 **Keys,** as in [CONTROLS.md](../../../agents/game/CONTROLS.md): E use, E held for holds, Q put
 down, C the task list, Left Shift sprint, Left Ctrl crouch.
@@ -54,8 +54,8 @@ Shown the first time each job comes up in the shift, in whatever order they come
 
 ## When things go wrong
 
-Only if it happens on the first shift. She isn't there (Q23), so this is the store's own
-trouble.
+Only if it happens on the first shift. In the game she isn't there (Q23), so this is the store's
+own trouble; in the Testing version it may be hers.
 
 | # | Starts when | Blinks | You think | Prompt (on look) | Ends when |
 |---|---|---|---|---|---|
@@ -73,10 +73,10 @@ trouble.
 
 ## Notes for editing
 
-- **Your voice:** tired, a little wry, never scared in the first lines. The fear should come from
+- **Your voice:** tired and wry (Q21), never scared in the first lines. The fear should come from
   the store, not from the guide.
 - **Short:** a thought is one breath. If a line needs two sentences, it's two steps.
 - **Prompts** use the game's own words for keys, the same as the hold bar's ("Hold E to … (20 s)").
-- **Step 18 is gone:** it was the line for first seeing her, and she isn't in the first shift.
-  Her first appearance (shift 2) is left to the game, not the guide.
-- **A PA welcome** as you walk in (no Karen, just the store's announcement) is option C of Q22.
+- **Step 18 is gone:** it was the line for first seeing her, and she isn't in the game's first
+  shift. Her first appearance (shift 2) is left to the game, not the guide.
+- **No voice and no PA welcome** (Q22: text only).

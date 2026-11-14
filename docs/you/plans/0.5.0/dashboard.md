@@ -1,7 +1,7 @@
 # One page for everything
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 9. **Discuss first:** the tasks wait on
-Q32 and Q33 (rewritten in the plan's §16.2). **No accounts exist yet** (Q34), so the marketing
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 9. **Your answers:** a private claude.ai
+page plus GitHub's board (Q32), seen only by you (Q33). **No accounts exist yet** (Q34), so the marketing
 numbers wait; the release, builds and training sections can start without them.
 
 | To show | It needs |
@@ -19,7 +19,7 @@ numbers wait; the release, builds and training sections can start without them.
 
 ## 1. The options
 
-| | A. A private claude.ai page | B. GitHub Projects | C. A page made on this Mac | **A + B (my pick)** |
+| | A. A private claude.ai page | B. GitHub Projects | C. A page made on this Mac | **A + B (your answer)** |
 |---|---|---|---|---|
 | **What** | a web page only you can open, with a small database of its own; agents write the day's numbers to it | GitHub's board for issues and PRs, with charts of work over time [1] | an HTML file a nightly job writes to the Mac | the page for the summary and growth; the board for PRs and bugs |
 | **Private?** | yes, until you share it | a project can be private, but this repo is public | yes | yes |
