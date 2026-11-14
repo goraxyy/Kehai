@@ -18,7 +18,7 @@ and the live model, arrives when the 0.4.0 branch merges.
 | What | Why it waits |
 |---|---|
 | Play 5–10 shifts on the 0.4.1 build, once merged (0.4.0 plan, Y1.1) | you're the first human reference for the bots |
-| After 0.4.1 merges: the go for 0.4.0's runs (re-record, refit with P1's wider speed range, look into P2/P3, C4.11, then training) | they run once, on the final game |
+| After 0.4.1 merges: the go for 0.4.0's runs, in the order of [TESTING.md](TESTING.md) | they run once, on the final game |
 | Keep the blur in her senses, or play the sharper fitted S1 | S1 trusts every sighting and noise almost fully: she'd play sharper |
 | Yes or no: delete the old 480 MB belief dataset (Q5) | the new recordings replace it |
 | Yes or no: sort the store's doors so a doorway keeps its number (Karen's Ledger mixes up doorways between shifts today) | it changes play against `main` |
