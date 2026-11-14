@@ -154,7 +154,8 @@ docs/
 │       ├── 0.4.0-build-plan.md       Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait)
 │       ├── playtest-v2.md            finish the test build: instructions, cloud uploads, a dataset for Windows
 │       ├── 0.2.0-tuning-plan.md      turning her down: the levers and the test (open questions)
-│       └── marketing-agents.md       hands-off video publishing
+│       ├── marketing-agents.md       hands-off video publishing
+│       └── sfx-plan.md               sound effects with a sound designer: tasks, delivery, tracking (draft)
 └── agents/                           long and exact, for coding agents
     ├── RULES.md                      the working rules, in one place (CLAUDE.md and AGENTS.md point here)
     ├── HANDOVER.md                   where everything is on the Mac; how to test, build and verify

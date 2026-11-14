@@ -10,6 +10,7 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
 | **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | reconciled with `main` (with 0.4.0) on 14 November; in a pull request from branch `0.4.1` | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
 | **Kehai 0.5.0** | the plan, for review: 34 questions in its §16 | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
+| **Sound effects,** with a sound designer | the plan, for review: a draft pull request; 11 questions in its §10 | [the plan](plans/sfx-plan.md) |
 | **Finish the test build / playtest v2** | checkbox plan updated; implementation not started beyond the homepage draft | [the build plan](plans/playtest-v2.md) |
 
 ## Waiting on you
