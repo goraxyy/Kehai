@@ -1724,3 +1724,69 @@ Karens (IDEAS.md §7); rung F's training; the playtest pipeline.
     and Block door never did. The building's tricks always land.
 - Shelf sweep's bay lookup is now cached: 14% faster.
 
+
+---
+
+## 18. Karen 0.4.0: two Karens, players that feel real
+
+The plan, with every decision and its reasons: [`docs/you/plans/0.4.0-build-plan.md`](../../you/plans/0.4.0-build-plan.md).
+Built on branch `claude/karen-0-4-0-build-d81c79` (11 November 2026). **Nothing is trained yet**: every
+learned part ships as hand-set numbers that reproduce today's game, and every training and test run
+waits for the owner's go. This section says what's in the code and how to switch it.
+
+### 18.1 The switches
+
+Every new part is off by default, and off means today's game, number for number.
+
+| Flag | Values (default first) | What it changes |
+|---|---|---|
+| `-karen-brain` | `planner`, `basic`, `vital` | who picks the (action, trick) pair. With no trained brain, the planner decides and the thought log says so once |
+| `-karen-hunter` | `off`, `on` | the planner with pacing and the Director's hint off: Vital's baseline |
+| `-belief-motion` | `p0`, `p1`, `p2`, `p3` | the belief's predict step |
+| `-karen-senses` | `s0`, `s1`, `s2` | her senses' numbers |
+| `-karen-mirror` | `k0`, `k1`, `k2` | what she assumes you know of where she is |
+| `-karen-pack` | a `.kpack` file | a model pack instead of the build's own numbers |
+| `-karen-set` | `field=value` | any `KarenConfig` field, for one test arm (repeatable) |
+| `-karen-learning` | `on`, `off` | learning records (on by default in eval runs and playtest builds) |
+| `-belief-shadows` | `p0,p1,p2,p3,p3x,s1,s2` | shadow filters beside her real belief (eval only) |
+| `-belief-trace` | a folder | the belief trace for the Python replay (eval only) |
+| `-league` | a league file | careers of six shifts, one side learning (`tools/rl/leagues/`) |
+| `-bot-mind` | `heuristic`, `trainer`, `generated` | who chooses for the simulated players |
+| `-kehai-timing` | — | where a batch shift's wall time goes |
+
+### 18.2 What was built, by part
+
+| Part | Where | What it does |
+|---|---|---|
+| Learning records | `Diagnostics/LearningRecord.cs` | one line per decision: her inputs (v2), the legal pairs, her pick and its chance, the brain and its version, Δpanic at 10 and 20 s, a catch within 30 s, the Director's hint flag |
+| Catch causes | `KarenBrain.CauseOfCatch`, `EpisodeMetrics` | per catch: what she was doing, seen in the last 3 s, metres from the clock. Time to catch by Kaplan–Meier |
+| What you sensed of her | `Diagnostics/PlayerSenses.cs` | every recorded frame says whether the player saw or heard her: the mirror map's answer sheet. Her mind never reads it (a test checks) |
+| Seeds and held-out players | `Eval/Scripts/EvalSplits.cs` | training 10000+, validation 20000+, test 30000+; the cautious profile and the careful corner never reach Karen's training |
+| Personas | `Eval/Scripts/Persona.cs` | 14 traits; the four profiles are named points with exactly today's reflexes |
+| The players' options and mind | `EmployeeOptions.cs`, `BotMemory.cs`, `EmployeeObservation.cs`, `EmployeeReward.cs`, `EmployeeMind.cs`, `MlAgentsEmployee.cs` | what / how / which, masked; habits and mood across a career; 71 inputs; a reward weighted by the persona; the ML-Agents behaviour `Employee` |
+| The league | `Eval/Scripts/League.cs` | who learns, who they meet in what shares, careers of six shifts with a fresh Ledger, the curriculum's lessons |
+| Everyone and you | `KarenLedger` (evidence per trick and per kind), `Core/LedgerStart.cs` | your evidence as plain counts; "everyone" from the starting Ledger; blended when read: (n × yours + 2 × everyone's) ÷ (n + 2) |
+| The model pack | `Decision/Policy/ModelPack.cs`, `tools/learn/pack.py`, `publish.py` | one signed file (RSA, SHA-256) with each part and its card; refused if tampered, for other inputs, or naming an unknown trick; the gate |
+| The predict step | `Belief/MotionModel.cs` (`IMotionModel`, `HandMotion`), `DestinationMotion.cs`, `MotionFeatures.cs`, `Destinations.cs`, `PredictionWeights.cs` | P0 is today's loop moved behind the interface, bit for bit; P1 the hand step with fitted gains and her presence as Danger; P2/P3 mass flowing to the places you might be heading |
+| Her route guesses | `RoutePredictor` (model priors), `KarenBrain.UpdateModelPredictor` | with P2/P3: built after any strong sighting, from the model's chances |
+| Tricks on your way | `TacticHelpers.OnGuessedRoutes`, Spill, Block door, Camera, Ambush; `TrickBet` | with P2/P3 her guessed routes join your habits as places; every trick put down logs its bet, settled by the eval |
+| Her senses' table | `Perception/SenseModel.cs` | S0 is today's literals in today's expressions; S1, S2 the same formulas with fitted numbers (S2 adds walls and the dark) |
+| The mirror map | `Belief/MirrorBelief.cs` | where you think she is: corrected when she thinks you sensed her, spread while you can't; K1 and K2 |
+| The seam | `Decision/Policy/BrainSeam.cs`, `BrainPolicy.cs`, `KarenBrain.DecideByBrain` | legal pairs and the mask; asked only at the planner's decision moments; its pick tried first, the planner's order as the fallback |
+| Her inputs v2 | `Decision/Policy/BrainObservation.cs` | appraisal, shift, tricks, belief by area, her three best guesses, the mirror, and your Ledger (Basic only); rung F's four dead inputs dropped |
+| The rewards | `TacticPolicy.cs` (`BrainReward`, `BrainPay`) | Vital: the catch, sooner is better; Basic: pacing, the catch dial (`catchDial`), sameness, stuck shifts |
+| Vital's gates, the hunter | `KarenConfig.PacingOff`, `KarenDirector.FairPermission` | tiers, budget, cooldowns, settling in, recovery and the hint off; never a hunt outside, nothing off shift |
+| The network in C# | `Decision/Policy/BrainNet.cs`, `tools/learn/export_brain.py` | ML-Agents' actor (normaliser, Swish layers, discrete heads) in plain C#; parity with the trainer's own model on 1,000 inputs |
+| The bridge | `Decision/Policy/MlAgentsBrain.cs` | behaviours `KarenVital` and `KarenBasic`; writes the brain spec the export needs |
+
+### 18.3 What stays the same
+
+- With every switch at its default, she decides and believes as before: the predict step is the same
+  loop (a frozen copy in `MotionModelTests` checks it bit for bit), S0's numbers sit in the same
+  expressions, the mirror and the destinations don't run, and no new code draws from her random
+  stream (the brain has its own dice).
+- The source scan now also covers `Diagnostics/LearningRecord.cs` and `Perception/SenseModel.cs`; the
+  players' scan covers every new player file; the "moved player" test holds for the mirror map, the
+  destinations and her v2 inputs.
+- The fairness rules, the mask and the Director are code: a model pack can make her dull or too deadly,
+  never unfair.

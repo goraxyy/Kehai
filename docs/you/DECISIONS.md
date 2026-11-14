@@ -6,6 +6,9 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-14 | Close 0.4.0 as code: push it and open its PR now. Its training and test runs wait for 0.4.1 (and 0.5.0's layouts, if approved), then run once on the final game | [0.4.0 plan](plans/0.4.0-build-plan.md) |
+| 2026-11-13 | Record the belief data now, with the hand-written bot standing in for Employee-1; record again after Employee-1 is trained | [0.4.0 plan](plans/0.4.0-build-plan.md), C4.9 |
+| 2026-11-12 | Run 0.3.0's ablation again as 0.4.0's baseline | same, C0.1 |
 | 2026-11-11 | The docs are split by reader: `docs/you/` for you, `docs/agents/` for agents | [RULES.md](../agents/RULES.md) |
 | 2026-11-11 | Build Karen 0.4.0. Add fitted senses, a map of what you know about her, and a central model that keeps improving | [0.4.0 plan](plans/0.4.0-build-plan.md) |
 | 2026-11-11 | No language-model layer in the 0.4.0 plan. A style vector and learned pacing stay ideas | [IDEAS.md](IDEAS.md) |

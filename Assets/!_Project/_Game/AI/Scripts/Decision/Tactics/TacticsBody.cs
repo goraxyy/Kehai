@@ -344,6 +344,15 @@ namespace Kehai.Karen
         // you a chore in one place (0.3.0, FixAt), on your way there — so Blackout then Ambush
         // waits by the breaker box, and Tool theft then Ambush by the mop; else the Ledger's
         // usual route to your next job.
+        // With the mirror map on (K1, K2: C4.8), a spot near where you think she is is worth less:
+        // you'd steer clear of it. K0: 1, today's.
+        static float WhereYouThinkSheIsnt(KarenContext c, int cell)
+        {
+            if (c.Brain == null || c.Brain.Mirror == null || c.Config.mirror == MirrorMode.K0 || cell < 0) return 1f;
+            float d = FairnessGuard.Flat(c.Brain.Mirror.Thought(c.Body.Position), c.Map.CellPosition[cell]);
+            return d < 6f ? 0.5f + 0.5f * d / 6f : 1f;
+        }
+
         public static bool Spot(KarenContext c, out int cell, out float sure, out string reason) =>
             Spot(c, out cell, out sure, out reason, out _);
 
@@ -358,7 +367,7 @@ namespace Kehai.Karen
                 CutTactic.ChooseSpot(c.Map, p, c.Body.Position, c.Config.hurrySpeed, Time.time, out CutTactic.CutSpot s))
             {
                 cell = s.Cell;
-                sure = s.Weight;
+                sure = s.Weight * WhereYouThinkSheIsnt(c, s.Cell);
                 reason = $"most of her guesses pass here ({s.Name}, {s.Weight:P0})";
                 return true;
             }

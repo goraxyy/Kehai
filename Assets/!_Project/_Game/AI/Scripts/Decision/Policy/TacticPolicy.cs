@@ -72,3 +72,86 @@ namespace Kehai.Karen
             -Mathf.Abs(panic - setpoint) * dt / Mathf.Max(1f, shiftLength);
     }
 }
+
+namespace Kehai.Karen
+{
+    // What the two Karens are paid for (0.4.0, build plan §5.4, C5.3). A shift is one episode; in
+    // test runs a catch ends the shift.
+    //
+    //   Vital   a catch: +1, less the share of the shift that had passed; no catch: −1, however the
+    //           shift ends; a fairness violation: −0.1 each. Your fear: nothing.
+    //   Basic   pacing: −|panic − target| per second ÷ shift length (between −1 and 0 over a shift);
+    //           the catch dial: w for a catch in a tense phase (Spike or Crunch), 0 otherwise (w starts
+    //           at +0.15, turned between rounds until her catch rate sits in 0.20–0.35 a shift);
+    //           sameness: −0.02 for each use of a trick past its third in a shift;
+    //           a stuck shift: −0.5; a fairness violation: −0.1 each.
+    public static class BrainReward
+    {
+        public const float Violation = -0.1f, Sameness = -0.02f, Stuck = -0.5f, CatchDialStart = 0.15f;
+        public const int FreeUses = 3;
+
+        public static float VitalCatch(float caughtAt, float shiftLength) => 1f - Mathf.Clamp01(caughtAt / Mathf.Max(1f, shiftLength));
+        public const float VitalNoCatch = -1f;
+
+        public static float BasicPacing(float panic, float target, float dt, float shiftLength) =>
+            -Mathf.Abs(panic - target) * dt / Mathf.Max(1f, shiftLength);
+
+        public static float BasicCatch(KarenDirector.Phase phase, float dial) =>
+            phase == KarenDirector.Phase.Spike || phase == KarenDirector.Phase.Crunch ? dial : 0f;
+
+        // The use about to be made, given the uses already this shift.
+        public static float BasicSameness(int usesBefore) => usesBefore >= FreeUses ? Sameness : 0f;
+    }
+
+    // One shift's reward for one brain, step by step: what the trainer is handed with each decision.
+    public sealed class BrainPay
+    {
+        public readonly KarenBrainKind Kind;
+        public float Dial = BrainReward.CatchDialStart;
+        public float Total { get; private set; }
+        float pending;
+
+        public BrainPay(KarenBrainKind kind) => Kind = kind;
+
+        public void Pacing(float panic, float target, float dt, float length)
+        {
+            if (Kind == KarenBrainKind.Basic) Add(BrainReward.BasicPacing(panic, target, dt, length));
+        }
+
+        public void Used(int usesBefore)
+        {
+            if (Kind == KarenBrainKind.Basic) Add(BrainReward.BasicSameness(usesBefore));
+        }
+
+        public void Violations(int n) => Add(BrainReward.Violation * n);
+
+        public void Caught(float at, float length, KarenDirector.Phase phase) =>
+            Add(Kind == KarenBrainKind.Vital ? BrainReward.VitalCatch(at, length) : BrainReward.BasicCatch(phase, Dial));
+
+        public void EndShift(bool caught, bool stuck)
+        {
+            if (Kind == KarenBrainKind.Vital && !caught) Add(BrainReward.VitalNoCatch);
+            if (Kind == KarenBrainKind.Basic && stuck) Add(BrainReward.Stuck);
+        }
+
+        void Add(float r)
+        {
+            pending += r;
+            Total += r;
+        }
+
+        // What's earned since the last ask.
+        public float Take()
+        {
+            float r = pending;
+            pending = 0f;
+            return r;
+        }
+
+        public void Reset()
+        {
+            pending = 0f;
+            Total = 0f;
+        }
+    }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "vital_r2",
+  "learner": "vital",
+  "split": "training",
+  "careers": 100000,
+  "shifts": 6,
+  "start_shift": 1,
+  "shift_seconds": 150,
+  "players": [
+    {
+      "kind": "scripted",
+      "profile": "efficient",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "skittish",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "reckless",
+      "share": 1
+    },
+    {
+      "kind": "employee",
+      "mind": "generated:EmployeeBrain",
+      "share": 3
+    },
+    {
+      "kind": "survivor",
+      "mind": "generated:EmployeeBrain",
+      "share": 0.5
+    }
+  ],
+  "karen": [
+    {
+      "brain": "vital",
+      "share": 1
+    }
+  ]
+}

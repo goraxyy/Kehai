@@ -501,6 +501,7 @@ namespace Kehai.Eval
                 result["last_seen_s"] = Round(Time.time - lastSeenAt);
                 result["last_seen_region"] = Map.NameAt(lastSeenPosition);
             }
+            PlayerSenses.FromBot((bool)result["visible"], (bool)result["heard"]);   // the recording's answer sheet (C1.6)
             return result;
         }
 

@@ -147,6 +147,8 @@ namespace Kehai.Karen
             if (r == null) return;
             r.Length = r.LengthAt(Time.time - shiftStartedAt);
             r.ClockedOut = clockedOut;
+            r.Bot = BotLabel ?? "";
+            r.Seed = RunSeed;
             KarenBrain brain = KarenBrain.Instance;
             if (brain != null && brain.Stats != null) r.Chains.AddRange(brain.Stats.ChainsFound);
             if (brain != null)
@@ -317,6 +319,23 @@ namespace Kehai.Karen
         }
 
         // ---- events ----------------------------------------------------------------------------
+
+        // A note for the shift record's file only (0.4.0): a simulated player's choices and where they
+        // lead (kind "choice", for tools/learn/legs.py). Not shown on the map, not told to listeners.
+        // Who played, when a simulated player did (its persona): the scorecard groups by it (0.4.0).
+        // Null for a person.
+        public static string BotLabel;
+        public static int RunSeed;      // the eval's seed for this career (0 in play): legs find their trace by it
+
+        public static void Annotate(string kind, string text, Vector3 at)
+        {
+            if (Instance == null || Instance.Current == null) return;
+            Instance.Current.Events.Add(new ShiftEvent
+            {
+                T = Instance.ShiftTime, WallTime = Time.time, Kind = kind, Text = text,
+                At = StoreFloorPlan.Flat(at), HasPlace = true, Who = "you"
+            });
+        }
 
         void Add(string kind, string text, Vector3 at, bool hasPlace, string who, float radius = 0f)
         {
