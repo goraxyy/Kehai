@@ -1,84 +1,144 @@
-# Testing and training left for 0.4.0
+# Testing and training left
 
-Updated 2026-11-14. What still has to run before 0.4.0's two Karens and players can be claimed, in
-order, with time on the Mac and on the Windows PC. Every run waits for your go and for **0.4.1 to
-merge** (your call, 14 November). The commands are in
-[the plan, §12](plans/0.4.0-build-plan.md#12-the-work-phase-by-phase).
+Updated 2026-11-14. Everything that still has to run for 0.4.0's two Karens and 0.5.0's plan, in
+the order it should run, with time on the Mac and on the Windows PC.
+
+**Your rule: build everything first, then test and train once, on the finished game.** Every long
+run waits for your go. The commands are in the [0.4.0 plan, §12](plans/0.4.0-build-plan.md#12-the-work-phase-by-phase)
+and the [0.5.0 plan](https://github.com/goraxyy/Kehai/pull/82) (open PR).
 
 ## Testing is not training
 
 | | Training | Testing |
 |---|---|---|
-| **What it is** | A model plays many shifts and changes its own numbers to do better | A model that's finished plays shifts it has never seen, and nothing changes; you only measure |
-| **How Kehai uses it** | The Employee bot, Vital and Basic learn by playing (millions of decisions); her senses and P1 are fitted to recordings | The belief tests, the two ladders (catch and fear), the exploit check, the trick check, the C# suite |
+| **What it is** | A model plays many shifts and changes its own numbers to do better | A finished model plays shifts it has never seen; nothing changes, you only measure |
+| **How Kehai uses it** | The Employee bot, Vital and Basic learn by playing (millions of decisions); her senses and P1 are fitted to recordings | The belief tests, the two ladders (catch and fear), the exploit check, the trick check |
 | **Real-world example** | A spam filter learning from emails people marked as spam | Checking that filter on a fresh week of email it never saw |
 
 - **Training is slow** (days to weeks). **Testing is quick** (minutes to nights).
-- **The held-out players are only for testing**, once. Testing on them twice, or tuning after
-  seeing them, makes the result meaningless.
-- **Fitting** (C4.10) is a small kind of training: a few numbers, hours, not days.
+- **The held-out players and layouts are for testing only, once.** Testing on them twice, or
+  tuning after seeing them, makes the result meaningless.
+- **Fitting** is a small kind of training: a few numbers, hours, not days.
 
-## Why everything waits for 0.4.1
+## Why it all waits
 
-0.4.1 changes what Karen and the players do:
-- her sight (twice the reach, twice as fast, eye-to-eye cover);
-- six store cameras, and a camera trick that feeds her belief;
-- two new tricks, Camera watch and Camera break, which change the brains' outputs;
-- three new chores (the PA announcement, the camera fix, 20 s holds), which change the bots' actions.
+Each of these changes what she or the bots would learn:
 
-Anything trained or tested before then would be about a different game.
+| Build | What it changes |
+|---|---|
+| 0.4.1 | her sight, six cameras, two camera tricks, three new chores |
+| 0.5.0 tricks (Phase 1) | the flash sale and the extras you pick: her list of choices |
+| 0.5.0 layouts (Phase 4) | ten store layouts: training draws a layout each career, two are held out |
+| 0.5.0 agents (Phase 2) | who plays against her; see [the agents question](#the-agents-question) |
+| 0.5.0 versions (Phase 7) | the Training version fixes the training player, so Windows can run 8 copies at once |
+| 0.5.0 cheat training (Phase 3) | escape habits in the Ledger, and a refit aimed at the moments after she loses you |
 
-## The list, in order
+## The times
 
-**Times:**
 - **The Mac** is measured where it says so, otherwise estimated.
-- **Windows** isn't measured. It assumes a 16-core PC running 8 copies at once, and that the training
-  player connects there. On the Mac it doesn't yet: [HANDOVER §5](../agents/HANDOVER.md#5-whats-next-in-order).
-- **"You"** marks your own time.
+- **Windows** isn't measured. It assumes a 16-core PC running 8 copies at once, after 0.5.0's
+  Training version (Phase 7) makes the training player connect. The PC's cores, RAM and GPU
+  aren't known yet ([0.5.0 Q3](https://github.com/goraxyy/Kehai/pull/82)).
+- **Across ten layouts, training will take longer** than on one store: how much isn't known.
+  The training times below are for one store and are the low end.
 
-| # | What | Kind | Mac | Windows | Necessary? | Why it matters |
-|---|---|---|---|---|---|---|
-| 1 | **Check the merge:** the C# suite, the trick check, the default game against `main` | Testing | 15 min (measured) | 15 min | **Yes** | Nothing broke when the two branches met |
-| 2 | **New baseline:** 0.3.0's ablation run again on the merged game | Testing | 66 min (measured, 12 Nov) | ~30 min | **Yes** | 0.4.1's eyes make the 12 November baseline out of date; every later result is compared with this |
-| 3 | **You play 5–10 shifts** (Y1.1), then I score them (C1.4) | Testing | 1 h for you + minutes | the same | **Yes**, for the bots | The only human reference the bots are judged against |
-| 4 | **Train Employee-1** (C2.7): 20,000 demos, then 1 M decisions | **Training** | ~5 h + **~11 days** (measured speed) | ~1–2 days | **Yes**, for "players that feel real" | Karen trains against these bots; without them she trains against the scripted four |
-| 5 | **Record her belief data again** (C4.9) with Employee-1 | Recording | ~80 min (measured) | ~40 min | **Yes** | Tonight's fits used the stand-in bot and the old eyes |
-| 6 | **Fit again** (C4.10), with P1's speed range widened, and **find out why P2 and P3 lost** | Fitting | 7–8 h (measured 7 h 41 min) | ~4 h | **Yes** | P1 was held back by its bound; P2/P3 lost even to today's step |
-| 7 | **The belief tests** (C4.11): senses, mirror map and prediction on the held-out players, then the models freeze | Testing | 3–5 h | ~2–3 h | **Yes**, once | The real test of tonight's "S1 and P1 win": 95% intervals by career |
-| 8 | **Train Vital-1 and Basic-1** (C5.9), two runs each | **Training** | 7 h to 6 nights per run, 4 runs (not measured: her speed falls as she learns) | ~1.5 days in all | **Yes** | The two trained Karens themselves |
-| 9 | **Rounds 3 and 4** (C5.10): Employee-2, then Vital-2 and Basic-2 | **Training** | ~1–2 weeks | ~2–3 days | Optional | A second round, each side against the other's newer self. Without it the claim is weaker, not wrong |
-| 10 | **The two ladders** (C6.2): catch (Vital against the hand-built hunter) and fear (Basic against today's game) | Testing | 2 nights | ~1 night | **Yes**, once | The headline results: is Vital faster to catch, does Basic hold fear closer to its target |
-| 11 | **The exploit check** (C6.3): a fresh Survivor trained to beat each frozen Karen | Training, then testing | ~3 days each, 6 days (300,000 decisions at the measured Employee speed) | ~10 h each | **Yes** for Vital, nice to have for Basic | A single cheap trick that beats her (a spot she never looks) is a failure to fix |
-| 12 | **You play both** (Y6.1), and **decide what ships** (Y6.2) | Testing | a few shifts each for you | the same | **Yes** | What it feels like to play against them |
-| 13 | C0.2: find 0.3.0's batch slowdown in the Profiler; C0.3: speed with two copies | Measuring | 1–2 h; 20 min | the same | No | Speeds up everything above. The slowdown multiplies every run by up to 3.6 |
+---
+
+## Part 1: checks that go with each build
+
+These aren't the testing phase. They're how each PR shows it didn't break anything, and they're quick.
+
+| What | When | Mac | Windows |
+|---|---|---|---|
+| The C# suite, the trick check, the default game against `main` | every PR that touches the game | 15 min (measured) | 15 min |
+| The trick check on every layout (0.5.0 C4.6) | the layouts PR | ~1 h | ~30 min |
+| The bots' stuck shifts on every layout (0.5.0 C4.8) | the layouts PR | ~3 h | ~1.5 h |
+| Each style's frame time (0.5.0 C8.4) | the look PR | 1 h | 1 h |
+
+---
+
+## Part 2: testing and training, once everything is built
+
+### Stage 1: baselines on the finished game (testing only)
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 1 | **The new baseline:** 0.3.0's ablation on the finished game | 66 min (measured) | ~30 min | **Yes** | Every later result is compared with this; the 12 November one predates 0.4.1's eyes |
+| 2 | **The new tricks' check** (0.5.0 C1.5): fairness, stuck shifts, each new trick lands in 80% of its starts | 1.5 h | ~45 min | **Yes** | The tricks must work before she learns to use them |
+| 3 | **You play:** 5–10 normal shifts (0.4.0 Y1.1), two with the flash sale forced (0.5.0 Y1.1), one guided first shift (0.5.0 Y6.2). I score them (0.4.0 C1.4) | 1–2 h for you | the same | **Yes** | The only human reference the bots are judged against |
+
+### Stage 2: the bots (training). Holds for the agents decision
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 4 | **Train Employee-1** (0.4.0 C2.7): 20,000 demos, then 1 M decisions, across the training layouts | ~5 h + **~11 days** (measured speed) | ~1–2 days | **Yes**, unless the agents change it | Karen trains against these bots |
+| 5 | **Escapes to learn from** (0.5.0 C3.5): recordings where the bots get away, at least 300 lost sightings | ~2 h | ~1 h | **Yes**, for cheat training | She almost never loses a bot today (5–13 of 144 shifts) |
+
+### Stage 3: her belief (fitting, then testing)
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 6 | **Record her belief data** (0.4.0 C4.9) with Employee-1, on the training layouts | ~2–3 h (80 min on one store, measured) | ~1 h | **Yes** | The 13 November fits used the stand-in bot, the old eyes and one store |
+| 7 | **Fit again** (0.4.0 C4.10): P1's speed range widened; first **find out why P2 and P3 lost**; the escape refit's first run (0.5.0 C3.4) | 7–8 h (7 h 41 min measured) | ~4 h | **Yes** | P1 was held back by its range; P2 and P3 lost even to today's step |
+| 8 | **The belief tests** (0.4.0 C4.11) and the **escape-habits test** (0.5.0 C3.6), on the held-out players, then the models freeze | 4–7 h | ~2–4 h | **Yes**, once | The real test of "S1 and P1 win", and of whether she learns where you run |
+
+### Stage 4: the two Karens (training)
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 9 | **Train Vital-1 and Basic-1** (0.4.0 C5.9), two runs each, across the training layouts | 7 h to 6 nights per run, 4 runs (not measured: her speed falls as she learns) | ~1.5–3 days in all | **Yes** | The two trained Karens themselves |
+| 10 | **Rounds 3 and 4** (0.4.0 C5.10): Employee-2, then Vital-2 and Basic-2 | ~1–2 weeks | ~2–4 days | Optional | Each side against the other's newer self. Without it the claim is weaker, not wrong |
+
+### Stage 5: the final tests (testing only, once)
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 11 | **The two ladders** (0.4.0 C6.2) on the training layouts, and the **same ladders on the two held-out layouts** (0.5.0 C4.10) | 2 nights + ~1 night | ~1 night + ~half a night | **Yes**, once | The headline results, and whether she copes with a store she never trained in |
+| 12 | **The exploit check** (0.4.0 C6.3): a fresh Survivor trained to beat each frozen Karen | ~3 days each (300,000 decisions at the measured bot speed) | ~10 h each | **Yes** for Vital, nice to have for Basic | One cheap trick that beats her (a spot she never looks) is a failure to fix |
+| 13 | **The agents panel** (0.5.0 C2.4): 3–5 language-model players, one career of six shifts each, against the finished Karen | 1–5 h (the API, not the CPU); about $1–2 on Haiku 5.5 | runs from the Mac | **Yes**, if you build the panel | A player she was never trained or tuned against: the fairest test, and a showpiece |
+| 14 | **You play both Karens** (0.4.0 Y6.1) and **decide what ships** (Y6.2) | a few shifts each | the same | **Yes** | What it feels like to play against them |
+
+### Stage 6: real players (after playtest v2 ships)
+
+| # | What | Mac | Windows | Necessary? | Why |
+|---|---|---|---|---|---|
+| 15 | **A round with real players**, then the round routine (0.4.0 C7.1): fit the bots and the starting Ledger to people, refit her senses and predictions, a refresh round of training | your go each round; about a night | about a night | **Yes**, for release | People, not bots, are what she's for. Cheat training's central refit needs their sessions |
+
+### Optional, any time before Stage 2
+
+| What | Mac | Why |
+|---|---|---|
+| Find 0.3.0's batch slowdown in the Profiler (0.4.0 C0.2) | 1–2 h | It may multiply every run above by up to 3.6 |
+| Two copies at once (0.4.0 C0.3) | 20 min | Done by 0.5.0's Training version (C7.3) |
+
+---
 
 ## Totals
 
 | | Mac | Windows (8 copies) |
 |---|---|---|
-| Testing only (1–3, 5, 7, 10, 12) | about 1 day of machine time + 2 nights, plus your shifts | about 1 day |
-| Fitting (6) | 7–8 h | ~4 h |
-| Training (4, 8, 9, 11) | **about 5–7 weeks** | **about 1.5–2 weeks** |
-| **All** | **about 6–8 weeks** | **about 2 weeks**, with the Mac doing 5–7 |
+| Part 1, inside the builds | about 5 h, spread over the PRs | about 3 h |
+| Testing only (1–3, 8, 11, 13, 14) | about 1.5 days of machine time + 3 nights, plus your shifts | about 1 day + 1.5 nights |
+| Fitting and recording (5–7) | about 12 h | about 6 h |
+| Training (4, 9, 10, 12), one store | **about 5–7 weeks** | **about 1.5–2 weeks** |
+| **All** | **about 6–8 weeks, more across layouts** | **about 2–3 weeks, more across layouts** |
 
 **Suggested split:**
-- **The Mac:** the light, exact jobs (1, 2, 5, 6, 7, the C# suite).
-- **Windows:** training (4, 8, 9, 11) and the ladders (10).
-- **Before Windows can train,** the training player has to connect. On the Mac it floods
-  TextMeshPro errors with no graphics device, on `main` too. Windows has a real GPU, so it may not
-  have the problem. Check that first, in about 20 minutes (13).
+- **The Mac:** light, exact jobs (1–3, 5–8, Part 1, the panel).
+- **Windows:** training (4, 9, 10, 12) and the ladders (11).
 
-## Will 0.5.0 make this out of date?
+## The agents question
 
-**Only if its 10 store layouts are approved.** [The 0.5.0 plan](https://github.com/goraxyy/Kehai/pull/82)
-isn't approved to build. Two of its ideas would change what's trained:
+The 0.5.0 plan ([§7](https://github.com/goraxyy/Kehai/pull/82), Q9–Q10) offers five kinds of
+"agent". **Hold Stage 2 onward until you've chosen**, because the choice decides what gets trained:
 
-| 0.5.0 idea | What it would redo |
-|---|---|
-| 10 maze layouts, maybe a new one each shift | All training (4, 8, 9, 11), the recordings and fits (5, 6), and the tests on the new layouts (7, 10) |
-| Bots as agents | Employee-1 (4) and everything trained against it (8–11) |
-| "Cheat training" on real players' routes | Adds to the fits (6); it needs real players first |
+| If you choose | Employee-1 (#4) | What else changes |
+|---|---|---|
+| **A + B panel** (the plan's suggestion): keep the trained bots, add language-model players as a judge | trained as planned | #13 is added; nothing is redone |
+| **C hybrid:** a language model sets the bot's goal every 20–30 s, the trained mind walks | trained, but to follow given goals: a new curriculum | the bots cost money every shift, so Karen's millions of training decisions can't use it. She still trains against plain bots |
+| **D:** a language model writes the bots' personas between shifts | trained as planned, on more varied personas | pennies a career |
+| **E:** copy people from replays | waits for about 100 real players | Stages 2–5 move after Stage 6 |
+| **B alone** as her opponent | not trained | not possible for training: about $5,000 even on Haiku, and months |
 
-- **If the layouts are likely:** do the quick testing (1–3) after 0.4.1 merges, and hold the training
-  (4, 8–11) until the layouts exist. Training on one store and then switching to ten wastes the weeks.
-- **If they aren't:** run the whole list after 0.4.1.
+**Only A and E are fast and cheap enough for her to train against.** So whatever you choose, she
+trains against bots. The agents decide how good those bots are, and who judges her at the end.
