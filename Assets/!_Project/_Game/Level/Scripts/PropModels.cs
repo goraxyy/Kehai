@@ -18,8 +18,10 @@ public static class PropModels
     // Whether the model has been imported.
     public static bool Has(string name) => Resources.Load<GameObject>(Folder + "/" + name) != null;
 
-    // The model under `parent`, facing the parent's forward (the models are made facing -Z, as
-    // the products are), colliders stripped: the prop keeps its own. Null without the model.
+    // The model under `parent`, facing the parent's forward, colliders stripped: the prop keeps
+    // its own. Null without the model. Made in Blender facing −Y, an imported model already faces
+    // +Z, the parent's forward: until 0.4.1 it was turned round as well, so every prop showed the
+    // wall its back (seen in 0.4.1's pictures, the first time the models were imported).
     // A model is one mesh, so the props light and blink their lamps with small objects of
     // their own, laid over the model's lamp.
     public static GameObject Place(string name, Transform parent)
@@ -29,7 +31,7 @@ public static class PropModels
         GameObject go = Object.Instantiate(model, parent, false);
         go.name = name;
         go.transform.localPosition = Vector3.zero;
-        go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        go.transform.localRotation = Quaternion.identity;
         foreach (Collider c in go.GetComponentsInChildren<Collider>())
         {
             if (Application.isPlaying) Object.Destroy(c);

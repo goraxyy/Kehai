@@ -313,7 +313,7 @@ public sealed class StoreCamera : MonoBehaviour
 
         var feedGo = new GameObject("Feed");
         feedGo.transform.SetParent(root.transform, false);
-        feedGo.transform.localPosition = new Vector3(0f, 0f, 0.2f);
+        feedGo.transform.localPosition = new Vector3(0f, 0f, 0.24f);   // just past the lens
         cam.Feed = feedGo.AddComponent<Camera>();
         cam.Feed.enabled = false;                 // drawn by hand, a feed at a time (StoreCameras.DrawFeeds)
         cam.Feed.fieldOfView = 68f;
@@ -450,8 +450,9 @@ public sealed class CctvWall : MonoBehaviour
         screen.transform.localPosition = local;
 
         GameObject model = PropModels.Place(PropModels.CctvScreen, screen.transform);
-        // The screens face their −z side (as the old monitors did); a model is made facing −z too.
-        if (model != null) model.transform.localRotation = Quaternion.identity;
+        // The screens face their −z side (as the old monitors did); a model faces +z once
+        // imported (PropModels.Place), so it's turned round.
+        if (model != null) model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         else
         {
             GameObject bezel = KarenProps.Box("Bezel", screen.transform.position, new Vector3(Screen.x, Screen.y, 0.07f), new Color(0.07f, 0.07f, 0.08f), screen.transform, collider: false);
