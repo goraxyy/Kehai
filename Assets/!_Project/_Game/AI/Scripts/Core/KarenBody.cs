@@ -161,7 +161,7 @@ namespace Kehai.Karen
         {
             CurrentPace = pace;
             turning = false;
-            if (!Agent.isOnNavMesh) return;
+            if (Agent == null || !Agent.isActiveAndEnabled || !Agent.isOnNavMesh) return;
             Agent.isStopped = false;
             Agent.speed = Speed(pace);
             // Sent outside her part of the building, she goes to the nearest point in it instead.
@@ -184,22 +184,23 @@ namespace Kehai.Karen
 
         public void Stop()
         {
-            if (!Agent.isOnNavMesh) return;
+            if (Agent == null || !Agent.isActiveAndEnabled || !Agent.isOnNavMesh) return;
             Agent.ResetPath();
             Agent.isStopped = true;
         }
 
         public bool Arrived(float radius)
         {
-            if (!Agent.isOnNavMesh) return true;
+            if (Agent == null || !Agent.isActiveAndEnabled || !Agent.isOnNavMesh) return true;
             if (Agent.pathPending) return false;
             return Agent.remainingDistance <= Mathf.Max(radius, Agent.stoppingDistance);
         }
 
-        public bool PathFailed => Agent.isOnNavMesh && !Agent.pathPending && Agent.pathStatus == NavMeshPathStatus.PathInvalid;
+        public bool PathFailed => Agent != null && Agent.isActiveAndEnabled && Agent.isOnNavMesh && !Agent.pathPending && Agent.pathStatus == NavMeshPathStatus.PathInvalid;
 
         public void Warp(Vector3 at)
         {
+            if (Agent == null || !Agent.isActiveAndEnabled) return;
             if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) Agent.Warp(hit.position);
         }
 
@@ -328,7 +329,7 @@ namespace Kehai.Karen
             float volume = CurrentPace == Pace.Sneak ? 0.25f : CurrentPace == Pace.Run ? 1f : 0.6f;
             // Her steps are a developer's aid since 0.2.0 (KarenFx, F3): players never hear them.
             // They still go on the noise bus for the record; the bots and replays leave them out.
-            if (KarenFx.StepsAudible) feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
+            if (KarenFx.StepsAudible && !FreezerAlarm.Masks(transform.position)) feet.PlayOneShot(ProceduralAudio.KarenStep(), volume * SoundSettings.Get(SoundKind.Karen));
             NoiseBus.Emit(transform.position, volume * 0.8f, NoiseKind.KarenStep, NoiseAuthor.Karen);
         }
 

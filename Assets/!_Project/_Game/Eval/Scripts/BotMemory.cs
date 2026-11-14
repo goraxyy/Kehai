@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Kehai.Eval
 {
     // A simulated player's memory across a career (0.4.0, build plan §7.4, C2.3): its habits, its
-    // mood, its grudges. Kept for the six shifts of a career, fresh for the next.
+    // mood, its grudges. Kept for the four shifts of a career, fresh for the next.
     //
     //   favourite spots and routes   counts of where it hid, and which job it went to after which
     //   job order                    the order it did its jobs in, last shift
@@ -23,6 +23,14 @@ namespace Kehai.Eval
         readonly List<string> order = new List<string>();
         public List<string> LastOrder { get; private set; } = new List<string>();
 
+        readonly Dictionary<string, float> sightings = new Dictionary<string, float>();
+        readonly Dictionary<string, float> catches = new Dictionary<string, float>();
+        readonly Dictionary<string, float> escapes = new Dictionary<string, float>();
+        readonly Dictionary<string, float> tricks = new Dictionary<string, float>();
+        readonly HashSet<string> activeTricks = new HashSet<string>();
+        float unseenSince = -1f;
+        bool threatened, ended;
+
         public int Shift { get; private set; }
         public float Confidence { get; private set; } = 1f;
         public int Catches { get; private set; }
@@ -33,6 +41,10 @@ namespace Kehai.Eval
         public void BeginShift(int shift)
         {
             Shift = shift;
+            ended = false;
+            threatened = false;
+            unseenSince = -1f;
+            activeTricks.Clear();
             if (order.Count > 0) LastOrder = new List<string>(order);
             order.Clear();
             sheWas.Clear();
@@ -42,16 +54,24 @@ namespace Kehai.Eval
         // A shift ended: caught or not. A quiet shift brings confidence back by a third.
         public void EndShift(bool caught, string where)
         {
+            if (ended) return;
+            ended = true;
             if (caught)
             {
                 Catches++;
                 Confidence = Mathf.Max(0.1f, Confidence * 0.5f);
-                if (!string.IsNullOrEmpty(where)) caughtAt[where] = Shift;
+                if (!string.IsNullOrEmpty(where)) { caughtAt[where] = Shift; Add(catches, where); }
             }
             else Confidence = Mathf.Min(1f, Confidence + (1f - Confidence) / 3f);
             // Habits fade a little each shift, so a changed habit wins in the end.
             foreach (string k in hides.Keys.ToList()) hides[k] *= 0.8f;
             foreach (string k in routes.Keys.ToList()) routes[k] *= 0.8f;
+            foreach (var table in new[] { sightings, catches, escapes, tricks })
+                foreach (string k in table.Keys.ToList())
+                {
+                    table[k] *= 0.8f;
+                    if (table[k] < 0.01f) table.Remove(k);
+                }
         }
 
         public void Hid(string region)
@@ -76,7 +96,61 @@ namespace Kehai.Eval
 
         public void SensedHer(string region, float at)
         {
-            if (!string.IsNullOrEmpty(region)) sheWas[region] = at;
+            if (ended || string.IsNullOrEmpty(region) || float.IsNaN(at) || float.IsInfinity(at)) return;
+            // Count distinct visits, not frames. Continuous visibility is one encounter.
+            if (!sheWas.TryGetValue(region, out float before) || at - before > 5f) Add(sightings, region);
+            sheWas[region] = at;
+        }
+
+        static void Add(Dictionary<string, float> table, string key)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+            table.TryGetValue(key, out float value);
+            table[key] = value + 1f;
+        }
+
+        static float Read(Dictionary<string, float> table, string key) =>
+            key != null && table.TryGetValue(key, out float value) ? value : 0f;
+
+        public float SeenAt(string region) => Read(sightings, region);
+        public float CaughtAt(string region) => Read(catches, region);
+        public float EscapedAt(string region) => Read(escapes, region);
+        public float TrickCount(string kind) => Read(tricks, kind);
+
+        // Called only with EnvWorld's public, player-visible observation. An "escape" here
+        // is the bot's impression (ten seconds without seeing/hearing her after red eyes),
+        // never the Director's privileged escape truth or her actual chase state.
+        public void ObserveFair(Dictionary<string, object> obs, float now)
+        {
+            if (ended || obs == null) return;
+            var her = obs.TryGetValue("karen", out object h) ? h as Dictionary<string, object> : null;
+            var you = obs.TryGetValue("you", out object y) ? y as Dictionary<string, object> : null;
+            bool visible = her != null && her.TryGetValue("visible", out object v) && v is bool b && b;
+            bool heard = her != null && her.TryGetValue("heard", out object a) && a is bool audible && audible;
+            if (visible)
+            {
+                SensedHer(her.TryGetValue("region", out object r) ? r as string : null, now);
+                if (her.TryGetValue("eye_colour", out object eye) && eye as string == "hunt") threatened = true;
+            }
+            if (visible || heard) unseenSince = -1f;
+            else if (threatened)
+            {
+                if (unseenSince < 0f) unseenSince = now;
+                if (now - unseenSince >= 10f)
+                {
+                    Add(escapes, you != null && you.TryGetValue("region", out object r) ? r as string : null);
+                    threatened = false;
+                }
+            }
+            var current = new HashSet<string>();
+            foreach (var chore in EmployeeOptions.List(obs, "karen_chores"))
+                if (chore.TryGetValue("kind", out object kind) && kind is string name)
+                {
+                    current.Add(name);
+                    if (!activeTricks.Contains(name)) Add(tricks, name);
+                }
+            activeTricks.Clear();
+            activeTricks.UnionWith(current);
         }
 
         // Its usual hiding spot, or null.

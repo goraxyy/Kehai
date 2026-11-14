@@ -63,6 +63,7 @@ namespace Kehai.Karen
         bool decideNow;
         float planStartedAt;
         bool chasing;
+        public bool PresentThisShift { get; private set; } = true;
         int violationsSeen;
 
         readonly Dictionary<int, float> lastVisited = new Dictionary<int, float>();
@@ -101,6 +102,8 @@ namespace Kehai.Karen
             Review = new PerformanceReview(this);
 
             Body = KarenBody.Build(transform, config, StartPosition());
+            PresentThisShift = Edition.ShouldKarenAppear(Shift != null ? Shift.UpcomingShiftNumber : 1);
+            Body.gameObject.SetActive(PresentThisShift);
             Body.Touched += OnTouched;
 
             RebuildBelief();
@@ -135,6 +138,12 @@ namespace Kehai.Karen
             FogState.Filled += OnFogFilled;
             FogState.Cleared += OnFogCleared;
             Understudy.SentAway += OnUnderstudySentAway;
+            FlashSaleState.Changed += OnSaleChanged;
+            StoreCameras.LoopChanged += OnScreenLoopChanged;
+            RoomLightSwitch.Changed += OnRoomLightsChanged;
+            FreezerAlarm.Changed += OnFreezerChanged;
+            CustomerComplaint.Resolved += OnComplaintResolved;
+            if (Tasks != null) Tasks.Changed += TrackComplaints;
             if (World != null) World.Pa.PowerChanged += OnPaPower;
 
             if (Shift != null)
@@ -172,6 +181,12 @@ namespace Kehai.Karen
             FogState.Filled -= OnFogFilled;
             FogState.Cleared -= OnFogCleared;
             Understudy.SentAway -= OnUnderstudySentAway;
+            FlashSaleState.Changed -= OnSaleChanged;
+            StoreCameras.LoopChanged -= OnScreenLoopChanged;
+            RoomLightSwitch.Changed -= OnRoomLightsChanged;
+            FreezerAlarm.Changed -= OnFreezerChanged;
+            CustomerComplaint.Resolved -= OnComplaintResolved;
+            if (Tasks != null) Tasks.Changed -= TrackComplaints;
             if (World != null && World.Pa != null) World.Pa.PowerChanged -= OnPaPower;
             if (Shift != null) Shift.FreezeChanged -= OnFreezeChanged;
             Director?.Dispose();
@@ -204,7 +219,7 @@ namespace Kehai.Karen
 
         void ApplyRungToSenses()
         {
-            bool full = config.Features.Belief;
+            bool full = PresentThisShift && config.Features.Belief;
             Sensorium.UseHearing = full;
             Sensorium.UseTraces = full;
             Sensorium.UseTestimony = full;
@@ -250,6 +265,8 @@ namespace Kehai.Karen
         public void BeginShift()
         {
             int number = Shift != null ? Mathf.Max(1, Shift.ShiftNumber) : 1;
+            PresentThisShift = Edition.ShouldKarenAppear(number);
+            Body.gameObject.SetActive(PresentThisShift); // restore her body only on a shift where she appears
             if (config.seed != 0) Rng.Reseed(config.seed * 7919 + number);
 
             Log.Clear();
@@ -267,6 +284,7 @@ namespace Kehai.Karen
             KilledThisShift = false;
             Dash.BeginShift();
             Learning.BeginShift();
+            repairs.Clear();
             biasSeen = Director.BiasApplied;
             stuck = false;
 
@@ -284,6 +302,7 @@ namespace Kehai.Karen
             Director.BeginShift(number, Shift != null ? Shift.shiftDurationSeconds : 300f);
 
             Ledger.FillHabitPrior(Map, Belief.HabitPrior);
+            shiftHabitPrior = (float[])Belief.HabitPrior.Clone();
             RefreshDesire();
             // She knows you clocked in: the time clock is hers.
             Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
@@ -292,12 +311,14 @@ namespace Kehai.Karen
             Features.Places.BeginShift();
             Mirror?.Reset(StartPosition(), Time.time);
 
+            ApplyRungToSenses();
             Sensorium.ForgetShift();
             Actions.Reset();
             AbortPlan();
             Body.Sight.ResetAwareness();
-            Body.Warp(StartPosition());
+            if (PresentThisShift) Body.Warp(StartPosition());
             Body.SetMood(KarenBody.Mood.Calm);
+            Body.gameObject.SetActive(PresentThisShift);
 
             ShiftActive = true;
             shiftStartedAt = Time.time;
@@ -320,6 +341,7 @@ namespace Kehai.Karen
         {
             if (!ShiftActive) return;
             ShiftActive = false;
+            repairs.Clear();
             Dash.Cancel(Ctx);
             AbortPlan();
             Director.EndShift();
@@ -335,6 +357,9 @@ namespace Kehai.Karen
             Learning.EndShift();
             float energy = Burnout != null ? Burnout.Energy01 : 1f;
             PlaceWatch.EndShift(Ctx, Time.time);   // before the Ledger fades what it knows
+            var escapeRecords = Director.EscapeRecording();
+            Ledger.QueueEscapesAtShiftEnd(escapeRecords);
+            Learning.WriteEscapes(escapeRecords);
             Ledger.EndShift(ShiftTime, energy, clockedOut);
             Stats.EndShift(this);
             if (config.writeJsonl)
@@ -354,6 +379,13 @@ namespace Kehai.Karen
             if (Body == null) return;
             float dt = Time.deltaTime;
 
+            if (!PresentThisShift)
+            {
+                // The store watches at the normal Director rate, without any body,
+                // belief, policy, dash or trick tick.
+                if (ShiftActive) TickDirector(dt);
+                return;
+            }
             using (ShiftTiming.Measure("sight")) Body.Sight.Tick(dt);
             if (!ShiftActive)
             {
@@ -411,10 +443,10 @@ namespace Kehai.Karen
 
             Ctx.A = Appraised();
             Director.Tick(step, Ctx);
-            if (ShiftActive) Dash.Tick(Ctx);
+            if (ShiftActive && PresentThisShift) Dash.Tick(Ctx);
             Director.ObserveForLedger(Ctx, step);
             if (ShiftActive) Stats.SamplePacing(Director.Panic, Director.Setpoint);
-            if (ShiftActive) PayPolicy(step);
+            if (ShiftActive && PresentThisShift) PayPolicy(step);
             SettleRewards();
             if (ShiftActive && Learning.Enabled)
             {
@@ -576,7 +608,7 @@ namespace Kehai.Karen
 
         void OnOwnNoise(NoiseEvent e)
         {
-            if (!ShiftActive || !MirrorRunning || Mirror == null) return;
+            if (!PresentThisShift || !ShiftActive || !MirrorRunning || Mirror == null) return;
             if (e.Author != NoiseAuthor.Karen && e.Author != NoiseAuthor.Director) return;
             if (e.Kind == NoiseKind.KarenStep)
             {
@@ -617,7 +649,7 @@ namespace Kehai.Karen
         void OnNoise(NoiseEvent e)
         {
             // A crash close by re-decides immediately rather than waiting up to half a second.
-            if (!ShiftActive || e.Author != NoiseAuthor.Player || e.Loudness < 0.7f) return;
+            if (!PresentThisShift || !ShiftActive || e.Author != NoiseAuthor.Player || e.Loudness < 0.7f) return;
             if (Vector3.Distance(e.Position, Body.Position) < e.Carry * 0.5f) decideNow = true;
         }
 
@@ -1003,6 +1035,59 @@ namespace Kehai.Karen
 
         void OnUnderstudySentAway(float seconds) => Answered("understudy_sent_away", seconds, "Kenji sent to the tills");
 
+        readonly RepairTiming repairs = new RepairTiming();
+        bool RecordingRepairs => ShiftActive && (Shift == null || Shift.IsShiftActive);
+
+        void FinishRepair(string kind, object fixture, bool repaired, string description)
+        {
+            if (repairs.Finish(kind, fixture, Time.time, repaired && RecordingRepairs, out float seconds))
+                Answered(kind, seconds, description);
+        }
+
+        void OnSaleChanged(bool active)
+        {
+            if (active) { if (RecordingRepairs) repairs.Begin("flash_sale", this, Time.time); }
+            // Closing automatically ends the sale before CustomersAllowed changes. The
+            // closing announcement/time and inactive career distinguish it from a repair.
+            else FinishRepair("flash_sale", this, Shift == null || (!Shift.ClosingAnnounced && !Shift.ClosingTime && !Shift.DoorsClosed), "the flash sale called off");
+        }
+
+        void OnScreenLoopChanged(bool active)
+        {
+            if (active) { if (RecordingRepairs) repairs.Begin("screen_loop", this, Time.time); }
+            else FinishRepair("screen_loop", this, true, "the frozen camera screen reset");
+        }
+
+        void OnRoomLightsChanged(RoomLightSwitch fixture, bool off)
+        {
+            if (off)
+            {
+                // A player may switch lights off too; only time a landed Karen effect.
+                if (RecordingRepairs && CurrentPlan?.Tactic?.Id == "room_lights")
+                    repairs.Begin("room_lights", fixture, Time.time);
+            }
+            else FinishRepair("room_lights", fixture, fixture != null && fixture.isActiveAndEnabled, "the room lights restored");
+        }
+
+        void OnFreezerChanged(FreezerAlarm fixture, bool ringing)
+        {
+            if (ringing) { if (RecordingRepairs) repairs.Begin("freezer_alarm", fixture, Time.time); }
+            else FinishRepair("freezer_alarm", fixture, fixture != null && fixture.isActiveAndEnabled, "the freezer alarm stopped");
+        }
+
+        void TrackComplaints()
+        {
+            // Begin() publishes TaskManager.Changed after marking the original shopper
+            // active. This records the exact start without a new event in another slice.
+            if (!RecordingRepairs) return;
+            foreach (var complaint in CustomerComplaint.All)
+                if (complaint != null && complaint.Active) repairs.Begin("complaint", complaint, Time.time);
+        }
+
+        void OnComplaintResolved(CustomerComplaint complaint, bool heard) =>
+            FinishRepair("complaint", complaint, heard, "the shopper's complaint heard out");
+
+
         void OnPaPower(bool on)
         {
             if (!on && ShiftActive) Answered("pa_off", -1f, "the PA switched off");
@@ -1242,7 +1327,7 @@ namespace Kehai.Karen
         // touch not an attack.
         void OnTouched(Collider other)
         {
-            if (!ShiftActive || KilledThisShift) return;
+            if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
 
             // Contact is the one certain observation she ever gets.
             if (Belief != null) Belief.Apply(new Observation(SenseChannel.Touch, Body.Position, 1f, 1f, "touch"));
@@ -1256,6 +1341,7 @@ namespace Kehai.Karen
 
         void Kill()
         {
+            if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
@@ -1331,12 +1417,47 @@ namespace Kehai.Karen
         public RoutePredictor Predictor { get; private set; }
         public bool ThrewThisHunt { get; set; }      // Throw: once a hunt
         float predictorTimer, replannedForSighting = -999f;
+        float[] shiftHabitPrior;
+
+        float EscapeRoutePrior(RouteGuess guess)
+        {
+            if (guess.Path.Length < 2) return 1f;
+            int from = Map.CellRegion[guess.Path[0]];
+            if (from < 0) return 1f;
+            foreach (int cell in guess.Path)
+            {
+                int next = Map.CellRegion[cell];
+                if (next >= 0 && next != from)
+                    return Ledger.EscapeMultiplier(Map.Regions[from].Key, Map.Regions[next].Key, Map.Regions[from].Links.Count);
+            }
+            return 1f;
+        }
+
+        void ApplyEscapeHabitPrior()
+        {
+            if (shiftHabitPrior == null || shiftHabitPrior.Length != Belief.HabitPrior.Length) return;
+            System.Array.Copy(shiftHabitPrior, Belief.HabitPrior, shiftHabitPrior.Length);
+            SightSensor sight = Body.Sight;
+            if (sight.SeesNow || Time.time - sight.LastSeenTime > 30f) return;
+            int from = Map.RegionAt(sight.LastSeenPosition);
+            if (from < 0) return;
+            // P1's existing habit input gets committed evidence only. Never condition on the
+            // Director's current true region; the origin is her own last sighting.
+            foreach (var link in Map.Regions[from].Links)
+            {
+                float factor = Ledger.EscapeMultiplier(Map.Regions[from].Key, Map.Regions[link.To].Key, Map.Regions[from].Links.Count);
+                if (factor == 1f) continue; // no evidence must leave the baseline bit-for-bit intact
+                foreach (int cell in Map.Regions[link.To].Cells)
+                    Belief.HabitPrior[cell] = Mathf.Clamp01((shiftHabitPrior[cell] + 0.25f) * factor - 0.25f);
+            }
+        }
 
         // Four times a second: guesses built when a hunt loses you, reweighed against her belief
         // after, and kept for half a minute so Ambush can still wait where they go once the hunt
         // has handed over. Seeing you again drops them.
         void UpdatePredictor(float dt)
         {
+            ApplyEscapeHabitPrior();
             if (Belief.Motion is DestinationMotion) { UpdateModelPredictor(dt); return; }
             if (!chasing && !(Predictor.Active && Time.time - Predictor.SeenAt < 30f))
             {
@@ -1354,7 +1475,7 @@ namespace Kehai.Karen
                 return;
             }
             if (chasing && (!Predictor.Active || Predictor.SeenAt != s.LastSeenTime))
-                Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals());
+                Predictor.Build(s.LastSeenPosition, s.LastSeenVelocity, s.LastSeenTime, PredictorGoals(), routePrior: EscapeRoutePrior);
             Predictor.Reweigh(Belief, Time.time);
         }
 
@@ -1385,7 +1506,7 @@ namespace Kehai.Karen
                 for (int k = 0; k < Features.Count; k++)
                     if (Features.List[k].Cell >= 0) goals.Add((Features.List[k].Label, Features.List[k].Position));
                 Predictor.Build(at, ownEyes ? s.LastSeenVelocity : Vector3.zero, Belief.LastStrongObservation, goals,
-                    (name, p, kind) => ModelChance(start, name, kind));
+                    (name, p, kind) => ModelChance(start, name, kind), EscapeRoutePrior);
             }
             if (Predictor.Active && Time.time - Predictor.SeenAt > 30f) Predictor.Clear();
             if (Predictor.Active) Predictor.Reweigh(Belief, Time.time);
@@ -1488,10 +1609,29 @@ namespace Kehai.Karen
 
         public void MazeChanged()
         {
+            AbortPlan();
+            Dash?.Cancel(Ctx);
+            closedUntil.Clear();
+            closedNow.Clear();
+            lastVisited.Clear();
+            heard.Clear();
+            PlaceWatch.Clear();
+            Director.ForgetEscapeTrack();
+            closedAll.Clear();
+            lastGuessRegion = -1;
+            tourIndex = 0;
+            ThrewThisHunt = false;
+            Ledger.SelectLayout(StoreLayoutRuntime.CurrentId);
+            predictorTimer = 0f;
+            replannedForSighting = strongSeenAt = -999f;
+            wasSeeing = false;
+            lostSightAt = -1f;
+            Body.Sight.ResetAwareness();
             TacticHelpers.ForgetStands();
             Map = StoreMap.Rebuild();
             RebuildBelief();
             Ledger.FillHabitPrior(Map, Belief.HabitPrior);
+            shiftHabitPrior = (float[])Belief.HabitPrior.Clone();
             RefreshDesire();
             Belief.ResetToPrior();
             tour = null;
@@ -1528,14 +1668,14 @@ namespace Kehai.Karen
         {
             Ledger.CompleteRoute("till");
             // The till is hers: serving puts you in front of the most reliable witness.
-            if (customer != null)
+            if (PresentThisShift && customer != null)
                 InfrastructureFeed.Report(new Observation(SenseChannel.Infrastructure, customer.transform.position,
                     0.85f, 3f, "till (POS)"));
         }
 
         void OnDoorSensor(Component door, bool opened)
         {
-            if (door == null || !opened) return;
+            if (!PresentThisShift || door == null || !opened) return;
             InfrastructureFeed.Report(new Observation(SenseChannel.Infrastructure, door.transform.position, 0.7f, 2.5f,
                 "door sensor (" + Map.Describe(door.transform.position) + ")"));
         }
@@ -1551,7 +1691,7 @@ namespace Kehai.Karen
         public void OnBlinkStarted()
         {
             Director?.Index.NoteBlink();
-            if (!ShiftActive || KilledThisShift) return;
+            if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             Stats.BlinkSeen();
             Dash.OnBlink(Ctx);
         }
@@ -1729,6 +1869,7 @@ namespace Kehai.Karen
 
         float pacingSquaredError;
         int pacingSamples;
+        public int PacingSamples => pacingSamples;
 
         // The single healthiest metric (Karen.md §13): how well panic tracks its target.
         public float SetpointRmse => pacingSamples > 0 ? Mathf.Sqrt(pacingSquaredError / pacingSamples) : 0f;

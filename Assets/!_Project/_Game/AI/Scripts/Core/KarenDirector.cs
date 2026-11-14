@@ -29,6 +29,11 @@ namespace Kehai.Karen
         public float RawPanic { get; private set; }
         public PanicIndex Index { get; }
 
+        // Privileged track is owned here; the hunt never reads this recorder.
+        readonly EscapeRecorder escapes = new EscapeRecorder();
+        public List<EscapeRecord> EscapeRecording() => escapes.Snapshot();
+        public void ForgetEscapeTrack() => escapes.Reset();
+
         readonly KarenConfig config;
         readonly List<(float t, float panic)> history = new List<(float, float)>(4096);
         float recoveryUntil = -1f;
@@ -53,6 +58,7 @@ namespace Kehai.Karen
 
         public void BeginShift(int shift, float length)
         {
+            escapes.Reset();
             huntEndedAt = -999f;
             shiftNumber = Mathf.Max(1, shift);
             shiftLength = Mathf.Max(60f, length);
@@ -67,7 +73,7 @@ namespace Kehai.Karen
             CurrentPhase = Phase.Settle;
         }
 
-        public void EndShift() => CurrentPhase = Phase.OffShift;
+        public void EndShift() { escapes.EndShift(); CurrentPhase = Phase.OffShift; }
 
         public void Dispose() => Index.Detach();
 
@@ -97,7 +103,7 @@ namespace Kehai.Karen
             if (history.Count >= 4000) history.RemoveRange(0, 1000);
             history.Add((Time.time, Panic));
 
-            MaybeEnvironmental(c);
+            if (c.Brain.PresentThisShift) MaybeEnvironmental(c);
         }
 
         void UpdatePhase(KarenContext c)
@@ -355,6 +361,22 @@ namespace Kehai.Karen
 
             PlayerMotor motor = player.GetComponent<PlayerMotor>();
             c.Ledger.ObservePlayer(c.Map, region, dt, hiding, motion, motor != null ? motor.PlanarSpeed : 0f);
+            if (!c.Brain.PresentThisShift) return;
+            int from = c.Map.RegionAt(c.Body.Sight.LastSeenPosition);
+            // Rank adjacent places by her belief at the loss, before inspecting the true route.
+            var ranked = new List<(string key, float mass)>();
+            if (from >= 0 && escapes.IsLosingSight(c.Body.Sight.SeesNow))
+                foreach (var link in c.Map.Regions[from].Links)
+                {
+                    float mass = 0f;
+                    foreach (int cell in c.Map.Regions[link.To].Cells) mass += c.Belief[cell];
+                    ranked.Add((c.Map.Regions[link.To].Key, mass));
+                }
+            ranked.Sort((a, b) => a.mass == b.mass ? string.CompareOrdinal(a.key, b.key) : b.mass.CompareTo(a.mass));
+            escapes.Observe(c.Body.Sight.SeesNow, from >= 0 ? c.Map.Regions[from].Key : null,
+                region >= 0 ? c.Map.Regions[region].Key : null, ShiftTime,
+                new[] { c.Body.Position.x, c.Body.Position.z }, StoreLayoutRuntime.CurrentId,
+                c.Ledger.Shift, c.Rng.Seed, ranked.ConvertAll(x => x.key), c.Ledger.PlayerName);
         }
 
         // ---- free dread -------------------------------------------------------------------

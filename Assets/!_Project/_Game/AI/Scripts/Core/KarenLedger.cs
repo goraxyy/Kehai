@@ -33,6 +33,15 @@ namespace Kehai.Karen
         public int lastShift;
     }
 
+    [System.Serializable]
+    public class LayoutLedger
+    {
+        public string id;
+        public List<RegionStat> regions = new List<RegionStat>();
+        public List<RouteStat> routes = new List<RouteStat>();
+        public List<PlaceStat> places = new List<PlaceStat>();
+    }
+
     // What she has seen one kind of thing do to you (0.4.0, build plan §6.2, C3.1): plain counts
     // and sums, never differences from "everyone", so a new general model doesn't make it wrong.
     [System.Serializable]
@@ -62,7 +71,12 @@ namespace Kehai.Karen
     [System.Serializable]
     public class LedgerData
     {
-        public int version = 1;
+        public int version = 2;
+        public string layout = "today";
+        public int doorKeySchema; // 0: untrusted legacy ordinals; 1: sorted door numbering
+        public List<string> migrations = new List<string>();
+        public List<LayoutLedger> layouts = new List<LayoutLedger>();
+        public List<EscapeStat> escapes = new List<EscapeStat>();
         public string playerName = "Employee #0417";
         public int shiftsWorked;
         public int shiftsClockedOut;
@@ -131,6 +145,9 @@ namespace Kehai.Karen
         readonly Dictionary<string, ArmStat> arms = new Dictionary<string, ArmStat>();
         readonly Dictionary<string, RegionStat> regions = new Dictionary<string, RegionStat>();
         int shift = 1;
+        readonly List<EscapeRecord> pendingEscapes = new List<EscapeRecord>();
+        bool shiftEnded;
+        bool writableSave = true;
 
         // Route tracking within a shift.
         readonly List<string> currentRoute = new List<string>();
@@ -148,11 +165,31 @@ namespace Kehai.Karen
 
         public void Load()
         {
+            writableSave = true;
             if (!Persistent || !File.Exists(SavePath)) { Index(); return; }
             try
             {
-                Data = JsonUtility.FromJson<LedgerData>(File.ReadAllText(SavePath)) ?? new LedgerData();
-                if (Data.baselineMean == null || Data.baselineMean.Length != PanicIndex.Features)
+                string original = File.ReadAllText(SavePath);
+                Data = JsonUtility.FromJson<LedgerData>(original) ?? new LedgerData();
+                if (Data.version > 2)
+                {
+                    writableSave = false;
+                    Debug.LogWarning("Ledger is newer than this build; preserving the file and using fresh in-memory habits.");
+                    Data = new LedgerData();
+                }
+                else if (Data.version < 2 || Data.doorKeySchema < 1)
+                {
+                    // Unsorted door_N identities cannot safely be reassigned. Keep the exact
+                    // original, including those rows, before quarantining them from live use.
+                    string backup = SavePath + ".pre-0.5.0.json";
+                    if (File.Exists(backup) && File.ReadAllText(backup) != original)
+                        backup = SavePath + ".pre-0.5.0-" + System.Guid.NewGuid().ToString("N") + ".json";
+                    if (!File.Exists(backup))
+                        using (var stream = new FileStream(backup, FileMode.CreateNew, FileAccess.Write))
+                        using (var writer = new StreamWriter(stream)) writer.Write(original);
+                }
+                if (Data.baselineMean == null || Data.baselineMean.Length != PanicIndex.Features ||
+                    Data.baselineStd == null || Data.baselineStd.Length != PanicIndex.Features)
                 {
                     Data.baselineMean = new float[PanicIndex.Features];
                     Data.baselineStd = new float[PanicIndex.Features];
@@ -161,7 +198,8 @@ namespace Kehai.Karen
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning(GameNames.Antagonist + ": couldn't read the ledger, starting fresh. " + e.Message);
+                Debug.LogWarning(GameNames.Antagonist + ": couldn't read or preserve the ledger; using fresh in-memory habits and leaving the save untouched. " + e.Message);
+                writableSave = false;
                 Data = new LedgerData();
             }
             Index();
@@ -169,7 +207,8 @@ namespace Kehai.Karen
 
         public void Save()
         {
-            if (!Persistent) return;
+            if (!Persistent || !writableSave) return;
+            SaveSpatial();
             Data.arms = arms.Values.ToList();
             Data.regions = regions.Values.ToList();
             Data.chains = Room.All.ToList();
@@ -181,6 +220,7 @@ namespace Kehai.Karen
 
         public void Wipe()
         {
+            writableSave = true;
             Data = new LedgerData();
             Index();
             if (File.Exists(SavePath)) File.Delete(SavePath);
@@ -188,6 +228,39 @@ namespace Kehai.Karen
 
         void Index()
         {
+            Data.arms = Data.arms ?? new List<ArmStat>();
+            Data.regions = Data.regions ?? new List<RegionStat>();
+            Data.routes = Data.routes ?? new List<RouteStat>();
+            Data.places = Data.places ?? new List<PlaceStat>();
+            Data.chains = Data.chains ?? new List<ChainStat>();
+            Data.counterplay = Data.counterplay ?? new List<CounterStat>();
+            if (Data.layouts == null) Data.layouts = new List<LayoutLedger>();
+            if (Data.escapes == null) Data.escapes = new List<EscapeStat>();
+            Data.layouts.RemoveAll(x => x == null || string.IsNullOrEmpty(x.id));
+            foreach (LayoutLedger saved in Data.layouts)
+            {
+                saved.regions = saved.regions ?? new List<RegionStat>();
+                saved.routes = saved.routes ?? new List<RouteStat>();
+                saved.places = saved.places ?? new List<PlaceStat>();
+            }
+            if (string.IsNullOrEmpty(Data.layout) || Data.version < 2) Data.layout = "today";
+            Data.version = 2;
+            if (Data.migrations == null) Data.migrations = new List<string>();
+            if (Data.doorKeySchema < 1)
+            {
+                int dropped = LegacyDoorKeys.Remove(Data.regions, r => r.key)
+                            + LegacyDoorKeys.Remove(Data.routes, r => r.path)
+                            + LegacyDoorKeys.Remove(Data.places, p => p.key)
+                            + LegacyDoorKeys.Remove(Data.escapes, e => e.from + "|" + e.next);
+                foreach (LayoutLedger saved in Data.layouts)
+                    dropped += LegacyDoorKeys.Remove(saved.regions, r => r.key)
+                             + LegacyDoorKeys.Remove(saved.routes, r => r.path)
+                             + LegacyDoorKeys.Remove(saved.places, p => p.key);
+                Data.doorKeySchema = 1;
+                if (dropped > 0) Data.migrations.Add("door-key-schema-1: removed " + dropped +
+                    " spatial entries using legacy door_N ordinals; sorted door identities cannot be recovered. Tile and nonspatial habits preserved.");
+            }
+            pendingEscapes.Clear();
             arms.Clear();
             foreach (ArmStat a in Data.arms)
                 if (TacticLibrary.Get(a.id) != null) arms[a.id] = a;   // not the tricks 0.2.0 and 0.3.0 removed (the chase, Funnel, the PA tricks…)
@@ -205,7 +278,10 @@ namespace Kehai.Karen
 
         public void BeginShift(int shiftNumber)
         {
+            SelectLayout(StoreLayoutRuntime.CurrentId);
             shift = shiftNumber;
+            shiftEnded = false;
+            pendingEscapes.Clear();
             Data.shiftsWorked++;
             currentRoute.Clear();
             lastRegionKey = null;
@@ -217,6 +293,8 @@ namespace Kehai.Karen
                 arms.Clear();
                 regions.Clear();
                 Data.routes.Clear();
+                Data.escapes.Clear();
+                Data.layouts.Clear();
                 Room.Clear();
                 Places.Clear();
             }
@@ -227,6 +305,10 @@ namespace Kehai.Karen
         // Rule 7: everything learned fades unless it is reinforced.
         public void EndShift(float shiftSeconds, float energyAtEnd, bool clockedOut)
         {
+            if (shiftEnded) return;
+            shiftEnded = true;
+            EscapeHabits.Commit(Data.escapes, pendingEscapes);
+            pendingEscapes.Clear();
             if (clockedOut) Data.shiftsClockedOut++;
             Data.energyAtClockOut = energyAtEnd;
             Data.meanShiftSeconds = Mathf.Lerp(Data.meanShiftSeconds <= 0f ? shiftSeconds : Data.meanShiftSeconds, shiftSeconds, 0.3f);
@@ -239,6 +321,15 @@ namespace Kehai.Karen
             foreach (RouteStat route in Data.routes)
                 route.count *= route.lastShift == shift ? 0.9f : 0.6f;
             Data.routes.RemoveAll(r => r.count < 0.3f);
+            // A layout not visited this shift still ages; returning to it must not restore
+            // habits at their old strength just because its cells were out of use.
+            foreach (LayoutLedger saved in Data.layouts.Where(x => x.id != Data.layout))
+            {
+                foreach (RegionStat r in saved.regions) { r.dwell *= 0.7f; r.concealment *= 0.35f; }
+                foreach (RouteStat r in saved.routes) r.count *= 0.6f;
+                saved.routes.RemoveAll(r => r.count < 0.3f);
+                foreach (PlaceStat place in saved.places) place.n *= PlacementMemory.FadeCount;
+            }
 
             foreach (ArmStat a in arms.Values)
             {
@@ -254,6 +345,51 @@ namespace Kehai.Karen
 
             if (energyAtEnd <= 0.01f) Data.burnouts++;
             Save();
+        }
+
+        // Incoming truth is staged and unreadable until EndShift. The Director is the only
+        // producer; callers cannot mutate the saved evidence through a recording's arrays.
+        public void QueueEscapesAtShiftEnd(IEnumerable<EscapeRecord> records)
+        {
+            if (shiftEnded || records == null) return;
+            foreach (EscapeRecord r in records)
+                if (r != null && r.shift == shift && r.layout == Data.layout && r.path != null)
+                    pendingEscapes.Add(r.Copy());
+        }
+
+        public float EscapeChance(string from, string next, float everyone) =>
+            EscapeHabits.Chance(Data.escapes, Data.layout, from, next, everyone);
+
+        public float EscapeMultiplier(string from, string next, int exits) =>
+            EscapeHabits.Multiplier(Data.escapes, Data.layout, from, next, exits);
+
+        void SaveSpatial()
+        {
+            Data.regions = regions.Values.ToList();
+            Data.places = Places.All.ToList();
+            LayoutLedger saved = Data.layouts.FirstOrDefault(x => x.id == Data.layout);
+            if (saved == null) Data.layouts.Add(saved = new LayoutLedger { id = Data.layout });
+            saved.regions = Data.regions;
+            saved.routes = Data.routes;
+            saved.places = Data.places;
+        }
+
+        public void SelectLayout(string id)
+        {
+            id = string.IsNullOrEmpty(id) ? "today" : id;
+            if (Data.layout == id) return;
+            SaveSpatial();
+            LayoutLedger saved = Data.layouts.FirstOrDefault(x => x.id == id);
+            Data.layout = id;
+            Data.regions = saved?.regions ?? new List<RegionStat>();
+            Data.routes = saved?.routes ?? new List<RouteStat>();
+            Data.places = saved?.places ?? new List<PlaceStat>();
+            regions.Clear();
+            foreach (RegionStat r in Data.regions) regions[r.key] = r;
+            Places.Load(Data.places);
+            currentRoute.Clear();
+            lastRegionKey = null;
+            pendingEscapes.Clear();
         }
 
         // ---- everyone, and you (0.4.0, build plan §6.2, C3.1) ----------------------------------
@@ -296,7 +432,7 @@ namespace Kehai.Karen
         public EvidenceStat KindEvidence(string kind) => Data.kindEvidence.FirstOrDefault(e => e.key == kind);
 
         // The weight "everyone" counts for, in times seen (§6.2: n × yours + 2 × everyone's).
-        public const float EveryoneWeight = 2f;
+        public const float EveryoneWeight = EscapeHabits.PriorWeight;
 
         public static float Blend(float n, float yours, float everyone) =>
             (n * yours + EveryoneWeight * everyone) / (n + EveryoneWeight);

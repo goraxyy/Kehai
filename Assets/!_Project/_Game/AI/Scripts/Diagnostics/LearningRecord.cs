@@ -104,6 +104,24 @@ namespace Kehai.Karen
             lastHintAt = -999f;
         }
 
+        public void WriteEscapes(IEnumerable<EscapeRecord> records)
+        {
+            if (!Enabled || string.IsNullOrEmpty(FilePath) || records == null) return;
+            try
+            {
+                string path = Path.ChangeExtension(FilePath, ".escapes.jsonl");
+                string dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                using (var output = new StreamWriter(path, true))
+                    foreach (EscapeRecord record in records) output.WriteLine(JsonUtility.ToJson(record));
+            }
+            catch (System.Exception e)
+            {
+                // Optional diagnostics must not interrupt Ledger settlement or shift cleanup.
+                Debug.LogWarning($"{GameNames.Antagonist}: escape record not written ({e.Message})");
+            }
+        }
+
         public void Add(LearningRecord r)
         {
             if (!Enabled || r == null) return;

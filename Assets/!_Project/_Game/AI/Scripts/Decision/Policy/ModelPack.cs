@@ -205,17 +205,25 @@ namespace Kehai.Karen
             card.Command = c.GetString("command", "");
             if (c.TryGetValue("outputs", out object outs) && outs is List<object> heads)
                 card.OutputNames = heads.Select(h => ((List<object>)h).Select(x => x as string).ToArray()).ToArray();
-            if (card.InputsVersion != BrainObservation.Version) { why = $"{card.Name} reads inputs version {card.InputsVersion}, this build writes {BrainObservation.Version}"; return null; }
-            if (card.OutputNames != null)
+            bool employee = card.Name.StartsWith("EmployeeBrain", System.StringComparison.Ordinal);
+            int inputsVersion = employee ? Kehai.Eval.EmployeeObservation.Version : BrainObservation.Version;
+            if (card.InputsVersion != inputsVersion) { why = $"{card.Name} reads inputs version {card.InputsVersion}, this build writes {inputsVersion}"; return null; }
+            if (!employee && card.OutputNames != null)
                 foreach (string name in card.OutputNames.SelectMany(h => h))
                     if (!BrainSeam.KnownOutput(name)) { why = $"{card.Name} names {name}, which this build doesn't have"; return null; }
             try
             {
                 var hidden = ((List<object>)part["hidden"]).Cast<Dictionary<string, object>>().ToList();
                 var heads2 = ((List<object>)part["heads"]).Cast<Dictionary<string, object>>().ToList();
+                var recurrent = part.TryGetValue("recurrent", out object recurrence) ? recurrence as Dictionary<string, object> : null;
+                if (!employee && recurrent != null) { why = "Karen recurrent policies are not supported by this build"; return null; }
                 return new BrainNet(card, Floats(part["mean"]), Floats(part["std"]),
                     hidden.Select(h => (int)h.GetNumber("out")).ToArray(), hidden.Select(h => Floats(h["w"])).ToArray(), hidden.Select(h => Floats(h["b"])).ToArray(),
-                    heads2.Select(h => (int)h.GetNumber("out")).ToArray(), heads2.Select(h => Floats(h["w"])).ToArray(), heads2.Select(h => Floats(h["b"])).ToArray());
+                    heads2.Select(h => (int)h.GetNumber("out")).ToArray(), heads2.Select(h => Floats(h["w"])).ToArray(), heads2.Select(h => Floats(h["b"])).ToArray(),
+                    recurrent == null ? 0 : (int)recurrent.GetNumber("size"),
+                    recurrent == null ? null : Floats(recurrent["input"]),
+                    recurrent == null ? null : Floats(recurrent["hidden"]),
+                    recurrent == null ? null : Floats(recurrent["bias"]));
             }
             catch (System.Exception e)
             {

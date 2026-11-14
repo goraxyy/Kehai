@@ -29,7 +29,15 @@ FLOOR = 1e-6
 
 class Replay:
     def __init__(self, m: kernels.Map, motion: str = "p0", senses: str = "s0", sense_numbers: dict | None = None,
-                 weights: dict | None = None, use_hint: bool = True):
+                 weights: dict | None = None, use_hint: bool = True, post_loss_weight: float = 1.0, post_loss_seconds: float = 15.0):
+        if not math.isfinite(post_loss_weight) or post_loss_weight < 1 or not math.isfinite(post_loss_seconds) or post_loss_seconds <= 0:
+            raise ValueError("invalid post-loss scoring window/weight")
+        self.post_loss_weight, self.post_loss_seconds = post_loss_weight, post_loss_seconds
+        self.seen_before = False
+        self.lost_at = None
+        self.score_weights = []
+        self.losses = []
+        self.pending_loss = None
         self.m = m
         self.motion_id = motion
         self.senses_id = senses
@@ -101,9 +109,49 @@ class Replay:
             self.max_diff = max(self.max_diff, float(np.abs(b - g.b).max()))
             self.checks += 1
         elif kind == "truth":
+            # Answers affect scores only, never the replayed posterior or model inputs.
             cell = op["cell"]
+            seen = bool(op["sees"])
+            raw_time = op.get("t")
+            if not isinstance(raw_time, (int, float)) or not math.isfinite(raw_time):
+                # Old parity fixtures/traces have no clock. Their ordinary truth score is
+                # still valid; an invented time would fabricate a post-loss training label.
+                self.seen_before = False
+                self.pending_loss = self.lost_at = None
+                if 0 <= cell < self.m.n:
+                    self.scores.append((math.log(max(FLOOR, g.b[cell])), seen))
+                    self.score_weights.append(1.0)
+                return
+            t = float(raw_time)
+            if self.seen_before and not seen:
+                self.lost_at = t
+                origin = self.m.region[self.last_truth_cell] if 0 <= self.last_truth_cell < self.m.n else -1
+                # Match the runtime score: rank possible next regions, not distant
+                # destinations with lots of area. Truth only supplies the later answer.
+                exits = set(int(self.m.region[to]) for src, to in zip(self.m.edge_from, self.m.edge_to)
+                            if origin >= 0 and self.m.region[src] == origin and
+                            self.m.region[to] >= 0 and self.m.region[to] != origin)
+                masses = {region: float(g.b[self.m.region == region].sum()) for region in exits}
+                top = sorted(masses, key=lambda k: (-masses[k], k))[:3]
+                self.pending_loss = {"t": t, "from": int(origin), "top_three": top, "next": None, "path": []}
+                self.losses.append(self.pending_loss)
+            if seen:
+                self.lost_at = None
+                self.pending_loss = None
+            if self.pending_loss is not None and t - self.pending_loss["t"] > 30:
+                self.pending_loss = None
+            if self.pending_loss is not None and 0 <= cell < self.m.n:
+                path = self.pending_loss["path"]
+                prior = path[-1] if path else self.pending_loss["from"]
+                if self.m.region[cell] >= 0 and self.m.region[cell] != prior:
+                    path.append(int(self.m.region[cell]))
+                    self.pending_loss["next"] = path[0]
+                    if len(path) == 3: self.pending_loss = None
+            self.seen_before = seen
+            self.last_truth_cell = cell
             if 0 <= cell < self.m.n:
-                self.scores.append((math.log(max(FLOOR, g.b[cell])), bool(op["sees"])))
+                self.scores.append((math.log(max(FLOOR, g.b[cell])), seen))
+                self.score_weights.append(self.post_loss_weight if self.lost_at is not None and 0 <= t-self.lost_at <= self.post_loss_seconds else 1.0)
 
     def run(self, path: str):
         for op in tr.ops(path):
@@ -111,8 +159,8 @@ class Replay:
         return self
 
     def log_p(self, out_of_view_only: bool = False) -> float:
-        xs = [lp for lp, seen in self.scores if not (out_of_view_only and seen)]
-        return sum(xs) / len(xs) if xs else float("nan")
+        xs = [(lp, w) for (lp, seen), w in zip(self.scores, self.score_weights) if not (out_of_view_only and seen)]
+        return sum(lp*w for lp,w in xs) / sum(w for _,w in xs) if xs else float("nan")
 
 
 def parity(folder: str, tolerance: float = 1e-3) -> list:

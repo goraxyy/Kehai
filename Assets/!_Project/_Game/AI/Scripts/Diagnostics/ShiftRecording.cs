@@ -80,6 +80,7 @@ namespace Kehai.Karen
         public bool ClockedOut;
         public string Bot = "";         // a simulated player's persona (0.4.0); empty for a person
         public int Seed;                // the eval's seed (0.4.0); 0 for a person
+        public readonly List<EscapeRecord> Escapes = new List<EscapeRecord>();
         public readonly List<ShiftFrame> Frames = new List<ShiftFrame>();
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
@@ -130,7 +131,7 @@ namespace Kehai.Karen
             f.Energy = burnout != null ? burnout.Energy01 : 1f;
 
             KarenBrain brain = KarenBrain.Instance;
-            f.KarenPresent = brain != null && brain.Body != null;
+            f.KarenPresent = brain != null && brain.Body != null && brain.PresentThisShift;
             if (f.KarenPresent)
             {
                 f.Karen = StoreFloorPlan.Flat(brain.Body.Position);
@@ -245,6 +246,9 @@ namespace Kehai.Karen
               .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false");
             if (!string.IsNullOrEmpty(Bot)) sb.Append(",\"bot\":\"").Append(MiniJson.EscapeInner(Bot)).Append('"');
             if (Seed != 0) sb.Append(",\"seed\":").Append(Seed);
+            sb.Append(",\"escapes\":[");
+            for (int i = 0; i < Escapes.Count; i++) { if (i > 0) sb.Append(','); sb.Append(JsonUtility.ToJson(Escapes[i])); }
+            sb.Append(']');
             if (plan != null) sb.Append(",\"plan\":").Append(plan.ToJson());
             if (analysis != null) sb.Append(",\"analysis\":").Append(analysis.ToJson());
 

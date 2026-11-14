@@ -86,13 +86,16 @@ namespace Kehai.Karen
             if (!NoRecords)
             {
                 root.AddComponent<ShiftRecorder>();
-                root.AddComponent<ClipMarkerRecorder>();
-                root.AddComponent<Kehai.Replay.ReplayRecorder>();
+                if (Edition.RecordReplays)
+                {
+                    root.AddComponent<ClipMarkerRecorder>();
+                    root.AddComponent<Kehai.Replay.ReplayRecorder>();
+                }
             }
-            root.AddComponent<KarenDebugOverlay>();
-            root.AddComponent<ReviewScreen>();
+            if (Edition.AllowDebugTools) root.AddComponent<KarenDebugOverlay>();
+            if (Edition.ShowUI) root.AddComponent<ReviewScreen>();
             root.AddComponent<Kehai.Blink.BlinkTracker>();
-            root.AddComponent<Kehai.Blink.BlinkTestPanel>();
+            if (Edition.AllowDebugTools) root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
         static string rungArg, seedArg, shieldArg, policyArg, comboArg, careerArg;

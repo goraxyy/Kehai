@@ -99,22 +99,27 @@ namespace Kehai.Eval
     public sealed class GeneratedEmployeeMind : IEmployeeMind
     {
         readonly Kehai.Karen.BrainNet net;
+        readonly float[] memory;
         public string Name => "generated " + net.Card.Name + " " + net.Card.Version;
+        public bool Trained => net.Card.Trained;
 
-        GeneratedEmployeeMind(Kehai.Karen.BrainNet net) => this.net = net;
+        GeneratedEmployeeMind(Kehai.Karen.BrainNet net) { this.net = net; memory = new float[net.MemorySize]; }
 
         public static GeneratedEmployeeMind TryCreate(out string why, string name = "EmployeeBrain")
         {
             Kehai.Karen.BrainNet n = Kehai.Karen.BrainNets.Find(name, out why);
             if (n == null) return null;
             if (n.InputSize != EmployeeObservation.Size) { why = $"EmployeeBrain expects {n.InputSize} inputs, the observation has {EmployeeObservation.Size}"; return null; }
+            if (n.Card.InputsVersion != EmployeeObservation.Version) { why = "Employee observation version changed; re-export/retrain the employee"; return null; }
+            if (n.Heads != 3 || n.HeadSize(0) != EmployeeOptions.Whats || n.HeadSize(1) != EmployeeOptions.Hows || n.HeadSize(2) != EmployeeOptions.Whiches)
+            { why = "Employee action branches changed; re-export/retrain the employee"; return null; }
             return new GeneratedEmployeeMind(n);
         }
 
         public bool TryChoose(float[] inputs, bool[] what, bool[] how, bool[] which, Persona persona, System.Random dice, out EmployeeChoice choice)
         {
             choice = default;
-            float[][] heads = net.Logits(inputs);
+            float[][] heads = net.Logits(inputs, memory);
             if (heads.Length < 3) return false;
             float consistency = persona != null ? persona[Trait.Consistency] : 0.5f;
             int w = EmployeeMinds.Draw(heads[0], what, consistency, dice, out float c0);
@@ -127,6 +132,6 @@ namespace Kehai.Eval
 
         public bool Active => true;
         public void AddReward(float reward) { }
-        public void EndShift(bool careerOver) { }
+        public void EndShift(bool careerOver) => System.Array.Clear(memory, 0, memory.Length);
     }
 }

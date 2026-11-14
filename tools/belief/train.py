@@ -109,7 +109,7 @@ def _score(task):
     return r.log_p(out_of_view)
 
 
-def mean_log_p(folders, out_of_view=False, **kw):
+def mean_log_p(folders, out_of_view=False, player_keys=None, **kw):
     """Mean over shifts of the replay's log p of the true cell (one shift, one number)."""
     global _pool
     tasks = [(folder, path, out_of_view, kw) for folder in folders for path in tr.shifts(folder)]
@@ -120,6 +120,11 @@ def mean_log_p(folders, out_of_view=False, **kw):
         lps = _pool.map(_score, tasks, chunksize=1)
     else:
         lps = [_score(t) for t in tasks]
+    if player_keys is not None:
+        groups = {}
+        for task, lp in zip(tasks, lps):
+            if math.isfinite(lp): groups.setdefault(player_keys[os.path.abspath(task[1])], []).append(lp)
+        lps = [float(np.mean(values)) for values in groups.values()]
     scores = [lp for lp in lps if not math.isnan(lp)]
     return float(np.mean(scores)) if scores else float("nan")
 
@@ -145,14 +150,14 @@ def fit_senses(train, val, sid):
     return dict(zip(names, map(float, x))), -loss(x, val), -loss(x0, val)
 
 
-def fit_p1(train, val, senses):
+def fit_p1(train, val, senses, score_options=None):
     p1 = feat.HAND["p1"]
     names = ["moving", "desire", "habit", "danger", "speed"]
     x0 = np.array([p1[k] for k in names])
 
     def loss(x, folders=train):
         w = dict(feat.HAND, p1=dict(zip(names, x)))
-        return -mean_log_p(folders, True, motion="p1", senses=senses.get("id", "s0"), sense_numbers=senses, weights=w)
+        return -mean_log_p(folders, True, motion="p1", senses=senses.get("id", "s0"), sense_numbers=senses, weights=w, **(score_options or {}))
 
     x, _ = nelder_mead(loss, x0, lo=np.zeros(5), hi=np.array([1.0, 3.0, 3.0, 1.0, 2.0]))
     return dict(zip(names, map(float, x))), -loss(x, val)

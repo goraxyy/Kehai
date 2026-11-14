@@ -54,6 +54,8 @@ namespace Kehai.Eval
                 case "flip_breaker":
                 case "reset_fog": case "restart_clock": case "find_tool":
                 case "unblock_door": case "send_kenji": case "unplug_camera":
+                case "call_off_sale": case "reset_screen": case "restore_room_lights":
+                case "close_freezer": case "hear_complaint":
                 case "announce_closing": case "fix_cameras":   // 0.4.1's two new chores
                     return EmployeeWhat.AnswerChore;
                 case "drink_coffee": return EmployeeWhat.Coffee;

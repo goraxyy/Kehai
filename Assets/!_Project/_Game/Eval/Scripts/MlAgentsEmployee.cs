@@ -1,7 +1,7 @@
 // The simulated players' trained mind, through Unity ML-Agents (0.4.0, build plan §7, C2.4).
 //
 // Compiled only with KAREN_MLAGENTS, like Karen's own bridge (MlAgentsTacticPolicy.cs). One agent
-// for the whole process, on an object that outlives the eval's scene reloads; each SimulatedPlayer
+// per mind, on an object that outlives the eval's scene reloads; each SimulatedPlayer
 // with -bot-mind trainer asks it at every decision, synchronously: RequestDecision, then one
 // EnvironmentStep, so the player has its answer now.
 //
@@ -26,13 +26,11 @@ namespace Kehai.Eval
     public sealed class MlAgentsEmployee : Agent, IEmployeeMind, IEmployeeDemonstrator
     {
         public const string Behavior = "Employee";
-        static MlAgentsEmployee instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Register()
         {
-            instance = null;
-            EmployeeMinds.MlAgentsFactory = () => instance != null ? instance : instance = Build();
+            EmployeeMinds.MlAgentsFactory = Build;
         }
 
         BehaviorParameters behavior;
@@ -69,6 +67,13 @@ namespace Kehai.Eval
                 behavior.BehaviorType = BehaviorType.HeuristicOnly;
                 agent.recorder = r;
             }
+            try
+            {
+                string dir = Path.Combine(Application.persistentDataPath, "kehai_eval");
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(Path.Combine(dir, "brain_spec_Employee.json"), EmployeeObservation.SpecJson());
+            }
+            catch (System.Exception e) { Debug.LogWarning("employee spec not written: " + e.Message); }
             go.SetActive(true);
             Application.quitting += () => { if (agent != null && agent.recorder != null) agent.recorder.Close(); };
             return agent;
@@ -180,6 +185,11 @@ namespace Kehai.Eval
         public void EndShift(bool careerOver)
         {
             EndEpisode();
+            inputs = null;
+            what = how = which = null;
+            shown = default;
+            showing = false;
+            action[0] = action[1] = action[2] = -1;
             Academy.Instance.EnvironmentStep();
             CountRecorded();
         }
