@@ -45,7 +45,7 @@ public sealed class StoreCameras : MonoBehaviour
     {
         new Spot("COLD ROOM", "Cold storage", new Vector2(83f, -177.5f), new Vector2(1f, 0f), new Vector3(66f, 0f, -184f)),
         new Spot("STOCKROOM", "Stockroom", new Vector2(15f, -177.5f), new Vector2(-1f, 0f), new Vector3(36f, 0f, -183f)),
-        new Spot("LOBBY", "Lobby", new Vector2(83f, -112f), new Vector2(1f, 0f), new Vector3(55f, 0f, -116f)),
+        new Spot("LOBBY", "Lobby", new Vector2(83f, -112f), new Vector2(1f, 0f), new Vector3(60f, 0f, -116f)),
         new Spot("STAFF ROOM", "Staff room", new Vector2(12f, -138.5f), new Vector2(-1f, 0f), new Vector3(19f, 0f, -145f)),
         new Spot("STORE FRONT", "Pavement", new Vector2(30f, -108.5f), new Vector2(0f, -1f), new Vector3(60f, 0f, -107.5f)),
         new Spot("BACKSTREET", "Backstreet", new Vector2(14.5f, -152.5f), new Vector2(0f, 1f), new Vector3(18.5f, 0f, -168f)),
@@ -241,7 +241,11 @@ public sealed class StoreCameras : MonoBehaviour
         }
     }
 
-    static bool CanDraw => !Application.isBatchMode && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+    static bool CanDraw => !Application.isBatchMode && HasGraphics;
+
+    // A graphics device to draw a feed with: none in batch runs with -nographics (the tests, the
+    // ablations), where a feed is never made. A batch run with graphics (the pictures) has one.
+    public static bool HasGraphics => SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
 
     // One feed at a time, in turn, and only while you're near enough to the screens to see
     // them: six extra views of the store are dear on a small computer.
@@ -358,7 +362,7 @@ public sealed class StoreCamera : MonoBehaviour
 
     public void RenderFeed()
     {
-        if (IsBroken || Feed == null) return;
+        if (IsBroken || Feed == null || !StoreCameras.HasGraphics) return;
         Feed.targetTexture = EnsurePicture();
         Feed.Render();
     }
@@ -505,7 +509,8 @@ public sealed class CctvWall : MonoBehaviour
         signal = on;
         for (int i = 0; i < pictures.Count; i++)
         {
-            Texture(pictures[i], on ? (Texture)cameras[i].EnsurePicture() : Noise());
+            // Without a graphics device (-nographics) there's no picture to show: the noise stands in.
+            Texture(pictures[i], on && StoreCameras.HasGraphics ? (Texture)cameras[i].EnsurePicture() : Noise());
             pictures[i].color = on ? Color.white : new Color(0.55f, 0.55f, 0.6f);
             labels[i].text = on ? cameras[i].Spot.Name : cameras[i].Spot.Name + "  ·  NO SIGNAL";
             labels[i].color = on ? (Color)UiTheme.Text : (Color)UiTheme.Accent;

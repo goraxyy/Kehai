@@ -337,7 +337,9 @@ public class AwarenessInTheStoreTests
                                   $"a sweep casts {rays / (float)spots:0} rays (at most {maxRays}) in {ms / spots:0.000} ms");
             Assert.LessOrEqual(after, before * 1.25, "cells in view are checked less often than before");
             Assert.LessOrEqual(maxRays, config.sweepCellsPerTick, "the sweep cast more rays than its budget");
-            Assert.Less(ms / spots, 5.0, "a sweep costs too much");
+            // The budget per cell checked is 0.2.0's (5 ms for 120 cells); since 0.4.1 a tick checks
+            // twice the cells, for a cone twice as long, so a sweep may cost twice as much.
+            Assert.Less(ms / spots, 5.0 * config.sweepCellsPerTick / 120.0, "a sweep costs too much for the cells it checks");
         }
         finally
         {

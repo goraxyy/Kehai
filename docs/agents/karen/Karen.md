@@ -1853,6 +1853,10 @@ Three calls by the owner, all in `SightSensor` and `KarenConfig`.
   by the eye-to-eye rule: hiding is breaking the line between her eyes and yours.
 - She sees as well at twice the distance as 0.2.0's eye did (tested), and twice the gain halves
   the time to "seen" at every distance (tested).
+- **The "nothing here" sweep costs about twice as much:** 240 cells a tick for a cone twice as
+  long, so a cell in view is looked at about as often as before (every 5.9 ticks against 5.1).
+  On this Mac a sweep took 8.4 ms in the test (209 rays), against about 4 before. The test's
+  budget is per cell checked, as before.
 - Her gaze light stays a torch's (26 m). `FogState.Open` went from 60 m to 120 m, or fog
   anywhere would have cut her eye back to 60.
 - **Against the tuning plan's Q2** (12 November: keep the eye targets, tune reactions rather
