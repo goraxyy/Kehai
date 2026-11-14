@@ -125,10 +125,19 @@ namespace Kehai.Karen
                     foreach (Region r in map.Regions)
                         if (!r.IsDoor && r.Area == room && sources.Count < 3) sources.Add(r.Centroid);
             }
+            // A room of fridges (the cold room has 46) pours from eight of them, spread out: enough
+            // to fill it, without thousands of particles.
+            if (sources.Count > MaxFogSources)
+            {
+                var spread = new List<Vector3>();
+                for (int i = 0; i < MaxFogSources; i++) spread.Add(sources[i * sources.Count / MaxFogSources]);
+                sources = spread;
+            }
             if (map != null) fogSources[room] = sources;   // found once per scene, like the fridges
             return sources;
         }
 
+        public const int MaxFogSources = 8;
         readonly Dictionary<string, List<Vector3>> fogSources = new Dictionary<string, List<Vector3>>();
         static readonly List<Vector3> noSources = new List<Vector3>();
 
