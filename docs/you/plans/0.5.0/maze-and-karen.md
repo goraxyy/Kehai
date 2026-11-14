@@ -24,7 +24,7 @@ Most of her is built from the map at load, so it follows a new layout without an
 | **Trick placement** (where to Spill, where to Block a door) | candidate places come from the map | none; the trick check runs per layout (C4.6) |
 | **Section names** ("Aisle 7/B") | come from the section rectangles | a section table per layout (C4.3) |
 | **The Ledger's places** (where you dwell, hide, the routes you take, placement memory, the new escape habits) | keyed by region names, which mean other places on another layout | places keyed by layout, plus a "kind of place" that carries over (§2; C4.4) |
-| **The trained brains' inputs** (0.4.0: her belief as a short list: mass per area, her three best guesses; D7) | mostly layout-free, because they're not a picture of the store | a check that no input names a fixed region; training across layouts (§3; C4.9) |
+| **The trained brains' inputs** (0.4.0's `BrainObservation`: about 200 numbers; her belief as mass per room, not per aisle, and her three best guesses; D7) | layout-free: the rooms don't change, and the whole sales floor is one room | a test that no input names an aisle or region; training across layouts (§3; C4.9) |
 | **The starting Ledger** ("everyone's" habits: where people hide) | keyed by place | per kind of place, so it carries to a new layout |
 
 **The one bug this exposes:** the map numbers doorways in whatever order Unity finds the doors,

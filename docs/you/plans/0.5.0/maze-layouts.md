@@ -25,9 +25,9 @@ says so.
 | M3 | **The pillar at a joint is picked by what meets there:** an end cap (E) at a free end, a straight piece (I) in a line, an L at a corner, a T where three meet, the cross (+) where four meet, and the "one-two" T and L where a one-sided run meets a two-sided one. **Guess:** the b, S and R pillars are special ends (b sells from its back, S and R sideways). | the shelf kit's pieces in the scene (`Shelf_Pillar_*`) and `MerchandisingTests` |
 | M4 | **Two-sided runs stand in the open and sell to both aisles; one-sided runs stand only with their back to a wall** (the drinks along the east wall). A pillar sells only on the sides its price strips are on. | [STORE.md](../../../agents/store/STORE.md), "Which way a shelf faces" |
 | M5 | **Tall shelves (2 m, three boards) block sight; short ones (1.25 m, two boards) don't** for a standing person. Since 0.4.1 she judges cover eye to eye, so crouching behind a short shelf hides you. Short shelves go by the doors (fruit and veg, bread) and where the view should stay open (health & beauty). | `ShelfPrefabBuilder.cs`; 0.4.1's sight |
-| M6 | **Fridges and chillers stand with their backs to a wall, never in the open,** so dairy and frozen sit at the cold end, by the cold room's door. Layouts don't move them (Q18). Chest freezers are the one cold piece that may stand free, inside the frozen section. **Guess:** that no chiller stands on the east wall. | the scene's chillers; [STORE.md](../../../agents/store/STORE.md), "Milk at the far wall" |
+| M6 | **Fridges and chillers stand with their backs to a wall, never in the open,** so dairy and frozen sit at the cold end, by the cold room's door. Layouts don't move them (Q18). Chest freezers are the one cold piece that may stand free, inside the frozen section. **Not checked chiller by chiller:** that they stand on the south wall comes from the sections (dairy and frozen are the south-most, by the cold room's door); I haven't read each chiller's position in the scene, nor whether any stand on the east wall. | the scene's chillers; [STORE.md](../../../agents/store/STORE.md), "Milk at the far wall" |
 | M7 | **The sections keep the customer's order** (Q17): in at the north-east doors, round, out through the tills at the north-west. Fruit and veg by the doors, bread at the front, drinks on the east wall, milk at the far wall, frozen beside dairy, pet in a far corner, sweets at the tills. Each layout cuts its own section rectangles to fit. | `StoreLayout.cs` |
-| M8 | **Every product needs a shelf, with heavy goods at floor level,** so a layout needs roughly today's amount of shelving: 161 bays in [STORE.md](../../../agents/store/STORE.md)'s 2.5 m plan. The ten here have 103–172 shelf squares in the same units. | the merchandising tests |
+| M8 | **Every product needs a shelf, with heavy goods at floor level,** so a layout needs roughly today's amount of shelving: 161 bays in [STORE.md](../../../agents/store/STORE.md)'s 2.5 m plan. The ten here have 103–172 shelf squares: a rough comparison, since a bay in that plan and a square here aren't quite the same thing. | the merchandising tests |
 | M9 | **Aisles are at least one bay wide,** so two people can pass and the NavMesh's agent fits. In the drawings that's 2.5 m; in the store, with the shelves' depth (about 1 m) taken off, 1.5–4 m. | today's store; the NavMesh |
 | M10 | **Mostly loops.** A chase with no way round is frustrating rather than tense, and her herding needs loops: the endless maze knocks through 75% of its dead ends. A few pockets and chokepoints on purpose, in the layouts that are about them. | [DECISIONS.md §4](../../../agents/DECISIONS.md#4-the-endless-maze) |
 | M11 | **The aprons stay open:** in front of every door, the tills' lanes, and the back aisle in front of the chillers. | the doors and the queue |
@@ -50,7 +50,7 @@ says so.
   walk in from the doors. The maze is the middle; the back aisle and the chillers are the bottom.
 - **A shelf fills a whole 2.5 m square in the drawing.** In the store a bay is about 1 m deep, so
   the aisles are wider than they look.
-- Today's store, in the same units, is the 2.5 m plan in [STORE.md](../../../agents/store/STORE.md#the-building).
+- Today's store is drawn at the same scale (not in these symbols) in [STORE.md](../../../agents/store/STORE.md#the-building)'s 2.5 m plan.
 
 **The four numbers under each layout:**
 
@@ -143,7 +143,7 @@ D.#...#.#####.#####.###.|#
 |---|---|---|---|
 | 165 (20 short) | 21 | 16 | 19 m |
 
-- **For a chase:** Closest to today's feel: the shortest views of the ten, many corners, a few pockets.
+- **For a chase:** Meant to feel most like today's store (not measured: today's store couldn't be compared on the same drawing): the shortest views of the ten, many corners, a few pockets.
 - **Sections:** Sections are cut as rectangles over it, as today.
 - **Risk:** Getting lost in a bad way (the release plan's worry): it needs the aisle signs and a landmark or two.
 
@@ -486,6 +486,9 @@ aid, not game code). For every layout:
 - the aprons of all eight doorways and the tills' lanes are open (M11);
 - one-sided shelving touches a wall, and chillers stand only on the south wall (M4, M6);
 - the four numbers above.
+
+**The drawings are the source of truth.** The Labyrinth came from Python's random numbers with
+seed 7, which C# won't repeat, so C4.1 copies each drawing's walls, not a seed.
 
 **What it doesn't check:** the real shelf models' sizes and how the pillars join (C4.2 does that
 in Unity), whether every section has the right shelves for its products (C4.3), and how the bots

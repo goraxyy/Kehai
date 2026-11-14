@@ -14,8 +14,8 @@ built until you answer Q9 and Q10.
 
 | Player | Where | How it decides | Speed |
 |---|---|---|---|
-| Four scripted bots (efficient, skittish, reckless, cautious), with a fear model | `main` | hand-written rules | a 150 s shift in 5–15 s in batch |
-| Trained bots: a mind trained with Unity ML-Agents, a persona of 14 numbers, habits, moods and dice | 0.4.0 branch | a small network, asked at each choice (40–80 choices a shift) | about the same |
+| Four scripted bots (efficient, skittish, reckless, cautious), with a fear model | `main` | hand-written rules | a 150 s shift in 5–15 s in the test environment ([IDEAS.md §3](../../IDEAS.md#3-an-agent-test-environment)) |
+| Trained bots: a mind trained with Unity ML-Agents, a persona of 14 numbers, habits, moods and dice | 0.4.0 branch | a small network, asked at each choice (40–80 choices a shift) | 15–30 s (0.4.0's batch shifts run at 5–9× real time) |
 | **Claude playing a shift** | `main`: `tools/eval/llm_agent.py` | reads the store as prose (only what a player could know), calls one tool, `act`, with one of 17 actions; the real player body does it | one model call per action |
 
 The test environment it plays through, with its six failure labels (starvation, thrashing,
