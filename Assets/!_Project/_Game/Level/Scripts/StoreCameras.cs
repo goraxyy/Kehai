@@ -329,8 +329,8 @@ public sealed class StoreCamera : MonoBehaviour
         ledGo.transform.localPosition = new Vector3(0.05f, -0.05f, 0.18f);
         cam.led = ledGo.AddComponent<Light>();
         cam.led.type = LightType.Point;
-        cam.led.range = 0.5f;
-        cam.led.intensity = 1.2f;
+        cam.led.range = 0.12f;      // a glint on the housing, not a pool of green on the wall
+        cam.led.intensity = 0.6f;
         cam.led.color = new Color(0.2f, 1f, 0.3f);
         return cam;
     }
@@ -602,7 +602,8 @@ public sealed class CameraBox : HighlightInteractable, IHoldInteractable
         collider.size = Size + new Vector3(0.02f, 0.02f, 0.04f);
 
         float front = Size.z * 0.5f;
-        if (PropModels.Place(PropModels.CameraBox, root.transform) == null)
+        GameObject model = PropModels.Place(PropModels.CameraBox, root.transform);
+        if (model == null)
         {
             // Its own boxes until the model's imported: the case, its door, a little camera
             // picture, the reset switch.
@@ -622,7 +623,7 @@ public sealed class CameraBox : HighlightInteractable, IHoldInteractable
         GameObject lampGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampGo.name = "Lamp";
         lampGo.transform.SetParent(root.transform, false);
-        lampGo.transform.localPosition = new Vector3(0.13f, 0.15f, front + 0.012f);
+        lampGo.transform.localPosition = new Vector3(0.13f * PropModels.Side(model), 0.15f, front + 0.012f);
         lampGo.transform.localScale = Vector3.one * 0.032f;
         CctvWall.Drop(lampGo.GetComponent<Collider>());
         box.lamp = lampGo.GetComponent<Renderer>();

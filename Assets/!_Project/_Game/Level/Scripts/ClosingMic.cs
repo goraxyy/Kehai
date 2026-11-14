@@ -38,7 +38,8 @@ public sealed class ClosingMic : HighlightInteractable
         collider.center = new Vector3(0f, 0f, 0.04f);
 
         float front = Size.z * 0.5f;
-        if (PropModels.Place(PropModels.ClosingMic, root.transform) == null)
+        GameObject model = PropModels.Place(PropModels.ClosingMic, root.transform);
+        if (model == null)
         {
             // Its own boxes until the model's imported: the case, a speaker grille, the talk
             // button, and a microphone on a short stalk.
@@ -58,7 +59,7 @@ public sealed class ClosingMic : HighlightInteractable
         GameObject lampGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampGo.name = "Lamp";
         lampGo.transform.SetParent(root.transform, false);
-        lampGo.transform.localPosition = new Vector3(-0.095f, -0.07f, front + 0.01f);
+        lampGo.transform.localPosition = new Vector3(-0.095f * PropModels.Side(model), -0.07f, front + 0.01f);
         lampGo.transform.localScale = Vector3.one * 0.026f;
         CctvWall.Drop(lampGo.GetComponent<Collider>());
         mic.lamp = lampGo.GetComponent<Renderer>();

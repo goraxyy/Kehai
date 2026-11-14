@@ -24,6 +24,12 @@ public static class PropModels
     // wall its back (seen in 0.4.1's pictures, the first time the models were imported).
     // A model is one mesh, so the props light and blink their lamps with small objects of
     // their own, laid over the model's lamp.
+    // Which way a model's left and right fall in the prop's own frame: Blender's +X shows on the
+    // viewer's right, which is the prop's −X, as it faces the viewer. The props lay their own
+    // lamps over the model's (a model is one mesh and can't blink), so a lamp at Blender's x sits
+    // at prop x × Side(model). Without a model the prop's own boxes keep the code's layout.
+    public static float Side(GameObject model) => model != null ? -1f : 1f;
+
     public static GameObject Place(string name, Transform parent)
     {
         GameObject model = Resources.Load<GameObject>(Folder + "/" + name);

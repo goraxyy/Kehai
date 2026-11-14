@@ -29,7 +29,8 @@ public sealed class PaBox : HighlightInteractable
         collider.size = Size + new Vector3(0.02f, 0.02f, 0.05f);
 
         float front = Size.z * 0.5f;
-        if (PropModels.Place(PropModels.PaBox, root.transform) == null)
+        GameObject model = PropModels.Place(PropModels.PaBox, root.transform);
+        if (model == null)
         {
             Part(root.transform, "Body", Vector3.zero, Size, new Color(0.9f, 0.86f, 0.74f));
             Part(root.transform, "Grille", new Vector3(0f, 0.07f, front + 0.004f), new Vector3(0.11f, 0.11f, 0.006f), new Color(0.08f, 0.08f, 0.09f));
@@ -49,8 +50,9 @@ public sealed class PaBox : HighlightInteractable
         box.greenDim = KarenProps.Lit(new Color(0.05f, 0.25f, 0.08f));
         box.red = KarenProps.Emissive(new Color(1f, 0.08f, 0.05f), 3f);
         box.redDim = KarenProps.Lit(new Color(0.3f, 0.04f, 0.04f));
-        box.onLamp = Lamp(root.transform, "ON lamp", new Vector3(-0.075f, -0.05f, front + 0.008f));
-        box.offLamp = Lamp(root.transform, "OFF lamp", new Vector3(0.075f, -0.05f, front + 0.008f));
+        float side = PropModels.Side(model);
+        box.onLamp = Lamp(root.transform, "ON lamp", new Vector3(-0.075f * side, -0.05f, front + 0.008f));
+        box.offLamp = Lamp(root.transform, "OFF lamp", new Vector3(0.075f * side, -0.05f, front + 0.008f));
         box.Show(true);
         return box;
     }

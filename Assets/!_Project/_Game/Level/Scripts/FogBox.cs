@@ -27,7 +27,8 @@ public sealed class FogBox : HighlightInteractable, IHoldInteractable
         var collider = root.AddComponent<BoxCollider>();
         collider.size = Size + new Vector3(0.02f, 0.02f, 0.04f);
 
-        if (PropModels.Place(PropModels.FogBox, root.transform) == null)
+        GameObject model = PropModels.Place(PropModels.FogBox, root.transform);
+        if (model == null)
         {
             // Its own boxes until the model's imported: the box, its door, the red reset knob.
             Part(root.transform, "Body", Vector3.zero, Size, new Color(0.33f, 0.42f, 0.47f));
@@ -46,7 +47,7 @@ public sealed class FogBox : HighlightInteractable, IHoldInteractable
         GameObject lampGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampGo.name = "Lamp";
         lampGo.transform.SetParent(root.transform, false);
-        lampGo.transform.localPosition = new Vector3(0.155f, 0.17f, Size.z * 0.5f + 0.012f);
+        lampGo.transform.localPosition = new Vector3(0.155f * PropModels.Side(model), 0.17f, Size.z * 0.5f + 0.012f);
         lampGo.transform.localScale = Vector3.one * 0.034f;
         Object.Destroy(lampGo.GetComponent<Collider>());
         box.lamp = lampGo.GetComponent<Renderer>();
