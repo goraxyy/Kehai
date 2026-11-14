@@ -263,6 +263,7 @@ made where the plan didn't say, each the plan's nearest default (11 November 202
 | **Tricks "on your way", the route guesses after any sighting, and the mirror map's placement bonus** only work with the destination model (P2, P3) or the mirror (K1, K2) | With today's settings her placements must not change | They can't be judged until the prediction model is chosen (C4.11) |
 | **C0.2's fences are off by default** (`KarenConfig.trapFences`), on in the league: Spill not at Office/G and only on your floor; a fallen test player put back where it stood | On, they changed today's shift (the bisect); training needs them, because a stuck episode poisons it | Ablations without `-karen-set trapFences=on` can still get stuck there; the causes are in the scene, not in git |
 | **The Employee's trainer side learns the careful corner; Karen's never meets it** | §7.6 says so; the league checks it and stops otherwise | — |
+| **0.4.0 merges as code; its runs wait for 0.4.1** (the owner, 14 November) | 0.4.1 changes her sight, adds cameras, two tricks and three chores: recordings, fits, the brains' outputs and the Employee's actions would all be out of date, and the held-out players are looked at once | C4.10's fits are in the build but off by default; C4.11 onward, C2.7, C5.9–C6.3 and Y1.1 run after 0.4.1 merges |
 
 ## 12. Still open
 
