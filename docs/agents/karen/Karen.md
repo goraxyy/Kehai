@@ -1968,4 +1968,11 @@ Appended to `TacticLibrary` (29 entries now), so every older trick keeps its num
   report saying when each trick started and landed, for the trick videos
   ([`tools/tricks`](../../../tools/tricks/README.md)).
 - New EditMode tests: `Kehai041Tests`, `Kehai041SightAndDoorsTests`, `Kehai041InTheStoreTests`.
+- **The trick check on 14 November** (one shift, rung E, the efficient test player): 12 of 14
+  tricks started and landed, 0 fairness violations, and the shift ended with a clock-out.
+  Camera watch ran its 25 s at the screens; Camera break's chore was fixed at the camera box
+  13 s after the player reached it. Fog didn't start (her belief wasn't in the cold room or the
+  stockroom at that moment: the check doesn't steer it), and Camera bolt-on found no shelf slot
+  near where she thought the player was. During other tricks she chose Camera watch on her own
+  and the cameras showed her the player 16 times in 25 s once.
 
