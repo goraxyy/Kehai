@@ -261,14 +261,18 @@ public class Kehai041Tests
     }
 
     [Test]
-    public void ThePaMicrophone_IsBuiltWithItsOwnBoxes_AndLightsWhenLookedAt()
+    public void ThePaMicrophone_IsBuilt_WithItsModelOrItsOwnBoxes_AndHighlights()
     {
         ClosingMic mic = ClosingMic.Build(new Vector3(2f, 1.45f, 0f), Vector3.forward, null);
         mic.transform.SetParent(root.transform);
         Assert.IsNotNull(mic.GetComponent<OutlineHighlight>(), "it highlights like the store's other things");
         Assert.IsNotNull(mic.GetComponent<BoxCollider>());
         Assert.AreEqual(LayerMask.NameToLayer("Interactable"), mic.gameObject.layer);
-        Assert.Greater(mic.GetComponentsInChildren<Renderer>().Length, 3, "a case, a grille, a button, a microphone, a lamp");
+        if (PropModels.Has(PropModels.ClosingMic))
+            Assert.IsNotNull(mic.transform.Find(PropModels.ClosingMic), "the imported model, in place of its own boxes");
+        else
+            Assert.Greater(mic.GetComponentsInChildren<Renderer>().Length, 3, "a case, a grille, a button, a microphone, a lamp");
+        Assert.IsNotNull(mic.transform.Find("Lamp"), "its own lamp, with or without the model");
         Assert.AreEqual("The PA microphone", mic.GetPrompt());
     }
 
