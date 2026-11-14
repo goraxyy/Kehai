@@ -4,17 +4,20 @@ Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 6. **Edit anything in the
 and "Prompt" columns,** cross out steps you don't want, and add any you do. When you're done,
 change the status line to "edited".
 
-> **Status:** draft lines, not yet edited by you.
+> **Status:** draft lines, not yet edited by you. Your answers of 14 November are in: no Karen in
+> the first shift (Q23), and the guide runs on the first shift only (Q24). The voice of the
+> thoughts (Q21) and whether they're read aloud (Q22) are rewritten in the plan's §16.2.
 
 **How it works.** The first shift of a new career runs a short script. Each step starts on
 something in the game, makes one or two things blink (their outline pulses), shows one thought
 at the bottom of the screen in your own voice, and shows a prompt when you look at the thing.
 It ends when you've done it. Only one thought is on screen at a time, each for about 4 seconds;
-if you haven't acted after 30 seconds, it shows once more. Esc → Help → "First shift" replays
-it; the pause menu can switch it off.
+if you haven't acted after 30 seconds, it shows once more. The pause menu can switch it off. It
+runs on the first shift of a new career only, and never again (Q24).
 
 **It never:** runs for bots or in batch runs; names one of her tricks or explains her; says
-anything only by sound.
+anything only by sound. **She isn't in the store on the first shift** (Q23), so nothing here
+needs to dodge her.
 
 **Keys,** as in [CONTROLS.md](../../../agents/game/CONTROLS.md): E use, E held for holds, Q put
 down, C the task list, Left Shift sprint, Left Ctrl crouch.
@@ -51,13 +54,12 @@ Shown the first time each job comes up in the shift, in whatever order they come
 
 ## When things go wrong
 
-Only if it happens on the first shift. She holds her own tricks back until you've clocked in and
-done two jobs, or for 3 minutes (Q23), so these are mostly the store's own trouble.
+Only if it happens on the first shift. She isn't there (Q23), so this is the store's own
+trouble.
 
 | # | Starts when | Blinks | You think | Prompt (on look) | Ends when |
 |---|---|---|---|---|---|
 | 17 | the lights go out | the backstreet door, then the breaker box | "Power's gone. The breakers are out back." | "Hold E to reset the breakers (20 s)" | the lights are back |
-| 18 | you first see her (optional: your call) | — | "…who's that? I thought I was alone tonight." | — | — |
 
 ## Closing
 
@@ -75,8 +77,6 @@ done two jobs, or for 3 minutes (Q23), so these are mostly the store's own troub
   the store, not from the guide.
 - **Short:** a thought is one breath. If a line needs two sentences, it's two steps.
 - **Prompts** use the game's own words for keys, the same as the hold bar's ("Hold E to … (20 s)").
-- **Step 18** is the one line that hints at her. Delete it if you'd rather she meet you in
-  silence.
-- **Option C** in the plan (Karen herself welcomes you over the PA) would replace steps 1–5 with
-  her voice: "Good evening. Please clock in at the staff room. I'll be watching the floor." Say if
-  you want it tried (Q22).
+- **Step 18 is gone:** it was the line for first seeing her, and she isn't in the first shift.
+  Her first appearance (shift 2) is left to the game, not the guide.
+- **A PA welcome** as you walk in (no Karen, just the store's announcement) is option C of Q22.

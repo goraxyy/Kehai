@@ -1,7 +1,8 @@
 # More tricks
 
 Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 1. The flash sale is the one you asked
-for; the six after it are ideas. **Tick the ones you want in 0.5.0** (Q8).
+for; the six after it were ideas. **You picked four on 14 November** (Q8): Screen loop, Room
+lights, Freezer alarm and The complaint. False trail and Door jam are out.
 
 Every trick keeps the rules of [Karen.md §17](../../../agents/karen/Karen.md#17-karen-030-the-tricks-come-back):
 a tell before it lands; a chore that says where it is; hands-on tricks only at her hands (rule 9);
@@ -18,23 +19,23 @@ no new chore once the doors close (rule 10); a shift can always be won.
 | | |
 |---|---|
 | **What she does** | the PA chimes and she announces a sale: "Attention, shoppers! Two for one in aisle 7, for the next ten minutes." |
-| **What changes** | the shopper limit goes from 2 to 4, and they arrive twice as often (Q5). Never above the code's ceiling of 5 |
+| **What changes** | the shopper limit goes from 2 to 4 (Q5: the limit only; they arrive as today). Never above the code's ceiling of 5 |
 | **Why it hurts** | a longer queue, more spills and questions, more help to give; and more people who can tell her where you are when she asks the customers |
-| **Your chore** | go to the PA microphone in the staff room and **hold E for 20 s**: "Hold E to call off the sale (20 s)". You announce the sale is over; the shoppers inside finish their lists, and the flow drops back to 2 (Q4) |
+| **Your chore** | go to the PA microphone in the staff room and **hold E for 20 s** (your answer, Q4): "Hold E to call off the sale (20 s)". You announce the sale is over; the shoppers inside finish their lists, and the limit drops back to 2 |
 | **Its tell** | the chime and her voice: the trick announces itself |
 | **Kind** | a building trick, like Blackout: she needn't be there. Attacks your work and your cover among people |
-| **It can't** | start while the PA is switched off at the PA box (Q6), or once the doors have closed (rule 10). A sale running at closing ends there, since nobody comes in after closing |
+| **It can't** | start while the PA is switched off at the PA box, or once the doors have closed (rule 10). What switching the PA off does to a running sale is Q6 (rewritten in the plan's §16.2); note that in 0.4.1 the microphone needs the PA on. A sale running at closing ends there, since nobody comes in after closing |
 | **Builds on** | 0.4.1's microphone (`ClosingMic.cs` on `claude/0-4-1-2305a2`) and its 20 s holds; the spawner on `main` |
 | **The bots** | a new chore, `call_off_sale`, and a row in the trick check |
 | **A combo she could learn** | Flash sale, then Ask the customers: more witnesses, and you're stuck at the microphone for 20 s |
 
 ## 2. Six more ideas
 
-Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 2, 5, 6.
+Each builds on something 0.4.0 or 0.4.1 added.
 
 ### 2.1 False trail
 
-- [ ] **Build in 0.5.0**
+**Not in 0.5.0** (you, 14 November).
 
 | | |
 |---|---|
@@ -47,7 +48,7 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 
 ### 2.2 Screen loop
 
-- [ ] **Build in 0.5.0**
+- [x] **Build in 0.5.0** (you, 14 November)
 
 | | |
 |---|---|
@@ -60,7 +61,7 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 
 ### 2.3 Room lights
 
-- [ ] **Build in 0.5.0**
+- [x] **Build in 0.5.0** (you, 14 November)
 
 | | |
 |---|---|
@@ -73,7 +74,7 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 
 ### 2.4 Freezer alarm
 
-- [ ] **Build in 0.5.0**
+- [x] **Build in 0.5.0** (you, 14 November)
 
 | | |
 |---|---|
@@ -86,7 +87,7 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 
 ### 2.5 The complaint
 
-- [ ] **Build in 0.5.0**
+- [x] **Build in 0.5.0** (you, 14 November)
 
 | | |
 |---|---|
@@ -99,7 +100,7 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 
 ### 2.6 Door jam
 
-- [ ] **Build in 0.5.0**
+**Not in 0.5.0** (you, 14 November).
 
 | | |
 |---|---|
@@ -120,4 +121,4 @@ Each builds on something 0.4.0 or 0.4.1 added. My order of preference: 1, 3, 4, 
 | A row in the trick check | `TrickCheck` |
 | A name in her learning records, the brains' list of choices and the model pack's known tricks | 0.4.0's learning code |
 | A line in the shift report's "your answers" | `KarenLedger` |
-| **And, if 0.4.0 has trained already:** a refresh round for both brains | Windows, nights (Q1) |
+| **No refresh round:** training happens once, after 0.5.0 and the vertical slice (Q1), so every trick is in first | — |

@@ -1,12 +1,13 @@
 # Bots into agents
 
-Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 2. **Discuss first:** nothing here is
-built until you answer Q9 and Q10.
+Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 2. **Your answer (Q9, 14 November):**
+better test players, using AI/ML, close to reality, and adaptable. That's option A, made
+adaptable (the plan's §7). The language-model panel below is optional (Q10, rewritten).
 
 1. [What exists](#1-what-exists)
 2. [Five meanings of "agent"](#2-five-meanings-of-agent)
 3. [What a language-model player costs](#3-what-a-language-model-player-costs)
-4. [My recommendation](#4-my-recommendation)
+4. [My recommendation, after your answer](#4-my-recommendation-after-your-answer)
 
 ---
 
@@ -64,9 +65,13 @@ which is about 100,000 shifts: thousands of dollars even on Haiku, and months of
 shared with the build sessions that ran out this week. A separate API key with its own monthly
 cap keeps the two apart (Q10).
 
-## 4. My recommendation
+## 4. My recommendation, after your answer
 
-- **A stays the opponent she trains against.** Only A (and E, later) are fast and cheap enough.
+- **A, made adaptable** (your answer): the trained bots get a memory within a shift and their own
+  record of her across shifts, and the scorecard checks they adapt like people (the plan's
+  C2.6–C2.9). Only A (and E, later) are fast and cheap enough for her to train against.
+- **The panel (B) is optional** (Q10). The rest of this section is why it could still be worth
+  a few dollars.
 - **B becomes a held-out panel:** three to five fixed players, each a short written character
   ("careful, hates the dark, always serves the queue first") matched to a persona. Haiku 5.5 for
   most shifts, Sonnet 5.5 for a few. No part of Karen is ever trained or tuned against them; they

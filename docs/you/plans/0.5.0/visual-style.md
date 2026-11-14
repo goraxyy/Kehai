@@ -54,6 +54,7 @@ list: on an 8 GB Mac it costs far more than it gives.
 
 **The Look Lab** (a scene of its own; [§5](#5-the-island-a-scene-a-project-or-a-branch)):
 
+- **New props get simple materials** (Q30), not geometry only.
 - **Four slices side by side,** copied from the store's own pieces when the scene is built: a
   staff room (the clock, the lockers), a corner of the parking (a lamp post, a car, the doors),
   the backstreet (the boxes, the skip), and a run of maze aisle (shelves, a chiller, the cold
@@ -71,7 +72,9 @@ list: on an 8 GB Mac it costs far more than it gives.
 
 ## 4. What makes a game look good and still run fast
 
-It must run on this Mac (an M2 with 8 GB), other Macs and Windows. The game already draws its
+It must run on Macs and Windows (Q31). **The minimum:** an Apple Silicon Mac with 8 GB, like
+yours, is a fair floor for Macs. For Windows it's set by a test on a modest PC: your PC (an i9
+and an RTX 4090) is far above any minimum, and the Mac's numbers don't carry over. The game already draws its
 16,500 shelf slots with the GPU Resident Drawer, which needs the Forward+ renderer and works best
 in big scenes [10].
 
@@ -104,6 +107,9 @@ Art never goes into the public repo. Today it reaches the Windows PC through the
 | Can it break the game? | no, if it's never in a build | no | — |
 | Shared how? | the builder script is code (in git); the scene is made by a menu; new art goes to `kehai-assets` | the whole project zipped to `kehai-assets` | **can't**: art isn't in git, so a branch holds nothing of the look |
 | **Verdict** | **my pick** | if the game's project ever gets too fragile | not workable |
+
+**Your answer (Q29): this project.** A second project with the redesign's art would need about
+7–13 GB, more than this Mac has free (the plan's §16.4).
 
 **The name:** the scene already has a showcase root called `Models_Island`, which also carries the
 store's NavMesh surface. Deleting or moving it breaks navigation, so the new scene is called

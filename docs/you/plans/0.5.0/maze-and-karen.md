@@ -63,9 +63,8 @@ chokepoint is one already), so they cost nothing to author.
   cheap; the brains are the long runs.
 - **The test** (C4.10) is 0.4.0's ladders, run on the two held-out layouts. If she's much worse
   there than on the training layouts, she memorised the eight.
-- **When:** this fits either answer to Q1. If the training happens once on the final game, it's
-  done on all ten layouts from the start. If 0.4.0 trains now on today's store, the layouts add a
-  refresh round on Windows.
+- **When:** once, after 0.5.0 and the vertical slice (your answer to Q1), so it's done on the
+  layouts from the start, with careers of 4 shifts like the game.
 - **Today's store stays a layout of its own** (the eleventh), so today's results still compare.
 
 ## 4. A new layout every shift
@@ -76,9 +75,20 @@ chokepoint is one already), so they cost nothing to author.
 | You | how she behaves, which tricks she likes, the building's rooms and doors | the aisles, the shortcuts, where the dead ends are |
 
 So a change every shift resets most of what she learns about you before it pays, and you spend
-each shift's first minutes lost. A change **every few shifts** (my suggestion, Q16) lets both of
-you learn the store, then breaks it. In the game it could be a "re-merchandising night": the
-shift report says the store will be reorganised before the next shift.
+each shift's first minutes lost.
+
+**Your answer (Q16): the game has 4 shifts, and the layout changes at the 3rd and the 4th.**
+
+| Shift | The store | Karen | What she knows of you |
+|---|---|---|---|
+| 1 | today's store | not there (Q23) | your habits from shift 1, if Q40 says the store still watches |
+| 2 | today's store | there | your exact places, from shift 1 (Q40) and shift 2 |
+| 3 | a new layout | there | your habits by kind of place; exact places start again |
+| 4 | another new layout | there | the same |
+
+The kinds of place (§2) carry what she learned in shifts 1–2 into shifts 3 and 4, which is why
+they matter so much in a 4-shift game. Which two layouts, and whether shifts 1–2 are today's
+store, is Q36. Training careers do the same (C4.11).
 
 For a hard mode or the endless-maze idea ([IDEAS.md §2](../../IDEAS.md#2-the-endless-maze)),
 "every shift" is a fair setting to offer later.

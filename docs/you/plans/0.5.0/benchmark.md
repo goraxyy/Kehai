@@ -31,7 +31,7 @@ asked for "a proper benchmark, so I could also track her progress".
 A first draft (v1). The [0.4.0 plan's §11](../0.4.0-build-plan.md#11-how-its-judged) already
 defines most of these; the benchmark fixes them in one place.
 
-| Group | Score | Better is | Example |
+| Group | Score | Better is | Example (made up) |
 |---|---|---|---|
 | **The game's Karen** (pacing on) | catches a shift | inside your target, 0.20–0.35 | 0.28: about one shift in four ends with her catching you |
 | | how close your fear stays to its target (setpoint error) | lower | 0.11 |

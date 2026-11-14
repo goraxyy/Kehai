@@ -12,12 +12,12 @@ Q25–Q27.
 
 ## 1. The memory question
 
-"I don't have a lot of memory, is that a problem?" It depends which memory (Q25). Measured on
-this Mac on 13 November:
+"I don't have a lot of memory, is that a problem?" You meant the disk, "7–8 GB free" (Q25).
+Measured on this Mac on 13 and 14 November:
 
 | | Size | Note |
 |---|---|---|
-| **Disk** | 228 GB, **13 GB free** (94% used) | macOS starts to struggle below about 10% free |
+| **Disk** | 228 GB, **8.0 GB free** on 14 November (13 GB the day before) | below about 10% free, macOS starts to struggle; it's below that now |
 | Unity 6000.5.10f1 | 11 GB | one copy serves every project |
 | The project's `Library/` (Unity's cache) | 4.2 GB | **one per project copy** |
 | The project's `Assets/` | 161 MB | |
@@ -30,19 +30,20 @@ this Mac on 13 November:
 | | Extra disk | RAM | Verdict |
 |---|---|---|---|
 | **One project, three editions** | each build, 150–250 MB; only the ones you keep | one Unity at a time, as now | **fine** |
-| Three projects | about 4–5 GB each for the two extra copies (their own `Library/` and assets): about 9 GB, leaving about 4 GB free | the temptation to open two at once, which 8 GB can't take | **not fine** |
+| Three projects | about 4–5 GB each for the two extra copies (their own `Library/` and assets): about 9 GB, more than is free | the temptation to open two at once, which 8 GB can't take | **not possible** |
 
 **To give the Mac room** (Y7.1, your yes first): the old builds and the old test data (about
-3.9 GB together) can move to the Windows PC or a `kehai-assets` release, and come back when
-needed.
+3.9 GB together) can move to the Windows PC, which has 2 TB free, and come back when needed. That
+nearly doubles the Mac's free space. A second project with the redesign's art (about 7–13 GB) and
+whether a project can live on a flash card are answered in the plan's §16.4.
 
 ## 2. What goes in each version
 
-My reading of your three (Q26):
+My reading of your three (Q26, rewritten in the plan's §16.2 so it's easier to answer):
 
 | | Training | Testing | Gameplay |
 |---|---|---|---|
-| **Who uses it** | the Windows PC: bots and the trainer, many copies at once | playtesters, through PR #81's build | players: the Steam demo, then the game |
+| **Who uses it** | the Windows PC: bots and the trainer, about 8–12 copies at once | playtesters, through PR #81's build | players: the Steam demo, then the game |
 | **Guidance** | none | the guided first shift (item 6) | the guided first shift |
 | **Plot** | none | none | yes, once written (Q27) |
 | **Art** | only what the bots and Karen need: collision, the NavMesh, the lights she sees by; no textures, no sound | the quick pass | the redesign (Milestone 7) |
@@ -50,7 +51,7 @@ My reading of your three (Q26):
 | **UI** | none (no text components: they're what breaks today's training player) | the game's, plus the bug key and consent | the game's |
 | **Recording** | learning records and shift records; no replays | everything, with consent (PR #81) | crash reports, and play data only with consent |
 | **Debug tools** (F1, F2, the trick check) | the trick check, for tests | F1 and F2, the bug report | none (or behind a setting) |
-| **Karen** | the version being trained or tested | the version that shipped last | the version that shipped last |
+| **Karen** | the version being trained or tested | the version that shipped last; not in the first shift if Q39 says so | the version that shipped last; **not in the first shift** (Q23) |
 
 **The Training version also fixes a real gap.** 0.4.0's training player never reaches the
 trainer: with no graphics device, its text components throw errors without end. A version with

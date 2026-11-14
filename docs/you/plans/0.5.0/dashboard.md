@@ -1,7 +1,14 @@
 # One page for everything
 
 Part of the [Kehai 0.5.0 plan](../0.5.0-plan.md), item 9. **Discuss first:** the tasks wait on
-Q32–Q34.
+Q32 and Q33 (rewritten in the plan's §16.2). **No accounts exist yet** (Q34), so the marketing
+numbers wait; the release, builds and training sections can start without them.
+
+| To show | It needs |
+|---|---|
+| views, likes, subscribers | the YouTube channel, and a YouTube Data API key |
+| posts on the other channels | Buffer, with TikTok and Instagram connected |
+| wishlists | the Steam page (Steamworks) |
 
 1. [The options](#1-the-options)
 2. [Where every number comes from](#2-where-every-number-comes-from)
