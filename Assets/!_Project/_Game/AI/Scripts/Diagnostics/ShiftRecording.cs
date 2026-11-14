@@ -43,6 +43,9 @@ namespace Kehai.Karen
         public bool Chasing;
         public Vector2 Guess;               // where she thinks you are
         public float GuessConfidence;
+        // What you could sense of her (0.4.0, C1.6): the mirror map's answer sheet, judging only.
+        public bool PlayerSawKaren;
+        public bool PlayerHeardKaren;
 
         public readonly List<PersonState> Customers = new List<PersonState>();
         public readonly List<Vector2> Spills = new List<Vector2>();
@@ -75,6 +78,8 @@ namespace Kehai.Karen
         public string StartedAt = "";   // wall-clock date and time
         public float Length;
         public bool ClockedOut;
+        public string Bot = "";         // a simulated player's persona (0.4.0); empty for a person
+        public int Seed;                // the eval's seed (0.4.0); 0 for a person
         public readonly List<ShiftFrame> Frames = new List<ShiftFrame>();
         public readonly List<ShiftEvent> Events = new List<ShiftEvent>();
         public readonly Dictionary<int, string> CustomerWants = new Dictionary<int, string>();
@@ -140,6 +145,7 @@ namespace Kehai.Karen
                     f.GuessConfidence = brain.Belief.Confidence;
                 }
             }
+            PlayerSenses.Sense(me, brain, out f.PlayerSawKaren, out f.PlayerHeardKaren);
 
             foreach (CustomerNPC c in CustomerNPC.All)
             {
@@ -237,6 +243,8 @@ namespace Kehai.Karen
               .Append("\",\"started\":\"").Append(MiniJson.EscapeInner(StartedAt))
               .Append("\",\"length\":").Append(N(Length))
               .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false");
+            if (!string.IsNullOrEmpty(Bot)) sb.Append(",\"bot\":\"").Append(MiniJson.EscapeInner(Bot)).Append('"');
+            if (Seed != 0) sb.Append(",\"seed\":").Append(Seed);
             if (plan != null) sb.Append(",\"plan\":").Append(plan.ToJson());
             if (analysis != null) sb.Append(",\"analysis\":").Append(analysis.ToJson());
 
@@ -282,7 +290,8 @@ namespace Kehai.Karen
 
             // Frames as arrays of numbers, to keep a ten-minute shift to a few hundred KB:
             // [t, px, pz, pyaw, motion, held, energy, karen?, kx, kz, kyaw, mood, sees, chase, gx, gz, gconf, power,
-            //  customers[[id,x,z,yaw,state,wait,bay]], spills[[x,z]], emptyBays[i], bins[[x,z,fill,cap]], bags[[x,z]], locked[[x,z]], props[[kind,x,z,size]]]
+            //  customers[[id,x,z,yaw,state,wait,bay]], spills[[x,z]], emptyBays[i], bins[[x,z,fill,cap]], bags[[x,z]], locked[[x,z]], props[[kind,x,z,size]],
+            //  sawHer, heardHer]   (the last two since 0.4.0: what you could sense of her)
             sb.Append(",\"frames\":[");
             for (int i = 0; i < Frames.Count; i++)
             {
@@ -323,7 +332,7 @@ namespace Kehai.Karen
                     Vector4 p = f.Props[j];
                     sb.Append('[').Append((int)p.x).Append(',').Append(N(p.y)).Append(',').Append(N(p.z)).Append(',').Append(N(p.w)).Append(']');
                 }
-                sb.Append("]]");
+                sb.Append("],").Append(f.PlayerSawKaren ? 1 : 0).Append(',').Append(f.PlayerHeardKaren ? 1 : 0).Append(']');
             }
             sb.Append("],\"events\":[");
             for (int i = 0; i < Events.Count; i++)

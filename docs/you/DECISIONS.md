@@ -6,13 +6,25 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
-| 2026-11-13 | Where 0.4.1 and 0.4.0 touch the same files, you decide each one later from a list of questions; neither is merged into the other | the 0.4.1 pull request |
+| 2026-11-14 | Reconcile 0.4.1 with `main` now that 0.4.0 is merged, push it and open its PR; then build 0.5.0 | this list; the 0.4.1 pull request |
+| 2026-11-14 | Build first, test later: 0.4.1, then 0.5.0, then the vertical slice and the test build; every test and training run comes after, once ([TESTING.md](TESTING.md)) | [NOW.md](NOW.md#next-in-order) |
+| 2026-11-14 | Confirmed: no yes needed for each published model (the 12 November call), now in 0.4.0's plan too | [0.4.0 plan, D15](plans/0.4.0-build-plan.md#41-defaults-i-picked-change-any) |
+| 2026-11-14 | Close 0.4.0 as code: push it and open its PR now. Its training and test runs wait for 0.4.1 (and 0.5.0's layouts, if approved), then run once on the final game | [0.4.0 plan](plans/0.4.0-build-plan.md) |
+| 2026-11-13 | Record the belief data now, with the hand-written bot standing in for Employee-1; record again after Employee-1 is trained | [0.4.0 plan](plans/0.4.0-build-plan.md), C4.9 |
 | 2026-11-12 | Her eyes: twice the radius, twice as quick, and cover judged eye to eye (a low shelf doesn't hide you if she sees your eyes; under a rack she doesn't see you without that line). Built with no test yet | [Karen.md §19.1](../agents/karen/Karen.md#191-her-eyes) |
 | 2026-11-12 | Six store cameras shown on the office screens; two tricks, Camera watch and Camera break | [Karen.md §19.2](../agents/karen/Karen.md#192-the-stores-cameras) |
 | 2026-11-12 | Closing time is announced on the PA. Until then customers keep coming, and the shift can't end with one inside | [Karen.md §19.5](../agents/karen/Karen.md#195-closing-time) |
 | 2026-11-12 | Fixing things in the backstreet (lights, fridges, cameras) takes a 20 s hold | [Karen.md §19.4](../agents/karen/Karen.md#194-fog-and-the-backstreets-fixes) |
 | 2026-11-12 | Fog only in the cold room and the stockroom, seen only from inside | same |
 | 2026-11-12 | The eyelids are open or shut, at a real blink's speed. The look is softer. The F1 map shows the building. The README has no controls and no build section | [CHANGELOG.md](../agents/CHANGELOG.md) |
+| 2026-11-12 | Keep Karen's vision targets; bots must not use her spotlight as a perception cue | [tuning decisions](plans/0.2.0-tuning-plan.md#3-your-decisions) |
+| 2026-11-12 | Keep playtest session data for six months; use tokenlimitlabs@gmail.com for deletion requests; keep developer-assigned testing rounds; nobody sends or types a tester code | [playtest decisions](plans/playtest-v2.md#3-questions-for-you) |
+| 2026-11-12 | No per-model publication approval; training still starts manually on Windows and publication must pass the existing evaluation/compatibility checks | [agent handover](../agents/HANDOVER.md#12-november-owner-answers) |
+| 2026-11-12 | Touch remains lethal outside Hunt; do not reduce Karen's sprint below 7.5 m/s | [tuning decisions](plans/0.2.0-tuning-plan.md#3-your-decisions) |
+| 2026-11-12 | Use a free website address for now; choose the feedback questions for me; include optional nickname and new-build notice; no after-catch fairness prompt | [playtest decisions](plans/playtest-v2.md#3-questions-for-you) |
+| 2026-11-12 | Testers get the game ZIP/link and illustrated instructions, with no typed code; sessions stay in the cloud and training runs later, manually, on a separate Windows computer | [playtest v2 build plan](plans/playtest-v2.md) |
+| 2026-11-12 | After 0.4.0: 0.4.1 from Notes, vertical slice, finish the test build, then the remaining list | [NOW.md](NOW.md#next-in-order) |
+| 2026-11-12 | Run 0.3.0's ablation again as 0.4.0's baseline | same, C0.1 |
 | 2026-11-11 | The docs are split by reader: `docs/you/` for you, `docs/agents/` for agents | [RULES.md](../agents/RULES.md) |
 | 2026-11-11 | Build Karen 0.4.0. Add fitted senses, a map of what you know about her, and a central model that keeps improving | [0.4.0 plan](plans/0.4.0-build-plan.md) |
 | 2026-11-11 | No language-model layer in the 0.4.0 plan. A style vector and learned pacing stay ideas | [IDEAS.md](IDEAS.md) |

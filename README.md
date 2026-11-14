@@ -131,11 +131,13 @@ Assets/!_Project/
 └── _Tests/Editor/    EditMode tests
 
 tools/
+├── belief/           where you go when she can't see you: recordings and fits (0.4.0)
 ├── blink/            webcam helpers (Apple Vision, MediaPipe) and model training
 ├── eval/             Python clients for the AI test environment; ablation analysis
 ├── marketing/        the video automation (Python, Remotion)
+├── learn/            Karen 0.4.0's learning: records, fits, the model pack, the scorecard
 ├── playtest/         the playtest upload service (Cloudflare)
-├── rl/               training Karen's policy (ML-Agents)
+├── rl/               training Karen's brains and the bots (ML-Agents)
 ├── scene/            the scene map generator
 ├── tricks/           records the trick videos shown in the Esc menu
 └── website/          the home page draft
@@ -147,9 +149,10 @@ docs/
 │   ├── DECISIONS.md                  the owner's calls, one dated line each
 │   ├── IDEAS.md                      blink, the endless maze, the AI test environment, ablation, memory ideas
 │   ├── RELEASE_PLAN.md               everything left until release, in order
+│   ├── TESTING.md                    the testing and training left, in order, by stage, with Mac and Windows times
 │   └── plans/
-│       ├── 0.4.0-build-plan.md       Karen 0.4.0: two trained Karens, players that feel real (being built)
-│       ├── playtest-v2.md            real players: how their shifts get recorded and uploaded (not built)
+│       ├── 0.4.0-build-plan.md       Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait)
+│       ├── playtest-v2.md            finish the test build: instructions, cloud uploads, a dataset for Windows
 │       ├── 0.2.0-tuning-plan.md      turning her down: the levers and the test (open questions)
 │       └── marketing-agents.md       hands-off video publishing
 └── agents/                           long and exact, for coding agents

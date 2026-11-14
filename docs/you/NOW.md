@@ -1,47 +1,59 @@
 # Now
 
-Updated 2026-11-13. One page: what's being built, what waits on you, what's next. Agents keep it
+Updated 2026-11-14. One page: what's being built, what waits on you, what's next. Agents keep it
 current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md).
 
 ## Being built
 
 | What | State | Where |
 |---|---|---|
-| **Kehai 0.4.1:** your 17 items of 12 November (her eyes, cameras and two tricks, closing on the PA, 20 s fixes, the map, the look, the eyelids, the docs) | built, in a pull request from branch `0.4.1` | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
-| **Karen 0.4.0:** two trained Karens, players that feel real | approved 11 November. A build session is working through phases 0–6. **Nothing is trained yet** | [the plan](plans/0.4.0-build-plan.md), on its own build branch (local, not pushed) |
-
-The docs split (this layout) merged on 11 November as PR #80.
-
-The plan on `main` is one step behind: the approved version, with fitted senses, the mirror map
-and the live model, arrives when the 0.4.0 branch merges.
+| **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
+| **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | reconciled with `main` (with 0.4.0) on 14 November; in a pull request from branch `0.4.1` | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
+| **Kehai 0.5.0** | the plan, for review: 34 questions in its §16 | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
+| **Finish the test build / playtest v2** | checkbox plan updated; implementation not started beyond the homepage draft | [the build plan](plans/playtest-v2.md) |
 
 ## Waiting on you
 
 | What | Why it waits |
 |---|---|
-| **0.4.1 and 0.4.0 touch the same files.** A short list of questions, one per overlap | only you can say which side wins; the list is in the 0.4.1 pull request |
 | Import the four new models: **Kehai → Props → Import Karen's Props** | until then the PA microphone, the camera box, the cameras and the screens are plain boxes |
 | Play a shift on 0.4.1 | her eyes are twice as far and twice as quick, and no test has measured that |
-| Play 5–10 shifts on today's build (0.4.0 plan, Y1.1) | you're the first human reference for the bots |
-| The go for each 0.4.0 recording, training and test run | "I will do the training later" |
-| Yes or no: a new model is published only on your yes each time (0.4.0 plan, D15) | a default I picked; you haven't seen it before |
-| How far to turn her down ([the tuning plan](plans/0.2.0-tuning-plan.md), Q2–Q5) | only you can answer; 0.4.1 turned her eyes up |
-| The word to push the 0.4.0 build branch and open its PR | nothing leaves this Mac, or lands on `main`, without it |
+| Answer the 0.5.0 plan's questions ([PR #82](https://github.com/goraxyy/Kehai/pull/82), §16), above all which "agents" (Q9–Q10) | the bots' training waits for the agents choice ([TESTING.md](TESTING.md#the-agents-question)) |
+| Keep the blur in her senses, or play the sharper fitted S1 | S1 trusts every sighting and noise almost fully: she'd play sharper |
+| Yes or no: delete the old 480 MB belief dataset (Q5) | the new recordings replace it |
+| Yes or no: sort the store's doors so a doorway keeps its number (Karen's Ledger mixes up doorways between shifts today) | it changes play against `main`; 0.5.0's layouts plan to do it (its C4.4) |
+| Cloudflare account/R2 and browser authorization; optional Telegram setup | [account steps](plans/playtest-v2.md#13-setting-up-the-accounts); no real-player upload connection is configured on this Mac |
+
+The playtest and tuning questions are answered: see the
+[playtest answers](plans/playtest-v2.md#3-questions-for-you),
+[tuning answers](plans/0.2.0-tuning-plan.md#3-your-decisions) and [decision log](DECISIONS.md).
+No tester code is sent or typed. The game assigns an internal ID automatically; collection
+runs independently of your computers and training starts later, manually, on Windows.
 
 ## Next, in order
 
-1. **Finish the 0.4.0 build,** then your training runs, then its tests and write-up.
-2. **Real players:** [playtest v2](plans/playtest-v2.md). It brings people's shifts, and the live
-   model's download depends on it.
-3. **Hands-off videos:** [the marketing agents plan](plans/marketing-agents.md), phase 2 on.
-4. **The release:** the Steam page, the demo, the redesign ([RELEASE_PLAN.md](RELEASE_PLAN.md)).
+Build everything first, then test and train once (your call, 14 November).
+
+1. **Kehai 0.4.1:** its PR, then merge (reconciled with `main` on 14 November).
+2. **Kehai 0.5.0:** answer the plan, merge it, then build its PRs (tricks, guide, versions,
+   layouts, agents, Karen ML, training view, look, status).
+3. **Vertical slice:** a convincing playable shift ([release milestone 1](RELEASE_PLAN.md#milestone-1-vertical-slice)).
+4. **Finish the test build:** [playtest v2](plans/playtest-v2.md): illustrated instructions,
+   no-code first launch, automatic cloud collection, and a dataset you can download on Windows
+   for training later. Uploads do not start training or require the Mac to process them.
+5. **Testing and training, once, on the finished game:** in the order of [TESTING.md](TESTING.md).
+6. **Real players:** run the first round with the finished test build, review, fix, repeat.
+   The live model's download also depends on v2; publication still requires evaluation and
+   compatibility checks, but no per-model approval from you.
+7. **Hands-off videos:** [the marketing agents plan](plans/marketing-agents.md), phase 2 on.
+8. **The release:** the Steam page, the demo, the redesign ([RELEASE_PLAN.md](RELEASE_PLAN.md)).
 
 ## Done lately
 
-- **12–13 November:** Kehai 0.4.1 built. 0.3.0's ablation ran again as 0.4.0's baseline (with
-  her old eyes).
-- **11 November:** `main` passes all 360 EditMode tests and all 222 marketing tests. The docs
-  split merged (PR #80).
+- **14 November:** Karen 0.4.0 merged as code (PR #83). Kehai 0.4.1 reconciled with it and opened as a PR.
+- **12–13 November:** Kehai 0.4.1 built.
+- **11 November:** the docs split merged as PR #80.
+- **11 November:** `main` passes all 360 EditMode tests and all 222 marketing tests.
 - **10 November:** every open PR cleared. Merged: the 0.2.0 tuning plan (#75), playtest v2 and the
   learning plan (#76), the website draft (#77), Karen 0.3.0's tricks (#78), the 0.4.0 plan (#79).
   Closed: the old motion model (#68), redesigned inside 0.4.0.

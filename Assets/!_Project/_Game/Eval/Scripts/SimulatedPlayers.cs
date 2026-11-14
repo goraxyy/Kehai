@@ -63,21 +63,48 @@ namespace Kehai.Eval
         public int ThrowsSeen { get; private set; }
         public int Dodges { get; private set; }
 
+        // 0.4.0 (build plan §7): who it is, what it remembers across the career, and the trained
+        // mind that chooses for it (none: the heuristic below, as it always was).
+        readonly Persona persona;
+        public BotMemory Memory { get; }
+        readonly IEmployeeMind mind;
+        EmployeeWhat? lastWhat;
+        float[] mindInputs;
+        bool[] mindWhat, mindWhich;
+        float fearSeconds, sprintSeconds;
+        int jobsAtDecision, lostAtDecision;
+        bool usedHabit, lookedOnce, curiousDone;
+        public int Choices { get; private set; }
+        public bool CareerOver { get; set; } = true;   // the league clears it on all but a career's last shift
+
         public SimulatedPlayer(KehaiEnv env, PlayerProfile profile, int seed, bool reactive = true)
+            : this(env, Persona.Of(profile), seed, reactive, null, null) { }
+
+        // A persona's player. A named point (Persona.Of) plays exactly as its profile does; `memory`
+        // carries over a career (null: a fresh one); `mind` chooses instead of the heuristic.
+        public SimulatedPlayer(KehaiEnv env, Persona persona, int seed, bool reactive, BotMemory memory, IEmployeeMind mind)
         {
             this.env = env;
-            this.profile = profile;
+            this.persona = persona ?? Persona.Of(PlayerProfile.Efficient);
+            profile = this.persona.NearestProfile();
             this.reactive = reactive;
             random = new System.Random(seed);
-            traits = BotTraits.For(profile, seed);
+            traits = this.persona.ToTraits(seed);
+            Memory = memory ?? new BotMemory();
+            this.mind = mind;
         }
 
-        public string Name => profile.ToString().ToLowerInvariant();
+        public string Name => persona.Scripted.HasValue ? profile.ToString().ToLowerInvariant() : persona.Name;
+        public Persona Persona => persona;
 
         // Plays until the episode is done.
         public IEnumerator PlayShift()
         {
             lastTick = Time.time;
+            ShiftRecorder.BotLabel = Name + ":" + persona;
+            Memory.BeginShift(env.Shift != null ? env.Shift.ShiftNumber : 0);
+            jobsAtDecision = JobsDone;
+            lostAtDecision = env.Metrics.CustomersLost;
             Look();
 
             while (!env.CheckDone())
@@ -91,20 +118,52 @@ namespace Kehai.Eval
                     continue;
                 }
 
-                if (reactive && fear.Fear >= traits.HideAt && Time.time > calmUntil)
+                // With a trained mind, hiding is one of its choices, not a reflex (§7.1).
+                if (!MindActive && reactive && fear.Fear >= traits.HideAt && Time.time > calmUntil)
                 {
+                    if (mind is IEmployeeDemonstrator teacher && teacher.Recording)
+                        teacher.Demonstrate(EmployeeObservation.Build(obs, fear.Fear, Memory, persona, lastWhat, Time.time),
+                                            EmployeeOptions.MaskWhat(obs), EmployeeOptions.MaskHow(), EmployeeOptions.MaskWhich(Memory, lastThreatAt.HasValue),
+                                            new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, Which = EmployeeWhich.Safest });
                     yield return Flee();
                     continue;
                 }
 
-                EnvAction action = Choose(obs);
+                EnvAction action = null;
+                EmployeeChoice choice = default;
+                if (mind != null && MindChooses(obs, out choice))
+                {
+                    if (choice.What == EmployeeWhat.Hide) { Log(choice, Here); yield return Flee(); continue; }
+                    if (choice.What == EmployeeWhat.BackOff)
+                    {
+                        Log(choice, Here);
+                        yield return BackOff(lastThreatAt ?? Here + Flat(env.Driver.transform.forward) * 4f);
+                        continue;
+                    }
+                    action = Realise(choice, obs);
+                }
+                if (action == null)
+                {
+                    action = Choose(obs);
+                    choice = Tag(action, obs, "heuristic");
+                    if (mind is IEmployeeDemonstrator teacher && teacher.Recording && mindInputs != null)
+                        teacher.Demonstrate(mindInputs, mindWhat, EmployeeOptions.MaskHow(), mindWhich, choice);
+                }
+                choice.Verb = action.verb;
+                choice.Target = action.target;
+                lastWhat = choice.What;
                 IEnumerator run = env.Act(action);
                 IEnumerator monitor = reactive ? Monitor(action) : profile == PlayerProfile.Skittish ? Watch() : null;
+                Vector3 leadsTo = Here;
                 while (run.MoveNext())
                 {
                     monitor?.MoveNext();
+                    if (env.Driver.Moving) leadsTo = env.Driver.Goal;
                     yield return run.Current;
                 }
+                bool done = env.LastResult != null && (bool)env.LastResult["ok"];
+                Log(choice, leadsTo, done);
+                if (done && IsJob(choice.What)) Memory.DidJob(choice.What.ToString());
 
                 if (dodgeSide != null)
                 {
@@ -140,6 +199,7 @@ namespace Kehai.Eval
                 yield return null;
             }
 
+            FinishShift();
             env.Metrics.BotMeanFear = fear.MeanFear;
             env.Metrics.BotPeakFear = fear.Peak;
             env.Metrics.BotStartles = fear.Startles;
@@ -198,6 +258,10 @@ namespace Kehai.Eval
                         Threat(Point(e["at"]));
                     }
                 }
+
+            fearSeconds += fear.Fear * dt;
+            if (env.Driver != null && env.Driver.Sprint && env.Driver.Moving) sprintSeconds += dt;
+            if ((bool)karen["visible"]) Memory.SensedHer((string)karen["region"], now);
 
             var power = (Dictionary<string, object>)obs["power"];
             bool lightsOn = (bool)power["lights_on"];
@@ -413,6 +477,7 @@ namespace Kehai.Eval
                 yield return env.Act(new EnvAction { verb = "wait", seconds = 0.5f });
                 yield break;
             }
+            Log(new EmployeeChoice { What = EmployeeWhat.BackOff, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = to.Name, Chance = 1f }, to.Centroid);
             yield return Act(new EnvAction { verb = "move_to", target = to.Name, sprint = true, timeout = 8f });
         }
 
@@ -479,6 +544,8 @@ namespace Kehai.Eval
             if (hide == null) yield break;
 
             Hides++;
+            Memory.Hid(hide.Name);
+            if (!MindActive) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = hide.Name, Chance = 1f }, hide.Centroid);
             yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
             env.Driver.Crouch = true;
             float wait = profile == PlayerProfile.Cautious ? 10f : 6f;
@@ -618,5 +685,164 @@ namespace Kehai.Eval
 
         static bool Carries(Dictionary<string, object> obs, string name) =>
             ((List<string>)((Dictionary<string, object>)obs["you"])["inventory"]).Contains(name);
+
+        // ---- 0.4.0: the options, the log, the trained mind (build plan §7.3) ----------------------
+
+        bool MindActive => mind != null && mind.Active;
+
+        Vector3 Here => env.Driver != null ? env.Driver.transform.position : Vector3.zero;
+
+        int JobsDone
+        {
+            get
+            {
+                EpisodeMetrics m = env.Metrics;
+                return m.SpillsMopped + m.ShelvesRestocked + m.BinsBagged + m.BagsDisposed + m.CustomersServed + m.DirectionsGiven;
+            }
+        }
+
+        static bool IsJob(EmployeeWhat w) =>
+            w == EmployeeWhat.ServeTill || w == EmployeeWhat.HelpShopper || w == EmployeeWhat.Restock || w == EmployeeWhat.Mop ||
+            w == EmployeeWhat.Bins || w == EmployeeWhat.BagOut || w == EmployeeWhat.AnswerChore;
+
+        // The heuristic's action, named as one of the options. Draws nothing.
+        EmployeeChoice Tag(EnvAction a, Dictionary<string, object> obs, string by) => new EmployeeChoice
+        {
+            What = EmployeeOptions.WhatOf(a, Holding(obs, "trash bag")),
+            How = EmployeeOptions.HowOf(a),
+            Which = EmployeeWhich.Nearest,
+            Chance = 1f,
+            By = by
+        };
+
+        // Every choice, with where it leads (the shift record's "choice" events, for legs.py).
+        void Log(EmployeeChoice c, Vector3 leadsTo, bool done = true)
+        {
+            Choices++;
+            ShiftRecorder.Annotate("choice", EmployeeOptions.Describe(c) + "|" + (done ? "ok" : "cut"), leadsTo);
+        }
+
+        // Asks the mind; pays it for what happened since its last choice.
+        bool MindChooses(Dictionary<string, object> obs, out EmployeeChoice choice)
+        {
+            PayMind(false, false, false);
+            float[] inputs = mindInputs = EmployeeObservation.Build(obs, fear.Fear, Memory, persona, lastWhat, Time.time);
+            bool[] what = mindWhat = EmployeeOptions.MaskWhat(obs);
+            bool[] which = mindWhich = EmployeeOptions.MaskWhich(Memory, lastThreatAt.HasValue);
+            // The heuristic's own pick is always among the options; a demonstration must be legal.
+            what[(int)EmployeeWhat.Wait] = true;
+            if (!mind.TryChoose(inputs, what, EmployeeOptions.MaskHow(), which, persona, random, out choice)) return false;
+            if (choice.Which == EmployeeWhich.Usual) usedHabit = true;
+            return true;
+        }
+
+        void PayMind(bool clockedOut, bool caught, bool timedOut)
+        {
+            if (mind == null) return;
+            int jobs = JobsDone, lost = env.Metrics.CustomersLost;
+            var outcome = new EmployeeOutcome
+            {
+                Jobs = jobs - jobsAtDecision, CustomersLost = Mathf.Max(0, lost - lostAtDecision),
+                FearSeconds = fearSeconds, SprintSeconds = sprintSeconds, UsedHabit = usedHabit, LookedOnce = lookedOnce,
+                ClockedOut = clockedOut, Caught = caught, TimedOut = timedOut
+            };
+            mind.AddReward(EmployeeReward.Pay(persona.Weights, outcome));
+            jobsAtDecision = jobs;
+            lostAtDecision = lost;
+            fearSeconds = sprintSeconds = 0f;
+            usedHabit = lookedOnce = false;
+        }
+
+        void FinishShift()
+        {
+            EpisodeMetrics m = env.Metrics;
+            bool caught = !m.ClockedOut && !m.TimedOut;
+            Memory.EndShift(caught, caught ? env.World.Map.NameAt(Here) : null);
+            if (mind == null) return;
+            PayMind(m.ClockedOut, caught, m.TimedOut);
+            mind.EndShift(CareerOver);
+        }
+
+        // A mind's choice made into an action, with the same helpers the heuristic uses. Null: it
+        // found nothing to do that way, and the heuristic picks.
+        EnvAction Realise(EmployeeChoice c, Dictionary<string, object> obs)
+        {
+            bool sprint = c.How == EmployeeHow.Hurry, crouch = c.How == EmployeeHow.Sneak;
+            EnvAction A(string verb, string target = null) => new EnvAction { verb = verb, target = target, sprint = sprint, crouch = crouch };
+            Dictionary<string, object> Pick(IEnumerable<Dictionary<string, object>> xs) => Which(xs, c.Which);
+
+            switch (c.What)
+            {
+                case EmployeeWhat.ServeTill:
+                    var q = Pick(List(obs, "checkout_queue").Where(x => !Avoided("serve", (string)x["id"])));
+                    return q != null ? A("serve", (string)q["id"]) : null;
+                case EmployeeWhat.HelpShopper:
+                    var ask = Pick(List(obs, "customers_asking").Where(a => (string)a["stage"] != "Talking" && !Avoided("help", (string)a["id"])));
+                    if (ask == null) return null;
+                    EnvAction help = A("help", (string)ask["id"]);
+                    help.accept = true;
+                    return help;
+                case EmployeeWhat.Restock:
+                case EmployeeWhat.Mop:
+                    bool mop = c.What == EmployeeWhat.Mop;
+                    string verb = mop ? "mop" : "restock";
+                    var job = Pick(List(obs, mop ? "spills" : "shelves_to_restock").Where(x => !Avoided(verb, (string)x["id"])));
+                    if (job == null) return null;
+                    string tool = mop ? "mop" : "crate";
+                    return Carries(obs, tool) ? A(verb, (string)job["id"]) : A("pick_up", tool);
+                case EmployeeWhat.Bins:
+                    var bin = Pick(List(obs, "bins").Where(x => (int)x["fill"] > 0 && !Avoided("bag_trash", (string)x["id"])));
+                    return bin != null ? A("bag_trash", (string)bin["id"]) : null;
+                case EmployeeWhat.BagOut:
+                    return Holding(obs, "trash bag") ? A("dispose") : null;
+                case EmployeeWhat.AnswerChore:
+                    var power = (Dictionary<string, object>)obs["power"];
+                    if (!(bool)power["lights_on"] && power.TryGetValue("breakers", out object b))
+                    {
+                        var off = ((List<object>)b).Cast<Dictionary<string, object>>().Where(x => !(bool)x["on"]).OrderBy(x => (int)x["hum_pitch_rank"]).FirstOrDefault();
+                        if (off != null) return A("flip_breaker", (string)off["id"]);
+                    }
+                    if (!obs.TryGetValue("karen_chores", out object ch)) return null;
+                    var chore = Pick(((List<object>)ch).Cast<Dictionary<string, object>>().Where(x => ChoreVerb((string)x["kind"]) != null));
+                    if (chore == null) return null;
+                    if (!curiousDone) { lookedOnce = true; curiousDone = true; }
+                    return A(ChoreVerb((string)chore["kind"]), (string)chore["id"]);
+                case EmployeeWhat.Coffee: return A("drink_coffee");
+                case EmployeeWhat.ClockOut: return A("clock_out");
+                case EmployeeWhat.GoRound:
+                    // The long way: somewhere 5–18 m off that keeps clear of where she was.
+                    Vector3 threat = lastThreatAt ?? Here;
+                    Region r = env.World.Map.Regions.Where(x => !x.IsDoor && Vector3.Distance(x.Centroid, Here) is float d && d >= 5f && d <= 18f)
+                        .OrderByDescending(x => Vector3.Distance(x.Centroid, threat)).FirstOrDefault();
+                    return r != null ? A("move_to", r.Name) : null;
+                case EmployeeWhat.StopAndLook:
+                    env.Driver.lookJitter = Mathf.Max(env.Driver.lookJitter, 1f);
+                    return new EnvAction { verb = "wait", seconds = 1.5f };
+                default:
+                    return new EnvAction { verb = "wait", seconds = 2f };
+            }
+        }
+
+        // Nearest (the shortest walk), usual (a region it's used to), or safest (furthest from
+        // where she last was).
+        Dictionary<string, object> Which(IEnumerable<Dictionary<string, object>> xs, EmployeeWhich which)
+        {
+            var list = xs.ToList();
+            if (list.Count == 0) return null;
+            switch (which)
+            {
+                case EmployeeWhich.Safest when lastThreatAt.HasValue:
+                    Vector3 her = lastThreatAt.Value;
+                    return list.OrderByDescending(x => x.TryGetValue("region", out object rg) && rg is string name && env.World.Map.Regions.FirstOrDefault(r => r.Name == name) is Region reg
+                        ? Vector3.Distance(reg.Centroid, her) : 0f).First();
+                case EmployeeWhich.Usual:
+                    string usual = Memory.UsualHide();
+                    var same = list.FirstOrDefault(x => x.TryGetValue("region", out object rg) && rg as string == usual);
+                    if (same != null) return same;
+                    goto default;
+                default:
+                    return list.OrderBy(x => { float d = Cost(x); return d < 0 ? 999f : d; }).First();
+            }
+        }
     }
 }

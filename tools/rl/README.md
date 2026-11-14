@@ -1,4 +1,39 @@
-# Rung F: training Karen's tactic choice with PPO
+# Training Karen with PPO: rung F, and the two Karens of 0.4.0
+
+> **0.4.0 (November 2026).** Three behaviours are trained here now, in a league where one side
+> learns while the others are frozen ([the plan, §10](../../docs/you/plans/0.4.0-build-plan.md)):
+>
+> | behaviour | who | config | league files |
+> |---|---|---|---|
+> | `Employee` | the simulated players' trained mind: one network for every persona | `employee_ppo.yaml` | `employee_r1.json`, `employee_r3.json` |
+> | `KarenVital` | Vital: paid for catching, pacing off | `karen_vital.yaml` | `vital_r2.json`, `vital_r4.json` |
+> | `KarenBasic` | Basic, the game's: paid for pacing your fear, pacing on | `karen_basic.yaml` | `basic_r2.json`, `basic_r4.json` |
+>
+> **Until the training player connects** (12 November: it floods TextMeshPro errors on the null graphics
+> device and never reaches the trainer), use the editor scripts, one copy each:
+> `tools/rl/record_demos_editor.sh employee|vital|basic 20000` and
+> `tools/rl/train_editor.sh <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> With a working player:
+>
+> ```bash
+> tools/rl/record_demos.sh employee 20000                 # the warm starts: the scripted players' choices,
+> tools/rl/record_demos.sh vital 20000                    # and the planner's (action, trick) picks
+> tools/rl/record_demos.sh basic 20000
+> tools/rl/train_league.sh employee_r1 2 tools/rl/employee_ppo.yaml tools/rl/leagues/employee_r1.json
+> python3 tools/learn/export_brain.py tools/rl/results/employee_r1 --as EmployeeBrain --behavior Employee
+> tools/rl/train_league.sh vital_r2_a 2 tools/rl/karen_vital.yaml tools/rl/leagues/vital_r2.json
+> python3 tools/learn/export_brain.py tools/rl/results/vital_r2_a --as KarenBrainVital --behavior KarenVital \
+>     --outputs "<persistent data>/kehai_eval/brain_spec_KarenVital.json"
+> ```
+>
+> - The smoke configs (`*_smoke.yaml`, `leagues/*_smoke.json`) check the pipe in minutes.
+> - Every long run waits for your go ("I will do the training later").
+> - Exports are generated C# with a model card, never a model file in git. A brain for other inputs,
+>   or naming tricks this build doesn't have, is refused with the reason (`BrainSeam.Accepts`).
+> - The catch dial is `-karen-set catchDial=<w>` on Basic's runs, turned between rounds 2 and 4.
+>
+> The rest of this page is rung F's, from 0.3.0 and before: the same pipeline, one behaviour (`Karen`).
+
 
 Rung F is rung E with one change: when Karen's planner needs a tactic, a small neural network
 trained with reinforcement learning picks it instead of the bandit. Everything else stays hand-built:

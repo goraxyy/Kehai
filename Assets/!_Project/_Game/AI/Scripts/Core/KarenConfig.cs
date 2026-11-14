@@ -41,6 +41,12 @@ namespace Kehai.Karen
             $"belief={Belief} goals={Goals} bandit={Bandit} persistent={Persistent} policy={Policy}";
     }
 
+    // Which brain answers "what next?" (0.4.0, build plan §5). The planner is today's game.
+    public enum KarenBrainKind { Planner, Basic, Vital }
+
+    // What she assumes you know of where she is (build plan §8.8).
+    public enum MirrorMode { K0, K1, K2 }
+
     // Every tunable in one place, with the Karen.md section it comes from. Plain data so an
     // eval run can override any of it from a JSON config without touching code.
     [System.Serializable]
@@ -181,6 +187,31 @@ namespace Kehai.Karen
         [Tooltip("Model under Resources/KarenPolicy/ (no extension). Empty or missing = the trainer if one is connected, else the bandit's choice.")]
         public string policyModel = "";
 
+        [Header("0.4.0: two Karens, her senses, the mirror map (build plan §5, §8.7, §8.8)")]
+        [Tooltip("What picks her action and trick: the hand-built planner (today), Basic (the game's) or Vital (catch-oriented).")]
+        public KarenBrainKind brain = KarenBrainKind.Planner;
+        [Tooltip("What she assumes you know of her: K0 where she is (today), K1 where you last sensed her, K2 the mirror map.")]
+        public MirrorMode mirror = MirrorMode.K0;
+        [Tooltip("Her senses' numbers: s0 today's hand-set ones, s1 fitted, s2 fitted with walls and lights.")]
+        public string senses = "s0";
+        [Tooltip("Her belief's predict step: p0 today's, p1 fitted, p2 destinations, p3 destinations reading your Ledger.")]
+        public string motion = "p0";
+        [Tooltip("The hunter: the planner with pacing and the Director's hint off, every fairness rule on (Vital's baseline).")]
+        public bool hunter;
+        [Tooltip("Her brain's picks come from the ML-Agents trainer (the league's learner), not from its generated C#.")]
+        public bool brainFromTrainer;
+        [Tooltip("Basic's catch dial (§5.4): paid for a catch in a tense phase. Starts at +0.15; turned between rounds until her catch rate sits in 0.20–0.35 a shift. May go below zero.")]
+        public float catchDial = 0.15f;
+        [Tooltip("C0.2's fences for the two known traps: no spill at Office/G, a spill only where your floor reaches, and a fallen test player put back where it stood. " +
+                 "Off by default, so a shift plays as today's; the league turns it on (a stuck episode poisons training).")]
+        public bool trapFences;
+        [Tooltip("Write one learning record per decision (Diagnostics/LearningRecord.cs).")]
+        public bool learningRecords;
+        [Tooltip("Where the learning records go. Empty: <persistent data>/learning/learning_<launch>.jsonl.")]
+        public string learningPath = "";
+        [Tooltip("A model pack to load instead of the build's own numbers (Decision/Policy/ModelPack.cs). Empty: the newest good pack, else the build's.")]
+        public string modelPack = "";
+
         [Header("Debug")]
         public bool logToConsole = false;
         public bool writeJsonl = true;
@@ -188,6 +219,11 @@ namespace Kehai.Karen
         public string ledgerPath = "";
 
         public RungFeatures Features => new RungFeatures(rung);
+
+        // The Director's pacing off (0.4.0, C5.4): Vital, and the hunter (the planner with the same
+        // freedom). Tiers, the tension budget, cooldowns, settling in and the recovery stop gating;
+        // the Director's hint toward your area stops; every fairness rule stays.
+        public bool PacingOff => hunter || brain == KarenBrainKind.Vital;
 
         public KarenConfig Clone() => (KarenConfig)MemberwiseClone();
     }

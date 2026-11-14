@@ -1,0 +1,48 @@
+{
+  "name": "test_fear_C",
+  "learner": "none",
+  "split": "test",
+  "careers": 64,
+  "shifts": 6,
+  "start_shift": 1,
+  "shift_seconds": 150,
+  "players": [
+    {
+      "kind": "scripted",
+      "profile": "efficient",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "skittish",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "reckless",
+      "share": 1
+    },
+    {
+      "kind": "scripted",
+      "profile": "cautious",
+      "share": 1
+    },
+    {
+      "kind": "employee",
+      "mind": "generated:EmployeeBrain",
+      "share": 2
+    },
+    {
+      "kind": "corner",
+      "mind": "generated:EmployeeBrain",
+      "share": 2
+    }
+  ],
+  "karen": [
+    {
+      "brain": "planner",
+      "rung": "C",
+      "share": 1
+    }
+  ]
+}

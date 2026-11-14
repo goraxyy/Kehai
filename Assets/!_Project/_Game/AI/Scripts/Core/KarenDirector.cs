@@ -189,6 +189,18 @@ namespace Kehai.Karen
             }
         }
 
+        // With pacing off (Vital, the hunter: C5.4): only what fairness asks. Never a hunt with you
+        // outside (her body stays in her part of the building), never while pursuit is suppressed,
+        // nothing off shift.
+        public float FairPermission(ActionId goal, KarenContext c)
+        {
+            if (CurrentPhase == Phase.OffShift && goal != ActionId.Roam && goal != ActionId.BackOff) return 0f;
+            if (goal != ActionId.Hunt) return 1f;
+            if (Time.time < suppressPursuitUntil) return 0f;
+            float outside = c != null && c.Belief != null ? c.Belief.OutsideMass : 0f;
+            return outside > 0.5f ? 0f : 1f;
+        }
+
         public float ActionPermission(ActionId goal, KarenContext c)
         {
             switch (goal)
@@ -284,6 +296,7 @@ namespace Kehai.Karen
         public void MaybeBias(KarenContext c, float dt)
         {
             if (CurrentPhase == Phase.OffShift || InRecovery) return;
+            if (config.PacingOff) return;   // Vital and the hunter: every catch is her own (C5.4)
             if (c.A.Staleness < 45f || Pressure < 0.1f) return;
 
             if (Time.time - biasMinuteStarted > 60f)
@@ -308,9 +321,11 @@ namespace Kehai.Karen
             c.Belief.Bias(trueRegion, step);
             biasThisMinute += step;
             BiasApplied += step;
+            LastBiasAt = Time.time;
         }
 
         public float BiasApplied { get; private set; }
+        public float LastBiasAt { get; private set; } = -999f;   // when the hint last moved her belief (learning records flag it)
 
         // The employee's true position — for debug views and replays only. Nothing that
         // plans may call this; the fairness test checks it.

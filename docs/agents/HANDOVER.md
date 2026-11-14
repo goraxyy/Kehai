@@ -86,7 +86,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 - **Coordinates:** world metres. The street is north (high Z), the store runs south along −Z to the stockroom, and east is +X.
 - **If the editor opens an empty Untitled scene,** `OpenStoreOnLaunch.cs` opens the store. Otherwise open `SampleScene.unity` by hand.
 
-## 4. State of the work (updated 2026-11-07)
+## 4. State of the work (updated 2026-11-12)
 
 **Merged to main** (highlights; the full history is in git and [`CHANGELOG.md`](CHANGELOG.md)):
 
@@ -105,6 +105,21 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | #65 | [`notmerged.md`](archive/notmerged.md) |
 
 **Open:**
+- **Karen 0.4.0, two trained Karens** (branch `claude/karen-0-4-0-build-d81c79`, local, not pushed; one PR when the owner says).
+  - Plan with tick boxes: [`0.4.0-build-plan.md`](../you/plans/0.4.0-build-plan.md). What's in the code and its switches:
+    [Karen.md §18](karen/Karen.md#18-karen-040-two-karens-players-that-feel-real). The build's own calls:
+    [DECISIONS.md §11](DECISIONS.md#11-karen-040-the-builds-own-calls).
+  - **Built (11–12 November):** phases 1–5's code and tests: learning records, catch causes, `-karen-set`, the splits, personas,
+    the players' options, memory and trained mind (ML-Agents `Employee`), the league, the Ledger's "everyone and you" blend, the
+    starting Ledger, the dataset, trait fitting, the signed model pack and its gate, the predict step behind `IMotionModel` (P0–P3),
+    the belief trace and its Python replay (`tools/belief/`), her senses' table, the mirror map, the seam, inputs v2, the rewards,
+    Vital's gates, the brains' bridge (`KarenVital`, `KarenBasic`), the network in C# and its export.
+  - **Nothing is trained.** Every default is today's game; every recording, training and test run is one command beside its task
+    in the plan, and waits for the owner's go.
+  - **Checked:** 430 of 430 EditMode tests; with every switch at its default, a shift plays exactly as on `main`, also with the shadow filters and the trace on.
+  - **Found:** the training player doesn't reach the trainer, on `main` too (TextMeshPro errors on the null graphics device), so for now
+    training runs one copy in the editor (`tools/rl/train_editor.sh`); C0.2's fences changed today's shift, so they're off by
+    default and on in the league. See [KAREN_RESULTS.md](results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november).
 - **Karen 0.3.0, the tricks come back** (branch `0.3.0`, worktree `.claude/worktrees/tricks`; draft [PR #78](https://github.com/goraxyy/Kehai/pull/78)). The owner's 21 items of 7 November: nine tricks removed, ten rebuilt end to end, a fog that blinds everyone, a PA off switch, placement memory.
   - Plan with tick boxes and a progress table: [`plans/0.3.0-build-plan.md`](archive/0.3.0-build-plan.md). What each trick does now: [Karen.md §17](karen/Karen.md#17-karen-030-the-tricks-come-back).
   - **One builder** (the owner's call, 7 November): Claude built every task, the old [B] ones too.
@@ -162,6 +177,23 @@ redesigned inside the [0.4.0 plan](../you/plans/0.4.0-build-plan.md).
 - The Director nudges her belief toward the player's true region after 45 s without a sighting (`KarenDirector.MaybeBias`). Published out-of-view belief numbers include this hint.
 - On 0.2.0, Cut rarely fires: never on a 25 m dash, sometimes on a 45–60 m run (Karen.md §16.4), and never in the ablation's 144 shifts.
 - On 0.2.0, `main` runs 2 to 4.6 times slower per simulated second than the branch in batch mode, for a reason not yet found; its log repeats a particle-system warning tens of thousands of times. Allow for it when timing a run against `main`.
+
+### 12 November owner answers
+
+The [decision log](../you/DECISIONS.md) supersedes the separate 0.4.0 build branch's D15
+requirement to obtain the owner's yes for every model publication. Training remains manually
+started on the Windows computer. Keep evaluation, fairness, compatibility, signing and rollback
+checks; once those pass, do not ask for per-model publication approval. Integrated into the
+0.4.0 plan (D15, C7.2), `tools/learn/publish.py` and the guide on 14 November, after 0.4.0
+merged; nothing was deployed or published.
+
+The [tuning plan](../you/plans/0.2.0-tuning-plan.md#3-your-decisions) now excludes removing
+outside-Hunt touch kills and reducing the sprint speed. Vision targets stay; spotlight
+perception for bots is rejected (the visible light for humans stays). The
+[v2 answers](../you/plans/playtest-v2.md#3-questions-for-you) settle retention, the deletion
+contact and rounds. C2.1 and C3.6 require eliminating codes from both the sender's workflow
+and the tester's screens. The internal automatic ID is only for grouping records; it must
+never become a code the owner sends or the player has to enter.
 
 ## 6. How to work on it
 

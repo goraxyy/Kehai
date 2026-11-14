@@ -111,6 +111,9 @@ Assets/ML-Agents.meta
 /Assets/!_Project/_Game/Level/Props/
 /Assets/!_Project/_Game/Level/Props.meta
 
+# Model packs staged by tools/learn/publish.py (local only; publishing is Phase 7)
+tools/learn/packs/
+
 # Kehai 0.4.1: the trick videos shown in the Esc menu's TRICKS tab (tools/tricks/record_tricks.sh). Media stays on the Mac.
 /Assets/StreamingAssets/TrickVideos/
 /Assets/StreamingAssets/TrickVideos.meta

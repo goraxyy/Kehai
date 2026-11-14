@@ -112,6 +112,8 @@ namespace Kehai.Karen
                     foreach (RouteStat r in c.Ledger.Data.routes)
                         if (r.path.Contains(key)) onRoutes += r.count;
                 float prior = 0.6f * (routeTotal > 0f ? onRoutes / routeTotal : 0f) + 0.4f * (1f - walk / MaxWalk);
+                // With the destination model (P2, P3), her guessed routes join your habits (C4.6).
+                prior += 0.5f * TacticHelpers.OnGuessedRoutes(c, c.Map.Regions[region]);
 
                 result.Add(new DoorOption { Door = d, Side = side, Region = region, Stand = stand, BoxAt = boxAt, Key = Key(c, d, side) });
                 candidates.Add(new PlaceCandidate(result[result.Count - 1].Key, Mathf.Clamp01(prior)));

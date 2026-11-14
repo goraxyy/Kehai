@@ -72,6 +72,14 @@ namespace Kehai.Karen
             if (best.id != null)
                 sb.AppendLine($"Most effective intervention: {TacticLibrary.Get(best.id)?.Title ?? best.id} (Δ {best.mean:+0.00;-0.00}).");
 
+            // Everyone, and you (0.4.0, C3.6): what she expects of her most-used tricks on you.
+            foreach (var used in s.TacticCounts.OrderByDescending(p => p.Value).ThenBy(p => p.Key).Take(2))
+            {
+                Tactic t = TacticLibrary.Get(used.Key);
+                if (t == null || !t.Learnable) continue;
+                sb.AppendLine($"File note, {t.Title}: {EveryoneAndYou(l.Reading(t, LedgerStart.Current))}.");
+            }
+
             sb.AppendLine();
             sb.AppendLine("<b>Excerpts from the log</b> <size=70%>(redacted)</size>");
             foreach (string line in Excerpts(5)) sb.AppendLine("<size=80%>" + line + "</size>");
@@ -119,6 +127,9 @@ namespace Kehai.Karen
             }
             return sb.ToString();
         }
+
+        // "everyone +0.12, you +0.01 over 3 → +0.05", in the review's voice.
+        public static string EveryoneAndYou(LedgerReading r) => r.ToString();
 
         public string EndingText(string kind)
         {

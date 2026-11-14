@@ -41,6 +41,9 @@ public class KarenRuleTests
         var files = new List<string> { Path.Combine(AiRoot, "Core/KarenBody.cs"), Path.Combine(AiRoot, "Core/KarenBrain.cs") };
         files.AddRange(Directory.GetFiles(Path.Combine(AiRoot, "Belief"), "*.cs", SearchOption.AllDirectories));
         files.AddRange(Directory.GetFiles(Path.Combine(AiRoot, "Decision"), "*.cs", SearchOption.AllDirectories));
+        // 0.4.0: what she reads as she decides goes on record (C1.1), and her senses' table (C4.7)
+        // sits under Perception/: both are held to the same rule.
+        files.AddRange(Karen040Files.UnderTheRule(AiRoot));
 
         var leaks = new List<string>();
         foreach (string file in files)
