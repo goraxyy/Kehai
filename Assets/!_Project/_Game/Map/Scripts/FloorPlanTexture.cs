@@ -3,16 +3,17 @@ using UnityEngine;
 namespace Kehai.Store
 {
     // Paints a StoreFloorPlan into a texture for the in-game map: outside dark, walkable
-    // floor grey (outdoors a little greener), counters and fridges darker, shelves in their
-    // section's colour, doors amber, walls pale on top. Built once per store.
+    // floor grey (outdoors a little greener), each room and each aisle in its own soft colour
+    // (0.4.1, StoreFloorPlan.Zones), counters and fridges darker, shelves in their aisle's
+    // colour but brighter, doors amber, walls pale on top. Built once per store.
     public static class FloorPlanTexture
     {
-        public static readonly Color Background = new Color32(18, 20, 26, 255);
-        public static readonly Color FloorIndoor = new Color32(62, 67, 78, 255);
-        public static readonly Color FloorOutdoor = new Color32(44, 56, 48, 255);
-        public static readonly Color Fixture = new Color32(96, 100, 110, 255);
-        public static readonly Color Wall = new Color32(214, 219, 228, 255);
-        public static readonly Color Door = new Color32(235, 170, 64, 255);
+        public static readonly Color Background = new Color32(21, 22, 27, 255);      // UiTheme.Ink, solid
+        public static readonly Color FloorIndoor = new Color32(58, 61, 70, 255);
+        public static readonly Color FloorOutdoor = new Color32(40, 46, 44, 255);
+        public static readonly Color Fixture = new Color32(30, 31, 37, 255);         // counters, racks: dark shapes on a coloured floor
+        public static readonly Color Wall = new Color32(236, 231, 222, 255);         // warm white
+        public static readonly Color Door = new Color32(238, 186, 104, 255);         // soft amber
 
         public static Texture2D Render(StoreFloorPlan plan, float pixelsPerMetre, int maxSize = 2048)
         {
@@ -27,6 +28,13 @@ namespace Kehai.Store
             var canvas = new Canvas(px, w, h, b, ppm);
             for (int i = 0; i < plan.Floor.Count; i++)
                 canvas.Triangle(plan.Floor[i][0], plan.Floor[i][1], plan.Floor[i][2], plan.FloorOutdoors[i] ? FloorOutdoor : FloorIndoor);
+
+            // Each room and aisle in its own colour, laid over the floor it has and nothing else:
+            // a cell's square only colours pixels that are already floor.
+            canvas.MarkFloor();
+            foreach (StoreFloorPlan.Zone zone in plan.Zones)
+                foreach (Vector2 cell in zone.Cells)
+                    canvas.FloorSquare(cell, Kehai.Store.StoreMap.CellSize + 0.2f, zone.Colour);
 
             foreach (StoreFloorPlan.Shape s in plan.Shapes)
                 if (s.Kind == StoreFloorPlan.ShapeKind.Fixture) canvas.Quad(s.Corners, Fixture, 0f);
@@ -63,6 +71,31 @@ namespace Kehai.Store
             }
 
             Vector2 ToPixel(Vector2 world) => new Vector2((world.x - bounds.xMin) * ppm, (world.y - bounds.yMin) * ppm);
+
+            bool[] floor;
+
+            // Remember which pixels are floor right now (everything painted so far).
+            public void MarkFloor()
+            {
+                floor = new bool[px.Length];
+                Color32 bg = Background;
+                for (int i = 0; i < px.Length; i++) floor[i] = px[i].r != bg.r || px[i].g != bg.g || px[i].b != bg.b;
+            }
+
+            // A square of `size` metres round `centre`, painted only where there is floor.
+            public void FloorSquare(Vector2 centre, float size, Color colour)
+            {
+                if (floor == null) return;
+                Vector2 c = ToPixel(centre);
+                float half = size * ppm * 0.5f;
+                int x0 = Mathf.Max(0, Mathf.FloorToInt(c.x - half)), x1 = Mathf.Min(w - 1, Mathf.CeilToInt(c.x + half));
+                int y0 = Mathf.Max(0, Mathf.FloorToInt(c.y - half)), y1 = Mathf.Min(h - 1, Mathf.CeilToInt(c.y + half));
+                Color32 c32 = colour;
+                c32.a = 255;
+                for (int y = y0; y <= y1; y++)
+                for (int x = x0; x <= x1; x++)
+                    if (floor[y * w + x]) px[y * w + x] = c32;
+            }
 
             public void Triangle(Vector2 a, Vector2 b, Vector2 c, Color colour)
             {

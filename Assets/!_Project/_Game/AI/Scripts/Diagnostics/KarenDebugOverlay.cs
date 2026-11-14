@@ -11,8 +11,10 @@ namespace Kehai.Karen
     //   F1  the live map: the real floor plan with you, Karen (and where she's looking), her
     //       guess of where you are, every customer and what they're doing, the sounds being
     //       made, her warnings, and the jobs. Beside it, what she's doing and a running story
-    //       of the shift. H adds her guess as a heat map; T swaps the story for the technical
-    //       numbers.
+    //       of the shift. H adds her guess as a heat map; R her route guesses; T swaps the story
+    //       for the technical numbers. The mouse stays the game's (0.4.1): you can keep walking
+    //       with the map open, and no cursor appears. In the editor and development builds G
+    //       opens the list that forces a trick, and frees the mouse for its buttons.
     //   F2  the replay of this shift (or the last one): drag the timeline, Space to play,
     //       1/2/3 for speed, ←/→ to skip, O to open the full report in your browser.
     public sealed class KarenDebugOverlay : MonoBehaviour
@@ -21,6 +23,8 @@ namespace Kehai.Karen
         public KeyCode replayKey = KeyCode.F2;
         public KeyCode heatKey = KeyCode.H;
         public KeyCode technicalKey = KeyCode.T;
+        public KeyCode routesKey = KeyCode.R;
+        public KeyCode tricksKey = KeyCode.G;      // editor and development builds only
         public bool showOverlay;
         public bool showScrubber;
         public bool showHeat;
@@ -60,6 +64,14 @@ namespace Kehai.Karen
             FullScreenPanel.Set(this, showOverlay || showScrubber);
             if (showOverlay && Input.GetKeyDown(heatKey)) showHeat = !showHeat;
             if (showOverlay && Input.GetKeyDown(technicalKey)) showTechnical = !showTechnical;
+            if (showOverlay && Input.GetKeyDown(routesKey)) showRoutes = !showRoutes;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (showOverlay && Input.GetKeyDown(tricksKey))
+            {
+                showTricks = !showTricks;
+                ApplyCursor();
+            }
+#endif
 
             if (showScrubber)
             {
@@ -90,8 +102,21 @@ namespace Kehai.Karen
                 replayT = 0f;
                 playing = r != null && r.Frames.Count > 0;
             }
-            Cursor.lockState = on || showOverlay ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = on || showOverlay;
+            ApplyCursor();
+        }
+
+        // Who has the mouse (0.4.1). The F1 map is read, not clicked: the mouse stays locked to
+        // the game and no cursor shows. The F2 replay's timeline is dragged, and the developer's
+        // trick list is clicked, so those two free it.
+        public static bool CursorFree(bool map, bool replay, bool trickList) => replay || map && trickList;
+
+        bool MouseIsFree => CursorFree(showOverlay, showScrubber, showTricks);
+
+        void ApplyCursor()
+        {
+            bool free = MouseIsFree;
+            Cursor.lockState = free ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = free;
         }
 
         static ShiftRecording Recording => ShiftRecorder.Instance != null ? ShiftRecorder.Instance.Current ?? ShiftRecorder.Instance.Last : null;
@@ -123,15 +148,15 @@ namespace Kehai.Karen
             int size = FontSize;
             if (body == null)
             {
-                body = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true };
+                body = UiTheme.Soften(new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true });
                 heading = new GUIStyle(body) { fontStyle = FontStyle.Bold };
                 small = new GUIStyle(body);
             }
             body.fontSize = size;
             heading.fontSize = Mathf.RoundToInt(size * 1.3f);
             small.fontSize = Mathf.RoundToInt(size * 0.8f);
-            body.normal.textColor = heading.normal.textColor = new Color(0.94f, 0.94f, 0.92f);
-            small.normal.textColor = new Color(0.75f, 0.77f, 0.8f);
+            body.normal.textColor = heading.normal.textColor = UiTheme.Text;
+            small.normal.textColor = UiTheme.Dim;
         }
 
         void OnGUI()
@@ -141,9 +166,7 @@ namespace Kehai.Karen
             if (painter == null) painter = new MapPainter(StoreFloorPlan.Current);
             Styles();
 
-            GUI.color = new Color(0.04f, 0.045f, 0.06f, 0.94f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            UiTheme.Fill(new Rect(0, 0, Screen.width, Screen.height), UiTheme.Ink);
 
             if (showScrubber) DrawReplay();
             else DrawLive();
@@ -168,12 +191,13 @@ namespace Kehai.Karen
             MapPainter.Legend(new Rect(margin, painter.Area.yMax + margin, mapWidth - margin, legendH), size);
 
             var panel = new Rect(mapWidth + margin, margin, Screen.width - mapWidth - margin * 2f, Screen.height - margin * 2f);
+            // The story sits on a card of its own, beside the map.
+            UiTheme.Fill(panel, UiTheme.Panel, size * 0.8f);
+            panel = new Rect(panel.x + size * 0.9f, panel.y + size * 0.7f, panel.width - size * 1.8f, panel.height - size * 1.4f);
             GUILayout.BeginArea(panel);
             routeScroll = GUILayout.BeginScrollView(routeScroll);
-            showRoutes = GUILayout.Toggle(showRoutes, "Routes — her guesses", GUI.skin.button);
             if (showRoutes) RouteList();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            showTricks = GUILayout.Toggle(showTricks, "Tricks — force one", GUI.skin.button);
             if (showTricks) TrickList();
 #endif
             if (showTechnical) Technical();
@@ -298,8 +322,15 @@ namespace Kehai.Karen
             if (shown == 0) GUILayout.Label("Nothing yet.", small);
 
             GUILayout.FlexibleSpace();
-            GUILayout.Label("F1 close · F2 replay the shift · H her guess as a heat map · T technical details · F10 blink test", small);
+            GUILayout.Label(Footer, small);
         }
+
+        static string Footer =>
+            "F1 close · F2 replay the shift · R her route guesses · H her guess as a heat map · T technical details · F10 blink test"
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            + " · G force a trick (frees the mouse)"
+#endif
+            ;
 
         static Color StoryColour(StoryKind kind)
         {
@@ -359,8 +390,7 @@ namespace Kehai.Karen
 
             // The timeline, with the moments that matter marked on it.
             var bar = new Rect(margin, Screen.height - timelineH, Screen.width - margin * 2f, size * 1.2f);
-            GUI.color = new Color(0.2f, 0.22f, 0.27f);
-            GUI.DrawTexture(bar, Texture2D.whiteTexture);
+            UiTheme.Fill(bar, UiTheme.Raised, size * 0.35f);
             foreach (ShiftEvent e in r.Events)
             {
                 Color c;

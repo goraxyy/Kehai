@@ -1,4 +1,3 @@
-using System.Collections;
 using Kehai;
 using Kehai.Karen;
 using UnityEngine;
@@ -85,19 +84,29 @@ public class HingeDoor : MonoBehaviour
 
     void Update()
     {
-        if (aimedInteraction || player == null) return;
-        // Check distance & E key press
-        float dist = Vector3.Distance(transform.position, player.position);
-        if (Input.GetKeyDown(KeyCode.E) && dist <= interactRange && !GamePause.Paused)
-            Use(player.position, NoiseAuthor.Player);
+        if (!aimedInteraction && player != null)
+        {
+            // Check distance & E key press
+            float dist = Vector3.Distance(transform.position, player.position);
+            if (Input.GetKeyDown(KeyCode.E) && dist <= interactRange && !GamePause.Paused)
+                Use(player.position, NoiseAuthor.Player);
+        }
+        StepSwing(Time.deltaTime);
     }
 
     // Opens or closes the door for whoever stands at `from` — the E key, the eval's agent,
-    // and Karen all come through here. Returns false if it's locked or already swinging.
+    // and Karen all come through here. Returns false if it's locked, or swinging for anyone
+    // but the player: E on a swinging door turns it round (0.4.1), as the fridge and locker
+    // doors do, so a door you opened by mistake can be shut again at once.
     public bool Use(Vector3 from, NoiseAuthor author)
     {
         if (Blocker != null) Blocker.Refresh();
-        if (isMoving) return false;
+        if (isMoving)
+        {
+            if (author != NoiseAuthor.Player || Locked) return false;
+            Reverse(author);
+            return true;
+        }
         if (Locked)
         {
             // Rattles against the lock or the box behind it.
@@ -160,11 +169,43 @@ public class HingeDoor : MonoBehaviour
             openedAt = Time.time;
         }
 
-        StartCoroutine(RotateDoor(isOpen ? closedRot : openRot));
         isOpen = !isOpen;
+        BeginSwing(isOpen ? openRot : closedRot);
 
         // isOpen has already flipped, so it now describes the swing that just started.
         OneShotAudio.PlayAt(isOpen ? openCreak : closeCreak, transform.position, creakVolume);
+    }
+
+    // Mid-swing: the door turns round and goes back the way it came. An opening door closes;
+    // a closing one opens again to the side it was already open on.
+    void Reverse(NoiseAuthor author)
+    {
+        isOpen = !isOpen;
+        if (isOpen) openedAt = Time.time;
+        BeginSwing(isOpen ? openRot : closedRot);
+        OneShotAudio.PlayAt(isOpen ? openCreak : closeCreak, transform.position, creakVolume);
+        NoiseBus.Emit(transform.position, 0.4f, NoiseKind.Door, author);
+        if (author == NoiseAuthor.Player && !Propped) GameEvents.RaiseDoorUsed(this, isOpen);
+    }
+
+    void BeginSwing(Quaternion target)
+    {
+        swingTarget = target;
+        isMoving = true;
+        if (openCarve != null) openCarve.enabled = false;
+    }
+
+    Quaternion swingTarget;
+
+    // One step of the swing. Update drives it; public so a test can.
+    public void StepSwing(float dt)
+    {
+        if (!isMoving) return;
+        transform.rotation = Quaternion.Lerp(transform.rotation, swingTarget, openSpeed * dt);
+        if (Quaternion.Angle(transform.rotation, swingTarget) > 0.1f) return;
+        transform.rotation = swingTarget;
+        isMoving = false;
+        if (openCarve != null) openCarve.enabled = isOpen;
     }
 
     // A physical block has its own lifetime. Removing it must not cancel a separate lock.
@@ -209,17 +250,4 @@ public class HingeDoor : MonoBehaviour
         }
     }
 
-    IEnumerator RotateDoor(Quaternion target)
-    {
-        isMoving = true;
-        if (openCarve != null) openCarve.enabled = false;
-        while (Quaternion.Angle(transform.rotation, target) > 0.1f)
-        {
-            transform.rotation = Quaternion.Lerp(transform.rotation, target, openSpeed * Time.deltaTime);
-            yield return null;
-        }
-        transform.rotation = target;
-        isMoving = false;
-        if (openCarve != null) openCarve.enabled = isOpen;
-    }
 }

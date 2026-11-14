@@ -1136,8 +1136,8 @@ namespace Kehai.Karen
         {
             FairnessGuard.NoteTell(kind, lead);
             Told?.Invoke(kind, at, lead);
-            if (ShiftActive && kind != TellKind.PaChime && kind != TellKind.Footsteps)
-                KarenNarrator.Say(StoryKind.Warning, $"Warning: {KarenNarrator.Tell(kind)} near {KarenNarrator.Place(at)} — something's about to happen.", at);
+            string heard = ShiftActive ? KarenNarrator.TrickSound(kind, at) : null;   // 0.4.1: what's happening, not "a warning"
+            if (heard != null) KarenNarrator.Say(StoryKind.Warning, heard, at);
             Note("TELL", $"TELL     {kind} at {Map.Describe(at)} ({lead:0.0}s lead)");
         }
 

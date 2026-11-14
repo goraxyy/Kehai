@@ -4,10 +4,16 @@ using UnityEngine;
 
 // What her fog looks like (Karen 0.3.0; build plan B2.1). It only shows what FogState says:
 //
-//   - fog pours out of every fridge in the fogged room (KarenWorld.FridgesIn), harder as it
-//     rolls in, and stops when the room is reset;
+//   - fog pours into the fogged room from its sources (KarenWorld.FogSources: the cold room's
+//     fridges, the stockroom's doors to it), harder as it rolls in, and stops when the room is
+//     reset;
 //   - while your camera is inside a fogged room, the renderer's distance fog closes in to the
 //     visibility (KarenConfig.fogVisibility, 2 m): you see about as far as she does.
+//
+// 0.4.1: all of it is seen from inside the room only (Shows). From the doorway, or through a
+// window, a fogged room looks like any other; the fog is there when you step in. Until then
+// the clouds poured in plain view of the next room, and with the sales floor a fog room the
+// fog seemed to cover the building.
 //
 // Distance fog, a term: the renderer fades everything beyond a distance into one colour. Here it
 // ends at the visibility while you're in the fog. (Elsewhere: Minecraft's render distance fog.)
@@ -17,6 +23,10 @@ public sealed class FogVisuals : MonoBehaviour
 
     static FogVisuals instance;
     readonly Dictionary<string, List<ParticleSystem>> pouring = new Dictionary<string, List<ParticleSystem>>();
+    readonly List<(string room, ParticleSystem cloud)> thinning = new List<(string, ParticleSystem)>();
+
+    // Whether someone standing in `viewerRoom` sees the fog of `fogRoom`: only from inside it.
+    public static bool Shows(string fogRoom, string viewerRoom) => fogRoom != null && fogRoom == viewerRoom;
 
     bool saved, applied;
     bool fogWas;
@@ -50,10 +60,9 @@ public sealed class FogVisuals : MonoBehaviour
         KarenWorld world = KarenWorld.Instance;
         if (world == null) return;
         if (!pouring.TryGetValue(room, out List<ParticleSystem> list)) pouring[room] = list = new List<ParticleSystem>();
-        foreach (Transform fridge in world.FridgesIn(room))
+        foreach (Vector3 source in world.FogSources(room))
         {
-            if (fridge == null) continue;
-            FogCloud cloud = FogCloud.Build(new Vector3(fridge.position.x, FloorUnder(fridge.position), fridge.position.z), 1.6f, 9999f);
+            FogCloud cloud = FogCloud.Build(new Vector3(source.x, FloorUnder(source), source.z), 1.6f, 9999f);
             ParticleSystem ps = cloud.GetComponent<ParticleSystem>();
             var main = ps.main;
             main.loop = true;
@@ -74,6 +83,7 @@ public sealed class FogVisuals : MonoBehaviour
             if (ps == null) continue;
             ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             Destroy(ps.gameObject, 15f);   // what's already out thins away
+            thinning.Add((room, ps));
         }
         pouring.Remove(room);
     }
@@ -96,9 +106,27 @@ public sealed class FogVisuals : MonoBehaviour
         }
 
         Camera eye = Camera.main;
+
+        // The clouds are drawn for someone standing in their room, and for nobody else.
+        string here = eye != null && (pouring.Count > 0 || thinning.Count > 0) ? FogState.RoomOf(eye.transform.position) : null;
+        foreach (KeyValuePair<string, List<ParticleSystem>> pair in pouring)
+            foreach (ParticleSystem ps in pair.Value) Draw(ps, Shows(pair.Key, here));
+        for (int i = thinning.Count - 1; i >= 0; i--)
+        {
+            if (thinning[i].cloud == null) { thinning.RemoveAt(i); continue; }
+            Draw(thinning[i].cloud, Shows(thinning[i].room, here));
+        }
+
         float visibility = eye != null ? FogState.VisibilityAt(eye.transform.position) : FogState.Open;
         if (visibility < FogState.Open - 0.01f) Apply(visibility);
         else Restore();
+    }
+
+    static void Draw(ParticleSystem ps, bool show)
+    {
+        if (ps == null) return;
+        Renderer r = ps.GetComponent<Renderer>();
+        if (r != null && r.enabled != show) r.enabled = show;
     }
 
     void Apply(float visibility)

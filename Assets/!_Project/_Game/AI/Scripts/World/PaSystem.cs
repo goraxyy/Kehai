@@ -73,7 +73,8 @@ namespace Kehai.Karen
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(transform, false);
             var text = go.AddComponent<TextMeshProUGUI>();
-            text.font = TMP_Settings.defaultFontAsset;
+            text.font = UiTheme.TmpFont ?? TMP_Settings.defaultFontAsset;   // the theme's rounded face (0.4.1)
+            text.color = UiTheme.Text;
             text.fontSize = size;
             text.alignment = align;
             text.textWrappingMode = TextWrappingModes.Normal;
@@ -92,7 +93,7 @@ namespace Kehai.Karen
 
         public void Banner(string text, float seconds)
         {
-            banner.font = GameFonts.ForText(text, TMP_Settings.defaultFontAsset);
+            banner.font = GameFonts.ForText(text, UiTheme.TmpFont ?? TMP_Settings.defaultFontAsset);
             banner.text = text;
             bannerUntil = Time.unscaledTime + seconds;
         }
@@ -176,6 +177,28 @@ namespace Kehai.Karen
             return a;
         }
 
+        // Somebody else on the microphone (0.4.1: you, closing the store). The chime, then the
+        // words, through the speakers nearest the listener and on screen under the speaker's
+        // name. It isn't one of Karen's announcements: it doesn't join her queue or raise her
+        // events, so her log and her fairness audit never take your voice for hers. False with
+        // the PA switched off.
+        public bool SayAs(string speaker, string text)
+        {
+            if (!Powered || string.IsNullOrEmpty(text)) return false;
+            PositionVoices();
+            Play(ProceduralAudio.PaChime());
+            StartCoroutine(Words(text));
+            KarenScreen.Ensure().Subtitle($"<color=#{UiTheme.Hex(UiTheme.Good)}>{speaker}</color> <size=70%>(store PA)</size>\n{text}",
+                                          ChimeSeconds + text.Length * 0.06f + 1.5f);
+            return true;
+        }
+
+        System.Collections.IEnumerator Words(string text)
+        {
+            yield return new WaitForSeconds(ChimeSeconds);
+            if (Powered) Play(ProceduralAudio.Voice(text));
+        }
+
         // A sound through the speaker nearest a point — her footsteps from the wrong side of
         // the store, a crackle, hold music.
         public void PlayNear(Vector3 point, AudioClip clip, float gain = 1f)
@@ -201,7 +224,7 @@ namespace Kehai.Karen
                 phase = 1;
                 phaseEnds = Time.time + ChimeSeconds;
                 ChimeStarted?.Invoke(current);
-                KarenScreen.Ensure().Subtitle("<color=#FF6F61>" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
+                KarenScreen.Ensure().Subtitle("<color=#" + UiTheme.Hex(UiTheme.Accent) + ">" + GameNames.Antagonist + "</color> <size=70%>(store PA)</size>\n" + current.Text,
                                               1.3f + current.Text.Length * 0.06f + 1.5f);
                 return;
             }

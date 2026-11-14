@@ -53,7 +53,7 @@ namespace Kehai.Blink
             int size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 44f, 15f, 36f));
             if (body == null)
             {
-                body = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true };
+                body = UiTheme.Soften(new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true });
                 heading = new GUIStyle(body) { fontStyle = FontStyle.Bold };
                 small = new GUIStyle(body);
             }
@@ -63,9 +63,7 @@ namespace Kehai.Blink
             body.normal.textColor = heading.normal.textColor = new Color(0.94f, 0.94f, 0.92f);
             small.normal.textColor = new Color(0.7f, 0.72f, 0.76f);
 
-            GUI.color = new Color(0.04f, 0.045f, 0.06f, 0.95f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            UiTheme.Fill(new Rect(0, 0, Screen.width, Screen.height), UiTheme.Ink);
 
             float m = size;
             var left = new Rect(m, m, Screen.width * 0.46f - m, Screen.height - m * 2f);

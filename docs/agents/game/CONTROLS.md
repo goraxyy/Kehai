@@ -26,8 +26,8 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| E | Use what you're looking at: pick up, stock a shelf, open a door, serve, talk, switch the radio, switch the PA off or on (the PA box in the staff room), talk to Kenji, pick up a box blocking a door |
-| E (hold) | Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints, reset the fridge control box (3 s), restart a stopped time clock (3 s) |
+| E | Use what you're looking at: pick up, stock a shelf, open or close a door (also while it's swinging), serve, talk, switch the radio, switch the PA off or on (the PA box in the staff room), announce at closing time that the store is closed (the PA microphone beside it), talk to Kenji, pick up a box blocking a door |
+| E (hold) | Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints, restart a stopped time clock (3 s). In the backstreet, 20 s each: reset the breakers (the breaker box), reset the fridges (the fridge control box), fix the store's cameras (the camera box) |
 | E (nothing in view) | Use what's in your hand, such as switching the torch on or off |
 | Q | Put down what you're holding |
 | Q (hold, then let go) | Throw it; hold longer to throw harder |
@@ -45,9 +45,10 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| Esc | Pause: settings (sound, display, mouse, webcam), restart the shift or the main menu; closes any open panel |
-| F1 | Live map of the store and what Karen is doing, in plain words |
+| Esc | Pause: settings (sound, display, mouse, webcam), every key, Karen's tricks with a video of each, restart the shift or the main menu; closes any open panel |
+| F1 | Live map of the store and what Karen is doing, in plain words. The mouse stays the game's: no cursor, and you can keep walking |
 | H (on the F1 map) | Karen's guess of where you are, as a heat map |
+| R (on the F1 map) | Her guesses of the route you're taking |
 | T (on the F1 map) | Technical view: goal scores and her thought log |
 | F2 | Replay the shift so far |
 | Space (in the replay) | Play or pause |

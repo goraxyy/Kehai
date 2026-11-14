@@ -262,9 +262,10 @@ public class Tricks030ApiTests
     }
 
     [Test]
-    public void FogsRooms_AreTheOnesWithFridges()
+    public void FogsRooms_AreTheColdRoomAndTheStockroom()
     {
-        CollectionAssert.AreEquivalent(new[] { "Sales floor", "Cold storage", "Staff room" }, KarenWorld.FogRooms);
+        // 0.4.1, the owner's call: not the sales floor (most of the building) or the staff room.
+        CollectionAssert.AreEquivalent(new[] { "Cold storage", "Stockroom" }, KarenWorld.FogRooms);
         Assert.AreEqual(2f, new KarenConfig().fogVisibility, 1e-4f, "2 m by default");
     }
 

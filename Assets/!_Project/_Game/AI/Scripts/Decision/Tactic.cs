@@ -154,7 +154,9 @@ namespace Kehai.Karen
                 // §8.6 you
                 new StalkTactic(), new AmbushTactic(), new FavourTactic(),
                 // Hunt's tricks (0.2.0), last so the older tactics keep their numbers
-                new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic()
+                new CutTactic(), new ThrowFlourTactic(), new ThrowOilTactic(), new ThrowTinTactic(),
+                // the store's cameras (0.4.1), last again for the same reason
+                new CameraWatchTactic(), new CameraBreakTactic()
             };
         }
 
@@ -164,7 +166,8 @@ namespace Kehai.Karen
         // each once it worked end to end (build plan C1.2); the five the owner didn't ask about
         // stay drafts (D9). Everything else is live: the own moves, Ask the customers, Cut,
         // Ambush, the three throws, Blackout, Fog, Camera bolt-on, Shelf sweep, Spill, Bin tamper,
-        // Tool theft, the overtime, Phantom chime, Block door and the understudy.
+        // Tool theft, the overtime, Phantom chime, Block door and the understudy; and since 0.4.1
+        // Camera watch and Camera break.
         static readonly HashSet<string> Drafts = new HashSet<string>
         {
             "crate_wall", "shelf_relocation", "mimicry", "stalk", "favour",

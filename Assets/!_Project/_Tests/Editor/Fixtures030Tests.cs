@@ -75,8 +75,9 @@ public class Fixtures030Tests
 
         FogState.Fill("Sales floor", 2f, 0.01f);
         Assert.IsTrue(box.CanHold(null));
-        Assert.AreEqual("Hold E to reset the fridges", box.GetPrompt());
+        Assert.AreEqual("Hold E to reset the fridges (20 s)", box.GetPrompt());
         Assert.AreEqual(FogBox.HoldSeconds, box.HoldDuration, 1e-5f);
+        Assert.AreEqual(20f, box.HoldDuration, 1e-5f, "0.4.1: a backstreet fix takes twenty seconds");
     }
 
     // ---- Kenji (B4.2) ---------------------------------------------------------------------

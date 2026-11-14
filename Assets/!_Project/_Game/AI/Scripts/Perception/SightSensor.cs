@@ -18,6 +18,19 @@ namespace Kehai.Karen
     //
     // 0.3.0: fog blinds every eye the same (FogState). In a fogged room, or looking into one, an
     // eye sees no further than the fog's visibility — hers, a camera's, Kenji's, and yours.
+    //
+    // 0.4.1: one rule for cover, eye to eye. An eye sees you only along a clear line from it to
+    // your eyes (your camera). A low thing on the floor between you — a short shelf, a box —
+    // doesn't hide you if she can look over it into your eyes; and with that line blocked — you're
+    // under the stockroom racks, the boards between her eyes and yours — she doesn't see you,
+    // however clear the floor is. Until now it was three rays (feet, chest, head) and any one
+    // would do, so feet showing under a rack gave you away. How much of the rest of you shows
+    // still counts, but only for how fast she notices (ExposureOf).
+    //
+    // Every ray starts at the eye (hers is at the top of her body, about your own eye height),
+    // and stops at anything solid on any layer: walls, shelving, doors, people. Triggers, your
+    // own body, the eye's own body and loose stock (things that can be knocked about) don't
+    // block it.
     public class SightSensor : MonoBehaviour
     {
         public const float CloseRange = 2.2f;
@@ -75,7 +88,7 @@ namespace Kehai.Karen
         // How far this eye can see a point right now: its range, or less in fog.
         public float ReachTo(Vector3 point) => FogState.Active ? Mathf.Min(range, FogState.SightLimit(Eye, point)) : range;
 
-        static readonly RaycastHit[] hits = new RaycastHit[8];
+        static readonly RaycastHit[] hits = new RaycastHit[16];
         Vector3 previousSeen;
         float previousSeenTime;
         float unseenFor;
@@ -136,19 +149,31 @@ namespace Kehai.Karen
             bool close = distance < CloseRange;
             if (angle > HalfAngle && !close) return 0f;
 
-            // Three rays, not one — a shoulder showing past a shelf end is still a shoulder.
-            int visible = 0;
-            if (Clear(player, player.Feet)) visible++;
-            if (Clear(player, player.Chest)) visible++;
-            if (Clear(player, player.Head)) visible++;
-            Exposure = visible / 3f;
-            if (visible == 0) return 0f;
+            // Eye to eye first (0.4.1): no clear line to your eyes, nothing seen. Then how much
+            // of the rest of you shows, for how fast she notices.
+            Exposure = ExposureTo(player.Head, player.Chest, player.Feet, player);
+            if (Exposure <= 0f) return 0f;
 
             // Are they looking this way? A face turned toward you reads instantly.
             Vector3 back = Eye - player.Head;
             IsWatched = Vector3.Angle(player.Facing, back) < 30f;
 
             return Detect(angle, distance, player.LightLevel, player.MotionSalience, Exposure);
+        }
+
+        // How much of you an eye has, 0 to 1, from which of its three lines are clear: to your
+        // eyes, your chest, your feet. Without the line to your eyes it has nothing (0.4.1); with
+        // it, half, and a quarter more each for the chest and the feet. So a head over a short
+        // shelf is seen, at half speed, and feet under a rack are not.
+        public static float ExposureOf(bool eyes, bool chest, bool feet) =>
+            !eyes ? 0f : 0.5f + (chest ? 0.25f : 0f) + (feet ? 0.25f : 0f);
+
+        // The same, cast: this eye's lines to someone's eyes, chest and feet, through whatever
+        // stands in the scene. `player` is whose body the lines may pass through (null in a test).
+        public float ExposureTo(Vector3 eyes, Vector3 chest, Vector3 feet, PlayerPresence player = null)
+        {
+            if (!Clear(player, eyes)) return 0f;
+            return ExposureOf(true, Clear(player, chest), Clear(player, feet));
         }
 
         // The score for someone `angle` degrees off this eye's forward and `distance` metres
@@ -190,7 +215,7 @@ namespace Kehai.Karen
             for (int i = 0; i < count; i++)
             {
                 Collider c = hits[i].collider;
-                if (player.Owns(c)) continue;
+                if (player != null && player.Owns(c)) continue;
                 if (ignoreRoot != null && c.transform.IsChildOf(ignoreRoot)) continue;
                 if (c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic) continue;   // loose stock
                 return false;

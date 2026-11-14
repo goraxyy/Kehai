@@ -192,15 +192,15 @@ namespace Kehai.Karen
                     wordWrap = true,
                     padding = new RectOffset(24, 24, 20, 20)
                 };
-                style.normal.textColor = new Color(0.92f, 0.92f, 0.9f);
+                style.normal.textColor = UiTheme.Text;
+                style.normal.background = null;      // the card behind it is the theme's (0.4.1)
+                UiTheme.Soften(style);
             }
 
             style.fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 48f, 15f, 34f));
             float w = Mathf.Min(Screen.height * 1.1f, Screen.width - 60f), h = Screen.height - 60f;
             var rect = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-            GUI.color = new Color(0f, 0f, 0f, 0.9f);
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            UiTheme.Fill(rect, UiTheme.Panel, 18f);
 
             // Karen's review, then what the recording says happened.
             var text = new System.Text.StringBuilder(brain.Review.Text);

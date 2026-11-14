@@ -307,6 +307,11 @@ namespace Kehai.Eval
             ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
             Landmark? clock = Map.FindLandmark(LandmarkKind.TimeClock);
             if (shift != null && shift.IsFrozen && clock.HasValue) Add("clock", "time_clock", clock.Value.Position);
+            // 0.4.1: closing time's announcement at the PA microphone, and the cameras she broke.
+            if (shift != null && shift.AwaitingAnnouncement)
+                Add("closing", "pa_microphone", ClosingMic.Instance != null ? ClosingMic.Instance.transform.position : clock?.Position ?? Vector3.zero);
+            if (StoreCameras.Instance != null && StoreCameras.Instance.Broken && StoreCameras.Instance.Box != null)
+                Add("cameras", "camera_box", StoreCameras.Instance.Box.transform.position);
             foreach (ToolSnapPoint rack in ToolSnapPoint.TakenRacks)
                 if (rack != null && rack.tool != null) Add("lost_tool", ChoreId(rack.tool, "tool"), rack.tool.transform.position);
             foreach (HingeDoor door in HingeDoor.All)

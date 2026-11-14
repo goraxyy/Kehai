@@ -8,7 +8,7 @@ namespace Kehai.Karen
     public enum StoryKind
     {
         Plan,       // what Karen has decided to do
-        Warning,    // a tell: something is about to happen
+        Warning,    // the sound one of her tricks makes as it happens (the name is kept for old records)
         Seen,       // she saw you / lost sight of you
         Heard,      // she heard something
         Guess,      // where she thinks you are
@@ -144,8 +144,10 @@ namespace Kehai.Karen
                 case "poll_witnesses": return "asking customers if they've seen you";
                 case "withdraw": return "backing off for a while";
                 case "blackout": return "cutting the power to the whole store";
-                case "fog": return "flooding your room with fog from the fridges";
+                case "fog": return "filling the cold room or the stockroom with fog";
                 case "camera_bolt_on": return "fitting a camera into a shelf, aimed where you go";
+                case "camera_watch": return "watching the store's cameras from the office";
+                case "camera_break": return "breaking the store's cameras";
                 case "shelf_sweep": return "knocking a shelf's stock onto the floor";
                 case "spill": return "dropping a spill on your way";
                 case "bin_tamper": return "tipping rubbish back into a bin";
@@ -193,7 +195,42 @@ namespace Kehai.Karen
                 case TellKind.DoorMotor: return "the front doors' motor whirs";
                 case TellKind.PaChime: return "the speakers chime";
                 case TellKind.Footsteps: return "footsteps";
+                case TellKind.CameraFizz: return "a camera fizzes and goes dark";
+                case TellKind.MonitorHum: return "the office screens hum";
                 default: return kind.ToString();
+            }
+        }
+
+        // A trick's sound as one plain line for the story: what you'd hear, where, and what she is
+        // doing. Until 0.2.0 these were warnings ("something's about to happen"); a trick's sound
+        // now plays as the trick happens, so the line says what is happening. Null for a sound
+        // that says nothing by itself (her PA chime, her steps) or whose trick is retired.
+        public static string TrickSound(TellKind kind, Vector3 at) => TrickSound(kind, In(at));
+
+        public static string TrickSound(TellKind kind, string where)
+        {
+            string her = GameNames.Antagonist;
+            switch (kind)
+            {
+                case TellKind.BallastWhine: return $"The lights whine and flicker {where}: {her} is cutting the power.";
+                case TellKind.ShelfRattle: return $"A shelf rattles {where}: {her} is knocking its stock onto the floor.";
+                case TellKind.BucketClank: return $"A bucket clanks {where}: {her} is leaving a spill.";
+                case TellKind.LidClatter: return $"A bin lid clatters {where}: {her} is tipping rubbish back into the bin.";
+                case TellKind.MopRattle: return $"The mop rattles on its hook {where}: {her} is taking it to hide.";
+                case TellKind.Drilling: return $"Drilling {where}: {her} is fitting a camera into a shelf.";
+                case TellKind.Scrape: return $"Crates scrape across the floor {where}: {her} is blocking the way.";
+                case TellKind.Clunk: return $"A thud {where}: {her} has put a box behind the door.";
+                case TellKind.FreezerHiss: return $"The fridges hiss {where}: {her} is filling the room with fog.";
+                case TellKind.CustomerFreeze: return $"A shopper stops dead {where}: {her} is using them to look for you.";
+                case TellKind.Screech: return $"A screech {where}: {her} has seen you and is coming.";
+                case TellKind.SilenceFalls: return $"Her footsteps stop {where}: {her} is waiting for you to walk past.";
+                case TellKind.PunchBuzz: return $"The time clock buzzes {where}: {her} has stopped it.";
+                case TellKind.HoldMusic: return $"Hold music plays: {her} is backing off for a while.";
+                case TellKind.Grinding: return $"Shelving grinds on its wheels {where}: {her} is moving a shelf.";
+                case TellKind.DoorMotor: return $"The front doors open by themselves {where}. Nobody is there: it's {her}'s Phantom chime.";
+                case TellKind.CameraFizz: return $"A camera fizzes and goes dark {where}: {her} has broken the store's cameras.";
+                case TellKind.MonitorHum: return $"The office screens hum {where}: {her} is watching the store's cameras.";
+                default: return null;   // PaChime, Footsteps, RevealSting, and the retired ones
             }
         }
 

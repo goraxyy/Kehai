@@ -35,8 +35,8 @@ public static class Controls
             K("Left Ctrl (hold)", "Crouch while held; let go to stand up. Quiet, and slow"),
             K("Space", "Jump")),
         new Section("Hands and work",
-            K("E", "Use what you're looking at: pick up, stock a shelf, open a door, serve, talk, switch the radio, switch the PA off or on (the PA box in the staff room), talk to Kenji, pick up a box blocking a door"),
-            K("E (hold)", "Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints, reset the fridge control box (3 s), restart a stopped time clock (3 s)"),
+            K("E", "Use what you're looking at: pick up, stock a shelf, open or close a door (also while it's swinging), serve, talk, switch the radio, switch the PA off or on (the PA box in the staff room), announce at closing time that the store is closed (the PA microphone beside it), talk to Kenji, pick up a box blocking a door"),
+            K("E (hold)", "Mop a spill (with the mop in hand), clear a crate wall, unplug a camera, scrub footprints, restart a stopped time clock (3 s). In the backstreet, 20 s each: reset the breakers (the breaker box), reset the fridges (the fridge control box), fix the store's cameras (the camera box)"),
             K("E (nothing in view)", "Use what's in your hand, such as switching the torch on or off"),
             K("Q", "Put down what you're holding"),
             K("Q (hold, then let go)", "Throw it; hold longer to throw harder"),
@@ -46,9 +46,10 @@ public static class Controls
             K("Up / Down", "Choose an answer when a customer asks you something"),
             K("E / Enter", "Give that answer")),
         new Section("Menus and maps",
-            K("Esc", "Pause: settings (sound, display, mouse, webcam), restart the shift or the main menu; closes any open panel"),
-            K("F1", "Live map of the store and what " + GameNames.Antagonist + " is doing, in plain words"),
+            K("Esc", "Pause: settings (sound, display, mouse, webcam), every key, " + GameNames.Antagonist + "'s tricks with a video of each, restart the shift or the main menu; closes any open panel"),
+            K("F1", "Live map of the store and what " + GameNames.Antagonist + " is doing, in plain words. The mouse stays the game's: no cursor, and you can keep walking"),
             K("H (on the F1 map)", GameNames.Antagonist + "'s guess of where you are, as a heat map"),
+            K("R (on the F1 map)", "Her guesses of the route you're taking"),
             K("T (on the F1 map)", "Technical view: goal scores and her thought log"),
             K("F2", "Replay the shift so far"),
             K("Space (in the replay)", "Play or pause"),
@@ -103,6 +104,7 @@ public static class Controls
     public static readonly Section[] Developer =
     {
         new Section("Developer builds only",
-            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off")),
+            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
+            K("G (on the F1 map)", "The list that forces one of her tricks; frees the mouse for its buttons")),
     };
 }

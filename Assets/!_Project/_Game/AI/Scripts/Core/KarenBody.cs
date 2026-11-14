@@ -136,7 +136,7 @@ namespace Kehai.Karen
             gazeGo.transform.localPosition = new Vector3(0f, height - 0.15f, radius * 0.5f);
             Light gaze = gazeGo.AddComponent<Light>();
             gaze.type = LightType.Spot;
-            gaze.range = config.sightRange * 0.7f;
+            gaze.range = Mathf.Min(26f, config.sightRange * 0.7f);   // the light stays a torch's; her eye goes further (0.4.1)
             gaze.spotAngle = Mathf.Min(90f, config.sightFov * 0.6f);
             gaze.intensity = 6f;
             gaze.shadows = LightShadows.None;
@@ -306,6 +306,16 @@ namespace Kehai.Karen
             if (Agent.velocity.sqrMagnitude < 0.05f) return;
             HingeDoor door = HingeDoor.ClosedAhead(transform.position, Agent.velocity, 1.8f);
             if (door != null && !door.Locked) door.OpenFor(transform.position, NoiseAuthor.Karen);
+
+            // The automatic doors too (0.4.1): they open as she nears, from further off the
+            // faster she comes, and she doesn't step between panels that are still sliding.
+            AutoDoubleDoor auto = AutoDoubleDoor.Ahead(transform.position, Agent.velocity);
+            if (auto == null) return;
+            auto.OpenForKaren();
+            if (auto.Openness >= 0.6f || !Agent.isOnNavMesh) return;
+            Vector3 to = auto.transform.position - transform.position;
+            to.y = 0f;
+            if (to.magnitude < config.bodyRadius + 0.9f) Agent.velocity = Vector3.zero;   // wait at the glass
         }
 
         void Footsteps()

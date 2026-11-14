@@ -9,157 +9,178 @@ where you hide, and she moves when you blink. Her touch kills.
 
 > *"Employee wellbeing is a tracked metric. I am optimising it."*
 
-**Status:** a playable prototype on its way to a vertical slice; not released. What's left is in
+**Status:** a playable prototype on its way to a vertical slice; not released. What's being built
+now is in [`docs/you/NOW.md`](docs/you/NOW.md), and what's left until release in
 [`docs/you/RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md).
+
+**Karen's full design:** [`docs/agents/karen/Karen.md`](docs/agents/karen/Karen.md). The same on
+one page, in plain words: [`docs/you/HOW_KAREN_WORKS.md`](docs/you/HOW_KAREN_WORKS.md).
 
 ---
 
-## This repository
+## Karen, in one picture
 
-It holds the **code and documents only**: C# scripts (with their `.meta` files), the shader, the
-Python, Swift and TypeScript tools, and the docs. Scenes, models, audio, prefabs and project
-settings stay on the developer's Mac, so this isn't a runnable Unity project on its own. Data
-that would normally live in assets (Karen's tactics, the products, the shelf plan) is written in
-code so it can be read here.
+She never knows where you are. She senses, guesses, and acts on the guess.
 
-The staff-room and office model libraries, layouts and organized Models_Island are generated
-by the **Kehai → Staff Room** and **Kehai → Office** editor menus. See
-[`docs/agents/store/INTERIOR_MODELS.md`](docs/agents/store/INTERIOR_MODELS.md) for their inventory, dimensions and saving steps.
+```mermaid
+flowchart LR
+    S["What she senses<br/>eyes · ears · traces<br/>cameras · customers"] --> B["Where she thinks you are<br/>a chance for every 1.5 m of floor"]
+    B --> D["What she does<br/>roam · check · search · hunt<br/>or one of 17 tricks"]
+    D --> Y["What you do<br/>hide · run · fix what she broke"]
+    Y --> S
+    P["The Director<br/>paces the tension in waves"] -.-> D
+    L["The Ledger<br/>remembers you between shifts"] -.-> B
+    L -.-> D
+```
+
+| Part | In one line |
+|---|---|
+| Senses | Sight judged eye to eye, hearing along the floor, traces you leave, cameras, what shoppers tell her |
+| The belief map | Spreads while she can't sense you, sharpens when she can, and drops where she looks and finds nothing |
+| Tricks | 17 live: Blackout, Fog, Camera watch, Camera break, Shelf sweep, Spill, Ambush, Block door and more. Most leave you a job |
+| Fairness | Ten rules in code, checked by tests. She can't read your position, and a shift can always be finished |
+
+## A shift, in one picture
+
+```mermaid
+flowchart LR
+    A["Clock in<br/>staff room"] --> W["Work<br/>stock · mop · bins · till · customers"]
+    W --> K{"Karen"}
+    K -->|"a trick"| C["A job for you<br/>breakers · fridges · cameras<br/>hold the box 20 s, in the backstreet"]
+    C --> W
+    K -->|"she sees you"| H["The hunt<br/>break the line between<br/>her eyes and yours"]
+    H -->|"she touches you"| X["The shift starts again"]
+    H -->|"you lose her"| W
+    W --> T["Closing time<br/>announce it on the PA"]
+    T --> O["Clock out<br/>every job done"]
+```
+
+## The store, in one picture
+
+Six rooms have a camera. The office shows all six on a wall of screens: for you, and for her.
+
+```mermaid
+flowchart TB
+    subgraph front [" "]
+        PAV["Pavement 📷"] --- LOB["Lobby 📷"]
+    end
+    LOB --- SF["Sales floor<br/>13 aisles · 189 shelf bays · 80 products"]
+    subgraph west ["Staff side"]
+        WC["WC"] --- OFF["Office<br/>six screens"]
+        OFF --- STAFF["Staff room 📷<br/>time clock · PA box · PA microphone"]
+        STAFF --- BACK["Backstreet 📷<br/>breaker box · fridge box · camera box"]
+    end
+    SF --- STAFF
+    SF --- STOCK["Stockroom 📷"]
+    BACK --- STOCK
+    STOCK --- COLD["Cold room 📷"]
+```
 
 ---
 
 ## The game
 
-- **The shift:** clock in, do the jobs, clock out once the shelves are full, the spills mopped
-  and the bins emptied. Energy drains as you go; coffee helps.
-- **The store:** a 60 × 45 m sales-floor maze of 189 shelf bays, 80 products in 13 sections,
-  thousands of shelf slots, power cuts, a radio and automatic doors.
-- **Karen:** three minds (a body that only knows what it senses, a director that paces the
-  tension, a ledger that remembers you across shifts), a map of where she thinks you are, and
-  fifteen live tricks (seventeen choices for the learner) on the 0.3.0 branch: Ask the customers,
-  Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw (powder, detergent or tin),
-  Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy and the overtime; five
-  others remain disabled drafts. Hands-on tricks only happen where she stands, and she learns
-  where each one works on you. Hunt runs at 7.5 m/s against your 6.5 m/s sprint, about 15%
-  faster. Tricks don't promise advance warnings. Design:
-  [`docs/agents/karen/Karen.md`](docs/agents/karen/Karen.md) (0.3.0: §17).
+- **The shift:** clock in, do the jobs, and clock out once the shelves are full, the spills
+  mopped and the bins emptied. At closing time you announce over the PA that the store is
+  closed: customers keep coming until you do. Energy drains as you go; coffee helps.
+- **The store:** a 60 × 45 m sales-floor maze, power cuts, a radio, automatic doors, and six
+  cameras you can watch from the office.
+- **Karen:** a body that only knows what it senses, a director that paces the tension, a ledger
+  that remembers you across shifts, and a map of where she thinks you are. Hands-on tricks only
+  happen where she stands, and she learns where each one works on you. She sprints a little
+  faster than you, so break her line of sight.
 - **The blink:** opt-in webcam tracking lets Karen act while your eyes are shut. Nothing is
   recorded, and nothing leaves your computer ([`tools/blink`](tools/blink/README.md)).
 - **Seeing what happened:** a live map (**F1**), a replay of the shift (**F2**), an HTML report
-  after every shift, and a full 3D replay (**R**) you can watch from any camera.
+  after every shift, a full 3D replay, and in the **Esc** menu every key and every one of
+  Karen's tricks with a short video.
 
-## Controls
+## This repository
 
-| Key | Action |
-|---|---|
-| WASD, mouse | Move, look |
-| Left Shift (hold) | Sprint (loud) |
-| Left Ctrl (hold) | Crouch (quiet) |
-| E / hold E | Use / mop, clear, unplug |
-| Q / hold Q | Put down / throw |
-| 1–4, mouse wheel | Hand slot |
-| C | Task list |
-| Esc | Pause and settings |
-| F1 / F2 | Live map / replay |
-| F8 / F9 / F10 / B | Webcam blink on-off / calibrate / test / keyboard blink |
+It holds the **code and documents only**: C# scripts (with their `.meta` files), the shader, the
+Python, Swift and TypeScript tools, and the docs. Scenes, models, audio, video, prefabs and
+project settings stay on the developer's computers, so this isn't a runnable Unity project on
+its own. Data that would normally live in assets (Karen's tricks, the products, the shelf plan,
+the store's cameras) is written in code so it can be read here.
 
-Every key: [`docs/agents/game/CONTROLS.md`](docs/agents/game/CONTROLS.md), or **Esc → Keys** in the game.
-
----
-
-## Build and test
-
-With the project closed in the editor (Unity allows one instance per project):
-
-```bash
-# EditMode tests
-Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults results.xml
-
-# Builds (or Kehai → Build in the editor)
-Unity -batchmode -nographics -projectPath . -executeMethod KehaiBuild.MacOS
-Unity -batchmode -nographics -projectPath . -buildTarget Win64 -executeMethod KehaiBuild.Windows
-
-# One simulated shift against the full Karen
-Unity -batchmode -nographics -projectPath . -executeMethod EvalBatch.Play \
-  -kehai-ablation -ablation-careers 1 -ablation-shifts 1 -ablation-rungs F -ablation-profiles efficient
-```
-
-- **macOS:** `Builds/macOS/Kehai.app`. It's signed only ad hoc, so another Mac blocks the first
-  launch: **System Settings → Privacy & Security → Open Anyway**.
-- **Windows:** `Builds/Windows/Kehai.exe`, with the rest of its folder. Not code-signed:
-  **More info → Run anyway**. No webcam helper yet; **B** blinks.
-- Each build writes `build.txt` with its version and commit. `-playtest <round>` makes a
-  playtest build ([`docs/agents/game/PLAYTEST.md`](docs/agents/game/PLAYTEST.md)).
+Unity 6 (6000.5), C#, URP, NavMesh, TextMesh Pro · Swift for the macOS blink helper · Python for
+the tools.
 
 ---
 
 ## Layout
 
+The code, the tools and every document, in one tree. The docs are split by reader: `docs/you/`
+is short and is what the owner reads and edits; `docs/agents/` is long and exact, for coding
+agents.
+
 ```
 Assets/!_Project/
-├── _Core/            the shift, tasks, burnout, settings, pause; the build script
+├── _Core/            the shift, tasks, burnout, settings, pause, the UI theme; the build script
 ├── _Game/
-│   ├── AI/           Karen: core, perception, belief, decisions and tactics, world, diagnostics
+│   ├── AI/           Karen: core, perception, belief, decisions and tricks, world, diagnostics
 │   ├── Blink/        blink sources, tracker, calibration
-│   ├── Eval/         headless environment, simulated players, ablation runner
-│   ├── Level/        shelves, planogram, doors, power, radio, bins, spills, the endless maze
-│   ├── Map/          the store map Karen uses
+│   ├── Eval/         headless environment, simulated players, ablation runner, trick check
+│   ├── Level/        shelves, planogram, doors, power, bins, spills, the store's cameras and wall boxes
+│   ├── Map/          the store map Karen uses, and the floor plan people look at
 │   ├── Replay/       recording shifts and the 3D replay
 │   ├── Playtest/     playtest builds: session log, consent, questions, upload
 │   ├── Characters/   customers
 │   ├── Items/        products and tools
-│   └── Player/       movement, hands, menus
+│   └── Player/       movement, hands, eyelids, menus, the HUD
 └── _Tests/Editor/    EditMode tests
+
 tools/
+├── belief/           where you go when she can't see you: recordings and fits (0.4.0)
 ├── blink/            webcam helpers (Apple Vision, MediaPipe) and model training
 ├── eval/             Python clients for the AI test environment; ablation analysis
 ├── marketing/        the video automation (Python, Remotion)
-└── playtest/         the playtest upload service (Cloudflare)
+├── learn/            Karen 0.4.0's learning: records, fits, the model pack, the scorecard
+├── playtest/         the playtest upload service (Cloudflare)
+├── rl/               training Karen's brains and the bots (ML-Agents)
+├── scene/            the scene map generator
+├── tricks/           records the trick videos shown in the Esc menu
+└── website/          the home page draft
+
+docs/
+├── you/                              short pages for the owner
+│   ├── NOW.md                        start here: what's being built, what waits on the owner, what's next
+│   ├── HOW_KAREN_WORKS.md            Karen in plain words, with pictures
+│   ├── DECISIONS.md                  the owner's calls, one dated line each
+│   ├── IDEAS.md                      blink, the endless maze, the AI test environment, ablation, memory ideas
+│   ├── RELEASE_PLAN.md               everything left until release, in order
+│   ├── TESTING.md                    the testing and training left, in order, by stage, with Mac and Windows times
+│   └── plans/
+│       ├── 0.4.0-build-plan.md       Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait)
+│       ├── playtest-v2.md            finish the test build: instructions, cloud uploads, a dataset for Windows
+│       ├── 0.2.0-tuning-plan.md      turning her down: the levers and the test (open questions)
+│       └── marketing-agents.md       hands-off video publishing
+└── agents/                           long and exact, for coding agents
+    ├── RULES.md                      the working rules, in one place (CLAUDE.md and AGENTS.md point here)
+    ├── HANDOVER.md                   where everything is on the Mac; how to test, build and verify
+    ├── DECISIONS.md                  the big technical choices and why
+    ├── CHANGELOG.md                  changes players will notice
+    ├── karen/Karen.md                ★ Karen's full design, and where the code differs
+    ├── results/KAREN_RESULTS.md      what testing Karen found
+    ├── store/
+    │   ├── STORE.md                  the building, the products, how the shelves are stocked, Karen's map
+    │   ├── SCENE_MAP.md              where everything is in the Unity scene (generated)
+    │   ├── STORE_MAP.md              Karen's map of the store: regions, links, chokepoints (generated)
+    │   ├── LEVEL_DESIGN.md           plans for the parking lot, the outside, the lobby and the staff rooms
+    │   └── INTERIOR_MODELS.md        the staff room, office and model library as built
+    ├── game/
+    │   ├── CONTROLS.md               every key (the same list is in the game: Esc, then Keys)
+    │   └── PLAYTEST.md               how playtests run
+    ├── marketing/MARKETING.md        the pitch, the videos, the automation
+    ├── research/whiteboard-2026-11-05.md   how Alien: Isolation and Hello Neighbor hunt you; Kehai's three pillars
+    └── archive/                      finished and replaced plans
+        ├── 0.3.0-build-plan.md       Karen 0.3.0, the tricks rebuilt (merged)
+        ├── 0.2.0-build-plan.md       Karen 0.2.0, task by task (merged)
+        ├── 0.2.0-design-notes.md     why 0.2.0 is built that way
+        ├── karen-learning.md         the first learning plan, replaced by 0.4.0
+        ├── learned-motion-model.md   the learned motion model (PR #68, closed), redesigned inside 0.4.0
+        ├── karen-capture.md          what catches you, and new fair ways to kill (partly taken into 0.4.0)
+        ├── notmerged.md              old: the 20 October status, how Karen adapts
+        ├── reactive-bots.md          old: the reactive simulated players plan (built in PR #62)
+        └── readchanges.md            old: the first redesign plan, replaced by the 0.2.0 plan
 ```
-
-Unity 6 (6000.5), C#, URP, NavMesh, TextMeshPro · Swift for the macOS blink helper · Python
-for the tools.
-
----
-
-## Documents
-
-Split by reader. `docs/you/` is short and is what the owner reads and edits. `docs/agents/` is
-long and exact, for coding agents. Start with [`docs/you/NOW.md`](docs/you/NOW.md).
-
-| folder | file | what it is |
-|---|---|---|
-| `you/` | [`NOW.md`](docs/you/NOW.md) | Start here: what's being built, what waits on the owner, what's next |
-| | [`HOW_KAREN_WORKS.md`](docs/you/HOW_KAREN_WORKS.md) | Karen in plain words, on one page |
-| | [`DECISIONS.md`](docs/you/DECISIONS.md) | The owner's calls, one dated line each |
-| | [`IDEAS.md`](docs/you/IDEAS.md) | Blink, the endless maze, the AI test environment, ablation, the thought log, search and memory ideas |
-| | [`RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md) | Everything left until release, in order |
-| | [`TESTING.md`](docs/you/TESTING.md) | Testing and training left for 0.4.0 and 0.5.0: in order, by stage, Mac and Windows times, what's necessary |
-| `you/plans/` | [`0.4.0-build-plan.md`](docs/you/plans/0.4.0-build-plan.md) | Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait for 0.4.1) |
-| | [`playtest-v2.md`](docs/you/plans/playtest-v2.md) | Finish the test build: illustrated instructions, automatic cloud uploads, later Windows dataset download (checkbox plan; homepage draft built) |
-| | [`0.2.0-tuning-plan.md`](docs/you/plans/0.2.0-tuning-plan.md) | Turning her down: why she catches you, the levers, and the test (open questions) |
-| | [`marketing-agents.md`](docs/you/plans/marketing-agents.md) | Hands-off video publishing |
-| `agents/` | [`RULES.md`](docs/agents/RULES.md) | The working rules, in one place. `CLAUDE.md` and `AGENTS.md` point here |
-| | [`HANDOVER.md`](docs/agents/HANDOVER.md) | Where everything is on this Mac, and how to work on it |
-| | [`DECISIONS.md`](docs/agents/DECISIONS.md) | The big technical choices and why |
-| | [`CHANGELOG.md`](docs/agents/CHANGELOG.md) | Changes players will notice |
-| `agents/karen/` | [`Karen.md`](docs/agents/karen/Karen.md) | Karen's full design, and where the code differs |
-| `agents/results/` | [`KAREN_RESULTS.md`](docs/agents/results/KAREN_RESULTS.md) | What testing Karen found |
-| `agents/store/` | [`STORE.md`](docs/agents/store/STORE.md) | The building, the products, how the shelves are stocked, Karen's map |
-| | [`SCENE_MAP.md`](docs/agents/store/SCENE_MAP.md) | Where everything is in the Unity scene (generated) |
-| | [`STORE_MAP.md`](docs/agents/store/STORE_MAP.md) | Karen's map of the store: regions, links, chokepoints (generated) |
-| | [`LEVEL_DESIGN.md`](docs/agents/store/LEVEL_DESIGN.md) | Plans for the parking lot, the outside, the lobby, the restrooms and the staff rooms |
-| | [`INTERIOR_MODELS.md`](docs/agents/store/INTERIOR_MODELS.md) | The staff room, office and model library as built |
-| `agents/game/` | [`CONTROLS.md`](docs/agents/game/CONTROLS.md) | Every key |
-| | [`PLAYTEST.md`](docs/agents/game/PLAYTEST.md) | How playtests run |
-| `agents/marketing/` | [`MARKETING.md`](docs/agents/marketing/MARKETING.md) | The pitch, the videos, the automation |
-| `agents/research/` | [`whiteboard-2026-11-05.md`](docs/agents/research/whiteboard-2026-11-05.md) | Whiteboard notes: how Alien: Isolation and Hello Neighbor hunt you, and Kehai's three pillars |
-| `agents/archive/` | [`0.3.0-build-plan.md`](docs/agents/archive/0.3.0-build-plan.md) | Karen 0.3.0, the tricks rebuilt (merged) |
-| | [`0.2.0-build-plan.md`](docs/agents/archive/0.2.0-build-plan.md) | Karen 0.2.0, task by task (merged) |
-| | [`0.2.0-design-notes.md`](docs/agents/archive/0.2.0-design-notes.md) | Why 0.2.0 is built that way |
-| | [`karen-learning.md`](docs/agents/archive/karen-learning.md) | The first learning plan, replaced by 0.4.0 |
-| | [`learned-motion-model.md`](docs/agents/archive/learned-motion-model.md) | The learned motion model (PR #68, closed), redesigned inside 0.4.0 |
-| | [`karen-capture.md`](docs/agents/archive/karen-capture.md) | What catches you, and new fair ways to kill (approved, not built; partly taken into 0.4.0) |
-| | [`notmerged.md`](docs/agents/archive/notmerged.md) | Old: the 20 October status, how Karen adapts, the tech list |
-| | [`reactive-bots.md`](docs/agents/archive/reactive-bots.md) | Old: the reactive simulated players plan, built in PR #62 |
-| | [`readchanges.md`](docs/agents/archive/readchanges.md) | Old: the first redesign plan, replaced by the 0.2.0 plan |

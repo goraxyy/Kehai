@@ -619,6 +619,8 @@ namespace Kehai.Eval
                     if (verb == null || Avoided(verb, id)) continue;
                     if (kind == "camera" && (profile == PlayerProfile.Reckless || (float)chore["walk_m"] > 25f)) continue;
                     if (kind == "clock" && !storeOpen) return new EnvAction { verb = verb, target = id, sprint = sprint };
+                    // Closing time (0.4.1): say so first, or customers and their jobs never stop coming.
+                    if (kind == "closing") return new EnvAction { verb = verb, target = id, sprint = sprint };
                     jobs.Add((Cost(chore), verb, id));
                 }
 
@@ -646,6 +648,8 @@ namespace Kehai.Eval
             {
                 case "fog": return "reset_fog";
                 case "clock": return "restart_clock";
+                case "closing": return "announce_closing";
+                case "cameras": return "fix_cameras";
                 case "lost_tool": return "find_tool";
                 case "blocked_door": return "unblock_door";
                 case "kenji": return "send_kenji";

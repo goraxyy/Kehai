@@ -13,7 +13,7 @@ using UnityEngine;
 public class TaskManager : MonoBehaviour
 {
     // Stored by name in the shift records, and by number nowhere: new kinds go at the end.
-    public enum TaskKind { Mop, Trash, Stock, Serve, Directions, ReturnTool, RestartClock }
+    public enum TaskKind { Mop, Trash, Stock, Serve, Directions, ReturnTool, RestartClock, AnnounceClosing, FixCameras }
 
     public readonly struct ShiftTask
     {
@@ -75,8 +75,17 @@ public class TaskManager : MonoBehaviour
     // The time clock she stopped (the overtime): restart it at the clock.
     public bool ClockRunning => Shift == null || !Shift.IsFrozen;
 
+    // The store's cameras she broke (Camera break, 0.4.1): fix them at the camera box in the
+    // backstreet. Set by the cameras themselves (StoreCameras), since they live with the level.
+    public static System.Func<bool> CamerasBroken;
+    public bool CamerasWorking => CamerasBroken == null || !CamerasBroken();
+
+    // Closing time, and the store hasn't been announced closed (0.4.1): say so on the PA.
+    public bool ClosingSaid => Shift == null || !Shift.AwaitingAnnouncement;
+
     public bool AllComplete => FloorClean && ShelvesStocked && TrashEmpty
-                            && AllCustomersServed && AllDirectionsGiven && ToolsHome && ClockRunning;
+                            && AllCustomersServed && AllDirectionsGiven && ToolsHome && ClockRunning
+                            && CamerasWorking && ClosingSaid;
 
     // Where a job is, when somebody knows: "Aisle 4" after she swept a bay there. Shown beside
     // the job while it's open, and dropped once the job's done.
@@ -136,6 +145,15 @@ public class TaskManager : MonoBehaviour
             if (!ClockRunning)
                 yield return new ShiftTask(TaskKind.RestartClock, "Restart the time clock",
                     Detail(TaskKind.RestartClock, false, "staff room"), false);
+
+            if (!CamerasWorking)
+                yield return new ShiftTask(TaskKind.FixCameras, "Fix the store's cameras",
+                    Detail(TaskKind.FixCameras, false, "camera box, backstreet"), false);
+
+            // Closing time (0.4.1): customers keep coming until you say the store is closed.
+            if (!ClosingSaid)
+                yield return new ShiftTask(TaskKind.AnnounceClosing, "Announce that the store is closed",
+                    Detail(TaskKind.AnnounceClosing, false, "PA microphone, staff room"), false);
         }
     }
 
@@ -172,4 +190,7 @@ public class TaskManager : MonoBehaviour
     }
 
     void Awake() => instance = this;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => CamerasBroken = null;
 }

@@ -25,10 +25,15 @@ World coordinates in metres; north is the street (high Z), the store runs south.
 - **Tills:** three checkouts at the north-west, with mints on the counter.
 - **Staff rooms** (west): the time clock, the coffee machine, the radio with the stock crate
   beside it (one crate restocks a whole shelf), the mop. Their two doors are chokepoints: lose
-  one and a room is cut off.
+  one and a room is cut off. On the wall by the time clock: the PA box (switches the PA off) and
+  the PA microphone (0.4.1: the closing announcement). In the office: the six screens that show
+  the store's cameras (0.4.1).
+- **Cameras** (0.4.1): one each in the cold room, the stockroom, the lobby, the staff room, in
+  front of the store and in the backstreet ([Karen.md §19.2](../karen/Karen.md#192-the-stores-cameras)).
 - **Stockroom** (south), two rooms of product boxes (see [The back rooms](#the-back-rooms)):
   the storage room's racks, and the cold room of fridges and freezers.
-- **Backstreet:** the breaker box and the skip.
+- **Backstreet:** the breaker box and the skip; beside the breaker box, the fridge control box
+  (0.3.0) and the camera box (0.4.1). Each is held for 20 s to fix what she did.
 
 ```
 Floor plan: one character per 2.5 m bay, north up (doors above, chillers below).

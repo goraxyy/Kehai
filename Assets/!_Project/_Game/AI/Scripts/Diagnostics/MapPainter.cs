@@ -16,14 +16,15 @@ namespace Kehai.Karen
     //                    Karen has taken one over
     //   sounds           rings spreading from where they were made: cyan yours, red hers,
     //                    grey customers', violet the store's; bigger = heard further away
-    //   warnings         yellow "!" where one of her tricks is about to happen
+    //   trick sounds     yellow "!" where one of her tricks is making its sound
     //   jobs             brown blobs spills, orange outlines empty shelves, bins green→red as
     //                    they fill, dark squares rubbish bags, red crosses locked doors
     public sealed class MapPainter
     {
-        public static readonly Color You = new Color32(77, 210, 255, 255);
-        public static readonly Color KarenRed = new Color32(255, 84, 84, 255);
-        public static readonly Color Guess = new Color32(255, 214, 64, 255);
+        // 0.4.1: the same meanings, softer (UiTheme): her red is the theme's coral.
+        public static readonly Color You = new Color32(116, 208, 244, 255);
+        public static readonly Color KarenRed = new Color32(238, 96, 104, 255);
+        public static readonly Color Guess = new Color32(246, 212, 110, 255);
         public static readonly Color Shopper = new Color32(160, 168, 178, 255);
         public static readonly Color ToTill = new Color32(242, 201, 76, 255);
         public static readonly Color Waiting = new Color32(242, 140, 50, 255);
@@ -37,7 +38,7 @@ namespace Kehai.Karen
         public static readonly Color SoundStore = new Color32(180, 140, 255, 255);
         public static readonly Color Spill = new Color32(150, 100, 45, 255);
         public static readonly Color EmptyShelf = new Color32(255, 150, 40, 255);
-        public static readonly Color Warning = new Color32(255, 230, 60, 255);
+        public static readonly Color Warning = new Color32(248, 226, 110, 255);
 
         readonly StoreFloorPlan plan;
         readonly Texture2D planTexture;
@@ -51,7 +52,7 @@ namespace Kehai.Karen
         public MapPainter(StoreFloorPlan plan)
         {
             this.plan = plan;
-            planTexture = FloorPlanTexture.Render(plan, 8f);
+            planTexture = FloorPlanTexture.Render(plan, 12f);   // the drawing is of the building now, so it can be finer
             EnsureSprites();
         }
 
@@ -67,18 +68,27 @@ namespace Kehai.Karen
         public Vector2 ToScreen(Vector2 world) =>
             new Vector2(Area.x + (world.x - plan.Bounds.xMin) * Scale, Area.y + (plan.Bounds.yMax - world.y) * Scale);
 
+        // The same, kept on the page: someone out in the parking lot is drawn at the map's edge
+        // (the map stops at the building since 0.4.1).
+        public Vector2 OnPage(Vector2 world, float inset = 10f)
+        {
+            Vector2 p = ToScreen(world);
+            return new Vector2(Mathf.Clamp(p.x, Area.xMin + inset, Area.xMax - inset), Mathf.Clamp(p.y, Area.yMin + inset, Area.yMax - inset));
+        }
+
+        public bool OffPage(Vector2 world) => !plan.Bounds.Contains(world);
+
         public float Px(float metres) => metres * Scale;
 
         // ---- the whole picture ------------------------------------------------------------
 
         public void Draw(ShiftFrame f, IEnumerable<ShiftEvent> events, float now, bool fromWallClock, int fontSize, bool showRooms = true)
         {
+            UiTheme.Fill(new Rect(Area.x - 6f, Area.y - 6f, Area.width + 12f, Area.height + 12f), FloorPlanTexture.Background, 14f);
             GUI.DrawTexture(Area, planTexture);
             if (!f.Power) Fill(Area, new Color(0f, 0f, 0.05f, 0.5f));
 
-            if (showRooms)
-                foreach (StoreFloorPlan.Label room in plan.Rooms)
-                    Text(ToScreen(room.At), room.Text, new Color(1f, 1f, 1f, 0.35f), fontSize, TextAnchor.MiddleCenter);
+            if (showRooms) DrawZoneLabels(fontSize);
 
             // Jobs.
             StoreMap map = StoreMap.Current;
@@ -166,10 +176,46 @@ namespace Kehai.Karen
             }
 
             // You.
-            Vector2 me = ToScreen(f.Player);
+            Vector2 me = OnPage(f.Player);
             Rotated(arrow, me, Mathf.Max(18f, Px(2.2f)) + 4f, f.PlayerYaw, Color.white);
             Rotated(arrow, me, Mathf.Max(18f, Px(2.2f)), f.PlayerYaw, You);
-            Text(me + new Vector2(Mathf.Max(12f, Px(1.4f)), 0f), f.PlayerHeld ? "You (caught)" : "You", You, fontSize, TextAnchor.MiddleLeft, true);
+            Text(me + new Vector2(Mathf.Max(12f, Px(1.4f)), 0f), f.PlayerHeld ? "You (caught)" : OffPage(f.Player) ? "You (outside)" : "You", You, fontSize, TextAnchor.MiddleLeft, true);
+        }
+
+        // Every room's name on a soft dark tag, and every aisle's number on a smaller one, so a
+        // place can be found by name at a glance (0.4.1). Rooms without zones (an old plan) keep
+        // their plain labels.
+        void DrawZoneLabels(int fontSize)
+        {
+            if (plan.Zones.Count == 0)
+            {
+                foreach (StoreFloorPlan.Label room in plan.Rooms)
+                    Text(ToScreen(room.At), room.Text, new Color(1f, 1f, 1f, 0.35f), fontSize, TextAnchor.MiddleCenter);
+                return;
+            }
+            foreach (StoreFloorPlan.Zone zone in plan.Zones)
+            {
+                int size = Mathf.Max(9, Mathf.RoundToInt(fontSize * (zone.Aisle ? 0.72f : 0.95f)));
+                string text = zone.Aisle ? AisleTag(zone.Name) : zone.Name;
+                Tag(ToScreen(zone.LabelAt), text, size, Color.Lerp(zone.Colour, Color.white, 0.72f));
+            }
+        }
+
+        // "Aisle 7" → "A7": short enough to sit inside the aisle it names.
+        public static string AisleTag(string name) =>
+            name != null && name.StartsWith("Aisle ") ? "A" + name.Substring(6) : name;
+
+        static GUIStyle tagStyle;
+
+        static void Tag(Vector2 at, string text, int size, Color colour)
+        {
+            if (tagStyle == null) tagStyle = UiTheme.Label(size, colour, TextAnchor.MiddleCenter, false);
+            tagStyle.fontSize = size;
+            tagStyle.normal.textColor = colour;
+            Vector2 need = tagStyle.CalcSize(new GUIContent(text));
+            var r = new Rect(at.x - need.x * 0.5f - size * 0.45f, at.y - size * 0.75f, need.x + size * 0.9f, size * 1.5f);
+            UiTheme.Fill(r, new Color(0.07f, 0.075f, 0.095f, 0.78f), r.height * 0.5f);
+            GUI.Label(r, text, tagStyle);
         }
 
         // Karen's belief as a heat layer (H on the F1 map).
@@ -377,7 +423,7 @@ namespace Kehai.Karen
 
         public static void TextStatic(Vector2 at, string text, Color c, int size, TextAnchor anchor, bool shadow)
         {
-            if (label == null) label = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = false, clipping = TextClipping.Overflow };
+            if (label == null) label = UiTheme.Soften(new GUIStyle(GUI.skin.label) { richText = true, wordWrap = false, clipping = TextClipping.Overflow });
             label.fontSize = size;
             label.alignment = anchor;
             var r = new Rect(at.x - 300f, at.y - size, 600f, size * 2f);

@@ -25,7 +25,7 @@ public class ClosingRuleTests
     static readonly string[] ChoreTricks =
     {
         "shelf_sweep", "spill", "bin_tamper", "tool_theft", "overtime", "fog", "camera_bolt_on",
-        "phantom_chime", "door_lock", "understudy", "blackout",
+        "phantom_chime", "door_lock", "understudy", "blackout", "camera_break",
     };
 
     KarenContext Context(KarenRung rung, out ShiftManager shift, bool shield = true)
@@ -71,11 +71,11 @@ public class ClosingRuleTests
         new PlanTree("probe", ActionId.Disrupt, t, steps.ToList(), _ => false);
 
     [Test]
-    public void TheTricksThatLeaveAChore_AreTheseEleven()
+    public void TheTricksThatLeaveAChore_AreTheseTwelve()
     {
         var live = TacticLibrary.Live.Where(t => !t.Draft && t.LeavesChore).Select(t => t.Id).OrderBy(x => x);
         CollectionAssert.AreEqual(ChoreTricks.OrderBy(x => x), live);
-        foreach (string id in new[] { "hunt", "cut", "ambush", "throw_oil", "throw_flour", "throw_tin", "poll_witnesses" })
+        foreach (string id in new[] { "hunt", "cut", "ambush", "throw_oil", "throw_flour", "throw_tin", "poll_witnesses", "camera_watch" })
             Assert.IsFalse(TacticLibrary.Get(id).LeavesChore, $"{id} leaves no chore: she may still do it after closing");
     }
 

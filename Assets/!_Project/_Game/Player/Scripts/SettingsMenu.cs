@@ -4,18 +4,21 @@ using Kehai.Karen;
 using Kehai.Blink;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Video;
 
-// Esc: the settings, in black, red and white. One page of settings (sound, display, mouse,
-// Karen's floor cone, the webcam) and a Keys tab listing every key in the game; the shift's
-// own choices (resume, restart, main menu, quit) sit in the bar along the bottom. The game
-// pauses while it's open, and everything chosen here is remembered. The main menu opens the
-// same pages, without the shift.
+// Esc: the settings, in the game's black, red and white, softened since 0.4.1 (UiTheme:
+// charcoal, coral, warm white, round corners, a rounded face). One page of settings (sound,
+// display, mouse, the webcam), a Keys tab listing every key in the game, and a Tricks tab
+// (0.4.1): everything Karen can do, each with a short video and three plain lines
+// (TrickGuide). The shift's own choices (resume, restart, main menu, quit) sit in the bar
+// along the bottom. The game pauses while it's open, and everything chosen here is
+// remembered. The main menu opens the same pages, without the shift.
 public sealed class SettingsMenu : MonoBehaviour
 {
     public static SettingsMenu Instance { get; private set; }
     public bool Visible { get; private set; }
 
-    enum Tab { Settings, Keys }
+    enum Tab { Settings, Keys, Tricks }
     Tab tab;
     Vector2 scroll;
     GUIStyle text, dim, heading, title, centred;
@@ -31,12 +34,19 @@ public sealed class SettingsMenu : MonoBehaviour
     const string SensitivityKey = "Kehai.MouseSensitivity";
     const float MinSensitivity = 0.5f, MaxSensitivity = 10f;
 
-    // The three colours, and white at two strengths for what's secondary or behind.
-    static readonly Color Black = new Color(0.015f, 0.015f, 0.015f, 0.97f);
-    static readonly Color Red = new Color(0.863f, 0.078f, 0.235f);
-    static readonly Color White = Color.white;
-    static readonly Color Dim = new Color(1f, 1f, 1f, 0.55f);
-    static readonly Color Faint = new Color(1f, 1f, 1f, 0.1f);
+    // The three colours, and white at two strengths for what's secondary or behind: the
+    // theme's (0.4.1), so the menu matches the map and the HUD.
+    static readonly Color Black = UiTheme.Panel;
+    static readonly Color Red = UiTheme.Accent;
+    static readonly Color White = UiTheme.Text;
+    static readonly Color Dim = UiTheme.Dim;
+    static readonly Color Faint = UiTheme.Faint;
+
+    // The Tricks tab: which trick is open, and its video.
+    int trick;
+    VideoPlayer video;
+    RenderTexture videoPicture;
+    string videoOf;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
@@ -63,6 +73,8 @@ public sealed class SettingsMenu : MonoBehaviour
     {
         if (faintTexture != null) Destroy(faintTexture);
         if (thumbTexture != null) Destroy(thumbTexture);
+        StopVideo();
+        if (videoPicture != null) { videoPicture.Release(); Destroy(videoPicture); }
     }
 
     // A restarted store has a new player, who gets your sensitivity too.
@@ -117,6 +129,7 @@ public sealed class SettingsMenu : MonoBehaviour
     {
         Visible = false;
         dragging = -1;
+        StopVideo();
         FullScreenPanel.Set(this, false);
         if (!fromMainMenu) GamePause.Set(false);
         fromMainMenu = false;
@@ -132,17 +145,19 @@ public sealed class SettingsMenu : MonoBehaviour
         size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 42f, 15f, 36f));
         Styles();
 
-        Fill(new Rect(0f, 0f, Screen.width, Screen.height), new Color(0f, 0f, 0f, 0.8f));
-        float w = Mathf.Min(size * 34f, Screen.width - size * 2f);
+        Fill(new Rect(0f, 0f, Screen.width, Screen.height), UiTheme.Scrim);
+        // The Tricks tab is wider: a list beside a video.
+        float w = Mathf.Min(size * (tab == Tab.Tricks ? 46f : 34f), Screen.width - size * 2f);
         var panel = new Rect((Screen.width - w) * 0.5f, size, w, Screen.height - size * 2f);
-        Fill(panel, Black);
-        Fill(new Rect(panel.x, panel.y, panel.width, Mathf.Max(2f, size * 0.12f)), Red);
+        Fill(panel, Black, size * 0.9f);
+        Fill(new Rect(panel.x + size * 1.2f, panel.y + size * 0.45f, size * 2.4f, Mathf.Max(3f, size * 0.18f)), Red, size);
         var inner = new Rect(panel.x + size * 1.2f, panel.y + size, panel.width - size * 2.4f, panel.height - size * 2f);
 
-        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.5f, size * 2f), fromMainMenu ? "SETTINGS" : "PAUSED", title);
+        GUI.Label(new Rect(inner.x, inner.y, inner.width * 0.4f, size * 2f), fromMainMenu ? "SETTINGS" : "PAUSED", title);
         float tabWidth = size * 5.5f;
-        if (TabButton(new Rect(inner.xMax - tabWidth * 2f, inner.y, tabWidth, size * 2f), "SETTINGS", tab == Tab.Settings)) { tab = Tab.Settings; scroll = Vector2.zero; }
-        if (TabButton(new Rect(inner.xMax - tabWidth, inner.y, tabWidth, size * 2f), "KEYS", tab == Tab.Keys)) { tab = Tab.Keys; scroll = Vector2.zero; }
+        if (TabButton(new Rect(inner.xMax - tabWidth * 3f, inner.y, tabWidth, size * 2f), "SETTINGS", tab == Tab.Settings)) Go(Tab.Settings);
+        if (TabButton(new Rect(inner.xMax - tabWidth * 2f, inner.y, tabWidth, size * 2f), "KEYS", tab == Tab.Keys)) Go(Tab.Keys);
+        if (TabButton(new Rect(inner.xMax - tabWidth, inner.y, tabWidth, size * 2f), "TRICKS", tab == Tab.Tricks)) Go(Tab.Tricks);
 
         var content = new Rect(inner.x, inner.y + size * 2.8f, inner.width, inner.height - size * 5.6f);
         labelWidth = content.width * 0.38f;
@@ -156,12 +171,137 @@ public sealed class SettingsMenu : MonoBehaviour
         var bar = new GUIStyle(GUI.skin.verticalScrollbar) { normal = { background = faintTexture } };
         GUILayout.BeginArea(content);
         scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, bar);
-        if (tab == Tab.Settings) DrawSettings(); else DrawKeys();
+        if (tab == Tab.Settings) DrawSettings(); else if (tab == Tab.Keys) DrawKeys(); else DrawTricks(content.width);
         GUILayout.EndScrollView();
         GUILayout.EndArea();
         thumb.normal.background = thumbWas;
 
         DrawBar(new Rect(inner.x, inner.yMax - size * 1.9f, inner.width, size * 1.9f));
+    }
+
+    // A page by number (0 settings, 1 keys, 2 tricks): for the picture-taking check.
+    public void ShowTab(int index) => Go((Tab)UnityEngine.Mathf.Clamp(index, 0, 2));
+
+    void Go(Tab to)
+    {
+        tab = to;
+        scroll = Vector2.zero;
+        if (to != Tab.Tricks) StopVideo();
+    }
+
+    // ---- the Tricks tab (0.4.1) ----------------------------------------------------------------
+
+    // Everything Karen can do: her tricks down the left, the one you pick on the right with
+    // its video and three plain lines.
+    void DrawTricks(float width)
+    {
+        TrickGuide.Entry[] all = TrickGuide.All;
+        trick = Mathf.Clamp(trick, 0, all.Length - 1);
+        float listWidth = Mathf.Min(size * 11f, width * 0.3f);
+
+        GUILayout.BeginHorizontal();
+        GUILayout.BeginVertical(GUILayout.Width(listWidth));
+        GUILayout.Space(size * 0.4f);
+        for (int i = 0; i < all.Length; i++)
+        {
+            Rect row = GUILayoutUtility.GetRect(listWidth, size * 1.7f, GUILayout.Width(listWidth), GUILayout.Height(size * 1.7f));
+            bool on = i == trick, hover = row.Contains(Event.current.mousePosition);
+            if (on) Fill(row, Red, UiTheme.Corner(row.height));
+            else if (hover) Fill(row, Faint, UiTheme.Corner(row.height));
+            Color was = text.normal.textColor;
+            text.normal.textColor = on ? Color.white : hover ? White : Dim;
+            GUI.Label(new Rect(row.x + size * 0.7f, row.y, row.width - size * 0.9f, row.height), all[i].Title, text);
+            text.normal.textColor = was;
+            if (GUI.Button(row, GUIContent.none, GUIStyle.none)) { trick = i; StopVideo(); }
+            GUILayout.Space(size * 0.12f);
+        }
+        GUILayout.EndVertical();
+
+        GUILayout.Space(size * 1.2f);
+        GUILayout.BeginVertical();
+        GUILayout.Space(size * 0.4f);
+        TrickGuide.Entry e = all[trick];
+        GUILayout.Label(e.Title, title);
+        GUILayout.Space(size * 0.3f);
+
+        // The video, 16 by 9, in a rounded frame; or a note where it would be.
+        float videoWidth = width - listWidth - size * 2.2f;
+        Rect frame = GUILayoutUtility.GetRect(videoWidth, videoWidth * 9f / 16f, GUILayout.Width(videoWidth), GUILayout.Height(videoWidth * 9f / 16f));
+        Fill(frame, UiTheme.Ink, size * 0.6f);
+        Texture picture = VideoFor(e.Id);
+        if (picture != null)
+        {
+            var inside = new Rect(frame.x + 3f, frame.y + 3f, frame.width - 6f, frame.height - 6f);
+            if (Event.current.type == EventType.Repaint)
+                GUI.DrawTexture(inside, picture, ScaleMode.ScaleToFit, false, 0f, Color.white, 0f, size * 0.5f);
+        }
+        else
+        {
+            GUI.Label(frame, "No video of this one yet.", NoVideo());
+        }
+
+        GUILayout.Space(size * 0.5f);
+        Line("WHAT SHE DOES", e.Does);
+        Line("HOW YOU NOTICE", e.Notice);
+        Line("WHAT YOU CAN DO", e.Answer);
+        if (e.Chore)
+        {
+            GUILayout.Space(size * 0.3f);
+            Rect chip = GUILayoutUtility.GetRect(size * 9.5f, size * 1.4f, GUILayout.Width(size * 9.5f), GUILayout.Height(size * 1.4f));
+            Fill(chip, UiTheme.AccentDim, chip.height * 0.5f);
+            GUI.Label(chip, "Leaves you a job", centred);
+        }
+        GUILayout.EndVertical();
+        GUILayout.EndHorizontal();
+    }
+
+    void Line(string label, string words)
+    {
+        GUILayout.Space(size * 0.35f);
+        GUILayout.Label(label, heading);
+        GUILayout.Label(words, text);
+    }
+
+    GUIStyle noVideo;
+    GUIStyle NoVideo()
+    {
+        if (noVideo == null) noVideo = new GUIStyle(centred);
+        noVideo.fontSize = size;
+        noVideo.normal.textColor = Dim;
+        return noVideo;
+    }
+
+    // The picture of a trick's video, playing; null when there's none. The game is paused under
+    // the menu, so the player runs on real time, and silent.
+    Texture VideoFor(string id)
+    {
+        if (videoOf == id) return video != null && video.isPrepared ? videoPicture : null;
+        StopVideo();
+        videoOf = id;
+        string path = TrickGuide.VideoPath(id);
+        if (path == null) return null;
+        if (videoPicture == null) videoPicture = new RenderTexture(960, 540, 0) { name = "Trick video", hideFlags = HideFlags.DontSave };
+        if (video == null)
+        {
+            video = gameObject.AddComponent<VideoPlayer>();
+            video.playOnAwake = false;
+            video.renderMode = VideoRenderMode.RenderTexture;
+            video.targetTexture = videoPicture;
+            video.audioOutputMode = VideoAudioOutputMode.None;
+            video.isLooping = true;
+            video.timeUpdateMode = VideoTimeUpdateMode.UnscaledGameTime;
+            video.skipOnDrop = true;
+        }
+        video.source = VideoSource.Url;
+        video.url = "file://" + path;
+        video.Play();
+        return null;
+    }
+
+    void StopVideo()
+    {
+        videoOf = null;
+        if (video != null && (video.isPlaying || video.isPrepared)) video.Stop();
     }
 
     void DrawSettings()
@@ -299,7 +439,7 @@ public sealed class SettingsMenu : MonoBehaviour
         GUILayout.Label(shown ?? $"{value01 * 100f:0}%", dim, GUILayout.Width(size * 3f));
         GUILayout.EndHorizontal();
 
-        var track = new Rect(r.x + size * 0.4f, r.center.y - size * 0.08f, r.width - size * 0.8f, Mathf.Max(2f, size * 0.16f));
+        var track = new Rect(r.x + size * 0.4f, r.center.y - size * 0.13f, r.width - size * 0.8f, Mathf.Max(4f, size * 0.26f));
         Event e = Event.current;
         if (e.type == EventType.MouseDown && r.Contains(e.mousePosition)) dragging = id;
         if (dragging == id && (e.type == EventType.MouseDown || e.type == EventType.MouseDrag))
@@ -315,10 +455,10 @@ public sealed class SettingsMenu : MonoBehaviour
         }
         if (e.type == EventType.Repaint)
         {
-            Fill(track, Faint);
-            Fill(new Rect(track.x, track.y, track.width * value01, track.height), Red);
-            float knob = size * 0.7f;
-            Fill(new Rect(track.x + track.width * value01 - knob * 0.5f, r.center.y - knob * 0.5f, knob, knob), White);
+            Fill(track, Faint, track.height);
+            Fill(new Rect(track.x, track.y, Mathf.Max(track.height, track.width * value01), track.height), Red, track.height);
+            float knob = size * 0.8f;
+            Fill(new Rect(track.x + track.width * value01 - knob * 0.5f, r.center.y - knob * 0.5f, knob, knob), White, knob);
         }
         return value01;
     }
@@ -344,7 +484,7 @@ public sealed class SettingsMenu : MonoBehaviour
         Rect r = GUILayoutUtility.GetRect(size * 4f, size * 1.6f, GUILayout.Width(size * 4f), GUILayout.Height(size * 1.6f));
         GUILayout.EndHorizontal();
         bool hover = r.Contains(Event.current.mousePosition);
-        Fill(r, on ? Red : hover ? new Color(1f, 1f, 1f, 0.2f) : Faint);
+        Fill(r, on ? Red : hover ? new Color(1f, 1f, 1f, 0.2f) : Faint, r.height * 0.5f);
         GUI.Label(r, on ? "ON" : "OFF", centred);
         return GUI.Button(r, GUIContent.none, GUIStyle.none) ? !on : on;
     }
@@ -356,9 +496,9 @@ public sealed class SettingsMenu : MonoBehaviour
     bool Button(Rect r, string label, bool main = false)
     {
         bool hover = r.Contains(Event.current.mousePosition);
-        Fill(r, hover ? Red : main ? White : Faint);
+        Fill(r, hover ? Red : main ? White : Faint, UiTheme.Corner(r.height));
         Color was = centred.normal.textColor;
-        centred.normal.textColor = main && !hover ? Color.black : White;
+        centred.normal.textColor = main && !hover ? (Color)UiTheme.Ink : White;
         GUI.Label(r, label, centred);
         centred.normal.textColor = was;
         return GUI.Button(r, GUIContent.none, GUIStyle.none);
@@ -371,7 +511,7 @@ public sealed class SettingsMenu : MonoBehaviour
         centred.normal.textColor = on || hover ? White : Dim;
         GUI.Label(r, label, centred);
         centred.normal.textColor = was;
-        if (on) Fill(new Rect(r.x + size, r.yMax - size * 0.3f, r.width - size * 2f, Mathf.Max(2f, size * 0.12f)), Red);
+        if (on) Fill(new Rect(r.x + size, r.yMax - size * 0.32f, r.width - size * 2f, Mathf.Max(3f, size * 0.18f)), Red, size);
         return GUI.Button(r, GUIContent.none, GUIStyle.none) && !on;
     }
 
@@ -440,7 +580,7 @@ public sealed class SettingsMenu : MonoBehaviour
     {
         if (text == null)
         {
-            text = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, alignment = TextAnchor.MiddleLeft };
+            text = UiTheme.Soften(new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, alignment = TextAnchor.MiddleLeft });
             dim = new GUIStyle(text);
             heading = new GUIStyle(text) { fontStyle = FontStyle.Bold };
             title = new GUIStyle(text) { fontStyle = FontStyle.Bold };
@@ -464,11 +604,6 @@ public sealed class SettingsMenu : MonoBehaviour
         return t;
     }
 
-    static void Fill(Rect r, Color c)
-    {
-        Color before = GUI.color;
-        GUI.color = c;
-        GUI.DrawTexture(r, Texture2D.whiteTexture);
-        GUI.color = before;
-    }
+    // A filled shape; with a radius, round at the corners (0.4.1).
+    static void Fill(Rect r, Color c, float radius = 0f) => UiTheme.Fill(r, c, radius);
 }

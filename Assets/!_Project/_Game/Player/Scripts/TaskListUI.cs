@@ -85,7 +85,9 @@ public class TaskListUI : MonoBehaviour
                 builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>  <color=#FF6F61>Clock stopped</color>");
             else
                 builder.AppendLine($"Time left  <b>{remaining / 60:0}:{remaining % 60:00}</b>");
-            if (!shiftManager.CustomersAllowed)
+            if (shiftManager.AwaitingAnnouncement)
+                builder.AppendLine("<i>Closing time - announce it on the PA</i>");
+            else if (!shiftManager.CustomersAllowed)
                 builder.AppendLine("<i>Store closed - clock out</i>");
         }
         else
@@ -117,7 +119,9 @@ public class TaskListUI : MonoBehaviour
             }
 
             if (shiftManager != null && !shiftManager.CanClockOut)
-                builder.AppendLine("\n<i>Finish all tasks to clock out</i>");
+                builder.AppendLine(taskManager.AllComplete
+                    ? "\n<i>Customers are still in the store</i>"
+                    : "\n<i>Finish all tasks to clock out</i>");
         }
 
         builder.Append($"\n<size=70%>[{toggleKey}] hide</size>");

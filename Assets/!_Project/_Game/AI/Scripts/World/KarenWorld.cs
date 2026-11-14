@@ -98,8 +98,48 @@ namespace Kehai.Karen
 
         // ---- fog (0.3.0) --------------------------------------------------------------
 
-        // The rooms with fridges she can flood (build plan D4).
-        public static readonly string[] FogRooms = { "Sales floor", "Cold storage", "Staff room" };
+        // The rooms she can flood. Until 0.4.1 these were the three with fridges (the sales floor,
+        // cold storage, the staff room), and the sales floor is most of the building: the fog
+        // seemed to be everywhere. Now it's the two cold back rooms only (the owner's call).
+        public static readonly string[] FogRooms = { "Cold storage", "Stockroom" };
+
+        // Where the fog pours into a room from: its fridges; in a room without any (the
+        // stockroom), the doorways it shares with a room that has them (the cold room's doors);
+        // failing that, the middle of its own floor. Empty for a room that isn't on the map.
+        public IReadOnlyList<Vector3> FogSources(string room)
+        {
+            if (room == null) return noSources;
+            if (fogSources.TryGetValue(room, out List<Vector3> known)) return known;
+            var sources = new List<Vector3>();
+            foreach (Transform f in FridgesIn(room)) if (f != null) sources.Add(f.position);
+            StoreMap map = StoreMap.Current;
+            if (sources.Count == 0 && map != null)
+            {
+                foreach (Region r in map.Regions)
+                {
+                    if (!r.IsDoor || r.Name == null || !r.Name.Contains(room)) continue;
+                    foreach (string other in FogRooms)
+                        if (other != room && r.Name.Contains(other) && FridgesIn(other).Count > 0) { sources.Add(r.Centroid); break; }
+                }
+                if (sources.Count == 0)
+                    foreach (Region r in map.Regions)
+                        if (!r.IsDoor && r.Area == room && sources.Count < 3) sources.Add(r.Centroid);
+            }
+            // A room of fridges (the cold room has 46) pours from eight of them, spread out: enough
+            // to fill it, without thousands of particles.
+            if (sources.Count > MaxFogSources)
+            {
+                var spread = new List<Vector3>();
+                for (int i = 0; i < MaxFogSources; i++) spread.Add(sources[i * sources.Count / MaxFogSources]);
+                sources = spread;
+            }
+            if (map != null) fogSources[room] = sources;   // found once per scene, like the fridges
+            return sources;
+        }
+
+        public const int MaxFogSources = 8;
+        readonly Dictionary<string, List<Vector3>> fogSources = new Dictionary<string, List<Vector3>>();
+        static readonly List<Vector3> noSources = new List<Vector3>();
 
         Dictionary<string, List<Transform>> fridges;
         static readonly List<Transform> none = new List<Transform>();
@@ -140,8 +180,8 @@ namespace Kehai.Karen
             return false;
         }
 
-        // Flood a room: the fog rolls out of its fridges (FogVisuals draws it) and everyone in it
-        // sees `visibility` metres, her included.
+        // Flood a room: the fog rolls out of its sources (FogVisuals draws it, for someone standing
+        // in the room) and everyone in it sees `visibility` metres, her included.
         public void FogRoom(string room, float visibility) => FogState.Fill(room, visibility);
 
         // Camera bolt-on (0.3.0): a camera standing in a shelf slot, turned and tilted. Hands-on.
@@ -327,6 +367,7 @@ namespace Kehai.Karen
             foreach (GameObject go in placed) if (go != null) Destroy(go);
             placed.Clear();
             DoorBlock.ClearAll();
+            StoreCameras.Instance?.ResetForShift();   // 0.4.1: the store's cameras work again
             FogState.Reset();
             StopPhantom();
             Pa.Clear();

@@ -92,21 +92,21 @@ namespace Kehai.Karen
         [Tooltip("Her body: a capsule this tall and wide — the player's own size, set at install by KarenBootstrap.")]
         public float bodyHeight = 2f;
         public float bodyRadius = 0.4f;
-        [Header("Her eyes (0.2.0: KarenBody.ConfigureEye)")]
-        [Tooltip("A cone 150° wide and 36 m long, at half strength 16 m away. The cameras and shoppers keep 18 m, 120° and 8 m.")]
-        public float sightRange = 36f;
+        [Header("Her eyes (0.2.0: KarenBody.ConfigureEye; 0.4.1: twice the radius, twice as quick)")]
+        [Tooltip("A cone 150° wide and 72 m long, at half strength 32 m away: twice 0.2.0's 36 m and 16 m (the owner's call, 0.4.1). The cameras and shoppers keep 18 m, 120° and 8 m.")]
+        public float sightRange = 72f;
         public float sightFov = 150f;
-        public float sightHalfStrength = 16f;
-        [Tooltip("Awareness per second at a score of 1: as low as still hits the walk-by targets (AwarenessTests).")]
-        public float sightGain = 1.65f;
+        public float sightHalfStrength = 32f;
+        [Tooltip("Awareness per second at a score of 1: twice 0.2.0's 1.65, so she notices you in half the time (the owner's call, 0.4.1).")]
+        public float sightGain = 3.3f;
         [Tooltip("A score below this is nothing seen: crouched and mostly hidden in the dim stays unseen.")]
         public float sightFloor = 0.04f;
         [Tooltip("Seconds her awareness holds after losing you, before it drains.")]
         public float sightGrace = 0.5f;
         [Tooltip("Up to this much more gain where her belief already expects you: 1 doubles it.")]
         public float sightExpectedBoost = 1f;
-        [Tooltip("Cells her \"nothing here\" sweep checks a tick, all of them inside her cone.")]
-        public int sweepCellsPerTick = 120;
+        [Tooltip("Cells her \"nothing here\" sweep checks a tick, all of them inside her cone. 240 since 0.4.1: the cone is twice as long, and a cell in view should still be looked at as often.")]
+        public int sweepCellsPerTick = 240;
         [Tooltip("Where she stands when the game starts and when each shift begins: the floor nearest this point. " +
                  "In a level with no floor near it she starts at the stock pallet instead.")]
         public Vector3 start = new Vector3(32.5f, 0f, -172.5f);

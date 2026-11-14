@@ -7,7 +7,7 @@ namespace Kehai.Blink
     // Turns whichever blink source is live into one clean signal (IDEAS.md "Architecture"):
     //
     //   IBlinkSource → BlinkTracker (calibration, smoothing, confidence)
-    //                       ├─→ Eyelids.Closed01            the player's own eyes, mirrored
+    //                       ├─→ Eyelids.SetShut(EyesClosed)  the player's own eyes: open or shut (0.4.1)
     //                       └─→ OnBlinkStart / OnEyesClosedFor(t) → Karen
     //
     // Non-negotiables, all enforced here:
@@ -35,7 +35,7 @@ namespace Kehai.Blink
         [Header("Signal")]
         [Range(0f, 1f)] public float closeThreshold = 0.5f;
         [Range(0f, 1f)] public float openThreshold = 0.3f;
-        [Tooltip("Mirror the player's real eyes onto the on-screen eyelids.")]
+        [Tooltip("Show the player's real eyes on the on-screen eyelids: shut while EyesClosed, open otherwise (two states, 0.4.1).")]
         public bool mirrorToEyelids = true;
 
         // ---- outputs ---------------------------------------------------------------------
@@ -197,8 +197,11 @@ namespace Kehai.Blink
 
             AdvanceCalibration();
 
-            if (mirrorToEyelids && lids != null && Live && Confidence > 0.3f && !(source is ReplayBlinkSource))
-                lids.SetClosed(Closed01);
+            // The lids are open or shut, as EyesClosed is (0.4.1): the yes-or-no Karen acts on, not
+            // the analog reading, which drew half-shut lids for a squint and left a slit when
+            // the eyes were fully shut.
+            if (mirrorToEyelids && lids != null && Live && !(source is ReplayBlinkSource))
+                lids.SetShut(EyesClosed && Confidence > 0.3f);
 
             PushToKaren();
         }

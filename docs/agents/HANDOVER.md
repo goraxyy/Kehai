@@ -44,6 +44,8 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | Game data | `~/Library/Application Support/TokenLimit/Kehai/`: Karen's ledger, shift records, and `kehai_eval/`, which holds the ablation runs and the motion model's 480 MB dataset in `belief_data/` | no |
 | Backups from the renames (keep) | `~/Library/Application Support/TokenLimit/Karoshi/`, `~/Library/Preferences/unity.TokenLimit.Karoshi.plist`, and the `aiko_*` files in `TokenLimit/Kehai/` | no |
 | Builds | `~/Developer/Kehai/Builds/` (gitignored); RL training builds in `Builds/KehaiTrain/` | no |
+| Karen's props (models with materials) | `~/Desktop/KehaiRelated/Props/`: `tools/build_props.py` (headless Blender) → `KehaiProps.blend`, `fbx/`, `thumbs/`. Seven models: three from 0.3.0, four from 0.4.1 | no |
+| Trick videos (the Esc menu's Tricks tab) | `Assets/StreamingAssets/TrickVideos/<trick id>.mp4`, recorded by `tools/tricks/record_tricks.sh` | no |
 | Marketing automation | the code in `tools/marketing/`. Keys in `tools/marketing/.env` (**never commit it**). Output in `~/TokenLimit/marketing/`; n8n in `~/TokenLimit/n8n/`. The jobs run from launchd agents `com.tokenlimit.kehai.job.*` | code yes, keys and media no |
 | The playtest pipeline | `tools/playtest/` (a Cloudflare Worker and R2). Settings in `tools/playtest/.env`; the report at `~/TokenLimit/playtests/report.html` | code yes |
 | The RL and ML Python environment | `tools/rl/.venv` (Python 3.10.12, `mlagents` 1.1.0, PyTorch), shared with `tools/belief/` | no |
@@ -157,6 +159,12 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - Three fair kill moves: cut you off, wait on your path, a deadly step-out.
   - 7 test arms × 400 shifts. It starts after PR #68 is merged.
   - Not in 0.2.0. Cut, and Ambush on her guessed routes, now cover part of its first two kill moves, so re-read it against 0.2.0 before building it.
+- **Kehai 0.4.1** (branch `0.4.1`, 12–13 November): the owner's 17 items in one PR. What it changed in Karen: [Karen.md §19](karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time). What players notice: [CHANGELOG.md](CHANGELOG.md).
+  - **Reconciled with 0.4.0** on 14 November, after 0.4.0 merged (PR #83): the code merged without conflicts; the docs were combined by hand. 0.4.0's trained-bot options know 0.4.1's two new chores (`EmployeeOptions.WhatOf`).
+  - **Her eyes changed with no ablation.** 0.3.0's baseline and 0.4.0's fitted senses used the old eyes.
+  - **New models** (`~/Desktop/KehaiRelated/Props`: `pa_microphone`, `camera_box`, `store_camera`, `cctv_screen`) come in with **Kehai → Props → Import Karen's Props**; until then each prop builds its own boxes.
+  - **Trick videos** for the Esc menu's Tricks tab are recorded by [`tools/tricks/record_tricks.sh`](../../tools/tricks/README.md) into `Assets/StreamingAssets/TrickVideos/` (git-ignored).
+  - **The picture-taking check:** `-executeMethod EvalBatch.Play -kehai-shots <folder>` saves what the visible changes look like (`VisualCheck.cs`). In batch mode it saves what a camera can render; run in the editor's window it also saves the screen (menus, the F1 map), muted.
 
 ## 5. What's next, in order
 

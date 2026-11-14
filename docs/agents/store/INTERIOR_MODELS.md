@@ -47,8 +47,11 @@ at (17.5, −150). The old partition at z−130.25 is retained inactive for reco
 
 The office entrance is at (25, −130). The WC entrance moves to (25, −116.7) so its old opening
 does not straddle the new office/WC partition. WC furnishings are still future work.
-The CCTV screens, laptop, printer and safe are models; live feeds and office tasks are not
-implemented. Karen's gameplay spawn remains unchanged.
+The laptop, printer and safe are models; office tasks are not implemented. The security desk's
+six monitors are part of the desk's own mesh and show nothing; since 0.4.1 a wall of six bigger
+screens stands in front of them at load and shows the store's six cameras live (`CctvWall` in
+`StoreCameras.cs`; [Karen.md §19.2](../karen/Karen.md#192-the-stores-cameras)). Karen's
+gameplay spawn remains unchanged.
 
 ## Models_Island
 
