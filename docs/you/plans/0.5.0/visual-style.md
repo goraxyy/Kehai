@@ -103,7 +103,7 @@ Art never goes into the public repo. Today it reaches the Windows PC through the
 | | A scene in this project ("Look Lab") | Its own Unity project | A git branch |
 |---|---|---|---|
 | The real props and shaders | yes, the same ones | copied by hand, and they drift | — |
-| Disk on this Mac (13 GB free) | almost nothing | another Library, about 4–5 GB | nothing |
+| Disk on this Mac (8 GB free) | almost nothing | another Library, about 4–5 GB | nothing |
 | Can it break the game? | no, if it's never in a build | no | — |
 | Shared how? | the builder script is code (in git); the scene is made by a menu; new art goes to `kehai-assets` | the whole project zipped to `kehai-assets` | **can't**: art isn't in git, so a branch holds nothing of the look |
 | **Verdict** | **my pick** | if the game's project ever gets too fragile | not workable |
