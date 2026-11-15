@@ -76,6 +76,21 @@ public static class StoreLayoutRuntime
         return true;
     }
 
+    // Replays restore recorded geometry, never choose a training or career layout. This
+    // performs no agent navigation/training and permits viewing a reserved layout's replay.
+    public static void PrepareReplay(string layout)
+    {
+        if (activeScene != SceneManager.GetActiveScene())
+        {
+            activeScene=SceneManager.GetActiveScene();
+            root=null;hidden.Clear();browsing.Clear();CurrentId="today";
+        }
+        string id=string.IsNullOrEmpty(layout)?"today":layout;
+        if (id!=CurrentId) Apply(id);
+        Physics.SyncTransforms();
+        StoreLayout.ApplyToScene();
+    }
+
     static string Argument(string flag)
     {
         string[] args = Environment.GetCommandLineArgs();
@@ -140,6 +155,9 @@ public static class StoreLayoutRuntime
             if(north) BuildModule(bay.transform,new Vector3(0,0,.5f+arm*.5f),1f,arm,tall,false,false,true,true);
             if(south) BuildModule(bay.transform,new Vector3(0,0,-(.5f+arm*.5f)),1f,arm,tall,false,false,true,true);
         }
+        // Same area contract as the authored shelf kit: the boards and their tops are not
+        // pedestrian floor, even when a low board could be reached by an agent step.
+        var modifier=bay.AddComponent<NavMeshModifier>();modifier.overrideArea=true;modifier.area=1;
         bay.AddComponent<ShelfUnit>();
         var outline = bay.GetComponent<OutlineHighlight>();
         outline.outlineMaterial = outlineMaterial; outline.shape = OutlineHighlight.OutlineShape.BoundingBox;

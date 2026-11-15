@@ -10,6 +10,7 @@ namespace Kehai.Replay
     public sealed class KrecHeader
     {
         public string Game = GameNames.Game, Stem = "", Started = "", Scene = "", Rung = "";
+        public string Layout = "today";
         public int Shift, Seed;
 
         // Karen's belief map is recorded on this grid (x across, z down the rows).
@@ -70,6 +71,7 @@ namespace Kehai.Replay
             w.Write(h.Scene ?? "");
             w.Write(h.Seed);
             w.Write(h.Rung ?? "");
+            w.Write(h.Layout ?? "today");
             w.Write(Krec.TickRate);
             w.Write(Krec.CameraRate);
             w.Write(Krec.BeliefRate);

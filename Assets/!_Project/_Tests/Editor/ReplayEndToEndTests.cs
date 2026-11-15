@@ -44,7 +44,7 @@ public class ReplayEndToEndTests
         var config = new EnvConfig
         {
             seed = 777, rung = "F", shiftSeconds = 90f, fps = 15, render = false, freshLedger = true,
-            startShift = 3, agent = "efficient", syntheticBlinks = true
+            startShift = 3, agent = "efficient", syntheticBlinks = true, layout = "labyrinth"
         };
         env.StartCoroutine(PlayOneShift(env, config));
         float deadline = Time.realtimeSinceStartup + 600f;
@@ -77,6 +77,8 @@ public class ReplayEndToEndTests
             Assert.IsTrue(p.Ready);
             p.Playing = false;
             yield return null;
+            Assert.AreEqual("labyrinth",p.Data.Header.Layout,"the recording identifies its layout");
+            Assert.AreEqual("labyrinth",StoreLayoutRuntime.CurrentId,"playback restores the recorded shelves");
 
             // Played back, not played.
             Assert.IsNull(Object.FindAnyObjectByType<KarenBrain>(), "Karen's brain isn't running in a replay");
@@ -87,6 +89,7 @@ public class ReplayEndToEndTests
 
             ReplayStage stage = p.Stage;
             int shelves = stage.Actors.Count(a => a.FromScene && a.Entity.Kind == KrecKind.ShelfUnit);
+            Assert.AreEqual(p.Data.Entities.Values.Count(e=>e.Kind==KrecKind.ShelfUnit),shelves,"every recorded bay is reconstructed");
             Assert.Greater(shelves, 100, "the store's own shelf units are driven: " + stage.Summary);
             Assert.GreaterOrEqual(stage.KarenId, 0, "Karen has a puppet");
             Assert.GreaterOrEqual(stage.PlayerId, 0, "you have a body");

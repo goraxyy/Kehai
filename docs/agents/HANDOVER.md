@@ -35,6 +35,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | what | where | in git? |
 |---|---|---|
 | The Unity project | `~/Developer/Kehai` (Unity **6000.5.10f1**, at `/Applications/Unity/Hub/Editor/6000.5.10f1/`) | code and docs only |
+| The current 0.5.0 Unity project | `~/Developer/Kehai/.claude/worktrees/0.5.0-build`, branch `0.5.0`. Private assets/packages/cache cloned locally; the original main folder stays intact. Use this project to review PR #82 | source/docs only |
 | The store scene | `Assets/!_Project/_Core/Scenes/SampleScene.unity` (about 22 MB, text YAML). Its layout is written out in [`SCENE_MAP.md`](store/SCENE_MAP.md) | no |
 | The endless-maze scene (parked) | `Assets/!_Project/_Core/Scenes/EndlessMaze.unity`, last and unticked in the build list | no |
 | Art: models, materials, prefabs, audio, textures | under `Assets/` (about 160 MB). Art files are listed in the local-only `.git/info/exclude`, so `git status` stays clean | no |

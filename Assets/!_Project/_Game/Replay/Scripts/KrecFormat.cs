@@ -63,7 +63,7 @@ namespace Kehai.Replay
     public static class Krec
     {
         public const string Magic = "KREC";
-        public const ushort Version = 3;               // 3 adds fog and the stopped clock; 2 her route guesses; 1 and 2 still read
+        public const ushort Version = 4;               // 4 adds the layout ID; 3 fog/clock; 2 routes; versions 1–3 still read
         public const float TickRate = 30f;
         public const float CameraRate = 60f;
         public const float BeliefRate = 2f;

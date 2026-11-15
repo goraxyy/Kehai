@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Kehai;
 using Kehai.Replay;
 using NUnit.Framework;
 using UnityEngine;
@@ -53,7 +54,7 @@ public class KrecTests
     [Test]
     public void AWrittenFileReadsBackAsWritten()
     {
-        var header = new KrecHeader { Stem = "shift_03_test", Shift = 3, Started = "2026-09-30 10:00", Scene = "Assets/store.unity", Seed = 1234, Rung = "F",
+        var header = new KrecHeader { Stem = "shift_03_test", Shift = 3, Started = "2026-09-30 10:00", Scene = "Assets/store.unity", Seed = 1234, Rung = "F", Layout = "fishbone",
                                       BeliefOrigin = new Vector2(-10f, -200f), BeliefCols = 3, BeliefRows = 2, BeliefMask = new byte[] { 1, 1, 0, 1, 1, 1 } };
         header.MazeMoves.Add((7, new Vector3(1f, 0f, 2f), new Vector3(4f, 0f, 2f)));
         header.Slots.Add((new Vector3(10f, 1.2f, -50f), true, "miso_paste"));
@@ -95,6 +96,8 @@ public class KrecTests
         Assert.AreEqual("shift_03_test", d.Header.Stem);
         Assert.AreEqual(1234, d.Header.Seed);
         Assert.AreEqual("F", d.Header.Rung);
+        Assert.AreEqual("fishbone", d.Header.Layout);
+        Assert.AreEqual("fishbone", KrecReader.LoadHeader(path).Layout);
         Assert.AreEqual(3, d.Header.BeliefCols);
         CollectionAssert.AreEqual(new byte[] { 1, 1, 0, 1, 1, 1 }, d.Header.BeliefMask);
         Assert.AreEqual(7, d.Header.MazeMoves[0].bay);
@@ -198,7 +201,7 @@ public class KrecTests
         }
         ReplayData d = KrecReader.Load(path);
         Assert.AreEqual(Krec.Version, d.Version);
-        Assert.AreEqual(3, Krec.Version);
+        Assert.AreEqual(4, Krec.Version);
         var fog = d.Events.Where(e => e.Type == KrecEvent.Fog).ToList();
         Assert.AreEqual(2, fog.Count);
         Assert.AreEqual("Sales floor", fog[0].Text);
@@ -229,6 +232,26 @@ public class KrecTests
         Assert.AreEqual(0f, middle.Position.x, 1e-4f, "still there five ticks later, not halfway");
         d.TryPose(1, 9.5f / 30f, out EntitySample moving);
         Assert.AreEqual(0.5f, moving.Position.x, 1e-3f, "moving only in the last tick");
+    }
+
+    [TestCase(1),TestCase(2),TestCase(3)]
+    public void LegacyHeadersStillUseTheOriginalStore(int version)
+    {
+        using(var file=File.Create(path))
+        using(var zip=new System.IO.Compression.GZipStream(file,System.IO.Compression.CompressionLevel.Optimal))
+        using(var w=new BinaryWriter(zip))
+        {
+            w.Write(System.Text.Encoding.ASCII.GetBytes(Krec.Magic));w.Write((ushort)version);
+            w.Write(GameNames.Game);w.Write("legacy");w.Write(3);w.Write("");w.Write("Assets/store.unity");w.Write(7);w.Write("E");
+            w.Write(30f);w.Write(60f);w.Write(2f);w.Write(1000f);
+            w.Write(0f);w.Write(0f);w.Write(3f);w.Write(0);w.Write(0);w.Write(0);
+            w.Write(0);w.Write(0);w.Write(0); // maze moves, slots and lights
+            w.Write((byte)KrecTag.End);w.Write(1f);w.Write(true);
+        }
+        var data=KrecReader.Load(path);
+        Assert.IsTrue(data.Complete);Assert.IsTrue(data.ClockedOut);
+        Assert.AreEqual(version,data.Version);Assert.AreEqual("today",data.Header.Layout);
+        Assert.AreEqual("today",KrecReader.LoadHeader(path).Layout);
     }
 
     [Test]

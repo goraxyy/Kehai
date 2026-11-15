@@ -140,6 +140,7 @@ Train on today's map, Racetrack, Labyrinth, Fishbone and Brick bond. Rings, Spli
 player and Karen's careful-corner personas remain excluded from training and tuning. Run the
 hidden benchmark once per frozen candidate; preserve negative results.
 
-Source compilation and pure-logic/Python tests run while building. Scene checks, trick checks,
-map exports, style timing, long training and the final benchmark remain queued for the agreed
-post-build testing stage. Never read a queued test as a recorded pass.
+Source compilation, pure-logic/Python tests, native EditMode tests and mechanical scene checks
+have run; [verification](../agents/integration/0.5.0-verification.md) records the exact scope.
+Per-layout maps are exported. Played trick/bot checks, style timing, platform builds, long
+training and the final benchmark remain queued. Never read a queued test as a passing result.

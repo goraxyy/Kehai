@@ -92,8 +92,12 @@ namespace Kehai.Karen
         void Start()
         {
             // Before the map: the bake that keeps her body to her part of the building.
+            Physics.SyncTransforms();
             string area = KarenArea.Install();
-            Map = StoreMap.Current;
+            // Early scene fixtures may have queried Current against the saved NavMesh before
+            // runtime shelves were placed. Rebuild only after their collider bake is ready.
+            TacticHelpers.ForgetStands();
+            Map = StoreMap.Rebuild();
             Rng = new KarenRng(config.seed);
             Ledger = new KarenLedger(config) { Persistent = config.Features.Persistent };
             Ledger.Load();

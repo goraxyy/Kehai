@@ -76,14 +76,20 @@ public static class Verify050
         foreach(var item in cases)
         {
             var env=KehaiEnv.Ensure();
-            var config=new EnvConfig {seed=777,agent="native-smoke",rung="C",startShift=item.shift,
+            var config=new EnvConfig {seed=777,agent="native-smoke",rung="E",startShift=item.shift,
                 shiftSeconds=90,fps=20,render=false,syntheticBlinks=true,freshLedger=true,
                 ledgerPath=Path.Combine(output,"smoke-ledger.json"),layout=item.layout,
                 heldoutLayout=!string.IsNullOrEmpty(item.layout)&&EvalSplits.HeldOutLayout(item.layout),
                 trainingLayouts=false,gameplayCareer=true};
             yield return env.ResetEpisode(config);
-            for(int frame=0;frame<30;frame++)yield return null;
             var brain=KarenBrain.Instance;var map=StoreMap.Current;
+            int home=map.FindLandmark(LandmarkKind.TimeClock)?.Cell??-1;
+            if(home>=0) env.Driver.Warp(map.CellPosition[home]);
+            for(int frame=0;frame<30;frame++)yield return null;
+            // The live Ledger indexes habits in a dictionary; Data.regions is the
+            // serialized snapshot, refreshed by Save, not on each observation.
+            brain.Ledger.Save();
+            var savedLedger=JsonUtility.FromJson<LedgerData>(File.ReadAllText(config.ledgerPath));
             string expected=string.IsNullOrEmpty(item.layout)?StoreLayouts.ForShift(item.shift):item.layout;
             if(!env.Metrics.Started||brain==null)throw new InvalidOperationException("Shift failed to start: "+expected);
             if(StoreLayoutRuntime.CurrentId!=expected)throw new InvalidOperationException("Wrong layout schedule");
@@ -92,6 +98,9 @@ public static class Verify050
                 throw new InvalidOperationException("Karen presence mismatch at shift "+item.shift);
             if(map.CellCount==0||map.Bays.Count==0||ShelfStock.Current.Count==0)
                 throw new InvalidOperationException("Empty navigation or stock: "+expected);
+            var activeBays=Object.FindObjectsByType<ShelfUnit>();
+            if(map.Bays.Count!=activeBays.Length || map.Bays.Any(b=>b.Unit==null||!b.Unit.gameObject.activeInHierarchy))
+                throw new InvalidOperationException("Map contains stale bays after scene/layout reload: "+expected);
             var stocked=new HashSet<string>(Object.FindObjectsByType<ShelfUnit>().SelectMany(s=>s.Slots).Select(s=>s.productId));
             var missing=ProductCatalog.All.Where(p=>!stocked.Contains(p.Id)).Select(p=>p.Id).ToArray();
             int unreachable=0,total=0;
@@ -103,12 +112,17 @@ public static class Verify050
                 if(!NavMesh.SamplePosition(point.position,out var hit,3f,NavMesh.AllAreas)||
                     !NavMesh.CalculatePath(from,hit.position,NavMesh.AllAreas,path)||path.status!=NavMeshPathStatus.PathComplete)unreachable++;
             }
-            File.WriteAllText(Path.Combine(output,$"{index:00}-{expected}-map.md"),StoreMapReport.ToMarkdown(map));
+            // Remove the ASCII grid's empty right-hand padding for clean generated diffs.
+            string report=string.Join("\n",StoreMapReport.ToMarkdown(map).Split('\n').Select(line=>line.TrimEnd()));
+            File.WriteAllText(Path.Combine(output,$"{index:00}-{expected}-map.md"),report);
             rows.Add(new Dictionary<string,object> { ["layout"]=expected,["shift"]=item.shift,["karen_present"]=brain.PresentThisShift,
-                ["cells"]=map.CellCount,["regions"]=map.Regions.Count,["bays"]=map.Bays.Count,["slots"]=ShelfStock.Current.Count,
+                ["cells"]=map.CellCount,["regions"]=map.Regions.Count,["bays"]=map.Bays.Count,["active_bays"]=activeBays.Length,["slots"]=ShelfStock.Current.Count,
                 ["missing_products"]=missing,["shelf_stands"]=total,["unreachable_stands"]=unreachable,
-                ["habit_places"]=brain.Ledger.Data.regions.Count });
+                ["habit_places"]=savedLedger.regions.Count,["habit_seconds"]=savedLedger.regions.Sum(r=>r.dwell),["player_region"]=map.RegionAt(env.Driver.transform.position),
+                ["player_position"]=new[]{env.Driver.transform.position.x,env.Driver.transform.position.y,env.Driver.transform.position.z},
+                ["brain_active"]=brain.isActiveAndEnabled,["brain_shift_active"]=brain.ShiftActive,["time_scale"]=Time.timeScale,["delta_time"]=Time.deltaTime });
             Debug.Log($"native smoke {expected} shift {item.shift}: {map.CellCount} cells, {missing.Length} missing products, {unreachable}/{total} unreachable stands");
+            if(savedLedger.regions.Count==0||savedLedger.regions.Sum(r=>r.dwell)<=0f)errors.Add(expected+": Director did not save player habits");
             if(missing.Length>0)errors.Add(expected+": missing products: "+string.Join(",",missing));
             if(unreachable>0)errors.Add(expected+": unreachable shelf stands: "+unreachable);
             env.Shift.EndShift(completed:false);index++;
