@@ -6,7 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
-| 2026-11-14 | Sound effects: a sound designer (no Unity) joins; audio lives in `goraxyy/kehai-assets`; tracked by tick boxes; scope is everything; Karen's code-made sounds are layered under recorded ones; the commercial radio song stays for private testing | [SFX plan](plans/sfx-plan.md) |
+| 2026-11-14 | Sound effects: Frixel, a sound designer, does all of it in a separate Unity project (no customers, no Karen), merged into the game and the test build when done; after 0.5.0. Files in `goraxyy/kehai-assets` (he's a collaborator there); tick boxes; Karen's code-made sounds layered under his; her PA stays a mumble; a dry night, heavy rain on shift 4; $1,000 for the whole game; the commercial radio song stays for private testing | [SFX plan](plans/sfx-plan.md) |
 | 2026-11-14 | Reconcile 0.4.1 with `main` now that 0.4.0 is merged, push it and open its PR; then build 0.5.0 | this list; the 0.4.1 pull request |
 | 2026-11-14 | Build first, test later: 0.4.1, then 0.5.0, then the vertical slice and the test build; every test and training run comes after, once ([TESTING.md](TESTING.md)) | [NOW.md](NOW.md#next-in-order) |
 | 2026-11-14 | Confirmed: no yes needed for each published model (the 12 November call), now in 0.4.0's plan too | [0.4.0 plan, D15](plans/0.4.0-build-plan.md#41-defaults-i-picked-change-any) |
