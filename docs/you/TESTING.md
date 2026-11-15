@@ -5,7 +5,11 @@ the order it should run, with time on the Mac and on the Windows PC.
 
 **Your rule: build everything first, then test and train once, on the finished game.** Every long
 run waits for your go. The commands are in the [0.4.0 plan, §12](plans/0.4.0-build-plan.md#12-the-work-phase-by-phase)
-and the [0.5.0 plan](https://github.com/goraxyy/Kehai/pull/82) (open PR).
+and the [0.5.0 plan](https://github.com/goraxyy/Kehai/pull/82).
+
+**14 November: merge 0.5.0 now, continue testing later.** The owner approved the source merge
+using the correctness evidence already recorded. Remaining checks, setup and long runs stay
+open in the [build status](plans/0.5.0/implementation-status.md); heavy work waits for Windows access.
 
 ## Testing is not training
 

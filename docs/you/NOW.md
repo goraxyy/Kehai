@@ -9,7 +9,7 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 |---|---|---|
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
 | **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | merged as PR #85 on 14 November | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
-| **Kehai 0.5.0** | source implemented on `0.5.0`; native checks and remaining work are in the [build status](plans/0.5.0/implementation-status.md) | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
+| **Kehai 0.5.0** | source delivered in PR #82; owner chose merge now, further checks later on 14 November. Completed native checks and open follow-ups are in the [build status](plans/0.5.0/implementation-status.md) | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
 | **Finish the test build / playtest v2** | checkbox plan updated; implementation not started beyond the homepage draft | [the build plan](plans/playtest-v2.md) |
 
 ## Waiting on you
@@ -34,8 +34,9 @@ runs independently of your computers and training starts later, manually, on Win
 Build everything first, then test and train once (your call, 14 November).
 
 1. **Kehai 0.4.1:** merged as PR #85.
-2. **Kehai 0.5.0:** review/play the implemented [plan](plans/0.5.0-plan.md) in PR #82 on `0.5.0`.
-   Remaining runtime, visual and platform checks are in the [build status](plans/0.5.0/implementation-status.md).
+2. **Kehai 0.5.0 source delivery:** PR #82. The owner authorised merging before further tests.
+   Remaining checks and setup stay open in the [build status](plans/0.5.0/implementation-status.md),
+   with heavy work deferred until Windows access.
 3. **Vertical slice:** a convincing playable shift ([release milestone 1](RELEASE_PLAN.md#milestone-1-vertical-slice)).
 4. **Finish the test build:** [playtest v2](plans/playtest-v2.md): illustrated instructions,
    no-code first launch, automatic cloud collection, and a dataset you can download on Windows

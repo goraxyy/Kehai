@@ -1,7 +1,13 @@
 # 0.5.0 build status
 
-Source implementation is on **`0.5.0`**, in [PR #82](https://github.com/goraxyy/Kehai/pull/82).
-The owner authorised building on 14 November. Nothing has been merged or trained in this build.
+Source delivery: **`0.5.0`**, [PR #82](https://github.com/goraxyy/Kehai/pull/82).
+The owner authorised building and merging on 14 November. No models were trained in this build.
+
+**Merge now, test further later — the owner's decision, 14 November.** The completed correctness
+checks below are retained. Additional human playtesting, full trick/bot runs, platform builds,
+trainer connection, visual review, Look Lab/dashboard setup and long training are follow-up
+work, with heavy jobs waiting for Windows access. Merging the source does not complete those
+acceptance tasks or certify a release. This plan stays active until that work is resolved.
 
 Unity is prepared at `~/Developer/Kehai/.claude/worktrees/0.5.0-build`, with game version
 `0.5.0` and the store scene loaded. The editor defaults to **Testing** (Karen from shift 1);
