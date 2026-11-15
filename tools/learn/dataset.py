@@ -103,6 +103,36 @@ def add_learning(dataset: str, path: str) -> int:
     return n
 
 
+def add_escapes(dataset: str, path: str, player: str | None = None) -> int:
+    """Typed truth sidecar; never mix escape answers into policy-decision learning rows."""
+    rows = [json.loads(line) for line in open(path) if line.strip()]
+    return add_escape_rows(dataset, rows, player)
+
+
+def add_escape_rows(dataset: str, rows: list, player: str | None = None) -> int:
+    n, gone = 0, forgotten(dataset)
+    for row in rows:
+        who = player or row.get("player")
+        if not who or row.get("version") != 1 or not isinstance(row.get("path"), list) or not row.get("from"):
+            raise ValueError("invalid escape record or missing player identity")
+        if safe_id(who) in gone:
+            continue
+        folder = player_dir(dataset, who)
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "player.txt"), "w") as f:
+            f.write(who + "\n")
+        # Upload retries must not turn a single escape into repeated evidence.
+        target = os.path.join(folder, "escapes.jsonl")
+        identity = lambda r: (r.get("seed"), r.get("shift"), r.get("layout"), r.get("t"))
+        existing = {identity(json.loads(line)) for line in open(target) if line.strip()} if os.path.exists(target) else set()
+        if identity(row) in existing:
+            continue
+        with open(target, "a") as f:
+            f.write(json.dumps(dict(row, player=who), sort_keys=True) + "\n")
+        n += 1
+    return n
+
+
 def add_zip(dataset: str, path: str) -> list:
     """A playtest session zip: meta.json (player_id), shift records, learning records, a Ledger."""
     added = []
@@ -122,6 +152,10 @@ def add_zip(dataset: str, path: str) -> list:
                 with open(os.path.join(base, "shifts", os.path.basename(n)), "wb") as f:
                     f.write(z.read(n))
                 added.append(n)
+            elif low.endswith(".escapes.jsonl"):
+                rows = [json.loads(line) for line in z.read(n).decode("utf-8").splitlines() if line.strip()]
+                add_escape_rows(dataset, rows, who)
+                added.append(n)
             elif low.endswith(".jsonl") and "learning" in low:
                 with open(os.path.join(base, "learning.jsonl"), "ab") as f:
                     f.write(z.read(n))
@@ -138,6 +172,8 @@ def add(dataset: str, sources) -> int:
     for src in sources:
         if src.endswith(".zip"):
             count += len(add_zip(dataset, src))
+        elif src.endswith(".escapes.jsonl"):
+            count += add_escapes(dataset, src)
         elif src.endswith(".jsonl"):
             count += add_learning(dataset, src)
         else:

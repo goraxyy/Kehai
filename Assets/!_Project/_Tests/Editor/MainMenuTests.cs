@@ -18,7 +18,7 @@ public class MainMenuTests
     [Test]
     public void ACareerOnFile_ComesFirst_AndCanBeStartedOver()
     {
-        var choices = MainMenu.ChoicesFor(6, careerOver: false);
+        var choices = MainMenu.ChoicesFor(2, careerOver: false);
         Assert.AreEqual(Choice.Continue, choices[0]);
         Assert.AreEqual(Choice.NewCareer, choices[1]);
         CollectionAssert.DoesNotContain(choices, Choice.FirstShift);
@@ -30,6 +30,14 @@ public class MainMenuTests
         var choices = MainMenu.ChoicesFor(14, careerOver: true);
         Assert.AreEqual(Choice.NewCareer, choices[0]);
         CollectionAssert.DoesNotContain(choices, Choice.Continue);
+    }
+
+    [Test]
+    public void FourCompletedShiftsFinishTheCareerWithoutALegacyEndingFlag()
+    {
+        var choices=MainMenu.ChoicesFor(4,careerOver:false);
+        Assert.AreEqual(Choice.NewCareer,choices[0]);
+        CollectionAssert.DoesNotContain(choices,Choice.Continue);
     }
 
     [Test]

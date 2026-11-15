@@ -593,6 +593,7 @@ public static class StorageBoxes
 
     static void Text(Transform parent, string name, string words, Color colour, Vector3 at, Quaternion rotation, Vector2 size)
     {
+        if (!Edition.ShowUI) return;
         var go = new GameObject(name);
         go.layer = parent.gameObject.layer;
         go.transform.SetParent(parent, false);

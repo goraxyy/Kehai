@@ -71,6 +71,19 @@ public sealed class StoreCameras : MonoBehaviour
     public CameraBox Box { get; private set; }
 
     // Broken by her (Camera break): every screen dark, no camera sees for anyone.
+    public StoreCamera LoopedCamera { get; private set; }
+    public bool Looped => LoopedCamera != null && LoopedCamera.Looped;
+    public bool NeedsReset => Broken || Looped;
+    public static event System.Action<bool> LoopChanged;
+    public bool Loop(StoreCamera camera)
+    {
+        if (Broken || Looped || camera == null || !cameras.Contains(camera) || Box == null) return false;
+        camera.FreezeEmpty();
+        LoopedCamera = camera;
+        TaskManager.NotifyWorldChanged();
+        LoopChanged?.Invoke(true);
+        return true;
+    }
     public bool Broken { get; private set; }
     public float BrokenAt { get; private set; } = -1f;
     public int TimesBroken { get; private set; }
@@ -90,6 +103,7 @@ public sealed class StoreCameras : MonoBehaviour
     {
         Instance = null;
         BrokenChanged = null;
+        LoopChanged = null;
     }
 
     // ---- putting them in --------------------------------------------------------------------
@@ -121,7 +135,7 @@ public sealed class StoreCameras : MonoBehaviour
 
         all.Wall = CctvWall.Build(root.transform, all.cameras);
         all.Box = CameraBox.Place(outline);
-        TaskManager.CamerasBroken = () => Instance != null && Instance.Broken;
+        TaskManager.CamerasBroken = () => Instance != null && Instance.NeedsReset;
         return all;
     }
 
@@ -172,14 +186,19 @@ public sealed class StoreCameras : MonoBehaviour
     // The camera box, held to the end. False if nothing was broken.
     public bool Fix()
     {
-        if (!Broken) return false;
+        if (!NeedsReset) return false;
+        bool broken = Broken;
+        bool looped = Looped;
+        if (LoopedCamera != null) LoopedCamera.Unfreeze();
+        LoopedCamera = null;
         Broken = false;
         BrokenAt = -1f;
         foreach (StoreCamera cam in cameras) if (cam != null) cam.SetBroken(false);
         if (Wall != null) Wall.SetSignal(true);
         nextFeedAt = 0f;
         TaskManager.NotifyWorldChanged();
-        BrokenChanged?.Invoke(false);
+        if (broken) BrokenChanged?.Invoke(false);
+        if (looped) LoopChanged?.Invoke(false);
         return true;
     }
 
@@ -196,7 +215,7 @@ public sealed class StoreCameras : MonoBehaviour
     public void ResetForShift()
     {
         SetWatching(false);
-        if (Broken) Fix();
+        if (NeedsReset) Fix();
         WatchedSeconds = 0f;
         Sightings = 0;
         TimesBroken = 0;
@@ -231,7 +250,7 @@ public sealed class StoreCameras : MonoBehaviour
         WatchedSeconds += dt;
         foreach (StoreCamera cam in cameras)
         {
-            if (cam == null) continue;
+            if (cam == null) continue; // A frozen display does not disable the real camera's eye.
             cam.Eye.Tick(dt);
             if (cam.Eye.Awareness < cam.Eye.glimpseAt || Time.time < cam.NextReport) continue;
             cam.NextReport = Time.time + ReportEvery;
@@ -245,7 +264,7 @@ public sealed class StoreCameras : MonoBehaviour
 
     // A graphics device to draw a feed with: none in batch runs with -nographics (the tests, the
     // ablations), where a feed is never made. A batch run with graphics (the pictures) has one.
-    public static bool HasGraphics => SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
+    public static bool HasGraphics => Edition.ShowUI && SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
 
     // One feed at a time, in turn, and only while you're near enough to the screens to see
     // them: six extra views of the store are dear on a small computer.
@@ -275,6 +294,31 @@ public sealed class StoreCamera : MonoBehaviour
     public SightSensor Eye { get; private set; }
     public Camera Feed { get; private set; }
     public RenderTexture Picture { get; private set; }
+    public bool Looped { get; private set; }
+    public float FeedClock { get; private set; }
+    // A synchronous empty snapshot, then no redraw until the box is reset. Renderers are
+    // restored even if rendering fails; neither the real actors nor her senses are changed.
+    public void FreezeEmpty()
+    {
+        if (Looped) return;
+        var hidden = new List<Renderer>();
+        var previous = new List<bool>();
+        foreach (KarenBody body in FindObjectsByType<KarenBody>()) Hide(body.transform);
+        foreach (CustomerNPC customer in CustomerNPC.All) if (customer != null) Hide(customer.transform);
+        if (PlayerPresence.Current != null) Hide(PlayerPresence.Current.transform);
+        try { RenderFeed(); }
+        finally { for (int i = 0; i < hidden.Count; i++) if (hidden[i] != null) hidden[i].forceRenderingOff = previous[i]; }
+        Looped = true;
+        void Hide(Transform actor)
+        {
+            foreach (Renderer renderer in actor.GetComponentsInChildren<Renderer>())
+            {
+                if (hidden.Contains(renderer)) continue;
+                hidden.Add(renderer); previous.Add(renderer.forceRenderingOff); renderer.forceRenderingOff = true;
+            }
+        }
+    }
+    public void Unfreeze() => Looped = false;
     public bool IsBroken { get; private set; }
     [System.NonSerialized] public float NextReport;
 
@@ -362,7 +406,9 @@ public sealed class StoreCamera : MonoBehaviour
 
     public void RenderFeed()
     {
-        if (IsBroken || Feed == null || !StoreCameras.HasGraphics) return;
+        if (IsBroken || Looped || Feed == null) return;
+        FeedClock = Time.time;
+        if (!StoreCameras.HasGraphics) return;
         Feed.targetTexture = EnsurePicture();
         Feed.Render();
     }
@@ -430,6 +476,8 @@ public sealed class CctvWall : MonoBehaviour
         var wall = root.AddComponent<CctvWall>();
         wall.cameras = cameras;
         wall.Front = -(facing * Vector3.forward);
+        // Keep the physical watch/fix target in Training, without screen geometry or TMP.
+        if (!Edition.ShowUI) return wall;
 
         for (int i = 0; i < cameras.Count; i++)
         {
@@ -445,6 +493,7 @@ public sealed class CctvWall : MonoBehaviour
 
     void AddScreen(Vector3 local, StoreCamera cam)
     {
+        if (!Edition.ShowUI) return;
         var screen = new GameObject("Screen_" + cam.Spot.Area.Replace(' ', '_'));
         screen.transform.SetParent(transform, false);
         screen.transform.localPosition = local;
@@ -519,6 +568,16 @@ public sealed class CctvWall : MonoBehaviour
         if (on && StoreCameras.Instance != null) StoreCameras.Instance.RenderAllNow();
     }
 
+    void UpdateClocks()
+    {
+        if (!signal || cameras == null) return;
+        for (int i = 0; i < labels.Count; i++)
+        {
+            // Timestamp of the last frame, so a loop stops its clock too.
+            int seconds = Mathf.FloorToInt(cameras[i].FeedClock);
+            labels[i].text = $"{cameras[i].Spot.Name}  {seconds / 60:00}:{seconds % 60:00}";
+        }
+    }
     public bool HasSignal => signal;
 
     // Grey static, made once.
@@ -541,6 +600,7 @@ public sealed class CctvWall : MonoBehaviour
 
     void Update()
     {
+        UpdateClocks();
         if (signal || pictures.Count == 0) return;
         // The static crawls.
         var offset = new Vector2(Mathf.Repeat(Time.unscaledTime * 7.3f, 1f), Mathf.Repeat(Time.unscaledTime * 3.1f, 1f));
@@ -572,7 +632,7 @@ public sealed class CameraBox : HighlightInteractable, IHoldInteractable
     Material lampOn, lampOff, lampOk;
     int shown = -1;
 
-    static bool Broken => StoreCameras.Instance != null && StoreCameras.Instance.Broken;
+    static bool Broken => StoreCameras.Instance != null && StoreCameras.Instance.NeedsReset;
 
     // Beside the fridge box (which is beside the breaker box), further along the wall.
     public static CameraBox Place(Material outline)

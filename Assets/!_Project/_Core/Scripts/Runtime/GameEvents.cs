@@ -19,6 +19,7 @@ public static class GameEvents
     public static event Action<CustomerNPC> DirectionsGiven;
     public static event Action<Component, bool> DoorUsed;               // door, opened (false = closed)
     public static event Action<bool> PunchAttempted;                    // accepted?
+    public static event Action TaskListOpened;
     public static event Action<Item> PlayerPickedUp;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -38,6 +39,7 @@ public static class GameEvents
         DoorUsed = null;
         PunchAttempted = null;
         PlayerPickedUp = null;
+        TaskListOpened = null;
     }
 
     public static void RaisePlayerDroppedItem(Item item, Vector3 at) => PlayerDroppedItem?.Invoke(item, at);
@@ -53,5 +55,6 @@ public static class GameEvents
     public static void RaiseDirectionsGiven(CustomerNPC customer) => DirectionsGiven?.Invoke(customer);
     public static void RaiseDoorUsed(Component door, bool opened) => DoorUsed?.Invoke(door, opened);
     public static void RaisePunchAttempted(bool accepted) => PunchAttempted?.Invoke(accepted);
+    public static void RaiseTaskListOpened() => TaskListOpened?.Invoke();
     public static void RaisePlayerPickedUp(Item item) => PlayerPickedUp?.Invoke(item);
 }

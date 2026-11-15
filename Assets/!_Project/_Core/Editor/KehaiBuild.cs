@@ -33,6 +33,17 @@ using Debug = UnityEngine.Debug;
 // tools/playtest/.env or the environment), and come zipped for testers beside that folder.
 public static class KehaiBuild
 {
+    public static KehaiEdition? BuildingEdition { get; private set; }
+    public static string[] EditionDefines(KehaiEdition edition) => new[] { Edition.Define(edition) };
+
+    // Unity -executeMethod KehaiBuild.Build -edition training|testing|gameplay -platform windows|macos
+    public static void Build()
+    {
+        string platform = (Arg("-platform") ?? "macos").ToLowerInvariant();
+        if (platform != "windows" && platform != "macos")
+            throw new ArgumentException("-platform must be windows or macos");
+        FromCommandLine(platform == "windows" ? BuildTarget.StandaloneWindows64 : BuildTarget.StandaloneOSX);
+    }
     // GuideMarker's rings and beacons, and Karen's fog.
     static readonly string[] RuntimeShaders = { "Universal Render Pipeline/Unlit", "Universal Render Pipeline/Particles/Unlit", "Universal Render Pipeline/Lit" };
 
@@ -65,7 +76,12 @@ public static class KehaiBuild
     static void FromCommandLine(BuildTarget target)
     {
         string playtest = Arg("-playtest");
-        BuildReport report = Build(target, Arg("-kehai-build-out") ?? DefaultPath(target, playtest), Environment.GetCommandLineArgs().Contains("-kehai-build-dev"), playtest);
+        var edition = string.IsNullOrEmpty(playtest) ? KehaiEdition.Gameplay : KehaiEdition.Testing;
+        string editionArg = Arg("-edition");
+        if (editionArg != null && !Edition.TryParse(editionArg, out edition))
+            throw new ArgumentException("-edition must be training, testing or gameplay");
+        string output = Arg("-kehai-build-out") ?? (edition == KehaiEdition.Training ? KehaiRl.TrainingPath(target) : DefaultPath(target, playtest));
+        BuildReport report = Build(target, output, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"), playtest, edition);
         EditorApplication.Exit(report != null && report.summary.result == BuildResult.Succeeded ? 0 : 1);
     }
 
@@ -84,8 +100,19 @@ public static class KehaiBuild
     // The scenes in File → Build Profiles, in order; the first is the one the game opens.
     public static string[] Scenes => EditorBuildSettings.scenes.Where(s => s.enabled && File.Exists(s.path)).Select(s => s.path).ToArray();
 
-    public static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest = null)
+    public static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest = null, KehaiEdition? edition = null)
     {
+        KehaiEdition selected = edition ?? (string.IsNullOrEmpty(playtest) ? KehaiEdition.Gameplay : KehaiEdition.Testing);
+        if (!string.IsNullOrEmpty(playtest) && selected != KehaiEdition.Testing)
+            throw new ArgumentException("Only Testing builds may include playtest configuration.");
+        if (selected == KehaiEdition.Gameplay && development)
+            throw new ArgumentException("Gameplay builds cannot enable development tools.");
+        if (selected == KehaiEdition.Training && !KehaiRl.Ready)
+            throw new InvalidOperationException("Training requires the ML-Agents package and KAREN_MLAGENTS define. Run Kehai → RL → Set Up ML-Agents first.");
+        string[] configured = PlayerSettings.GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.Standalone).Split(';');
+        if (configured.Any(d => d.StartsWith("KEHAI_", StringComparison.Ordinal) &&
+            new[] { "KEHAI_TRAINING", "KEHAI_TESTING", "KEHAI_GAMEPLAY" }.Contains(d) && d != Edition.Define(selected)))
+            throw new InvalidOperationException("Remove conflicting KEHAI edition defines from Player Settings; the build stamps its edition automatically.");
         string[] scenes = Scenes;
         if (scenes.Length == 0)
         {
@@ -98,30 +125,49 @@ public static class KehaiBuild
             return null;
         }
 
-        IncludeRuntimeShaders();
+        if (selected != KehaiEdition.Training) IncludeRuntimeShaders();
         Directory.CreateDirectory(Path.GetDirectoryName(appPath));
         var watch = Stopwatch.StartNew();
-        BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        BuildReport report;
+        BuildingEdition = selected;
+        try
         {
-            scenes = scenes,
-            locationPathName = appPath,
-            target = target,
-            targetGroup = BuildTargetGroup.Standalone,
-            options = development ? BuildOptions.Development : BuildOptions.None,
-        });
+            report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = appPath,
+                target = target,
+                targetGroup = BuildTargetGroup.Standalone,
+                options = development ? BuildOptions.Development : BuildOptions.None,
+                extraScriptingDefines = EditionDefines(selected),
+            });
+        }
+        finally { BuildingEdition = null; }
         BuildSummary s = report.summary;
         Debug.Log($"Kehai build: {s.result} in {watch.Elapsed:mm\\:ss}: {appPath}, {s.totalSize / 1048576f:0} MB, " +
                   $"{s.totalErrors} errors, {s.totalWarnings} warnings");
         if (s.result != BuildResult.Succeeded) return report;
 
         Kehai.Playtest.PlaytestConfig config = string.IsNullOrEmpty(playtest) ? null : WritePlaytestConfig(target, appPath, playtest);
+        // An output folder can be reused; never inherit another edition's upload settings.
+        string streaming = StreamingAssetsOf(target, appPath);
+        Directory.CreateDirectory(streaming);
+        File.WriteAllText(Path.Combine(streaming, "edition.txt"), selected.ToString().ToLowerInvariant());
+        if (selected != KehaiEdition.Testing)
+        {
+            string stale = Path.Combine(streaming, Kehai.Playtest.PlaytestConfig.FileName);
+            if (File.Exists(stale)) File.Delete(stale);
+        }
         if (target == BuildTarget.StandaloneOSX)
         {
-            AddCameraReason(appPath);
-            CopyBlinkHelper(appPath);
+            if (selected != KehaiEdition.Training)
+            {
+                AddCameraReason(appPath);
+                CopyBlinkHelper(appPath);
+            }
             Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
         }
-        WriteBuildInfo(appPath, target, development, config);
+        WriteBuildInfo(appPath, target, development, selected, config);
         if (config != null) ZipForTesters(appPath);
         return report;
     }
@@ -229,7 +275,7 @@ public static class KehaiBuild
         if (File.Exists(zip)) Debug.Log($"Kehai build: {zip} ({new FileInfo(zip).Length / 1048576f:0} MB) is the one to send");
     }
 
-    static void WriteBuildInfo(string appPath, BuildTarget target, bool development, Kehai.Playtest.PlaytestConfig playtest = null)
+    static void WriteBuildInfo(string appPath, BuildTarget target, bool development, KehaiEdition edition, Kehai.Playtest.PlaytestConfig playtest = null)
     {
         string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
         string branch = Run("git", $"-C \"{ProjectRoot}\" rev-parse --abbrev-ref HEAD", null)?.Trim();
@@ -237,9 +283,15 @@ public static class KehaiBuild
         string from = string.IsNullOrEmpty(commit) ? "an unknown commit"
             : $"commit {commit}" + (string.IsNullOrEmpty(branch) || branch == "HEAD" ? "" : $" ({branch})") +
               (string.IsNullOrWhiteSpace(changes) ? "" : " with local changes");
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build-provenance.json"), MiniJson.Serialize(new System.Collections.Generic.Dictionary<string,object>
+        {
+            ["commit"] = Run("git", $"-C \"{ProjectRoot}\" rev-parse HEAD", null)?.Trim(),
+            ["dirty"] = !string.IsNullOrWhiteSpace(changes),
+            ["edition"] = edition.ToString().ToLowerInvariant(),
+        }));
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build.txt"),
-            $"{PlayerSettings.productName} {PlayerSettings.bundleVersion} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
-            $"Built {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n" +
+            $"{PlayerSettings.productName} {Edition.VersionLabel(PlayerSettings.bundleVersion, edition)} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
+            $"Edition: {edition.ToString().ToLowerInvariant()}.\nBuilt {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n" +
             (playtest == null ? "" : $"Playtest {playtest.round}: " + (playtest.Uploads ? "sends sessions after the tester agrees." : "keeps sessions on the tester's computer.") + "\n"));
     }
 

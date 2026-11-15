@@ -154,6 +154,7 @@ namespace Kehai.Karen
             if (brain != null)
             {
                 r.Places.AddRange(brain.PlaceWatch.Settled);
+                r.Escapes.AddRange(brain.Director.EscapeRecording());
                 foreach (CounterStat c in brain.Ledger.Data.counterplay)
                     if (c.lastShift == brain.Ledger.Shift) r.Answers.Add(c);
             }

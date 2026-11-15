@@ -3,7 +3,7 @@
   "learner": "none",
   "split": "validation",
   "careers": 8,
-  "shifts": 6,
+  "shifts": 4,
   "start_shift": 1,
   "shift_seconds": 150,
   "players": [

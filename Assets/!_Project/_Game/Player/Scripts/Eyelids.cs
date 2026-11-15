@@ -210,6 +210,7 @@ public class Eyelids : MonoBehaviour
 
     void EnsureBuilt()
     {
+        if (!Edition.ShowUI) return;
         if (built && topLid != null && bottomLid != null) return;
 
         var existing = transform.Find("~Eyelids");

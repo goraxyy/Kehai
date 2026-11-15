@@ -34,6 +34,10 @@ namespace Kehai.Karen
         public readonly BrainCard Card;
         public int InputSize => mean.Length;
         public int Heads => headWeights.Length;
+        public int HeadSize(int head) => headSizes[head];
+        public int MemorySize => recurrentSize * 2;
+        readonly int recurrentSize;
+        readonly float[] recurrentInput, recurrentHidden, recurrentBias;
 
         readonly float[] mean, std;
         readonly float[][] weights, biases;   // per hidden layer: [out × in] row-major, [out]
@@ -42,7 +46,8 @@ namespace Kehai.Karen
         readonly int[] headSizes;
 
         public BrainNet(BrainCard card, float[] mean, float[] std, int[] layerSizes, float[][] weights, float[][] biases,
-                        int[] headSizes, float[][] headWeights, float[][] headBiases)
+                        int[] headSizes, float[][] headWeights, float[][] headBiases,
+                        int recurrentSize = 0, float[] recurrentInput = null, float[] recurrentHidden = null, float[] recurrentBias = null)
         {
             Card = card ?? new BrainCard();
             this.mean = mean;
@@ -53,6 +58,10 @@ namespace Kehai.Karen
             this.headSizes = headSizes;
             this.headWeights = headWeights;
             this.headBiases = headBiases;
+            this.recurrentSize = recurrentSize;
+            this.recurrentInput = recurrentInput;
+            this.recurrentHidden = recurrentHidden;
+            this.recurrentBias = recurrentBias;
             Validate();
         }
 
@@ -66,6 +75,15 @@ namespace Kehai.Karen
                     throw new System.ArgumentException($"layer {l}: {weights[l].Length} weights for {layerSizes[l]}×{inSize}");
                 inSize = layerSizes[l];
             }
+            if (recurrentSize < 0) throw new System.ArgumentException("negative recurrent size");
+            if (recurrentSize > 0)
+            {
+                if (recurrentInput == null || recurrentInput.Length != 4 * recurrentSize * inSize ||
+                    recurrentHidden == null || recurrentHidden.Length != 4 * recurrentSize * recurrentSize ||
+                    recurrentBias == null || recurrentBias.Length != 4 * recurrentSize)
+                    throw new System.ArgumentException("invalid LSTM shapes");
+                inSize = recurrentSize;
+            }
             for (int h = 0; h < headSizes.Length; h++)
                 if (headWeights[h].Length != headSizes[h] * inSize || headBiases[h].Length != headSizes[h])
                     throw new System.ArgumentException($"head {h}: {headWeights[h].Length} weights for {headSizes[h]}×{inSize}");
@@ -76,8 +94,14 @@ namespace Kehai.Karen
         }
 
         // The raw scores of every head. Doubles inside, so it matches the trainer to 1e-5.
-        public float[][] Logits(float[] input)
+        public float[][] Logits(float[] input) => Logits(input, null);
+
+        // Weights may be cached, memory may not: each bot owns [hidden, cell] and clears it
+        // at every shift boundary. Refuse a stateless call on a recurrent model.
+        public float[][] Logits(float[] input, float[] memory)
         {
+            if (MemorySize > 0 && (memory == null || memory.Length != MemorySize))
+                throw new System.ArgumentException("this model requires caller-owned LSTM memory");
             if (input.Length != InputSize) throw new System.ArgumentException($"{Card.Name} takes {InputSize} inputs, given {input.Length}");
             var x = new double[InputSize];
             for (int i = 0; i < x.Length; i++)
@@ -87,6 +111,21 @@ namespace Kehai.Karen
                 x[i] = v < -5.0 ? -5.0 : v > 5.0 ? 5.0 : v;
             }
             for (int l = 0; l < layerSizes.Length; l++) x = Swish(Dense(x, weights[l], biases[l], layerSizes[l]));
+            if (recurrentSize > 0)
+            {
+                double[] gates = Dense(x, recurrentInput, recurrentBias, recurrentSize * 4);
+                for (int g = 0; g < gates.Length; g++)
+                    for (int j = 0; j < recurrentSize; j++) gates[g] += recurrentHidden[g * recurrentSize + j] * memory[j];
+                x = new double[recurrentSize];
+                for (int j = 0; j < recurrentSize; j++)
+                {
+                    double cell = Sigmoid(gates[recurrentSize + j]) * memory[recurrentSize + j]
+                                + Sigmoid(gates[j]) * System.Math.Tanh(gates[2 * recurrentSize + j]);
+                    x[j] = Sigmoid(gates[3 * recurrentSize + j]) * System.Math.Tanh(cell);
+                    memory[j] = (float)x[j];
+                    memory[recurrentSize + j] = (float)cell;
+                }
+            }
             var outs = new float[headSizes.Length][];
             for (int h = 0; h < headSizes.Length; h++)
             {
@@ -113,6 +152,8 @@ namespace Kehai.Karen
             for (int i = 0; i < p.Length; i++) p[i] = (float)(e[i] / sum);
             return p;
         }
+
+        static double Sigmoid(double x) => 1.0 / (1.0 + System.Math.Exp(-x));
 
         static double[] Dense(double[] x, float[] w, float[] b, int outSize)
         {

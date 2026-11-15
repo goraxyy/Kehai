@@ -12,12 +12,12 @@ public class HandsOnTests
         new KarenContext { Config = new KarenConfig { seed = 7 }, Rng = new KarenRng(7) };
 
     [Test]
-    public void TheHandsOnTricks_AreTheSevenThePlanNames_AndCameraWatch()
+    public void HandsOnTricksIncludeLoopFreezerAndComplaint()
     {
         var handsOn = TacticLibrary.All.Where(t => t.IsHandsOn).Select(t => t.Id).OrderBy(id => id).ToArray();
         CollectionAssert.AreEqual(new[]
         {
-            "bin_tamper", "camera_bolt_on", "camera_watch", "door_lock", "overtime", "shelf_sweep", "spill", "tool_theft",
+            "bin_tamper", "camera_bolt_on", "camera_watch", "complaint", "door_lock", "freezer_alarm", "overtime", "screen_loop", "shelf_sweep", "spill", "tool_theft",
         }, handsOn);
     }
 

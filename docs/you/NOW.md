@@ -8,8 +8,8 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 | What | State | Where |
 |---|---|---|
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
-| **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | reconciled with `main` (with 0.4.0) on 14 November; in a pull request from branch `0.4.1` | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
-| **Kehai 0.5.0** | the plan, for review: 34 questions in its §16 | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
+| **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | merged as PR #85 on 14 November | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
+| **Kehai 0.5.0** | source delivered in PR #82; owner chose merge now, further checks later on 14 November. Completed native checks and open follow-ups are in the [build status](plans/0.5.0/implementation-status.md) | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
 | **Finish the test build / playtest v2** | checkbox plan updated; implementation not started beyond the homepage draft | [the build plan](plans/playtest-v2.md) |
 
 ## Waiting on you
@@ -18,10 +18,9 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 |---|---|
 | Import the four new models: **Kehai → Props → Import Karen's Props** | until then the PA microphone, the camera box, the cameras and the screens are plain boxes |
 | Play a shift on 0.4.1 | her eyes are twice as far and twice as quick, and no test has measured that |
-| Answer the 0.5.0 plan's questions ([PR #82](https://github.com/goraxyy/Kehai/pull/82), §16), above all which "agents" (Q9–Q10) | the bots' training waits for the agents choice ([TESTING.md](TESTING.md#the-agents-question)) |
+| 0.5.0 scope is settled; later art review and external storage setup remain | adaptive ML bots are selected; long training remains after the build |
 | Keep the blur in her senses, or play the sharper fitted S1 | S1 trusts every sighting and noise almost fully: she'd play sharper |
 | Yes or no: delete the old 480 MB belief dataset (Q5) | the new recordings replace it |
-| Yes or no: sort the store's doors so a doorway keeps its number (Karen's Ledger mixes up doorways between shifts today) | it changes play against `main`; 0.5.0's layouts plan to do it (its C4.4) |
 | Cloudflare account/R2 and browser authorization; optional Telegram setup | [account steps](plans/playtest-v2.md#13-setting-up-the-accounts); no real-player upload connection is configured on this Mac |
 
 The playtest and tuning questions are answered: see the
@@ -34,9 +33,10 @@ runs independently of your computers and training starts later, manually, on Win
 
 Build everything first, then test and train once (your call, 14 November).
 
-1. **Kehai 0.4.1:** its PR, then merge (reconciled with `main` on 14 November).
-2. **Kehai 0.5.0:** answer the plan, merge it, then build its PRs (tricks, guide, versions,
-   layouts, agents, Karen ML, training view, look, status).
+1. **Kehai 0.4.1:** merged as PR #85.
+2. **Kehai 0.5.0 source delivery:** PR #82. The owner authorised merging before further tests.
+   Remaining checks and setup stay open in the [build status](plans/0.5.0/implementation-status.md),
+   with heavy work deferred until Windows access.
 3. **Vertical slice:** a convincing playable shift ([release milestone 1](RELEASE_PLAN.md#milestone-1-vertical-slice)).
 4. **Finish the test build:** [playtest v2](plans/playtest-v2.md): illustrated instructions,
    no-code first launch, automatic cloud collection, and a dataset you can download on Windows

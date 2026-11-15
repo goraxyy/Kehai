@@ -76,14 +76,14 @@ Once she starts a trick she does by hand, she finishes it, unless she starts a h
 
 ## 5. Her tricks
 
-17 live ones. The Esc menu's **Tricks** tab has each in three lines, with a video.
+22 live ones. The Esc menu's **Tricks** tab has each in three lines, with a video.
 
 | She attacks | Tricks | What it costs you |
 |---|---|---|
-| Your sight | Blackout · Fog · Camera bolt-on · Camera watch · Camera break | hold a box in the backstreet for 20 s, or unplug her camera |
-| Your work | Shelf sweep · Spill · Bin tamper · Tool theft · the overtime | do the job again |
-| Your nerves | Phantom chime | nothing: she's listening for whether you go and look |
-| Your way | Block door | go round, pick the box up |
+| Your sight | Blackout · Fog · Camera bolt-on · Camera watch · Camera break · Screen loop · Room lights | hold a box in the backstreet for 20 s, or unplug her camera |
+| Your work | Shelf sweep · Spill · Bin tamper · Tool theft · the overtime · Flash sale | do the job again; hold the staff-room microphone for 20 s to end a sale |
+| Your nerves | Phantom chime · Freezer alarm | close the cold-room freezer; Phantom chime only tests whether you investigate |
+| Your way | Block door · The complaint | go round, pick the box up; hear the angry shopper at the till for 20 s |
 | You | Ambush · Cut · Throw · Ask the customers · the understudy (Kenji) | change your route; send Kenji to the tills |
 
 ## 6. The cameras

@@ -923,15 +923,19 @@ namespace Kehai.Store
             doorAxis.Clear();
             doorHalfWidth.Clear();
 
-            foreach (AutoDoubleDoor door in Object.FindObjectsByType<AutoDoubleDoor>())
+            // Geometry ordering survives Unity object-id / scene enumeration changes.
+            var doors = new List<Component>();
+            doors.AddRange(Object.FindObjectsByType<AutoDoubleDoor>());
+            doors.AddRange(Object.FindObjectsByType<HingeDoor>());
+            doors.Sort((a,b) =>
             {
-                AddDoorway(door, true);
-            }
-
-            foreach (HingeDoor door in Object.FindObjectsByType<HingeDoor>())
-            {
-                AddDoorway(door, false);
-            }
+                int order = a.transform.position.x.CompareTo(b.transform.position.x);
+                if (order == 0) order = a.transform.position.z.CompareTo(b.transform.position.z);
+                if (order == 0) order = a.transform.position.y.CompareTo(b.transform.position.y);
+                if (order == 0) order = string.CompareOrdinal(a.GetType().Name,b.GetType().Name);
+                return order;
+            });
+            foreach (Component door in doors) AddDoorway(door, door is AutoDoubleDoor);
 
             GameObject checkouts = SceneObjectNames.Find("Cashierdesks");
             if (checkouts != null)

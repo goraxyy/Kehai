@@ -34,7 +34,7 @@ namespace Kehai.Karen
             if (KarenBootstrap.Override != null || Application.isBatchMode)
             {
                 ShiftManager shift = Object.FindAnyObjectByType<ShiftManager>();
-                if (shift != null && shift.IsShiftActive) shift.EndShift();
+                if (shift != null && shift.IsShiftActive) shift.EndShift(completed: false);
                 if (motor != null) motor.movementLocked = false;
                 PlayerHeld = false;
                 yield break;

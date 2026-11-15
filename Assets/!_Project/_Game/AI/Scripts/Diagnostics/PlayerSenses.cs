@@ -45,15 +45,16 @@ namespace Kehai.Karen
 
         public static void Sense(PlayerPresence me, KarenBrain brain, out bool saw, out bool heard)
         {
+            saw = false;
+            heard = false;
+            if (brain != null && (!brain.PresentThisShift || brain.Body == null || !brain.Body.gameObject.activeInHierarchy)) return;
             if (BotPlaying)
             {
                 saw = botSaw;
                 heard = botHeard;
                 return;
             }
-            saw = false;
-            heard = false;
-            if (me == null || brain == null || brain.Body == null) return;
+            if (me == null || brain == null) return;
             saw = CanSee(me.Head, me.Facing, brain.Body.Position + Vector3.up * 1.4f, brain.Body.transform);
             heard = Heard(me.Position);
         }
@@ -64,9 +65,27 @@ namespace Kehai.Karen
         {
             Vector3 d = her - head;
             float distance = d.magnitude;
-            if (distance > Mathf.Min(SightRange, FogState.SightLimit(head, her)) || Vector3.Angle(facing, d) > SightHalfAngle) return false;
+            if (distance > Mathf.Min(SightRangeAt(her), FogState.SightLimit(head, her)) || Vector3.Angle(facing, d) > SightHalfAngle) return false;
             return !Physics.Linecast(head, her, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
                    || (herBody != null && hit.collider.transform.IsChildOf(herBody));
+        }
+
+        // Keep the old baseline until a room circuit is switched off. A held torch can
+        // illuminate the target within its real beam; a disabled renderer is never a sight.
+        public static float SightRangeAt(Vector3 target)
+        {
+            if(RoomLightSwitch.Allows(target)) return SightRange;
+            float illumination=LightProbe.LevelAt(target);
+            Item held=PlayerPresence.Current!=null?PlayerPresence.Current.HeldItem:null;
+            Flashlight torch=held!=null?held.GetComponent<Flashlight>():null;
+            Light beam=torch!=null&&torch.IsOn?torch.beam:null;
+            if(beam!=null&&beam.enabled)
+            {
+                Vector3 d=target-beam.transform.position;
+                if(d.magnitude<=beam.range&&Vector3.Angle(beam.transform.forward,d)<=beam.spotAngle*.5f)
+                    illumination=1f;
+            }
+            return SightRange*Mathf.Lerp(.35f,1f,illumination);
         }
 
         // A noise of hers that carried to where you stand, in the last two seconds.

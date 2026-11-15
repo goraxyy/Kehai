@@ -445,6 +445,7 @@ namespace Kehai.Replay
             h.Scene = r.ReadString();
             h.Seed = r.ReadInt32();
             h.Rung = r.ReadString();
+            h.Layout = data.Version >= 4 ? r.ReadString() : "today";
             r.ReadSingle(); r.ReadSingle(); r.ReadSingle(); r.ReadSingle();   // rates and scale, as written
 
             h.BeliefOrigin = new Vector2(r.ReadSingle(), r.ReadSingle());

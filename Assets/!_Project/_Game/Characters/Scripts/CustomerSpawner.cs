@@ -22,7 +22,7 @@ public class CustomerSpawner : MonoBehaviour
     public Vector2 spawnIntervalRange = new Vector2(8f, 16f);
     [Tooltip("The first shopper arrives this long after the doors open.")]
     public Vector2 firstArrivalRange = new Vector2(6f, 12f);
-    public int maxActiveCustomers = MaxCustomers;
+    public int maxActiveCustomers = Kehai.Karen.SaleRules.NormalCap;
     [Tooltip("Nobody new comes in while someone is this close to the entrance.")]
     public float entranceClearRadius = 2.5f;
 
@@ -35,7 +35,7 @@ public class CustomerSpawner : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => InStore = 0;
 
-    public int Cap => Mathf.Clamp(maxActiveCustomers, 0, MaxCustomers);
+    public int Cap => Kehai.Karen.FlashSaleState.Cap(maxActiveCustomers);
 
     void Start()
     {

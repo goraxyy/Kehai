@@ -28,7 +28,7 @@ public static class SoundSettings
     // Unattended runs (EditMode tests, bot shifts, replay renders: all batch mode) are never
     // heard: nobody is listening, and the developer's speakers stay quiet. Renders mix their
     // sound offline, so they lose nothing.
-    public static float Audible(float level) => Application.isBatchMode ? 0f : level;
+    public static float Audible(float level) => Application.isBatchMode || Edition.Training ? 0f : level;
 
     public static float Get(SoundKind kind) => levels[(int)kind];
 

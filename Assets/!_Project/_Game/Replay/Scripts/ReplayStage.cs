@@ -90,8 +90,10 @@ namespace Kehai.Replay
 
         public void Build()
         {
+            StoreLayoutRuntime.PrepareReplay(Data.Header.Layout);
             // What the scene has, found before switching it off (registries empty as scripts disable).
-            var units = new List<ShelfUnit>(Object.FindObjectsByType<ShelfUnit>(FindObjectsInactive.Include));
+            // Authored bays replaced by the runtime layout must not be claimed as actors.
+            var units = new List<ShelfUnit>(Object.FindObjectsByType<ShelfUnit>());
             var doors = new List<HingeDoor>(Object.FindObjectsByType<HingeDoor>(FindObjectsInactive.Include));
             var panels = new List<Transform>();
             foreach (AutoDoubleDoor d in Object.FindObjectsByType<AutoDoubleDoor>(FindObjectsInactive.Include))

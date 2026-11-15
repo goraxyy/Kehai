@@ -16,7 +16,7 @@ public sealed class InteractHud : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
-        if (Application.isBatchMode || Instance != null) return;
+        if (!Edition.ShowUI || Application.isBatchMode || Instance != null) return;
         var go = new GameObject("~InteractHud");
         DontDestroyOnLoad(go);
         Instance = go.AddComponent<InteractHud>();

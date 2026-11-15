@@ -1,4 +1,5 @@
 using Kehai;
+using System.Collections.Generic;
 
 // Every key the game uses, in one place. The Esc menu's Keys tab shows this list, and
 // CONTROLS.md is the same list to read outside the game (a test keeps the two in step).
@@ -98,6 +99,22 @@ public static class Controls
         new Section("For testing",
             K("L", "Cut the power to the whole store")),
     };
+
+    public static IEnumerable<Section> ForEdition(KehaiEdition edition)
+    {
+        foreach (Section section in All)
+        {
+            if (edition != KehaiEdition.Gameplay) { yield return section; continue; }
+            if (section.Title == ReplaySection || section.Title == "Clips" || section.Title == "For testing") continue;
+            if (section.Title == "Menus and maps")
+                yield return new Section(section.Title, section.Entries[0]);
+            else if (section.Title == "Blinking (webcam)")
+                yield return new Section(section.Title, section.Entries[0], section.Entries[1], section.Entries[2], section.Entries[7]);
+            else if (section.Title == "After a shift")
+                yield return new Section(section.Title, section.Entries[0], K("Enter (after a career ends)", "Back to the main menu"));
+            else yield return section;
+        }
+    }
 
     // Keys only the editor and development builds read (KarenFx). Not in the game's Keys tab or
     // CONTROLS.md: a player never has them. The test that every key is listed counts these too.

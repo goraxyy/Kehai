@@ -1976,3 +1976,42 @@ Appended to `TacticLibrary` (29 entries now), so every older trick keeps its num
   near where she thought the player was. During other tricks she chose Camera watch on her own
   and the cameras showed her the player 16 times in 25 s once.
 
+
+
+## 20. Kehai 0.5.0: implementation, pending scene verification
+
+The approved scope is implemented on branch `0.5.0`, in one PR. Long training and scene checks
+remain queued in [TESTING.md](../../you/TESTING.md); source compilation is not a played shift.
+
+| New trick | Tell and effect | Player response |
+|---|---|---|
+| Flash sale | PA sale announcement; normal shopper ceiling 2 becomes 4; arrivals unchanged | Hold E 20 seconds at the staff-room microphone with PA on; switching PA off leaves the sale running |
+| Screen loop | One feed freezes, including its timestamp; Karen's live camera sensing continues | Hold the backstreet camera box for 20 seconds |
+| Room lights | Two flickers warn the employee; that room's lights switch off, reducing both sides' sight | Press its light switch by the room door |
+| Freezer alarm | She physically props the cold-room freezer; the local alarm masks both sides' footsteps | Close the freezer door with E |
+| The complaint | A shopper she spoke to walks angrily to the till | Hold E to hear them out for 20 seconds; impatience can lose the shopper |
+
+This brings the live list to **22 tactics, 24 learner choices** (Throw still has three).
+The five new choices are appended; old trained packs without the new choices are refused.
+`PhaseOneChores` exposes physical repair targets. TaskManager, bot verbs, the in-game trick guide
+and the trick check know the jobs. No new chores start after the closing announcement.
+
+Gameplay has four successful shifts: Karen is absent on shift 1, while the store's Director
+and Ledger still collect habits. Testing keeps her from shift 1. Failed shifts remain retryable.
+Today's floor is used on shifts 1–2, Labyrinth on 3 and Brick bond on 4. Shelf data uses a
+2.5 m pitch with 1 m shelf depth; shelves are not square wall tiles. Cold fixtures and the
+checkout sweets display remain authored. Source-generated review drawings do not verify the
+scene's NavMesh, collision proxies or stocking.
+
+Ledger spatial memory is scoped by layout; old unidentifiable door ordinal entries are
+removed by a one-time migration rather than assigned to different doors. Escape truth is
+recorded separately and only committed to local counts at shift end. Central refits use
+consented uploaded sessions on Windows; no neural training runs on the player's computer.
+Bot memory uses only sensed information. Their recurrent state belongs to each mind, and
+an observation-version change requires a new employee export. The code is not a trained model.
+
+The private web tools live in `tools/reports`, `tools/benchmark` and `tools/status`. They preserve
+provenance and negative results, mark missing metrics unavailable, and reserve hidden evaluations
+before execution. The retail Gameplay edition does not expose evaluation. Training/Testing can
+run the nonlearning benchmark with explicit Gameplay career semantics; missing frozen models
+fail capability checks instead of silently becoming scripted opponents.

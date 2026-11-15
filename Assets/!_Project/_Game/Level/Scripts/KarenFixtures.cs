@@ -40,6 +40,7 @@ public static class KarenFixtures
         if (Object.FindAnyObjectByType<PaBox>() == null) PlacePaBox(outline);
         if (Object.FindAnyObjectByType<ClosingMic>() == null) PlaceClosingMic(outline);
         StoreCameras.Install(outline);
+        PhaseOneFixtures.Install(outline);
         TwoWayDoors();
         FogVisuals.Ensure();
         WallClockHands.Ensure();

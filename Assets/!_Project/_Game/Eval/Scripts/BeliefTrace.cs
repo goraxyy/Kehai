@@ -45,11 +45,14 @@ namespace Kehai.Eval
             if (!On || b == null) return;
             brain = b;
             KarenBrain.FeaturesWanted = true;
-            Directory.CreateDirectory(Folder);
-            string map = Path.Combine(Folder, "map.json");
+            // A map file cannot describe two layouts. Keep each layout's complete replay
+            // together; central manifests point at these leaf folders.
+            string folder = Path.Combine(Folder, StoreLayoutRuntime.CurrentId);
+            Directory.CreateDirectory(folder);
+            string map = Path.Combine(folder, "map.json");
             if (!File.Exists(map)) File.WriteAllText(map, MapJson(b));
-            w = new StreamWriter(Path.Combine(Folder, $"trace_{seed}_{shift}_{agent}.jsonl"), false, new UTF8Encoding(false));
-            Line("start", $"\"seed\":{seed},\"shift\":{shift},\"agent\":{MiniJson.Escape(agent)},\"motion\":{MiniJson.Escape(b.config.motion)},\"senses\":{MiniJson.Escape(b.config.senses)},\"mirror\":\"{b.config.mirror}\",\"cells\":{b.Map.CellCount}");
+            w = new StreamWriter(Path.Combine(folder, $"trace_{seed}_{shift}_{agent}.jsonl"), false, new UTF8Encoding(false));
+            Line("start", $"\"layout\":{MiniJson.Escape(StoreLayoutRuntime.CurrentId)},\"seed\":{seed},\"shift\":{shift},\"agent\":{MiniJson.Escape(agent)},\"motion\":{MiniJson.Escape(b.config.motion)},\"senses\":{MiniJson.Escape(b.config.senses)},\"mirror\":\"{b.config.mirror}\",\"cells\":{b.Map.CellCount}");
             b.Belief.Applied += OnApplied;
             b.Belief.Swept += OnSwept;
             b.Belief.Biased += OnBiased;
@@ -59,6 +62,7 @@ namespace Kehai.Eval
             b.Sensed += OnSensed;
             NoiseBus.Emitted += OnNoise;
             predicts = 0;
+            truthPredicts = -1;
             desireHash = habitHash = int.MinValue;
             tracedRegions = null;
             Layers();

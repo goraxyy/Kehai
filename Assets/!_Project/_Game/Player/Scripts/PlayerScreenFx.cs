@@ -31,7 +31,7 @@ public sealed class PlayerScreenFx : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
-        if (Application.isBatchMode) return;
+        if (!Edition.ShowUI || Application.isBatchMode) return;
         PlayerEffects.Changed -= Changed;
         PlayerEffects.Changed += Changed;
         SceneManager.sceneLoaded -= SceneLoaded;
@@ -46,7 +46,7 @@ public sealed class PlayerScreenFx : MonoBehaviour
 
     static void Changed(PlayerEffects on)
     {
-        if (on == null || Application.isBatchMode) return;
+        if (!Edition.ShowUI || on == null || Application.isBatchMode) return;
         var fx = on.GetComponent<PlayerScreenFx>();
         if (fx == null && on.GetComponentInChildren<Camera>() != null) fx = on.gameObject.AddComponent<PlayerScreenFx>();
         if (fx != null) fx.Read(on);

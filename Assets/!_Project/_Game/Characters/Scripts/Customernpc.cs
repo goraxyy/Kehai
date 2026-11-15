@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
+public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable, IHoldInteractable
 {
     // Every shopper in the store — Karen picks witnesses and puppets from this.
     static readonly List<CustomerNPC> all = new List<CustomerNPC>();
@@ -594,19 +594,21 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
 
     public void Interact(PlayerInteract player)
     {
+        if (GetComponent<CustomerComplaint>() is CustomerComplaint complaint && complaint.Active) return;
         // A customer asking for directions answers E before the till does.
         if (request != null && request.TryTalk()) return;
 
         if (!IsWaitingToBeServed) return;
 
         served = true;
-        OneShotAudio.PlayAt(serveSound, transform.position, serveVolume);
+        if (!Edition.Training) OneShotAudio.PlayAt(serveSound, transform.position, serveVolume);
         Kehai.Karen.NoiseBus.Emit(transform.position, 0.4f, Kehai.Karen.NoiseKind.Serve, Kehai.Karen.NoiseAuthor.Player);
         GameEvents.RaiseCustomerServed(this);
     }
 
     public string GetPrompt()
     {
+        if (GetComponent<CustomerComplaint>() is CustomerComplaint complaint && complaint.Active) return complaint.Prompt;
         if (request != null)
         {
             string asking = request.GetPrompt();
@@ -643,6 +645,26 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
 
     // ---- Karen's hooks (Karen.md §8.5) ------------------------------------------------
 
+    public void TakeComplaintRoute()
+    {
+        StopAllCoroutines();
+        IsWaitingToBeServed = false;
+        QueueingSince = -1f;
+        CurrentActivity = Activity.HeadingToTill;
+    }
+    public void WaitForComplaint()
+    {
+        IsWaitingToBeServed = true;
+        QueueingSince = Time.time;
+        CurrentActivity = Activity.Queueing;
+    }
+    public bool CanHold(PlayerInteract player) => GetComponent<CustomerComplaint>() is CustomerComplaint complaint && complaint.CanHold;
+    public float HoldDuration => CustomerComplaint.HoldSeconds;
+    public void OnHoldProgress(float normalised) => Kehai.Karen.NoiseBus.Emit(transform.position, .1f,
+        Kehai.Karen.NoiseKind.Serve, Kehai.Karen.NoiseAuthor.Player);
+    public void OnHoldCancelled() { }
+    public void OnHoldComplete(PlayerInteract player) => GetComponent<CustomerComplaint>()?.HearOut();
+
     // A possessed shopper never queues; take it out of the till count if it was in it.
     public void ReleaseQueueSpot() => IsWaitingToBeServed = false;
 
@@ -651,6 +673,11 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable
     {
         StopAllCoroutines();
         IsWaitingToBeServed = false;
+        CurrentActivity = Activity.Leaving;
+        QueueingSince = -1f;
+        // Pure editor fixtures may settle a complaint, but must not run/despawn a game actor.
+        if (!Application.isPlaying) return;
+        if (agent != null && agent.isOnNavMesh) agent.isStopped = isFrozen;
         StartCoroutine(Leave());
     }
 

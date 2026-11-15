@@ -27,6 +27,7 @@ namespace Kehai.Eval
         public bool quitOnClose;
 
         TcpListener listener;
+        TcpClient connectedClient;
         Thread thread;
         volatile bool running;
         readonly ConcurrentQueue<(string line, StreamWriter reply, ManualResetEventSlim answered)> inbox =
@@ -35,10 +36,13 @@ namespace Kehai.Eval
 
         public static EnvServer Start(int port, bool quitOnClose)
         {
-            KehaiEnv env = KehaiEnv.Ensure();
-            var server = env.gameObject.AddComponent<EnvServer>();
+            if(!EditionRules.AllowEvaluation(Edition.Current)) throw new System.InvalidOperationException("Evaluation is disabled in Gameplay builds");
+            // Configure before OnEnable opens the socket, including nondefault worker ports.
+            var go=new GameObject("~KehaiEnvServer");go.SetActive(false);DontDestroyOnLoad(go);
+            var server = go.AddComponent<EnvServer>();
             server.port = port;
             server.quitOnClose = quitOnClose;
+            go.SetActive(true);
             return server;
         }
 
@@ -46,6 +50,7 @@ namespace Kehai.Eval
 
         void OnEnable()
         {
+            if(!EditionRules.AllowEvaluation(Edition.Current)) { enabled=false;return; }
             running = true;
             listener = new TcpListener(IPAddress.Loopback, port);
             listener.Start();
@@ -59,6 +64,8 @@ namespace Kehai.Eval
         {
             running = false;
             try { listener?.Stop(); } catch { }
+            try { connectedClient?.Close(); } catch { }
+            StopAllCoroutines();
         }
 
         void Listen()
@@ -72,6 +79,7 @@ namespace Kehai.Eval
                     using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
                     using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true })
                     {
+                        connectedClient=client;
                         string line;
                         while (running && (line = reader.ReadLine()) != null)
                         {
@@ -101,9 +109,32 @@ namespace Kehai.Eval
                 {
                     Dictionary<string, object> reply = null;
                     IEnumerator handle = Handle(item.line, r => reply = r);
-                    while (handle.MoveNext()) yield return handle.Current;
-                    Send(item.reply, reply ?? Error("no reply"));
-                    item.answered.Set();
+                    // Flatten nested coroutines so a failed validation/action replies with an
+                    // error instead of silently killing the TCP pump and hanging the client.
+                    var stack=new Stack<IEnumerator>();stack.Push(handle);
+                    try
+                    {
+                        while(running&&enabled&&stack.Count>0)
+                        {
+                            IEnumerator top=stack.Peek();bool more;
+                            try { more=top.MoveNext(); }
+                            catch(System.Exception e) { reply=Error(e.GetType().Name+": "+e.Message);break; }
+                            if(!more) { stack.Pop();continue; }
+                            if(top.Current is IEnumerator nested) stack.Push(nested);
+                            else yield return top.Current;
+                        }
+                    }
+                    finally
+                    {
+                        while(stack.Count>0)
+                        {
+                            try { (stack.Pop() as System.IDisposable)?.Dispose(); }
+                            catch(System.Exception e) { reply=Error(e.GetType().Name+": "+e.Message); }
+                        }
+                        Send(item.reply, reply ?? Error("request cancelled"));
+                        // Shutdown can release and dispose the listener's waiting event first.
+                        try { item.answered.Set(); } catch(System.ObjectDisposedException) { }
+                    }
                 }
                 yield return null;
             }
@@ -127,6 +158,12 @@ namespace Kehai.Eval
             string cmd = request.GetString("cmd", string.Empty);
             switch (cmd)
             {
+                case "benchmark_capabilities":
+                    reply(BenchmarkCareer.Capabilities());
+                    break;
+                case "benchmark_career":
+                    yield return BenchmarkCareer.Play(env,request,reply);
+                    break;
                 case "reset":
                     yield return env.ResetEpisode(EnvConfig.From(request.GetObject("config")));
                     reply(Observation(true));

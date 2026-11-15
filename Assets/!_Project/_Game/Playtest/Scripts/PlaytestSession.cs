@@ -58,7 +58,7 @@ namespace Kehai.Playtest
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Install()
         {
-            if (Instance != null || !PlaytestConfig.Active) return;
+            if (!Edition.Testing || Instance != null || !PlaytestConfig.Active) return;
             ReplayRecorder.RecordInterludes = true;
             var go = new GameObject("Playtest");
             DontDestroyOnLoad(go);
@@ -224,6 +224,7 @@ namespace Kehai.Playtest
             if (brain == null || brain.Ledger == null || shiftManager == null || shiftManager.IsShiftActive) return;
             string code = pendingFreshCareer;
             pendingFreshCareer = null;
+            CareerRuntime.NewCareer();
             brain.Ledger.Wipe();
             brain.Ledger.Data.playerName = "Employee " + code;
             brain.Ledger.Save();

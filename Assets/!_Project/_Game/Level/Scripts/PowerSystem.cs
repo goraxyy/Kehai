@@ -87,7 +87,7 @@ public class PowerSystem : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(cutPowerKey) && HasPower && !GamePause.Paused) CutPower();
+        if (Edition.AllowDebugTools && Input.GetKeyDown(cutPowerKey) && HasPower && !GamePause.Paused) CutPower();
 
         float target = HasPower ? 1f : 0f;
         if (!Mathf.Approximately(ambientBlend, target))

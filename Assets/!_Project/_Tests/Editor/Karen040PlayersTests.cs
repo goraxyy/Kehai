@@ -178,7 +178,8 @@ public class Karen040PlayersTests
     {
         float[] v = EmployeeObservation.Build(Obs(queue: 1, spills: 2, chores: 1), 0.4f, new BotMemory(), Persona.Of(PlayerProfile.Skittish), EmployeeWhat.Mop, 10f);
         Assert.AreEqual(EmployeeObservation.Size, v.Length);
-        Assert.That(EmployeeObservation.Size, Is.InRange(60, 80), "about 70 numbers (§7.3)");
+        Assert.AreEqual(109, EmployeeObservation.Size, "v2: 13 chore kinds and per-place history");
+        Assert.AreEqual(2, EmployeeObservation.Version);
         Assert.IsTrue(v.All(x => !float.IsNaN(x) && x >= -1f && x <= 1f));
         // An empty observation doesn't throw.
         Assert.AreEqual(EmployeeObservation.Size, EmployeeObservation.Build(new Dictionary<string, object>(), 0f, null, null, null, 0f).Length);

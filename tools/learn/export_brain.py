@@ -86,18 +86,37 @@ def layers_from_state(s: dict) -> dict:
         std = np.sqrt(s[key + "running_variance"].astype(np.float64) / max(steps, 1.0))
     else:
         mean, std = np.zeros(n), np.ones(n)
-    return {"mean": mean, "std": std, "hidden": hidden, "heads": heads}
+    recurrent = None
+    prefix = "network_body.lstm.lstm."
+    if any("lstm" in k for k in s):
+        expected = {prefix + k for k in ("weight_ih_l0", "weight_hh_l0", "bias_ih_l0", "bias_hh_l0")}
+        if {k for k in s if "lstm" in k} != expected:
+            raise ValueError("unsupported recurrent actor: expected one unidirectional LSTM layer")
+        recurrent = {"size": int(s[prefix + "weight_hh_l0"].shape[1]),
+                     "input": s[prefix + "weight_ih_l0"], "hidden": s[prefix + "weight_hh_l0"],
+                     "bias": s[prefix + "bias_ih_l0"] + s[prefix + "bias_hh_l0"]}
+    return {"mean": mean, "std": std, "hidden": hidden, "heads": heads, "recurrent": recurrent}
 
 
 # ---- running it as the C# does ------------------------------------------------------------------------
 
-def forward(net: dict, x: np.ndarray) -> list:
+def forward(net: dict, x: np.ndarray, memory=None) -> list:
     """BrainNet.Logits, in numpy (doubles): the same arithmetic in the same order."""
     std = np.where(net["std"] > 1e-8, net["std"], 1.0)
     h = np.clip((x.astype(np.float64) - net["mean"]) / std, -5.0, 5.0)
     for w, b in net["hidden"]:
         h = h @ w.astype(np.float64).T + b.astype(np.float64)
         h = h / (1.0 + np.exp(-h))
+    r = net.get("recurrent")
+    if r:
+        if memory is None or memory.shape != (len(x), 2 * r["size"]):
+            raise ValueError("recurrent inference requires per-bot [hidden, cell] state")
+        n = r["size"]
+        g = h @ r["input"].astype(float).T + memory[:, :n] @ r["hidden"].astype(float).T + r["bias"]
+        sigmoid = lambda z: 1 / (1 + np.exp(-z))
+        cell = sigmoid(g[:, n:2*n]) * memory[:, n:] + sigmoid(g[:, :n]) * np.tanh(g[:, 2*n:3*n])
+        h = sigmoid(g[:, 3*n:]) * np.tanh(cell)
+        memory[:, :n], memory[:, n:] = h, cell
     return [h @ w.astype(np.float64).T + b.astype(np.float64) for w, b in net["heads"]]
 
 
@@ -131,6 +150,31 @@ def parity(net: dict, state, n: int = 1000, seed: int = 0) -> float:
     """Largest difference in chances between our arithmetic and the trainer's actor."""
     rng = np.random.default_rng(seed)
     x = rng.uniform(-1.0, 1.0, size=(n, len(net["mean"])))
+    if net.get("recurrent"):
+        import torch
+        r = net["recurrent"]
+        cell = torch.nn.LSTM(net["hidden"][-1][0].shape[0], r["size"], batch_first=True)
+        cell.load_state_dict({k: v for k, v in {
+            "weight_ih_l0": torch.as_tensor(r["input"]), "weight_hh_l0": torch.as_tensor(r["hidden"]),
+            "bias_ih_l0": torch.as_tensor(r["bias"]), "bias_hh_l0": torch.zeros_like(torch.as_tensor(r["bias"]))}.items()})
+        memory = np.zeros((len(x), 2*r["size"]), dtype=np.float32)
+        hidden = (torch.zeros(1, len(x), r["size"]), torch.zeros(1, len(x), r["size"]))
+        worst = 0.0
+        for step in range(8):
+            if step == 5:  # episode boundary
+                memory[:] = 0
+                hidden = tuple(torch.zeros_like(v) for v in hidden)
+            inputs = x if step == 0 else rng.uniform(-1, 1, x.shape)
+            ours = forward(net, inputs, memory)
+            with torch.no_grad():
+                h = torch.as_tensor(np.clip((inputs-net["mean"])/np.where(net["std"] > 1e-8, net["std"], 1), -5, 5), dtype=torch.float32)
+                for w, b in net["hidden"]:
+                    h = torch.nn.functional.silu(torch.nn.functional.linear(h, torch.as_tensor(w), torch.as_tensor(b)))
+                h, hidden = cell(h[:, None, :], hidden)
+                theirs = [torch.nn.functional.linear(h[:, 0, :], torch.as_tensor(w), torch.as_tensor(b)).numpy() for w, b in net["heads"]]
+            worst = max(worst, max(float(np.abs(softmax(a)-softmax(b)).max()) for a,b in zip(ours, theirs)),
+                        float(np.abs(memory-np.concatenate([v[0].numpy() for v in hidden], axis=1)).max()))
+        return worst
     ours = forward(net, x)
     theirs = trainer_logits(state, x, net["hidden"][0][0].shape[0], len(net["hidden"]),
                             not np.allclose(net["std"], 1.0) or not np.allclose(net["mean"], 0.0),
@@ -189,12 +233,18 @@ def generated_cs(name: str, net: dict, card: dict, namespace: str = "Kehai.Karen
         "}",
         "",
     ]
+    if net.get("recurrent"):
+        r = net["recurrent"]
+        old = "            new float[][] { " + ", ".join(arr(b) for _, b in heads) + " });"
+        lines[lines.index(old)] = old[:-2] + f", {r['size']}, {arr(r['input'])}, {arr(r['hidden'])}, {arr(r['bias'])});"
     return "\n".join(lines)
 
 
 def part_json(name: str, net: dict, card: dict) -> dict:
     return {
         "kind": "brain", "name": name, "card": card,
+        "recurrent": ({"size": net["recurrent"]["size"], **{k: np.asarray(net["recurrent"][k], np.float32).reshape(-1).tolist()
+                        for k in ("input", "hidden", "bias")}} if net.get("recurrent") else None),
         "mean": [float(x) for x in net["mean"]], "std": [float(x) for x in net["std"]],
         "hidden": [{"w": np.asarray(w, np.float32).reshape(-1).tolist(), "b": np.asarray(b, np.float32).tolist(), "out": int(w.shape[0])} for w, b in net["hidden"]],
         "heads": [{"w": np.asarray(w, np.float32).reshape(-1).tolist(), "b": np.asarray(b, np.float32).tolist(), "out": int(w.shape[0])} for w, b in net["heads"]],

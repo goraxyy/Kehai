@@ -66,6 +66,7 @@ namespace Kehai.Karen
                 foreach (Light light in bucket)
                 {
                     if (light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
+                    if (RoomLightSwitch.RoomOf(light.transform.position) != RoomLightSwitch.RoomOf(position)) continue;
                     Vector3 d = light.transform.position - position;
                     d.y = 0f;
                     float distance = d.magnitude;
@@ -74,7 +75,7 @@ namespace Kehai.Karen
                 }
             }
 
-            float ambient = PowerSystem.PowerOn ? 0.12f : 0.02f;
+            float ambient = PowerSystem.PowerOn && RoomLightSwitch.Allows(position) ? 0.12f : 0.02f;
             return Mathf.Clamp01(best * 0.88f + ambient);
         }
 

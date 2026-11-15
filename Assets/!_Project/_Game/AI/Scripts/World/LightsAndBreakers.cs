@@ -50,7 +50,7 @@ namespace Kehai.Karen
             foreach (KeyValuePair<Light, LightCircuit> pair in circuit)
             {
                 if (pair.Key == null) continue;
-                bool on = PowerSystem.PowerOn && (panel == null || panel.IsOn(pair.Value)) && !killed.Contains(pair.Key);
+                bool on = PowerSystem.PowerOn && (panel == null || panel.IsOn(pair.Value)) && !killed.Contains(pair.Key) && RoomLightSwitch.Allows(pair.Key.transform.position);
                 pair.Key.enabled = on;
             }
         }
@@ -64,7 +64,7 @@ namespace Kehai.Karen
                 light.enabled = !light.enabled;
                 yield return new WaitForSeconds(Random.Range(0.03f, 0.12f));
             }
-            if (light != null) light.enabled = PowerSystem.PowerOn && !killed.Contains(light);
+            if (light != null) ApplyCircuits();
         }
 
         public void FlickerCircuit(LightCircuit which, float seconds)

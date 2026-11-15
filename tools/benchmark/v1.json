@@ -1,0 +1,320 @@
+{
+  "version": "kehai-0.5-v1",
+  "edition": "gameplay",
+  "shifts_per_career": 4,
+  "horizon_seconds": 150,
+  "practice_seed_range": [
+    20000,
+    20049
+  ],
+  "hidden_seed_range": [
+    30000,
+    30049
+  ],
+  "layouts": [
+    "today",
+    "racetrack",
+    "labyrinth",
+    "fishbone",
+    "brick-bond",
+    "rings",
+    "split"
+  ],
+  "players": {
+    "efficient": {},
+    "skittish": {},
+    "reckless": {},
+    "cautious": {},
+    "trained-range": {
+      "caution": 0.5,
+      "pace": 0.5
+    },
+    "careful-corner": {
+      "caution": 0.9,
+      "pace": 0.2
+    }
+  },
+  "strata": [
+    {
+      "player": "efficient",
+      "layouts": [
+        "labyrinth",
+        "brick-bond"
+      ]
+    },
+    {
+      "player": "skittish",
+      "layouts": [
+        "racetrack",
+        "fishbone"
+      ]
+    },
+    {
+      "player": "reckless",
+      "layouts": [
+        "fishbone",
+        "racetrack"
+      ]
+    },
+    {
+      "player": "trained-range",
+      "layouts": [
+        "labyrinth",
+        "brick-bond"
+      ]
+    },
+    {
+      "player": "trained-range",
+      "layouts": [
+        "racetrack",
+        "fishbone"
+      ]
+    },
+    {
+      "player": "cautious",
+      "layouts": [
+        "labyrinth",
+        "brick-bond"
+      ]
+    },
+    {
+      "player": "careful-corner",
+      "layouts": [
+        "labyrinth",
+        "brick-bond"
+      ]
+    },
+    {
+      "player": "efficient",
+      "layouts": [
+        "rings",
+        "split"
+      ]
+    },
+    {
+      "player": "trained-range",
+      "layouts": [
+        "split",
+        "rings"
+      ]
+    },
+    {
+      "player": "careful-corner",
+      "layouts": [
+        "rings",
+        "split"
+      ]
+    }
+  ],
+  "arms": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "planner",
+    "Basic",
+    "Vital"
+  ],
+  "ledger_conditions": [
+    "retained",
+    "wiped"
+  ],
+  "metrics": {
+    "caught": {
+      "group": "pacing",
+      "target": [
+        0.2,
+        0.35
+      ],
+      "rule": "mean binary catches on shifts 2-4; career SE"
+    },
+    "panic_setpoint_rmse": {
+      "group": "pacing",
+      "better": "lower",
+      "rule": "mean recorded per-shift RMSE, shifts 2-4; career SE"
+    },
+    "fairness_violations": {
+      "group": "safety",
+      "target": 0,
+      "rule": "mean per shift; any nonzero observation fails, shifts 2-4"
+    },
+    "stuck": {
+      "group": "safety",
+      "better": "lower",
+      "rule": "mean explicit binary stuck flag on all four shifts"
+    },
+    "top_trick_share": {
+      "group": "pacing",
+      "target_max": 0.4,
+      "rule": "within-career pooled trick counts, shifts 2-4: largest count / all picks; mean and career SE; gate also checks pooled stratum picks <= 0.4; missing counts unavailable"
+    },
+    "true_mass_oov": {
+      "group": "prediction",
+      "better": "higher",
+      "rule": "mean recorded true-cell probability out of view, shifts 2-4"
+    },
+    "true_mass_5s": {
+      "group": "prediction",
+      "better": "higher",
+      "rule": "mean true-cell probability recorded 5 seconds after loss, shifts 2-4"
+    },
+    "true_mass_10s": {
+      "group": "prediction",
+      "better": "higher",
+      "rule": "mean true-cell probability recorded 10 seconds after loss, shifts 2-4"
+    },
+    "true_mass_20s": {
+      "group": "prediction",
+      "better": "higher",
+      "rule": "mean true-cell probability recorded 20 seconds after loss, shifts 2-4"
+    },
+    "calibration_brier": {
+      "group": "prediction",
+      "better": "lower",
+      "rule": "recorded mean squared probability error for predeclared binary occupancy events, shifts 2-4"
+    },
+    "bot_human_accuracy": {
+      "group": "players",
+      "target": 0.5,
+      "rule": "mean out-of-fold held-out-player bot/human classification accuracy per career; requires consented human reference and player-split provenance; career SE is descriptive"
+    },
+    "bot_jobs_per_min": {
+      "group": "players",
+      "rule": "recorded jobs per minute on all shifts, shown beside Karen scores"
+    },
+    "belief_ms": {
+      "group": "speed",
+      "target_max": 0.7,
+      "rule": "recorded mean belief CPU milliseconds/frame, shifts 2-4"
+    },
+    "catch_rmst_s": {
+      "group": "hunting",
+      "better": "lower",
+      "rule": "Vital only, pacing off; Kaplan-Meier restricted mean to 150s, right censoring, delete-one-career jackknife SE"
+    },
+    "adaptation_rmse_delta": {
+      "group": "learning",
+      "better": "lower",
+      "rule": "paired retained minus wiped RMSE on shifts 2-4 within seed, layout, player and model; career SE"
+    }
+  },
+  "persona_ranges": {
+    "trained-range": {
+      "diligence": [
+        0.1,
+        0.9
+      ],
+      "caution": [
+        0.2,
+        0.7
+      ],
+      "pace": [
+        0.35,
+        0.9
+      ],
+      "habit": [
+        0.1,
+        0.9
+      ],
+      "consistency": [
+        0.1,
+        0.9
+      ],
+      "attention": [
+        0.1,
+        0.9
+      ],
+      "curiosity": [
+        0.1,
+        0.9
+      ],
+      "grudge": [
+        0.1,
+        0.9
+      ],
+      "calmingdown": [
+        0.1,
+        0.9
+      ],
+      "fearofdark": [
+        0.1,
+        0.9
+      ],
+      "fearofsounds": [
+        0.1,
+        0.9
+      ],
+      "fearofher": [
+        0.1,
+        0.9
+      ],
+      "fearofdashes": [
+        0.1,
+        0.9
+      ],
+      "fearofchase": [
+        0.1,
+        0.9
+      ]
+    },
+    "careful-corner": {
+      "diligence": [
+        0.1,
+        0.9
+      ],
+      "caution": [
+        0.8,
+        1.0
+      ],
+      "pace": [
+        0.0,
+        0.25
+      ],
+      "habit": [
+        0.1,
+        0.9
+      ],
+      "consistency": [
+        0.1,
+        0.9
+      ],
+      "attention": [
+        0.1,
+        0.9
+      ],
+      "curiosity": [
+        0.1,
+        0.9
+      ],
+      "grudge": [
+        0.1,
+        0.9
+      ],
+      "calmingdown": [
+        0.1,
+        0.9
+      ],
+      "fearofdark": [
+        0.1,
+        0.9
+      ],
+      "fearofsounds": [
+        0.1,
+        0.9
+      ],
+      "fearofher": [
+        0.1,
+        0.9
+      ],
+      "fearofdashes": [
+        0.1,
+        0.9
+      ],
+      "fearofchase": [
+        0.1,
+        0.9
+      ]
+    }
+  }
+}

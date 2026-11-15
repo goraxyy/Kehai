@@ -173,8 +173,7 @@ public static class ShelfPrefabBuilder
 
     // ---------------------------------------------------------------- geometry
 
-    // Drops surplus platforms and spreads the rest evenly over the shelf's height,
-    // keeping the bottom platform exactly where it was.
+    // Low/tall shelves share the lower module; only tall shelves have an upper board.
     static int Restructure(GameObject root, bool isShort)
     {
         float top = isShort ? ShortTop : TallTop;
@@ -189,9 +188,8 @@ public static class ShelfPrefabBuilder
                                     .Distinct().OrderBy(y => y).ToList();
 
         float bottom = Mathf.Abs(oldLevels[0] - StandardBottom) < 0.05f ? oldLevels[0] : StandardBottom;
-        float step = (top - bottom) / target;
-        var newLevels = new List<float>();
-        for (int i = 0; i < target; i++) newLevels.Add(bottom + i * step);
+        var newLevels = new List<float> { StoreLayouts.BottomBoard, StoreLayouts.SharedBoard };
+        if (!isShort) newLevels.Add(StoreLayouts.UpperBoard);
 
         // Map each existing level onto a new one. Models that already have fewer platforms
         // than the target (the "b" pieces, whose bottom bay is a solid base block) are aligned

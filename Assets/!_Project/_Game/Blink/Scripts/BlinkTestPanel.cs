@@ -31,6 +31,7 @@ namespace Kehai.Blink
 
         void Update()
         {
+            if (!Edition.AllowDebugTools) return;
             if (Input.GetKeyDown(key) && !GamePause.Paused)
             {
                 visible = !visible;
@@ -49,6 +50,7 @@ namespace Kehai.Blink
 
         void OnGUI()
         {
+            if (!Edition.AllowDebugTools) return;
             if (!visible || tracker == null) return;
             int size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 44f, 15f, 36f));
             if (body == null)

@@ -10,14 +10,22 @@ namespace Kehai.Eval
     // Karen (BotFearTests.Players_NeverReadKaren covers this file).
     public static class EmployeeObservation
     {
-        public const int Version = 1;
-        const int Self = 7, Jobs = 11, Chores = 8, Her = 8, Store = 3, Memory = 6;
-        public static readonly string[] ChoreKinds = { "fog", "clock", "lost_tool", "blocked_door", "kenji", "camera" };
+        public const int Version = 2;
+        const int Self = 7, Jobs = 11, Her = 8, Store = 3, Memory = 6;
+        static int Chores => ChoreKinds.Length + 2;
+        public static readonly string[] ChoreKinds = { "fog", "clock", "lost_tool", "blocked_door", "kenji", "camera", "closing", "cameras",
+            "flash_sale", "screen_loop", "room_lights", "freezer_alarm", "complaint" };
 
-        public static int Size => Self + Jobs + Chores + Her + Store + Memory + Persona.Count + EmployeeOptions.Whats;
+        // Current place plus each nearest job's encounter/catch/escape counts. These retain
+        // spatial meaning; a global count alone cannot teach the bot which doorway to avoid.
+        public static readonly string[] HistoryJobs = { "checkout_queue", "customers_asking", "shelves_to_restock", "spills", "bins" };
+        public static int HistorySize => (1 + HistoryJobs.Length) * 3 + ChoreKinds.Length;
+
+        public static int Size => Self + Jobs + Chores + Her + Store + Memory + Persona.Count + EmployeeOptions.Whats + HistorySize;
 
         public static float[] Build(Dictionary<string, object> obs, float fear, BotMemory memory, Persona persona, EmployeeWhat? last, float now)
         {
+            memory?.ObserveFair(obs, now);
             var v = new float[Size];
             int i = 0;
             var you = Obj(obs, "you");
@@ -84,9 +92,32 @@ namespace Kehai.Eval
             if (last.HasValue) v[i + (int)last.Value] = 1f;
             i += EmployeeOptions.Whats;
 
+            PutHistory(v, ref i, memory, Str(you, "region"));
+            foreach (string key in HistoryJobs)
+            {
+                var nearest = EmployeeOptions.List(obs, key).Where(x => Num(x, "walk_m", -1f) >= 0f)
+                    .OrderBy(x => Num(x, "walk_m")).FirstOrDefault();
+                PutHistory(v, ref i, memory, Str(nearest, "region"));
+            }
+            foreach (string kind in ChoreKinds) v[i++] = Squash(memory?.TrickCount(kind) ?? 0f, 2f);
+
             if (i != v.Length) throw new System.InvalidOperationException($"employee observation wrote {i} of {v.Length}");
             for (int k = 0; k < v.Length; k++) if (float.IsNaN(v[k]) || float.IsInfinity(v[k])) v[k] = 0f;
             return v;
+        }
+
+        public static string SpecJson()
+        {
+            string Names(System.Type type) => "[" + string.Join(",", System.Enum.GetNames(type).Select(x => "\"" + x + "\"")) + "]";
+            return "{\"inputs_version\":" + Version + ",\"input_size\":" + Size + ",\"outputs\":[" +
+                Names(typeof(EmployeeWhat)) + "," + Names(typeof(EmployeeHow)) + "," + Names(typeof(EmployeeWhich)) + "]}";
+        }
+
+        static void PutHistory(float[] values, ref int i, BotMemory memory, string region)
+        {
+            values[i++] = Squash(memory?.SeenAt(region) ?? 0f, 2f);
+            values[i++] = Squash(memory?.CaughtAt(region) ?? 0f, 2f);
+            values[i++] = Squash(memory?.EscapedAt(region) ?? 0f, 2f);
         }
 
         static float Squash(float x, float scale) => x <= 0f ? 0f : x / (x + scale);

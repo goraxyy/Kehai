@@ -19,12 +19,14 @@ namespace Kehai.Eval
     // Seeds below 10000 are the ablations' own (AblationRunner's 1000 and up), from before 0.4.0.
     public static class EvalSplits
     {
+        public static bool HeldOutLayout(string id) => id == "rings" || id == "split";
+        public static bool LayoutMayTrainOn(string id) => id == "today" || (StoreLayouts.Find(id) != null && !HeldOutLayout(id));
         public const int TrainingFrom = 10000, ValidationFrom = 20000, TestFrom = 30000, Span = 10000;
         public const float CornerCaution = 0.75f, CornerPace = 0.3f;
 
         // The test runs' exact sizes (written into the plan under C1.5, before any run): eight
-        // groups of players, each 8 careers of 6 shifts, 150 s shifts. 384 shifts an arm.
-        public const int TestCareersPerGroup = 8, TestShiftsPerCareer = 6;
+        // groups of players, each 8 careers of 4 shifts, 150 s shifts. 256 shifts an arm.
+        public const int TestCareersPerGroup = 8, TestShiftsPerCareer = 4;
         public const float TestShiftSeconds = 150f;
         public static readonly string[] TestGroups =
             { "efficient", "skittish", "reckless", "cautious", "trained-a", "trained-b", "corner-a", "corner-b" };

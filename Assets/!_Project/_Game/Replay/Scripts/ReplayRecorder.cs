@@ -292,7 +292,8 @@ namespace Kehai.Replay
                 Started = started,
                 Scene = SceneManager.GetActiveScene().path,
                 Seed = brain != null && brain.Rng != null ? brain.Rng.Seed : 0,
-                Rung = brain != null ? brain.config.rung.ToString() : ""
+                Rung = brain != null ? brain.config.rung.ToString() : "",
+                Layout = StoreLayoutRuntime.CurrentId
             };
 
             BuildBeliefGrid(h);

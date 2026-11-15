@@ -9,7 +9,7 @@ using UnityEngine;
 // Its lamp tells you where things stand: dim before closing time, blinking amber when the
 // announcement is owed, green once it's made. It needs the PA to be on: with the PA switched
 // off at the PA box beside it, the microphone is dead too.
-public sealed class ClosingMic : HighlightInteractable
+public sealed class ClosingMic : HighlightInteractable, IHoldInteractable
 {
     public static readonly Vector3 Size = new Vector3(0.26f, 0.30f, 0.12f);   // w, h, d in metres
     public const string Words = "Attention, customers. The store is now closed. Please take your shopping to the till.";
@@ -99,6 +99,7 @@ public sealed class ClosingMic : HighlightInteractable
         if (shift == null || !shift.IsShiftActive) { Show(0); return; }
         if (shift.ClosingAnnounced) Show(2);
         else if (shift.ClosingTime) Show(Mathf.Repeat(Time.time, 1f) < 0.5f ? 1 : 0);
+        else if (FlashSaleState.Active) Show(Mathf.Repeat(Time.time, 1f) < 0.5f ? 1 : 0);
         else Show(0);
     }
 
@@ -116,11 +117,29 @@ public sealed class ClosingMic : HighlightInteractable
 
     public override string GetPrompt()
     {
+        if (FlashSaleState.Active && Shift != null && !Shift.ClosingTime)
+            return Pa != null && Pa.Powered ? BackstreetFix.Prompt("call off the sale") : "The PA is switched off";
         string no = Refusal(Shift, Pa);
         return no.Length == 0 ? "Announce that the store is closed" : no;
     }
 
-    public override void Interact(PlayerInteract player) => Announce();
+    public override void Interact(PlayerInteract player)
+    {
+        // Closing takes priority when the clock runs out; a running sale ends with the doors.
+        if (!FlashSaleState.Active || (Shift != null && Shift.ClosingTime)) Announce();
+    }
+
+    public bool CanHold(PlayerInteract player) => FlashSaleState.Active && Shift != null &&
+        Shift.IsShiftActive && !Shift.ClosingTime && Pa != null && Pa.Powered;
+    public float HoldDuration => SaleRules.HoldSeconds;
+    public void OnHoldProgress(float normalised) => BackstreetFix.WorkNoise(transform.position, normalised);
+    public void OnHoldCancelled() { }
+    public void OnHoldComplete(PlayerInteract player)
+    {
+        if (!CanHold(player) || !FlashSaleState.End()) return;
+        Pa.SayAs(Speaker, "Attention, shoppers. The sale is now over. Thank you.");
+        NoiseBus.Emit(transform.position, 0.5f, NoiseKind.Environmental, NoiseAuthor.Player);
+    }
 
     // Press the button and say it. False when it isn't time, it's been said, or the PA is off.
     public bool Announce()
@@ -129,10 +148,11 @@ public sealed class ClosingMic : HighlightInteractable
         PaSystem pa = Pa;
         if (Refusal(shift, pa).Length > 0)
         {
-            if (shift != null && shift.AwaitingAnnouncement) OneShotAudio.PlayAt(ProceduralAudio.ErrorBuzz(), transform.position, 0.6f);
+            if (!Edition.Training && shift != null && shift.AwaitingAnnouncement) OneShotAudio.PlayAt(ProceduralAudio.ErrorBuzz(), transform.position, 0.6f);
             return false;
         }
         if (!shift.AnnounceClosing()) return false;
+        FlashSaleState.End();
         if (pa != null) pa.SayAs(Speaker, Words);
         // She hears the microphone click where it is, like any other thing you use.
         NoiseBus.Emit(transform.position, 0.5f, NoiseKind.Environmental, NoiseAuthor.Player);

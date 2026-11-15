@@ -34,6 +34,7 @@ public class OutlineHighlight : MonoBehaviour
 
     readonly List<GameObject> outlineObjects = new List<GameObject>();
     bool isHighlighted;
+    bool hovered, guided;
     bool built;
 
     void EnsureBuilt()
@@ -187,8 +188,12 @@ public class OutlineHighlight : MonoBehaviour
             if (shell != null) shell.SetActive(true);
     }
 
-    public void SetHighlighted(bool on)
+    public void SetGuided(bool on) { guided = on; ApplyHighlight(); }
+    public void SetHighlighted(bool on) { hovered = on; ApplyHighlight(); }
+    void Update() { if (guided) ApplyHighlight(); }
+    void ApplyHighlight()
     {
+        bool on = Edition.ShowUI && (hovered || (guided && Mathf.Repeat(Time.unscaledTime,1.4f)<1f));
         if (isHighlighted == on) return;
         isHighlighted = on;
 

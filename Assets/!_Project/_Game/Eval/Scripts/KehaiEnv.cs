@@ -18,6 +18,10 @@ namespace Kehai.Eval
         public bool render = true;
         public bool karen = true;
         public bool freshLedger = true;
+        public bool gameplayCareer;
+        public string layout = "";
+        public bool heldoutLayout;           // final evaluation only, forbidden to a learner
+        public bool trainingLayouts;        // deterministic allowed pool (also in Testing builds)
         public int startShift = 1;           // career position of the first shift
         public float overtimeCap = 240f;     // give up this long after the doors close
         public string agent = "external";
@@ -30,6 +34,9 @@ namespace Kehai.Eval
             var c = new EnvConfig();
             if (o == null) return c;
             c.seed = (int)o.GetNumber("seed", c.seed);
+            c.layout = o.GetString("layout", "");
+            c.heldoutLayout = o.GetBool("heldout_layout", false);
+            c.trainingLayouts = o.GetBool("training_layouts", false);
             c.rung = o.GetString("rung", c.rung);
             c.shiftSeconds = (float)o.GetNumber("shift_seconds", c.shiftSeconds);
             c.fps = Mathf.Clamp((int)o.GetNumber("fps", c.fps), 5, 120);
@@ -156,6 +163,15 @@ namespace Kehai.Eval
             Ready = false;
             Done = false;
             Config = config ?? new EnvConfig();
+            if(Config.gameplayCareer && !EditionRules.AllowEvaluation(Edition.Current)) throw new System.InvalidOperationException("Gameplay simulation requires an evaluation edition");
+            CareerRuntime.GameplaySimulation = Config.gameplayCareer;
+            StoreLayoutRuntime.EpisodeLayout = string.IsNullOrWhiteSpace(Config.layout) ? null : Config.layout;
+            StoreLayoutRuntime.EvaluationLayouts = Config.heldoutLayout;
+            StoreLayoutRuntime.TrainingSchedule = Config.trainingLayouts;
+            CareerRuntime.PendingCompletedShifts = Config.startShift - 1;
+            CareerRuntime.Seed = Config.seed;
+            // Validate before touching a scene or its Ledger.
+            StoreLayoutRuntime.Choose(Config.startShift, Config.seed, Config.trainingLayouts || (Edition.Training && !Config.gameplayCareer), Config.heldoutLayout);
             Metrics.Unsubscribe();
 
             // Everything the next Karen and the next shift will be built from.
@@ -307,7 +323,7 @@ namespace Kehai.Eval
             Done = true;
             Metrics.End(clockedOut, timedOut, Burnout, Time.realtimeSinceStartup - wallStartedAt);
             if (timedOut) KarenBrain.Instance?.MarkStuck();
-            if (timedOut && Shift.IsShiftActive) Shift.EndShift();
+            if (timedOut && Shift.IsShiftActive) Shift.EndShift(completed:false);
             return true;
         }
 
@@ -398,6 +414,11 @@ namespace Kehai.Eval
                 case "restart_clock": return "Clock";
                 case "announce_closing": return "Closing";
                 case "fix_cameras": return "Cameras";
+                case "call_off_sale": return "FlashSale";
+                case "reset_screen": return "ScreenLoop";
+                case "restore_room_lights": return "RoomLights";
+                case "close_freezer": return "FreezerAlarm";
+                case "hear_complaint": return "Complaint";
                 case "find_tool": return "LostTool";
                 case "unblock_door": return "Door";
                 case "send_kenji": return "Kenji";
@@ -441,6 +462,11 @@ namespace Kehai.Eval
                 case "restart_clock": return RestartClock(a, r);
                 case "announce_closing": return AnnounceClosing(a, r);
                 case "fix_cameras": return FixCameras(a, r);
+                case "reset_screen": return FixCameras(a, r);
+                case "call_off_sale": return CallOffSale(a, r);
+                case "restore_room_lights": return RestoreRoomLights(a, r);
+                case "close_freezer": return CloseFreezer(a, r);
+                case "hear_complaint": return HearComplaint(a, r);
                 case "find_tool": return FindTool(a, r);
                 case "unblock_door": return UnblockDoor(a, r);
                 case "send_kenji": return SendKenji(a, r);
@@ -844,13 +870,64 @@ namespace Kehai.Eval
         IEnumerator FixCameras(EnvAction a, ActionResult r)
         {
             StoreCameras cams = StoreCameras.Instance;
-            if (cams == null || !cams.Broken) { r.Pass("the cameras work"); yield break; }
+            if (cams == null || !cams.NeedsReset) { r.Pass("the cameras work"); yield break; }
             CameraBox box = cams.Box;
             if (box == null) { cams.Fix(); r.Pass("cameras fixed"); yield break; }
             yield return Approach(box.transform.position, 1.5f, a, r);
             if (r.Finished) yield break;
-            yield return HoldOn(box, box.transform.position, box.HoldDuration + 2f, () => !cams.Broken);
-            if (cams.Broken) r.Fail("the cameras are still broken"); else r.Pass("cameras fixed");
+            yield return HoldOn(box, box.transform.position, box.HoldDuration + 2f, () => !cams.NeedsReset);
+            if (cams.NeedsReset) r.Fail("the cameras are still broken"); else r.Pass("cameras fixed");
+        }
+
+        IEnumerator CallOffSale(EnvAction a, ActionResult r)
+        {
+            if (!FlashSaleState.Active) { r.Pass("sale already ended"); yield break; }
+            ClosingMic mic = ClosingMic.Instance;
+            if (mic == null) { r.Fail("no PA microphone"); yield break; }
+            yield return Approach(mic.transform.position,1.5f,a,r);
+            if (r.Finished) yield break;
+            PaSystem pa = KarenWorld.Instance != null ? KarenWorld.Instance.Pa : null;
+            if (pa != null && !pa.Powered) pa.SetPowered(true);
+            if (!mic.CanHold(Driver.Hands)) { r.Fail("microphone cannot call off sale now"); yield break; }
+            yield return HoldOn(mic,mic.transform.position,mic.HoldDuration+2f,()=>!FlashSaleState.Active);
+            if (FlashSaleState.Active) r.Fail("sale is still on"); else r.Pass("sale ended");
+        }
+        IEnumerator RestoreRoomLights(EnvAction a, ActionResult r)
+        {
+            RoomLightSwitch sw = World.Resolve<RoomLightSwitch>(a.target);
+            if (sw == null) { r.Fail("no room light switch"); yield break; }
+            if (!sw.IsOff) { r.Pass("room already lit"); yield break; }
+            yield return Approach(sw.transform.position,1.3f,a,r);
+            if (r.Finished) yield break;
+            yield return Tap(sw,sw.transform.position);
+            if (sw.IsOff) r.Fail("room lights are still off"); else r.Pass("room lights restored");
+        }
+        IEnumerator CloseFreezer(EnvAction a, ActionResult r)
+        {
+            FreezerAlarm alarm = World.Resolve<FreezerAlarm>(a.target);
+            if (alarm == null || alarm.Door == null) { r.Fail("no freezer door"); yield break; }
+            if (!alarm.Ringing) { r.Pass("freezer already closed"); yield break; }
+            yield return Approach(alarm.Door.transform.position,1.3f,a,r);
+            if (r.Finished) yield break;
+            yield return Tap(alarm.Door,alarm.Door.transform.position);
+            if (alarm.Ringing) r.Fail("freezer still open"); else r.Pass("freezer closed");
+        }
+
+        IEnumerator HearComplaint(EnvAction a, ActionResult r)
+        {
+            var complaint=World.Resolve<CustomerComplaint>(a.target);
+            if(complaint==null) { r.Fail("no complaint"); yield break; }
+            if(!complaint.Active) { r.Pass("complaint already ended"); yield break; }
+            yield return Approach(complaint.FixPosition,1.5f,a,r);
+            if(r.Finished) yield break;
+            // Let the shopper arrive normally; the player's action remains cancellable.
+            float until=Time.time+Mathf.Min(30f,a.timeout);
+            while(complaint.Active&&!complaint.Waiting&&Time.time<until) yield return null;
+            if(!complaint.Active) { r.Fail("shopper left before being heard"); yield break; }
+            var customer=complaint.GetComponent<CustomerNPC>();
+            if(customer==null||!customer.CanHold(Driver.Hands)) { r.Fail("shopper is not ready"); yield break; }
+            yield return HoldOn(customer,complaint.FixPosition,customer.HoldDuration+2f,()=>!complaint.Active);
+            if(complaint.HeardOut) r.Pass("complaint heard"); else r.Fail("complaint interrupted or shopper left");
         }
 
         IEnumerator FindTool(EnvAction a, ActionResult r)

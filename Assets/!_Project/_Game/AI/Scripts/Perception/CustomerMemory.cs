@@ -19,6 +19,9 @@ namespace Kehai.Karen
         [Tooltip("Seconds a sighting stays worth reporting.")]
         public float memorySeconds = 75f;
 
+        public bool HasSpokenToKaren { get; private set; }
+        public void ClearConversation() => HasSpokenToKaren = false;
+
         public bool HasSighting => lastSeenTime > -900f && Time.time - lastSeenTime < memorySeconds;
         public Vector3 LastSeenAt { get; private set; }
         public float LastSeenTime => lastSeenTime;
@@ -93,6 +96,7 @@ namespace Kehai.Karen
         // A witness report fades with age: sure of the aisle a moment ago, vague a minute later.
         public Observation ToObservation(SenseModel senses = null)
         {
+            HasSpokenToKaren = true; // a report was actually taken at talking distance
             float decayed = SightingConfidence * Mathf.Clamp01(1f - Age / memorySeconds);
             float sigma = (senses ?? SenseModel.Hand()).TestimonySigma(Age);
             return new Observation(SenseChannel.Testimony, LastSeenAt, decayed, sigma,

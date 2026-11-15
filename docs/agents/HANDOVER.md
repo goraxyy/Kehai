@@ -35,6 +35,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
 | what | where | in git? |
 |---|---|---|
 | The Unity project | `~/Developer/Kehai` (Unity **6000.5.10f1**, at `/Applications/Unity/Hub/Editor/6000.5.10f1/`) | code and docs only |
+| The current 0.5.0 Unity project | `~/Developer/Kehai/.claude/worktrees/0.5.0-build`, branch `0.5.0`. Private assets/packages/cache cloned locally; the original main folder stays intact. Use this project to review PR #82 | source/docs only |
 | The store scene | `Assets/!_Project/_Core/Scenes/SampleScene.unity` (about 22 MB, text YAML). Its layout is written out in [`SCENE_MAP.md`](store/SCENE_MAP.md) | no |
 | The endless-maze scene (parked) | `Assets/!_Project/_Core/Scenes/EndlessMaze.unity`, last and unticked in the build list | no |
 | Art: models, materials, prefabs, audio, textures | under `Assets/` (about 160 MB). Art files are listed in the local-only `.git/info/exclude`, so `git status` stays clean | no |
@@ -117,9 +118,11 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   - **Nothing is trained.** Every default is today's game; every recording, training and test run is one command beside its task
     in the plan, and waits for the owner's go.
   - **Checked:** 430 of 430 EditMode tests; with every switch at its default, a shift plays exactly as on `main`, also with the shadow filters and the trace on.
-  - **Found:** the training player doesn't reach the trainer, on `main` too (TextMeshPro errors on the null graphics device), so for now
-    training runs one copy in the editor (`tools/rl/train_editor.sh`); C0.2's fences changed today's shift, so they're off by
-    default and on in the league. See [KAREN_RESULTS.md](results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november).
+  - **Found:** the 0.4.0 training player doesn't reach the trainer (TextMeshPro errors on the null graphics device).
+    Phase 7's Training edition now removes scene UI and gates runtime presentation; its remaining hooks and offline checks
+    are in the [edition/guide handoff](integration/0.5.0-editions-guide.md). No headless startup or trainer handshake has been
+    verified yet; `tools/rl/train_editor.sh` remains the earlier one-copy fallback. C0.2's fences are off by default and on
+    in the league. See [KAREN_RESULTS.md](results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november).
 - **Karen 0.3.0, the tricks come back** (branch `0.3.0`, worktree `.claude/worktrees/tricks`; draft [PR #78](https://github.com/goraxyy/Kehai/pull/78)). The owner's 21 items of 7 November: nine tricks removed, ten rebuilt end to end, a fog that blinds everyone, a PA off switch, placement memory.
   - Plan with tick boxes and a progress table: [`plans/0.3.0-build-plan.md`](archive/0.3.0-build-plan.md). What each trick does now: [Karen.md §17](karen/Karen.md#17-karen-030-the-tricks-come-back).
   - **One builder** (the owner's call, 7 November): Claude built every task, the old [B] ones too.

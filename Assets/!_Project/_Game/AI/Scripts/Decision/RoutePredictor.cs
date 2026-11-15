@@ -82,7 +82,8 @@ namespace Kehai.Karen
         // `modelPrior` (0.4.0, C4.5): each guess's chance from the prediction model instead of the
         // hand-set heading fit; given (the goal's name, where it is, its kind), null keeps today's.
         public void Build(Vector3 seen, Vector3 velocity, float seenAt, IEnumerable<(string name, Vector3 at)> goals,
-                          System.Func<string, Vector3, GuessKind, float> modelPrior = null)
+                          System.Func<string, Vector3, GuessKind, float> modelPrior = null,
+                          System.Func<RouteGuess, float> routePrior = null)
         {
             guesses.Clear();
             Seen = seen;
@@ -103,6 +104,7 @@ namespace Kehai.Karen
                 RouteGuess g = Route(start, goal, GuessKind.Goal, name);
                 if (g == null) continue;
                 g.Prior = modelPrior != null ? modelPrior(name, at, GuessKind.Goal) : HeadingFit(g, heading) / (1f + g.Length / 40f);
+                if (routePrior != null) g.Prior *= routePrior(g);
                 candidates.Add(g);
             }
             candidates.Sort((a, b) => b.Prior.CompareTo(a.Prior));
@@ -117,6 +119,7 @@ namespace Kehai.Karen
                 if (turned != null)
                 {
                     turned.Prior = modelPrior != null ? modelPrior(turned.Name, back, GuessKind.TurnedBack) : 0.15f;
+                    if (routePrior != null) turned.Prior *= routePrior(turned);
                     guesses.Add(turned);
                 }
             }
