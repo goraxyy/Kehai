@@ -6,7 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
-| 2026-11-15 | Create a 0.5.1 branch and planning PR for eleven playtest fixes; no building yet. Karen approaches witnessed hiding and catches if reachable; manual doors open both ways and E reverses a closing door | [0.5.1 plan](plans/0.5.1-plan.md) |
+| 2026-11-15 | Create a 0.5.1 branch and planning PR for fourteen playtest fixes; no building yet. Karen approaches witnessed hiding and catches if reachable; manual doors open both ways and E reverses a closing door | [0.5.1 plan](plans/0.5.1-plan.md) |
 | 2026-11-14 | Merge 0.5.0 now with the completed correctness checks; defer further playtesting, platform builds, visual review, remaining setup and long training until later. Keep unverified acceptance tasks open | [build status](plans/0.5.0/implementation-status.md) |
 | 2026-11-14 | 0.5.0 uses adaptive trained bots with within-shift memory and across-shift sensed history; no language-model players or judges | [0.5.0](plans/0.5.0/agents.md) |
 | 2026-11-14 | Escape learning combines consented central refits on Windows with local counts settled at shift end; no local neural training or player warning | [0.5.0](plans/0.5.0/build-decisions.md) |
