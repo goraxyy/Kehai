@@ -3,6 +3,10 @@
 Source implementation is on **`0.5.0`**, in [PR #82](https://github.com/goraxyy/Kehai/pull/82).
 The owner authorised building on 14 November. Nothing has been merged or trained in this build.
 
+Unity is prepared at `~/Developer/Kehai/.claude/worktrees/0.5.0-build`, with game version
+`0.5.0` and the store scene loaded. The editor defaults to **Testing** (Karen from shift 1);
+the Gameplay build uses the approved Karen-free first shift. The original main folder is intact.
+
 The plan's checkboxes measure their **full “Done when” conditions**. A box stays open when it
 requires a played shift, trained model, Windows run or visual review, even if its code exists.
 
