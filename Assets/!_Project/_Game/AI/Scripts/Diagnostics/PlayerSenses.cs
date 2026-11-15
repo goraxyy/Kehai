@@ -47,14 +47,14 @@ namespace Kehai.Karen
         {
             saw = false;
             heard = false;
-            if (brain == null || !brain.PresentThisShift || brain.Body == null || !brain.Body.gameObject.activeInHierarchy) return;
+            if (brain != null && (!brain.PresentThisShift || brain.Body == null || !brain.Body.gameObject.activeInHierarchy)) return;
             if (BotPlaying)
             {
                 saw = botSaw;
                 heard = botHeard;
                 return;
             }
-            if (me == null) return;
+            if (me == null || brain == null) return;
             saw = CanSee(me.Head, me.Facing, brain.Body.Position + Vector3.up * 1.4f, brain.Body.transform);
             heard = Heard(me.Position);
         }

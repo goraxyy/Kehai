@@ -27,7 +27,12 @@ public static class StoreLayoutRuntime
         CareerRuntime.CareerPreparing -= OnPreparing;
         CareerRuntime.CareerPreparing += OnPreparing;
     }
-    static void OnPreparing(int shift, int seed, bool training) => Prepare(shift,seed,(training && !CareerRuntime.GameplaySimulation) || TrainingSchedule,EvaluationLayouts);
+    static void OnPreparing(int shift, int seed, bool training)
+    {
+        // Static subscriptions survive leaving Play mode. Editor/unit-test clock changes must
+        // never replace shelves or bake navigation in the owner's authored scene.
+        if(Application.isPlaying) Prepare(shift,seed,(training && !CareerRuntime.GameplaySimulation) || TrainingSchedule,EvaluationLayouts);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void Reset()
@@ -81,7 +86,7 @@ public static class StoreLayoutRuntime
     static void Apply(string id)
     {
         StoreLayouts.Layout layout = id == "today" ? null : StoreLayouts.Find(id);
-        if (root != null) { root.SetActive(false); UnityEngine.Object.Destroy(root); root = null; }
+        if (root != null) { root.SetActive(false); Drop(root); root = null; }
         foreach (var go in hidden) if (go != null) go.SetActive(true);
         hidden.Clear();
         foreach (var pair in browsing) if (pair.Key != null) pair.Key.shelfPoints = pair.Value;
@@ -167,7 +172,13 @@ public static class StoreLayoutRuntime
     static void Strip(Transform p,Vector3 at,float x,float z)
     {
         var strip=Part(p,"Pricetag",at,new Vector3(x,.025f,z));
-        var collider=strip.GetComponent<Collider>(); if(collider!=null) UnityEngine.Object.Destroy(collider);
+        var collider=strip.GetComponent<Collider>(); if(collider!=null) Drop(collider);
+    }
+    static void Drop(UnityEngine.Object value)
+    {
+        if(value==null)return;
+        if(Application.isPlaying) UnityEngine.Object.Destroy(value);
+        else UnityEngine.Object.DestroyImmediate(value);
     }
     static GameObject Part(Transform parent,string name,Vector3 position,Vector3 size)
     {

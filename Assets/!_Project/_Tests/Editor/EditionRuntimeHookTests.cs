@@ -74,7 +74,7 @@ public sealed class EditionRuntimeHookTests
     }
     [Test] public void TrainingSceneStripPreservesCollisionAndLightButRemovesText()
     {
-        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        Scene scene = EditorSceneManager.NewPreviewScene();
         var fixture = new GameObject("Strip fixture"); SceneManager.MoveGameObjectToScene(fixture, scene);
         fixture.SetActive(false); fixture.AddComponent<BoxCollider>(); fixture.AddComponent<Light>();
         var ui = new GameObject("Text", typeof(RectTransform)); ui.transform.SetParent(fixture.transform);
@@ -87,11 +87,11 @@ public sealed class EditionRuntimeHookTests
             Assert.IsNotNull(fixture.GetComponent<BoxCollider>());
             Assert.IsTrue(fixture.GetComponent<Light>().enabled);
         }
-        finally { EditorSceneManager.CloseScene(scene, true); }
+        finally { EditorSceneManager.ClosePreviewScene(scene); }
     }
     [Test] public void GameplayStripRemovesDiagnosticsAndTestingKeepsThem()
     {
-        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        Scene scene = EditorSceneManager.NewPreviewScene();
         var fixture = new GameObject("Debug fixture"); SceneManager.MoveGameObjectToScene(fixture, scene);
         fixture.SetActive(false); fixture.AddComponent<KarenDebugOverlay>();
         try
@@ -101,6 +101,6 @@ public sealed class EditionRuntimeHookTests
             EditionBuildProcessor.StripScene(scene, KehaiEdition.Gameplay);
             Assert.IsNull(fixture.GetComponent<KarenDebugOverlay>());
         }
-        finally { EditorSceneManager.CloseScene(scene, true); }
+        finally { EditorSceneManager.ClosePreviewScene(scene); }
     }
 }

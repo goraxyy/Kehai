@@ -39,8 +39,8 @@ public class KarenActionsTests
         var live = TacticLibrary.Live.Where(t => !t.OwnMove).Select(t => t.Id).OrderBy(id => id).ToList();
         CollectionAssert.AreEqual(new[]
         {
-            "ambush", "bin_tamper", "blackout", "camera_bolt_on", "camera_break", "camera_watch", "cut", "door_lock", "fog", "overtime", "phantom_chime",
-            "poll_witnesses", "shelf_sweep", "spill", "throw_flour", "throw_oil", "throw_tin", "tool_theft", "understudy",
+            "ambush", "bin_tamper", "blackout", "camera_bolt_on", "camera_break", "camera_watch", "complaint", "cut", "door_lock", "flash_sale", "fog", "freezer_alarm", "overtime", "phantom_chime",
+            "poll_witnesses", "room_lights", "screen_loop", "shelf_sweep", "spill", "throw_flour", "throw_oil", "throw_tin", "tool_theft", "understudy",
         }, live);
     }
 

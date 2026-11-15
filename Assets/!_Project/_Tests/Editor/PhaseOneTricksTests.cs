@@ -1,10 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Kehai.Karen;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
+using UnityEngine.TestTools;
 using UnityEngine;
 using UnityEngine.AI;
 using Object = UnityEngine.Object;
@@ -23,7 +25,7 @@ public class PhaseOneTricksTests
     {
         previousEdition = Edition.EditorOverride;
         Edition.EditorOverride = KehaiEdition.Testing;
-        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        if(!Application.isPlaying) EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         root = new GameObject("PhaseOneTricksTests");
         previousRoom = RoomLightSwitch.RoomOf;
         RoomLightSwitch.RoomOf = p => p.x < 0f ? "Cold storage" : "Office";
@@ -34,8 +36,11 @@ public class PhaseOneTricksTests
     public void Cleanup()
     {
         FlashSaleState.End();
+        if(root!=null) foreach(var component in root.GetComponentsInChildren<MonoBehaviour>(true))
+            if(component is RoomLightSwitch || component is FreezerAlarm || component is CustomerComplaint)
+                component.GetType().GetMethod("OnDisable",Private)?.Invoke(component,null);
         Object.DestroyImmediate(root);
-        RoomLightSwitch.RoomOf = previousRoom;
+        RoomLightSwitch.RoomOf = previousRoom ?? RoomLightSwitch.PhysicalRoom;
         TaskManager.CamerasBroken = null;
         CustomerComplaint.ResetForShift();
         Edition.EditorOverride = previousEdition;
@@ -45,7 +50,12 @@ public class PhaseOneTricksTests
         var go = new GameObject(typeof(T).Name);
         go.transform.SetParent(root.transform);
         go.SetActive(active);
-        return go.AddComponent<T>();
+        var component=go.AddComponent<T>();
+        // These ordinary behaviours do not receive OnEnable in EditMode. Drive that native
+        // lifecycle boundary explicitly, rather than pretending an unregistered fixture is live.
+        if(active && component is RoomLightSwitch sw && !RoomLightSwitch.All.Contains(sw))
+            typeof(RoomLightSwitch).GetMethod("OnEnable",Private).Invoke(sw,null);
+        return component;
     }
     static void Set(object target, string name, object value) => target.GetType().GetProperty(name).SetValue(target, value);
     static void Field(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
@@ -187,6 +197,7 @@ public class PhaseOneTricksTests
     {
         var door = Add<FurnitureDoor>(); door.transform.position = Vector3.left;
         var alarm = door.gameObject.AddComponent<FreezerAlarm>(); alarm.Configure(door);
+        if(!FreezerAlarm.All.Contains(alarm)) typeof(FreezerAlarm).GetMethod("OnEnable",Private).Invoke(alarm,null);
         return alarm;
     }
     [Test]
@@ -328,40 +339,50 @@ public class PhaseOneTricksTests
         CollectionAssert.AreEquivalent(clipsBefore, clips.Keys, "Training must not synthesise PA/alarm audio");
         Assert.IsTrue(KarenScreen.Instance == null, "Training PA must not invoke the screen factory");
     }
-    [Test]
-    public void ComplaintWaitingAgentResumesItsExitAfterItIsHeardOrTimesOut()
+    [UnityTest]
+    public IEnumerator ComplaintWaitingAgentResumesItsExitAfterItIsHeardOrTimesOut()
     {
+        yield return new EnterPlayMode();
+        root = GameObject.Find("PhaseOneTricksTests") ?? new GameObject("PhaseOneTricksTests");
         var source = new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
-            transform = Matrix4x4.Translate(Vector3.down * .1f), size = new Vector3(20f, .2f, 20f) };
-        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByIndex(0), new List<NavMeshBuildSource> { source },
-            new Bounds(Vector3.zero, new Vector3(20f, 5f, 20f)), Vector3.zero, Quaternion.identity);
+            transform = Matrix4x4.Translate(Vector3.down * .1f), size = new Vector3(20f, .2f, 20f), area=0 };
+        var settings=NavMesh.GetSettingsByIndex(0);
+        var data = NavMeshBuilder.BuildNavMeshData(settings,new List<NavMeshBuildSource>{source},
+            new Bounds(Vector3.zero,new Vector3(20f,5f,20f)),Vector3.zero,Quaternion.identity);
         Assert.IsNotNull(data);
-        var mesh = NavMesh.AddNavMeshData(data);
+        var mesh=NavMesh.AddNavMeshData(data);
         try
         {
-            foreach (bool heard in new[] { false, true })
+            foreach(bool heard in new[]{false,true})
             {
-                var complaint = Complaint();
-                var npc = complaint.GetComponent<CustomerNPC>();
-                npc.agent = npc.gameObject.AddComponent<NavMeshAgent>();
-                Assert.IsTrue(npc.agent.Warp(Vector3.zero));
-                npc.exitPoint = new GameObject("complaint exit").transform;
-                npc.exitPoint.SetParent(root.transform);
-                npc.exitPoint.position = Vector3.forward * 5f;
-                ((ComplaintPatience)typeof(CustomerComplaint).GetField("patience", Private).GetValue(complaint)).Arrive();
-                npc.WaitForComplaint(); npc.agent.isStopped = true;
-                if (heard) complaint.HearOut(); else complaint.Step(91f);
-                Assert.IsFalse(npc.agent.isStopped, "resolved shoppers must walk out, not wait for stuck-timeout despawn");
+                var go=new GameObject("complaint native actor");go.SetActive(false);go.transform.SetParent(root.transform);
+                var agent=go.AddComponent<NavMeshAgent>();agent.agentTypeID=settings.agentTypeID;
+                var npc=go.AddComponent<CustomerNPC>();npc.enabled=false;
+                var complaint=go.AddComponent<CustomerComplaint>();complaint.enabled=false;
+                Field(complaint,"npc",npc);Set(complaint,"Active",true);
+                npc.exitPoint=new GameObject("complaint exit").transform;npc.exitPoint.SetParent(root.transform);
+                npc.exitPoint.position=Vector3.forward*5f;
+                go.SetActive(true);
+                yield return null;
+                Assert.IsTrue(agent.Warp(Vector3.zero));
+                ((ComplaintPatience)typeof(CustomerComplaint).GetField("patience",Private).GetValue(complaint)).Arrive();
+                npc.WaitForComplaint();agent.isStopped=true;
+                if(heard)complaint.HearOut();else complaint.Step(91f);
+                Assert.IsFalse(agent.isStopped,"resolved shoppers must walk out, not wait for stuck-timeout despawn");
                 Assert.IsFalse(npc.IsWaitingToBeServed);
+                Object.Destroy(go);
+                yield return null;
             }
         }
-        finally { mesh.Remove(); Object.DestroyImmediate(data); }
+        finally { mesh.Remove();Object.DestroyImmediate(data); }
+        yield return new ExitPlayMode();
     }
     CustomerComplaint Complaint()
     {
         var customer = Add<CustomerNPC>();
         var complaint = customer.gameObject.AddComponent<CustomerComplaint>();
         Field(complaint, "npc", customer); Set(complaint, "Active", true);
+        if(!CustomerComplaint.All.Contains(complaint)) typeof(CustomerComplaint).GetMethod("OnEnable",Private).Invoke(complaint,null);
         return complaint;
     }
     [Test]

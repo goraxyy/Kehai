@@ -673,6 +673,10 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable, IHoldIntera
     {
         StopAllCoroutines();
         IsWaitingToBeServed = false;
+        CurrentActivity = Activity.Leaving;
+        QueueingSince = -1f;
+        // Pure editor fixtures may settle a complaint, but must not run/despawn a game actor.
+        if (!Application.isPlaying) return;
         if (agent != null && agent.isOnNavMesh) agent.isStopped = isFrozen;
         StartCoroutine(Leave());
     }
