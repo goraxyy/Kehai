@@ -174,7 +174,7 @@ namespace Kehai.Blink
             }
             if (string.IsNullOrEmpty(Problem))
                 Problem = Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.OSXPlayer
-                    ? (Application.isEditor ? "Build the camera helper: Kehai → Blink → Build Camera Helper." : "The camera helper is missing from this app. Reinstall a complete macOS build.")
+                    ? (Application.isEditor ? "The camera helper isn't built yet. It builds itself when the editor opens (needs the Xcode command line tools), or use Kehai → Blink → Build Camera Helper." : "The camera helper is missing from this app. Reinstall a complete macOS build.")
                     : "No camera helper found. Set up tools/blink (see tools/blink/README.md).";
             return false;
         }
@@ -196,7 +196,20 @@ namespace Kehai.Blink
             }
             if (lines.Count > 40) lines.RemoveRange(0, lines.Count - 40);
             if (process != null && process.HasExited && string.IsNullOrEmpty(Problem))
-                Problem = $"the camera helper stopped (exit code {process.ExitCode}) — see its last lines below";
+                Problem = ProblemFor(process.ExitCode);
+        }
+
+        // What the helper's exit code means, in words a player can act on (0.5.1). The codes are
+        // BlinkVision.swift's: 2 no camera, 3 the camera wouldn't start, 4 access refused or off.
+        public static string ProblemFor(int exitCode)
+        {
+            switch (exitCode)
+            {
+                case 2: return "No camera found. Plug one in (or close apps using it) and try again; the keyboard still works.";
+                case 3: return "The camera wouldn't start. Another app may be using it; close it and try again.";
+                case 4: return "Camera access is off. Allow it in System Settings → Privacy & Security → Camera, then try again.";
+                default: return $"the camera helper stopped (exit code {exitCode}) — see its last lines below";
+            }
         }
     }
 }

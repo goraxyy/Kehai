@@ -212,14 +212,27 @@ public static class KehaiBuild
         string script = Path.Combine(folder, "build.sh");
         if (!File.Exists(source) || !File.Exists(script))
             throw new InvalidOperationException("Blink helper sources are missing from tools/blink/mac.");
-        if (File.Exists(helper) && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(source)
-            && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(script)) return;
+        if (BlinkHelperUpToDate()) return;
         if (UnityEngine.Application.platform != UnityEngine.RuntimePlatform.OSXEditor)
             throw new InvalidOperationException("Build the macOS blink helper on a Mac before packaging it.");
         if (Run("/bin/sh", "\"" + script + "\"", "building the camera helper") == null || !File.Exists(helper))
             throw new InvalidOperationException("Camera helper compilation failed. Install Xcode command line tools and use Kehai → Blink → Build Camera Helper.");
         Debug.Log("Camera helper built. It starts only when webcam blinking is enabled with consent.");
     }
+
+    // Built and newer than its source and build script: nothing to do.
+    public static bool BlinkHelperUpToDate()
+    {
+        string folder = Path.Combine(ProjectRoot, "tools", "blink", "mac");
+        string helper = Path.Combine(folder, "build", "BlinkVision");
+        string source = Path.Combine(folder, "BlinkVision.swift");
+        string script = Path.Combine(folder, "build.sh");
+        return File.Exists(helper) && File.Exists(source) && File.Exists(script)
+            && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(source)
+            && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(script);
+    }
+
+    public static string BlinkHelperScript => Path.Combine(ProjectRoot, "tools", "blink", "mac", "build.sh");
 
     static void CopyBlinkHelper(string appPath)
     {
