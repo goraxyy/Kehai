@@ -4,11 +4,42 @@ using Kehai.Karen;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Runtime migration also covers existing local scenes without serializing art into git.
+// 0.5.1 item 4 and 12. Names float above the things you can use, and the old decorative office
+// camera stays gone. Runtime migration also covers existing local scenes without serializing art
+// into git.
+//
+// The names are world-space text (a legacy TextMesh with a black copy behind it), not OnGUI: they
+// sit behind walls and furniture like any other object, and a picture taken in batch mode shows
+// them. A label shows only within 4 m of the camera and with a clear line to it; not in the
+// training edition and not while paused. It never lights anything: no light, no emissive.
 public sealed class FixturePresentation : MonoBehaviour
 {
-    readonly List<(Component target, string title)> labels = new List<(Component, string)>();
-    GUIStyle style;
+    public const float ShowWithin = 4f;       // metres from the camera
+    public const float Above = 0.15f;         // gap over the top of the fixture, metres
+    public const float CharacterSize = 0.0125f;
+    public const int FontSize = 64;           // 64 * 0.0125 * 0.1 = a 0.08 m line
+    public const string LabelName = "Fixture_Label";
+    public const float RescanSeconds = 5f;    // fixtures other scripts add a little late
+
+    // Where the coffee machine goes at load: the path of a surface, or empty to leave it where
+    // the scene has it (the staff-room kitchen counter). One line to change: e.g.
+    // "Staff Room - Furnished/Shared dining table" puts it on the dining table.
+    public const string CoffeeMachineSurface = "";
+
+    static readonly string[] ClockPaths = { "Staff Room - Furnished/Staff clock", "Office - Furnished/Office clock" };
+    static Font font;
+
+    sealed class Label
+    {
+        public Transform target;
+        public GameObject root;
+        public bool shown;
+    }
+
+    readonly List<Label> labels = new List<Label>();
+    float nextScan;
+
+    public int LabelCount => labels.Count;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void OnLoad()
@@ -28,24 +59,16 @@ public sealed class FixturePresentation : MonoBehaviour
 
     IEnumerator Start()
     {
-        yield return null; // KarenFixtures installs the PA during scene startup.
+        yield return null; // KarenFixtures installs the PA and the rest during scene startup.
         ApplyPlacement();
-        foreach (var fixture in FindObjectsByType<HighlightInteractable>())
-        {
-            string title = NameOf(fixture);
-            if (title != null) labels.Add((fixture, title));
-        }
-        foreach (string path in new[] { "Staff Room - Furnished/Staff clock", "Office - Furnished/Office clock" })
-        {
-            var clock = SceneObjectNames.Find(path);
-            if (clock != null) labels.Add((clock.transform, "Clock"));
-        }
+        BuildLabels();
+        nextScan = Time.unscaledTime + RescanSeconds;
     }
 
     public static string NameOf(HighlightInteractable fixture)
     {
         if (fixture is CoffeeMachine) return "Coffee machine";
-        if (fixture is Puncher) return "Time clock / puncher";
+        if (fixture is Puncher) return "Time clock (Puncher)";
         if (fixture is ClosingMic) return "PA microphone";
         if (fixture is PaBox) return "PA controls";
         if (fixture is CameraBox) return "Camera controls";
@@ -56,23 +79,34 @@ public sealed class FixturePresentation : MonoBehaviour
         return null; // Stock, doors and drawers already have contextual action prompts.
     }
 
+    // ---- placement ---------------------------------------------------------------------------
+
+    // Safe to run any number of times. The microphone is not moved here: KarenFixtures builds it
+    // on its own table.
     public static void ApplyPlacement()
     {
-        // Identified in the local scene and OfficeRoomBuilder: decorative only, no feed.
-        var retired = SceneObjectNames.Find("Office - Furnished/Office camera");
-        if (retired != null && retired.GetComponentInChildren<StoreCamera>(true) == null &&
-            retired.GetComponentInChildren<Camera>(true) == null) retired.SetActive(false);
-        var table = SceneObjectNames.Find("Staff Room - Furnished/Shared dining table") ?? SceneObjectNames.Find("Shared dining table");
+        // The reported office camera was decorative, with no feed; a scene the builder has not
+        // been rerun on still has it.
+        foreach (string path in new[] { "Office - Furnished/Office camera", "Supermarket/Office/Furniture_And_Props/Office_Camera_01" })
+        {
+            var retired = SceneObjectNames.Find(path);
+            if (retired != null && IsRetiredOfficeCamera(retired)) retired.SetActive(false);
+        }
+        if (CoffeeMachineSurface.Length == 0) return;
+        var table = SceneObjectNames.Find(CoffeeMachineSurface);
         if (table == null || !BoundsOf(table.transform, out Bounds b)) return;
-        // Opposite ends of the kitchen table, within reach from either long side.
         var coffee = FindAnyObjectByType<CoffeeMachine>();
         if (coffee != null) RestOn(coffee.transform, b, new Vector3(b.min.x + .42f, b.max.y, b.min.z + .35f));
-        var mic = FindAnyObjectByType<ClosingMic>();
-        if (mic != null)
-        {
-            mic.transform.rotation = Quaternion.LookRotation(Vector3.forward);
-            RestOn(mic.transform, b, new Vector3(b.max.x - .3f, b.max.y, b.max.z - .16f));
-        }
+    }
+
+    // The bare mesh prop the office builder used to place: named "Office camera" when authored
+    // (Office_Camera_01 in the organised scene), with no Camera and no StoreCamera beneath it.
+    // A real feed, even a disabled one, is never matched.
+    public static bool IsRetiredOfficeCamera(GameObject go)
+    {
+        if (go == null) return false;
+        if (SceneObjectNames.Original(go) != "Office camera" && go.name != "Office camera" && go.name != "Office_Camera_01") return false;
+        return go.GetComponentInChildren<StoreCamera>(true) == null && go.GetComponentInChildren<Camera>(true) == null;
     }
 
     static void RestOn(Transform fixture, Bounds table, Vector3 bottom)
@@ -97,34 +131,105 @@ public sealed class FixturePresentation : MonoBehaviour
         return found;
     }
 
-    void OnGUI()
+    // ---- the names -----------------------------------------------------------------------------
+
+    // One label per fixture, made once: a second call adds only what is new.
+    public void BuildLabels()
     {
-        if (Edition.Training || GamePause.Paused || Camera.main == null) return;
-        var eye = Camera.main;
-        if (style == null) style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 16, fontStyle = FontStyle.Bold };
-        foreach (var entry in labels)
+        foreach (var fixture in FindObjectsByType<HighlightInteractable>())
         {
-            if (entry.target == null || !entry.target.gameObject.activeInHierarchy) continue;
-            if (!BoundsOf(entry.target.transform, out Bounds b)) continue;
-            Vector3 anchor = new Vector3(b.center.x, b.max.y + .16f, b.center.z);
-            if (Vector3.Distance(eye.transform.position, b.center) > 4f) continue;
-            // Test both the fixture and its label so a high label cannot peek over a wall.
-            if (!Visible(eye.transform.position, b.center, entry.target.transform) ||
-                !Visible(eye.transform.position, anchor, entry.target.transform)) continue;
-            Vector3 pixel = eye.WorldToScreenPoint(anchor);
-            if (pixel.z <= 0) continue;
-            var rect = new Rect(pixel.x - 120, Screen.height - pixel.y - 12, 240, 24);
-            style.normal.textColor = Color.black;
-            GUI.Label(new Rect(rect.x + 1, rect.y + 1, rect.width, rect.height), entry.title, style);
-            style.normal.textColor = Color.white;
-            GUI.Label(rect, entry.title, style);
+            string title = NameOf(fixture);
+            if (title != null) AddLabel(fixture.transform, title);
+        }
+        foreach (string path in ClockPaths)
+        {
+            var clock = SceneObjectNames.Find(path);
+            if (clock != null) AddLabel(clock.transform, "Clock");
         }
     }
 
-    static bool Visible(Vector3 from, Vector3 to, Transform target)
+    public GameObject LabelOf(Transform target)
+    {
+        foreach (var l in labels) if (l.target == target) return l.root;
+        return null;
+    }
+
+    public bool AddLabel(Transform target, string title)
+    {
+        if (target == null || LabelOf(target) != null || !BoundsOf(target, out Bounds b)) return false;
+        // Not a child of the fixture: its outline is drawn round the fixture's renderers.
+        var root = new GameObject(LabelName + " - " + title);
+        root.transform.SetParent(transform, false);
+        root.transform.position = new Vector3(b.center.x, b.max.y + Above, b.center.z);
+        Text(root.transform, "Shadow", title, new Color(0f, 0f, 0f, 0.85f), new Vector3(0.004f, -0.004f, 0.004f));
+        Text(root.transform, "Text", title, Color.white, Vector3.zero);
+        root.SetActive(false);
+        labels.Add(new Label { target = target, root = root });
+        return true;
+    }
+
+    static void Text(Transform parent, string name, string text, Color colour, Vector3 local)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = local;
+        var mesh = go.AddComponent<TextMesh>();
+        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        mesh.font = font;
+        mesh.text = text;
+        mesh.fontSize = FontSize;
+        mesh.characterSize = CharacterSize;
+        mesh.anchor = TextAnchor.MiddleCenter;
+        mesh.alignment = TextAlignment.Center;
+        mesh.color = colour;
+        go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+    }
+
+    void LateUpdate()
+    {
+        if (Time.unscaledTime >= nextScan && nextScan > 0f) { nextScan = Time.unscaledTime + RescanSeconds; BuildLabels(); }
+        Camera eye = Camera.main;
+        UpdateLabels(eye != null ? eye.transform : null, Edition.Training || GamePause.Paused);
+    }
+
+    // Shows each label that is near and in the clear, turned to face the eye (yaw only).
+    public void UpdateLabels(Transform eye, bool suppressed)
+    {
+        for (int i = labels.Count - 1; i >= 0; i--)
+        {
+            Label l = labels[i];
+            if (l.target == null)
+            {
+                if (l.root != null) DestroyImmediateOrNot(l.root);
+                labels.RemoveAt(i);
+                continue;
+            }
+            Vector3 anchor = l.root.transform.position;
+            bool show = !suppressed && eye != null && l.target.gameObject.activeInHierarchy &&
+                Vector3.Distance(eye.position, anchor) <= ShowWithin && Visible(eye.position, anchor, l.target);
+            if (show)
+            {
+                Vector3 away = anchor - eye.position;
+                away.y = 0f;
+                if (away.sqrMagnitude > 1e-4f) l.root.transform.rotation = Quaternion.LookRotation(away);
+            }
+            if (show != l.shown) { l.shown = show; l.root.SetActive(show); }
+        }
+    }
+
+    static void DestroyImmediateOrNot(GameObject go)
+    {
+        if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
+    }
+
+    // True with nothing solid between the eye and the label, apart from the fixture itself.
+    public static bool Visible(Vector3 from, Vector3 to, Transform target)
     {
         Vector3 delta = to - from;
-        return !Physics.Raycast(from, delta.normalized, out RaycastHit hit, delta.magnitude, ~0, QueryTriggerInteraction.Ignore) ||
-            hit.transform == target || hit.transform.IsChildOf(target);
+        float length = delta.magnitude;
+        if (length < 1e-3f) return true;
+        foreach (RaycastHit hit in Physics.RaycastAll(from, delta / length, length, ~0, QueryTriggerInteraction.Ignore))
+            if (hit.transform != target && !hit.transform.IsChildOf(target)) return false;
+        return true;
     }
 }

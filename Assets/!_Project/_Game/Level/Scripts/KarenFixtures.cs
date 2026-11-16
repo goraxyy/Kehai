@@ -91,33 +91,93 @@ public static class KarenFixtures
 
     // ---- the PA box (B2.2) -----------------------------------------------------------------
 
-    static void PlacePaBox(Material outline)
+    public static PaBox PlacePaBox(Material outline)
     {
         Puncher clock = Object.FindAnyObjectByType<Puncher>();
-        if (clock == null) return;
+        if (clock == null) return null;
         Vector3 facing = TowardFloor(clock.transform.position);
         Vector3 across = Vector3.Cross(Vector3.up, facing).normalized;
         Vector3 at = clock.transform.position + across * PaBoxBeside;
-        at.y = FloorY(clock.transform.position) + BoxHeight;
-        PaBox.Build(Wall(at, facing), facing, outline);
+        at.y = FloorY(clock.transform.position, facing) + BoxHeight;
+        return PaBox.Build(Wall(at, facing), facing, outline);
     }
 
-    // ---- the PA microphone (0.4.1) ----------------------------------------------------------
+    // ---- the PA microphone (0.4.1; its own table 0.5.1) ------------------------------------
+
+    public const float MicTableHeight = 0.75f;   // top of the little table, metres above the floor
+    public const float MicTableAlong = 0.6f;     // along the wall
+    public const float MicTableDeep = 0.45f;     // out from the wall
+    public const string MicTableName = "PA_Microphone_Table";
 
     // On the same wall as the time clock and the PA box, one step further along: you clock in,
-    // and at closing time you say so, in the same corner.
-    static void PlaceClosingMic(Material outline)
+    // and at closing time you say so, in the same corner. The microphone stands on a small
+    // table of its own, so it is within reach of someone standing on the floor.
+    public static ClosingMic PlaceClosingMic(Material outline)
     {
         Puncher clock = Object.FindAnyObjectByType<Puncher>();
-        if (clock == null) return;
+        if (clock == null) return null;
         Vector3 facing = TowardFloor(clock.transform.position);
         Vector3 across = Vector3.Cross(Vector3.up, facing).normalized;
+        float floor = FloorY(clock.transform.position, facing);
+        float micY = floor + MicTableHeight + ClosingMic.Size.y * 0.5f + 0.01f;
+
         Vector3 at = clock.transform.position + across * (PaBoxBeside + MicBeside);
+        Vector3 wall = TableWall(at, facing, floor, micY);
         // If that end of the wall is taken (a corner, a door frame), go the other side of the clock.
-        if (Physics.CheckSphere(at + facing * 0.25f, 0.12f, ~0, QueryTriggerInteraction.Ignore))
-            at = clock.transform.position - across * PaBoxBeside;
-        at.y = FloorY(clock.transform.position) + BoxHeight;
-        ClosingMic.Build(Wall(at, facing), facing, outline);
+        if (MicTableBlocked(wall, facing, floor))
+            wall = TableWall(clock.transform.position - across * PaBoxBeside, facing, floor, micY);
+
+        BuildMicTable(wall, facing, floor);
+        // Standing on the table, its back a hand's width off the wall.
+        return ClosingMic.Build(wall + facing * 0.05f, facing, outline);
+    }
+
+    // The wall behind `at`, found at the height the microphone will stand.
+    static Vector3 TableWall(Vector3 at, Vector3 facing, float floor, float micY)
+    {
+        at.y = micY;
+        return Wall(at, facing);
+    }
+
+    static Quaternion Facing(Vector3 facing) => Quaternion.LookRotation(new Vector3(facing.x, 0f, facing.z).normalized);
+
+    static bool MicTableBlocked(Vector3 wall, Vector3 facing, float floor)
+    {
+        Vector3 centre = wall + facing * (MicTableDeep * 0.5f + 0.03f);
+        centre.y = floor + 0.4f;
+        return Physics.CheckBox(centre, new Vector3(MicTableAlong * 0.5f, 0.3f, MicTableDeep * 0.5f - 0.02f),
+            Facing(facing), ~0, QueryTriggerInteraction.Ignore);
+    }
+
+    // A plain side table: a slab on four legs, one box collider, and a carve in the NavMesh.
+    public static GameObject BuildMicTable(Vector3 wall, Vector3 facing, float floor)
+    {
+        var root = new GameObject(MicTableName);
+        Vector3 at = wall + facing * (MicTableDeep * 0.5f + 0.005f);
+        at.y = floor;
+        root.transform.SetPositionAndRotation(at, Facing(facing));
+        Color wood = new Color(0.45f, 0.33f, 0.22f);
+        Part(root.transform, "Top", new Vector3(0f, MicTableHeight - 0.02f, 0f), new Vector3(MicTableAlong, 0.04f, MicTableDeep), wood);
+        float lx = MicTableAlong * 0.5f - 0.04f, lz = MicTableDeep * 0.5f - 0.04f, lh = MicTableHeight - 0.04f;
+        foreach (float sx in new[] { -1f, 1f })
+            foreach (float sz in new[] { -1f, 1f })
+                Part(root.transform, "Leg", new Vector3(sx * lx, lh * 0.5f, sz * lz), new Vector3(0.04f, lh, 0.04f), wood);
+        var box = root.AddComponent<BoxCollider>();
+        box.size = new Vector3(MicTableAlong, MicTableHeight, MicTableDeep);
+        box.center = new Vector3(0f, MicTableHeight * 0.5f, 0f);
+        var carve = root.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+        carve.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
+        carve.size = box.size;
+        carve.center = box.center;
+        carve.carving = true;
+        return root;
+    }
+
+    static void Part(Transform parent, string name, Vector3 local, Vector3 size, Color colour)
+    {
+        GameObject go = KarenProps.Box(name, parent.position, size, colour, parent, collider: false);
+        go.transform.localPosition = local;
+        go.transform.localRotation = Quaternion.identity;
     }
 
     // ---- doors (B4.1) -----------------------------------------------------------------------
@@ -152,6 +212,23 @@ public static class KarenFixtures
     {
         Vector3 from = p + facing * 0.6f;
         return Physics.Raycast(from, -facing, out RaycastHit hit, 1.6f, ~0, QueryTriggerInteraction.Ignore) ? hit.point : p;
+    }
+
+    // The floor in front of a wall fixture at `p`. Not straight down the wall line: that lands on
+    // whatever hangs on the wall above the fixture (the wall clock over the time clock, its own
+    // collider), which put the PA box and microphone 1.7 m too high (0.5.1). Instead drop rays
+    // from the fixture's own height at three steps out into the room and take the lowest surface.
+    public static float FloorY(Vector3 p, Vector3 facing)
+    {
+        float lowest = float.MaxValue;
+        foreach (float step in new[] { 0.5f, 1f, 1.5f })
+        {
+            Vector3 from = p + facing * step;
+            from.y = p.y;
+            foreach (RaycastHit hit in Physics.RaycastAll(from, Vector3.down, 6f, ~0, QueryTriggerInteraction.Ignore))
+                if (hit.point.y < lowest) lowest = hit.point.y;
+        }
+        return lowest < float.MaxValue ? lowest : FloorY(p);
     }
 
     static float FloorY(Vector3 p) =>
