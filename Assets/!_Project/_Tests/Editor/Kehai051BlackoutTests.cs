@@ -4,7 +4,7 @@ using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-public class Kehai051EnvironmentTests
+public class Kehai051BlackoutTests
 {
     PowerSystem power;
     Material lit, unlit;
@@ -114,83 +114,5 @@ public class Kehai051EnvironmentTests
         Assert.IsFalse(lamp.enabled, "restoring mains must not cancel a separate room-light effect");
         sw.Restore();
         Assert.IsTrue(lamp.enabled);
-    }
-
-    [Test]
-    public void FogUsesNeutralColourAndBlackoutDoesNotChangeItsDistanceLimit()
-    {
-        Mains();
-        var fog = new GameObject("fog").AddComponent<FogVisuals>();
-        var apply = typeof(FogVisuals).GetMethod("Apply", Private);
-        apply.Invoke(fog, new object[] { 2f });
-        Assert.AreEqual(FogVisuals.Colour.r, FogVisuals.Colour.g);
-        Assert.AreEqual(FogVisuals.Colour.g, FogVisuals.Colour.b);
-        Assert.AreEqual(FogVisuals.Colour, RenderSettings.fogColor);
-        power.CutPower();
-        apply.Invoke(fog, new object[] { 2f });
-        Assert.AreEqual(Color.black, RenderSettings.fogColor);
-        Assert.AreEqual(2f, RenderSettings.fogEndDistance);
-        power.RestorePower();
-        apply.Invoke(fog, new object[] { 2f });
-        Assert.AreEqual(FogVisuals.Colour, RenderSettings.fogColor);
-    }
-
-    [Test]
-    public void PlacementKeepsCoffeeAndMicrophoneOnTheTable_AndOnlyRetiresTheExactUnusedCamera()
-    {
-        var room = new GameObject("Staff Room - Furnished");
-        var table = Box("Shared dining table", room.transform, new Vector3(16.8f, .4f, -142.35f), new Vector3(4.8f, .8f, 1.6f));
-        var coffee = Box("coffee", null, new Vector3(3f, 6f, 3f), new Vector3(.6f, .7f, .5f));
-        coffee.AddComponent<CoffeeMachine>();
-        var mic = Box("microphone", null, new Vector3(9f, 6f, 9f), new Vector3(.26f, .3f, .3f));
-        mic.AddComponent<ClosingMic>();
-        var office = new GameObject("Office - Furnished");
-        var old = new GameObject("Office camera"); old.transform.SetParent(office.transform);
-        var working = new GameObject("Working feed").AddComponent<Camera>();
-        FixturePresentation.ApplyPlacement();
-        FixturePresentation.BoundsOf(table.transform, out Bounds top);
-        foreach (var prop in new[] { coffee, mic })
-        {
-            FixturePresentation.BoundsOf(prop.transform, out Bounds placed);
-            Assert.AreEqual(top.max.y, placed.min.y, 1e-5f);
-            Assert.GreaterOrEqual(placed.min.x, top.min.x);
-            Assert.LessOrEqual(placed.max.x, top.max.x);
-            Assert.GreaterOrEqual(placed.min.z, top.min.z);
-            Assert.LessOrEqual(placed.max.z, top.max.z);
-            Assert.Less(placed.center.y, 1.5f, "reachable from floor level");
-        }
-        Vector3 first = coffee.transform.position;
-        FixturePresentation.ApplyPlacement();
-        Assert.AreEqual(first, coffee.transform.position, "runtime migration must be repeatable");
-        Assert.IsFalse(old.activeSelf);
-        Assert.IsTrue(working.gameObject.activeSelf);
-        old.SetActive(true);
-        old.AddComponent<Camera>().enabled = false;
-        FixturePresentation.ApplyPlacement();
-        Assert.IsTrue(old.activeSelf, "even a disabled real feed must survive");
-    }
-
-    [Test]
-    public void IslandMigrationMovesOnlyTheIdentifiedPair_AndIsRepeatable()
-    {
-        var root = new GameObject(ColdStoreBuilder.RootName);
-        var storage = new GameObject("Cold Storage Cabinets"); storage.transform.SetParent(root.transform);
-        var islands = new GameObject[2];
-        for (int i = 0; i < 2; i++)
-        {
-            islands[i] = new GameObject("Back-to-back island " + (i + 1));
-            islands[i].transform.SetParent(storage.transform);
-            Box("cabinet assembly", islands[i].transform, new Vector3(i == 0 ? 62.2f : 77.8f, 1.3f, -182.5f), new Vector3(7.2f, 2.6f, 2.8f));
-        }
-        Assert.IsTrue(ColdStoreBuilder.MoveIslandsCloser());
-        var positions = new[] { islands[0].transform.position, islands[1].transform.position };
-        Assert.IsTrue(ColdStoreBuilder.MoveIslandsCloser());
-        for (int i = 0; i < 2; i++)
-        {
-            FixturePresentation.BoundsOf(islands[i].transform, out Bounds b);
-            Assert.AreEqual(i == 0 ? 64.5f : 75.5f, b.center.x, 1e-5f);
-            Assert.AreEqual(-182.5f, b.center.z, 1e-5f);
-            Assert.AreEqual(positions[i], islands[i].transform.position);
-        }
     }
 }
