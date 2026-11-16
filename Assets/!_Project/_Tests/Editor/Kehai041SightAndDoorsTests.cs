@@ -211,4 +211,77 @@ public class Kehai041SightAndDoorsTests
         }
         finally { Object.DestroyImmediate(door.gameObject); }
     }
+
+    static void Power(bool on) => typeof(PowerSystem).GetProperty("PowerOn")
+        .GetSetMethod(true).Invoke(null, new object[] { on });
+
+    [Test]
+    public void BlackoutFreezesMovingPanelsAndRejectsEveryPoweredRequest()
+    {
+        AutoDoubleDoor door = AutoDoor(Vector3.zero);
+        try
+        {
+            Power(true);
+            door.OpenForKaren();
+            door.StepMotion(.2f);
+            Vector3 stopped = door.LeftPanel.position;
+            Power(false);
+            door.StepMotion(1f);
+            Assert.IsFalse(door.OpenForKaren());
+            door.PhantomCycle();
+            door.StepMotion(1f);
+            Assert.AreEqual(stopped, door.LeftPanel.position);
+        }
+        finally { Power(true); Object.DestroyImmediate(door.gameObject); }
+    }
+
+    [Test]
+    public void PowerRestorationFindsAnOccupantAlreadyInTheSensor()
+    {
+        AutoDoubleDoor door = AutoDoor(Vector3.zero);
+        var person = new GameObject("employee");
+        person.AddComponent<CharacterController>();
+        try
+        {
+            Power(false);
+            door.StepMotion(.1f);
+            door.PhantomCycle();
+            Assert.IsFalse(door.IsOpen);
+            typeof(AutoDoubleDoor).GetMethod("OnTriggerEnter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Invoke(door, new object[] { person.GetComponent<CharacterController>() });
+            Assert.IsFalse(door.IsOpen);
+            Physics.SyncTransforms();
+            Power(true);
+            door.StepMotion(.1f);
+            Assert.IsTrue(door.IsOpen);
+            Assert.Greater(door.Openness, 0f);
+        }
+        finally { Power(true); Object.DestroyImmediate(person); Object.DestroyImmediate(door.gameObject); }
+    }
+
+    [Test]
+    public void FurnitureDoorFlushWithFloorOpensBothWaysAndReverses()
+    {
+        Box("floor", new Vector3(0f, -.1f, 0f), new Vector3(10f, .2f, 10f));
+        var hinge = new GameObject("furniture hinge");
+        var panel = Box("leaf", new Vector3(.5f, 1f, 0f), new Vector3(1f, 2f, .05f));
+        panel.transform.SetParent(hinge.transform, true);
+        var door = hinge.AddComponent<FurnitureDoor>();
+        door.panel = panel.GetComponent<BoxCollider>();
+        door.UseFrom(Vector3.back);
+        door.StepSwing(.2f);
+        float first = Mathf.DeltaAngle(0f, hinge.transform.eulerAngles.y);
+        Assert.Greater(Mathf.Abs(first), 5f, "floor contact must not freeze the leaf");
+        door.UseFrom(Vector3.forward);
+        door.StepSwing(1f);
+        Assert.Less(Quaternion.Angle(Quaternion.identity, hinge.transform.rotation), .1f);
+        door.UseFrom(Vector3.forward);
+        door.StepSwing(.2f);
+        float other = Mathf.DeltaAngle(0f, hinge.transform.eulerAngles.y);
+        Assert.Less(first * other, 0f, "opposite approaches choose opposite swings");
+        door.UseFrom(Vector3.forward);
+        door.StepSwing(.05f);
+        door.UseFrom(Vector3.back);
+        Assert.IsTrue(door.IsOpen, "closing reverses immediately");
+    }
 }

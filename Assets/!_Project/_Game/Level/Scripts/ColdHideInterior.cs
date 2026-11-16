@@ -9,6 +9,7 @@ public sealed class ColdHideInterior : MonoBehaviour
     Renderer[] shells;
     Material[][] originals;
     bool faded;
+    void OnEnable() { Kehai.Karen.HidingPlace.Author(gameObject, interior).enabled=true; }
     void Awake()
     {
         shells=GetComponentsInChildren<Renderer>();originals=new Material[shells.Length][];
@@ -32,5 +33,5 @@ public sealed class ColdHideInterior : MonoBehaviour
             shells[i].sharedMaterials=mats;
         }
     }
-    void OnDisable(){if(faded&&shells!=null)SetFaded(false);}
+    void OnDisable(){if(faded&&shells!=null)SetFaded(false); var place=GetComponent<Kehai.Karen.HidingPlace>(); if(place!=null)place.enabled=false;}
 }

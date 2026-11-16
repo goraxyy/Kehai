@@ -137,6 +137,7 @@ public static class PublicInteriorModels
 
     static void Cabin(Transform p)
     {
+        Kehai.Karen.HidingPlace.Author(p.gameObject, HidingPlaceAuthoring.StallInterior);
         // 2.65 x 3.4m gross; 2.49 x 3.24m inside. Inward 1.5m door clears the toilet.
         B(p,"Back",0,1.35f,1.66f,2.65f,2.7f,.08f,white,true);
         foreach(float x in new[]{-1.285f,1.285f})B(p,"Side",x,1.35f,0,.08f,2.7f,3.4f,white,true);

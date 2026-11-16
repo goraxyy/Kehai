@@ -186,7 +186,7 @@ public static class EnvironmentPolishBuilder
         RenderSettings.skybox=null;RenderSettings.ambientMode=AmbientMode.Trilight;
         RenderSettings.ambientSkyColor=new Color(.004f,.006f,.012f);RenderSettings.ambientEquatorColor=new Color(.002f,.003f,.006f);RenderSettings.ambientGroundColor=new Color(.001f,.0015f,.003f);RenderSettings.reflectionIntensity=.035f;
         foreach(var light in Object.FindObjectsByType<Light>())if(light.type==LightType.Directional)
-        {Undo.RecordObject(light,"Midnight moonlight");light.color=new Color(.38f,.52f,.78f);light.intensity=.012f;light.transform.rotation=Quaternion.Euler(25,-35,0);}
+        {Undo.RecordObject(light,"Midnight moonlight");light.color=new Color(.38f,.52f,.78f);light.intensity=0f;light.transform.rotation=Quaternion.Euler(25,-35,0);}
         foreach(var camera in Object.FindObjectsByType<Camera>()){camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.006f,.01f,.022f);}
     }
 

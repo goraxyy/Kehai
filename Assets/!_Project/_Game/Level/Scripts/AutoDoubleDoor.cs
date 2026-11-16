@@ -25,7 +25,48 @@ public class AutoDoubleDoor : MonoBehaviour
     // Every automatic door in the loaded scene, for whoever has to have one opened ahead of them.
     static readonly List<AutoDoubleDoor> all = new List<AutoDoubleDoor>();
     public static IReadOnlyList<AutoDoubleDoor> All => all;
-    void OnEnable() => all.Add(this);
+    void OnEnable()
+    {
+        if (!all.Contains(this)) all.Add(this);
+        PowerSystem.PowerChanged += PowerChanged;
+    }
+    readonly List<UnityEngine.AI.NavMeshObstacle> powerObstacles = new List<UnityEngine.AI.NavMeshObstacle>();
+    bool powerWasOn = true;
+
+    void PowerChanged(bool powered)
+    {
+        powerWasOn = powered;
+        karenUntil = -1f;
+        foreach (var obstacle in powerObstacles) if (obstacle != null) obstacle.enabled = !powered;
+        if (!powered) return;
+        // Triggers may not send Enter again for somebody already standing in the sensor.
+        occupants.Clear();
+        if (TryGetComponent(out BoxCollider sensor))
+        {
+            Vector3 size = Vector3.Scale(sensor.size, sensor.transform.lossyScale);
+            foreach (Collider other in Physics.OverlapBox(sensor.transform.TransformPoint(sensor.center),
+                size * .5f, sensor.transform.rotation, ~0, QueryTriggerInteraction.Ignore))
+                if (IsCharacter(other)) occupants.Add(other);
+        }
+        isOpen = occupants.Count > 0;
+        closeAt = isOpen ? float.PositiveInfinity : Time.time + closeDelay;
+    }
+
+    void AddPowerObstacles(Transform leaf)
+    {
+        foreach (BoxCollider panel in leaf.GetComponentsInChildren<BoxCollider>())
+        {
+            if (panel.isTrigger) continue;
+            var obstacle = panel.gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            obstacle.shape = UnityEngine.AI.NavMeshObstacleShape.Box;
+            obstacle.center = panel.center;
+            obstacle.size = panel.size;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = false;
+            obstacle.enabled = !PowerSystem.PowerOn;
+            powerObstacles.Add(obstacle);
+        }
+    }
 
     // How far ahead the sensor reaches for someone moving at `speed`: far enough that the panels
     // (which take slideDistance / slideSpeed seconds) are open by the time they arrive. Karen
@@ -68,6 +109,7 @@ public class AutoDoubleDoor : MonoBehaviour
     // authored hers, so her own ears don't take it for you. False if they were already open.
     public bool OpenForKaren()
     {
+        if (!PowerSystem.PowerOn) return false;
         karenUntil = Time.time + KarenHold;
         closeAt = float.PositiveInfinity;
         if (isOpen) return false;
@@ -107,10 +149,17 @@ public class AutoDoubleDoor : MonoBehaviour
         rightClosed = rightDoor.position;
         leftOpen = leftClosed + transform.right * slideDistance;
         rightOpen = rightClosed + transform.right * -slideDistance;
+        AddPowerObstacles(leftDoor);
+        AddPowerObstacles(rightDoor);
+        powerWasOn = PowerSystem.PowerOn;
     }
 
-    void Update()
+    void Update() => StepMotion(Time.deltaTime);
+
+    public void StepMotion(float dt)
     {
+        if (powerWasOn != PowerSystem.PowerOn) PowerChanged(PowerSystem.PowerOn);
+        if (!PowerSystem.PowerOn || GamePause.Paused) return;
         if (leftDoor == null || rightDoor == null) return;
         int before = occupants.Count;
         occupants.RemoveWhere(c => c == null || !c.enabled || !c.gameObject.activeInHierarchy);
@@ -126,13 +175,13 @@ public class AutoDoubleDoor : MonoBehaviour
         Vector3 leftTarget = isOpen ? leftOpen : leftClosed;
         Vector3 rightTarget = isOpen ? rightOpen : rightClosed;
 
-        leftDoor.position = Vector3.MoveTowards(leftDoor.position, leftTarget, slideSpeed * Time.deltaTime);
-        rightDoor.position = Vector3.MoveTowards(rightDoor.position, rightTarget, slideSpeed * Time.deltaTime);
+        leftDoor.position = Vector3.MoveTowards(leftDoor.position, leftTarget, slideSpeed * dt);
+        rightDoor.position = Vector3.MoveTowards(rightDoor.position, rightTarget, slideSpeed * dt);
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (!IsCharacter(other) || !occupants.Add(other)) return;
+        if (!PowerSystem.PowerOn || !IsCharacter(other) || !occupants.Add(other)) return;
         closeAt = float.PositiveInfinity;
 
         // Only on the closed -> open transition: a second body walking in behind the
@@ -165,12 +214,12 @@ public class AutoDoubleDoor : MonoBehaviour
             || other.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null;
     }
 
-    void OnDisable() { all.Remove(this); occupants.Clear(); isOpen = false; closeAt = float.PositiveInfinity; karenUntil = -1f; }
+    void OnDisable() { PowerSystem.PowerChanged -= PowerChanged; all.Remove(this); occupants.Clear(); isOpen = false; closeAt = float.PositiveInfinity; karenUntil = -1f; }
 
     // The phantom chime (Karen.md §8.3): the doors cycle with nobody there.
     public void PhantomCycle()
     {
-        if (isOpen) return;
+        if (!PowerSystem.PowerOn || isOpen) return;
         isOpen = true;
         OneShotAudio.PlayAt(openChime, transform.position, chimeVolume);
         closeAt = Time.time + closeDelay;

@@ -164,7 +164,7 @@ public class HingeDoor : MonoBehaviour
             toOpener.y = 0f;
             float plus = Vector3.Dot(Quaternion.Euler(0f, openAngle, 0f) * along, toOpener);
             float minus = Vector3.Dot(Quaternion.Euler(0f, -openAngle, 0f) * along, toOpener);
-            float angle = fixedSwingDirection ? openAngle : plus < minus ? openAngle : -openAngle;
+            float angle = plus < minus ? openAngle : -openAngle;
             openRot = Quaternion.Euler(closedRot.eulerAngles + new Vector3(0, angle, 0));
             openedAt = Time.time;
         }
@@ -200,12 +200,37 @@ public class HingeDoor : MonoBehaviour
     // One step of the swing. Update drives it; public so a test can.
     public void StepSwing(float dt)
     {
-        if (!isMoving) return;
-        transform.rotation = Quaternion.Lerp(transform.rotation, swingTarget, openSpeed * dt);
+        if (!isMoving || GamePause.Paused) return;
+        Quaternion next = Quaternion.Lerp(transform.rotation, swingTarget, openSpeed * dt);
+        float remaining = Quaternion.Angle(transform.rotation, next);
+        while (remaining > .001f)
+        {
+            float step = Mathf.Min(remaining, 2f);
+            Quaternion candidate = Quaternion.RotateTowards(transform.rotation, next, step);
+            if (SwingBlocked(candidate)) return;
+            transform.rotation = candidate;
+            remaining -= step;
+        }
         if (Quaternion.Angle(transform.rotation, swingTarget) > 0.1f) return;
         transform.rotation = swingTarget;
         isMoving = false;
         if (openCarve != null) openCarve.enabled = isOpen;
+    }
+
+    readonly Collider[] swingOverlaps = new Collider[64];
+    bool SwingBlocked(Quaternion rotation)
+    {
+        if (panel == null) return false;
+        Quaternion delta = rotation * Quaternion.Inverse(transform.rotation);
+        Vector3 center = transform.position + delta * (panel.transform.TransformPoint(panel.center) - transform.position);
+        Vector3 half = Vector3.Scale(panel.size, panel.transform.lossyScale);
+        for (int i = 0; i < 3; i++) half[i] = Mathf.Max(.001f, Mathf.Abs(half[i]) * .5f - .005f);
+        int count = Physics.OverlapBoxNonAlloc(center, half, swingOverlaps,
+            delta * panel.transform.rotation, ~0, QueryTriggerInteraction.Ignore);
+        if (count == swingOverlaps.Length) return true;
+        for (int i = 0; i < count; i++)
+            if (!swingOverlaps[i].transform.IsChildOf(transform)) return true;
+        return false;
     }
 
     // A physical block has its own lifetime. Removing it must not cancel a separate lock.

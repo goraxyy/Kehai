@@ -399,7 +399,7 @@ namespace Kehai.Karen
 
             if (!config.Features.Belief)
             {
-                SimpleGuard(dt);
+                if (!PursueWitnessedHide()) SimpleGuard(dt);
                 TickDirector(dt);
                 return;
             }
@@ -424,6 +424,8 @@ namespace Kehai.Karen
                 ExpireClosures();
                 return;
             }
+
+            if (PursueWitnessedHide()) { ExpireClosures(); return; }
 
             decideTimer += dt;
             if (decideNow || decideTimer >= 1f / config.decideHz)
@@ -1247,6 +1249,38 @@ namespace Kehai.Karen
             Note("EFFECT", $"EFFECT   {label} ({by} {Time.time - toldAt:0.0}s before)");
 
         void OnPaChime(PaAnnouncement a) => RecordTell(TellKind.PaChime, Body.Position, PaSystem.ChimeSeconds);   // storewide; logged where she is
+        HidingPlace pursuingHide;
+        Vector3 hidingDestination;
+        float hidingPathAt;
+
+        bool PursueWitnessedHide()
+        {
+            if (Body.IsStunned) return true;
+            WitnessedHide memory = Body.Sight.HiddenEntry;
+            if (!memory.Active)
+            {
+                if (pursuingHide != null) { pursuingHide = null; decideNow = true; }
+                return false;
+            }
+            if (pursuingHide != memory.Place)
+            {
+                pursuingHide = memory.Place;
+                AbortPlan();
+                hidingPathAt = -999f;
+                if (!chasing) SetChasing(true);
+                Note("SENSE", "saw entry into hiding; approaching the remembered entrance");
+            }
+            if (Body.Sight.CanCatchWitnessedHide(Body.Position)) { Kill(); return true; }
+            if (Time.time - hidingPathAt >= 1f)
+            {
+                hidingPathAt = Time.time;
+                hidingDestination = HidingApproach.ClosestReachable(Body.Agent, memory.Position);
+                Body.MoveTo(hidingDestination, KarenBody.Pace.Run);
+            }
+            if (Body.Arrived(0.4f)) Body.TurnToward(memory.Position + Vector3.up);
+            return true;
+        }
+
         void OnPaSpeech(PaAnnouncement a)
         {
             RecordToldEffect("PA: " + a.Text, "chime", a.Started);

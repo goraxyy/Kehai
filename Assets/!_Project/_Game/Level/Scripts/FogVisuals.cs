@@ -19,7 +19,7 @@ using UnityEngine;
 // ends at the visibility while you're in the fog. (Elsewhere: Minecraft's render distance fog.)
 public sealed class FogVisuals : MonoBehaviour
 {
-    public static readonly Color Colour = new Color(0.82f, 0.85f, 0.88f);
+    public static readonly Color Colour = new Color(0.85f, 0.85f, 0.85f);
 
     static FogVisuals instance;
     readonly Dictionary<string, List<ParticleSystem>> pouring = new Dictionary<string, List<ParticleSystem>>();
@@ -126,7 +126,7 @@ public sealed class FogVisuals : MonoBehaviour
     {
         if (ps == null) return;
         Renderer r = ps.GetComponent<Renderer>();
-        if (r != null && r.enabled != show) r.enabled = show;
+        if (r != null && r.enabled != (show && PowerSystem.PowerOn)) r.enabled = show && PowerSystem.PowerOn;
     }
 
     void Apply(float visibility)
@@ -145,7 +145,7 @@ public sealed class FogVisuals : MonoBehaviour
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogStartDistance = Mathf.Min(0.3f, visibility * 0.2f);
         RenderSettings.fogEndDistance = visibility;
-        RenderSettings.fogColor = Colour;
+        RenderSettings.fogColor = PowerSystem.PowerOn ? Colour : Color.black;
     }
 
     void Restore()

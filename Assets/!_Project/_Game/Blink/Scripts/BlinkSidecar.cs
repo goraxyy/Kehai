@@ -55,8 +55,16 @@ namespace Kehai.Blink
                     var info = new ProcessStartInfo(exe, "--list-cameras") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                     using (Process p = Process.Start(info))
                     {
-                        string text = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-                        p.WaitForExit(3000);
+                        var stdout = p.StandardOutput.ReadToEndAsync();
+                        var stderr = p.StandardError.ReadToEndAsync();
+                        if (!p.WaitForExit(3000))
+                        {
+                            try { p.Kill(); } catch { }
+                            Problem = "Camera enumeration timed out; retry after checking the camera connection.";
+                            cameras = null;
+                            return new string[0];
+                        }
+                        string text = stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult();
                         cameras = text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 2 && char.IsDigit(l[0]) && l.Contains(":")).ToArray();
                     }
                 }
@@ -90,7 +98,7 @@ namespace Kehai.Blink
             get
             {
                 if (Application.platform != RuntimePlatform.OSXEditor && Application.platform != RuntimePlatform.OSXPlayer) return null;
-                foreach (string path in new[] { Path.Combine(ProjectRoot, "tools/blink/mac/build/BlinkVision"), Path.GetFullPath(Path.Combine(Application.dataPath, "../../BlinkVision")) })
+                foreach (string path in new[] { Path.Combine(Application.dataPath, "Helpers/BlinkVision"), Path.Combine(ProjectRoot, "tools/blink/mac/build/BlinkVision"), Path.GetFullPath(Path.Combine(Application.dataPath, "../../BlinkVision")) })
                     if (File.Exists(path)) return path;
                 return null;
             }
@@ -133,6 +141,7 @@ namespace Kehai.Blink
         public static bool Start(int port)
         {
             if (Running) return true;
+            Stop(); // Dispose an exited helper before creating its replacement.
             Problem = "";
             foreach (var (exe, args, name) in Candidates(port))
             {
@@ -165,7 +174,7 @@ namespace Kehai.Blink
             }
             if (string.IsNullOrEmpty(Problem))
                 Problem = Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.OSXPlayer
-                    ? "The camera helper isn't built yet. In a terminal, run:  tools/blink/mac/build.sh"
+                    ? (Application.isEditor ? "Build the camera helper: Kehai → Blink → Build Camera Helper." : "The camera helper is missing from this app. Reinstall a complete macOS build.")
                     : "No camera helper found. Set up tools/blink (see tools/blink/README.md).";
             return false;
         }

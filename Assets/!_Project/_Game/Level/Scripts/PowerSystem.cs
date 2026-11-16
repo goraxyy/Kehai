@@ -30,23 +30,23 @@ public class PowerSystem : MonoBehaviour
     // a flat wash. It is driven by the mains, which is what keeps a blackout black.
     [Header("Bounce light (while powered)")]
     [Tooltip("Fill on upward-facing surfaces — shelf tops, which the cones already hit.")]
-    public Color bounceFromAbove = new Color(0.035f, 0.036f, 0.042f);
+    public Color bounceFromAbove = new Color(0.001f, 0.001f, 0.001f);
 
     [Tooltip("Fill on walls and anything vertical.")]
-    public Color bounceFromSides = new Color(0.070f, 0.070f, 0.076f);
+    public Color bounceFromSides = new Color(0.001f, 0.001f, 0.001f);
 
     [Tooltip("Fill on downward-facing surfaces — the ceiling and undersides catching floor bounce.")]
-    public Color bounceFromBelow = new Color(0.130f, 0.125f, 0.110f);
+    public Color bounceFromBelow = new Color(0.001f, 0.001f, 0.001f);
 
     [Range(0f, 1f)]
     public float poweredReflections = 0.25f;
 
     [Header("Blackout")]
     [Tooltip("What is left to see by once the mains are down.")]
-    public Color blackoutAmbient = new Color(0.006f, 0.006f, 0.010f);
+    public Color blackoutAmbient = Color.black;
 
     [Range(0f, 1f)]
-    public float blackoutReflections = 0.02f;
+    public float blackoutReflections = 0f;
 
     [Min(0f)]
     [Tooltip("How long the fill takes to come up or die away.")]
@@ -75,7 +75,17 @@ public class PowerSystem : MonoBehaviour
         Instance = this;
 
         if (musicBox == null) musicBox = FindAnyObjectByType<MusicBox>();
+        // This is a code-authored profile, including scenes serialized before 0.5.1.
+        bounceFromAbove = bounceFromSides = bounceFromBelow = new Color(.001f, .001f, .001f);
+        blackoutAmbient = Color.black;
+        blackoutReflections = 0f;
+        RenderSettings.skybox = null;
+        foreach (Light light in FindObjectsByType<Light>())
+            if (light.type == LightType.Directional) light.intensity = 0f;
         Collect();
+        foreach (Light light in lights)
+            if (light != null && light.type != LightType.Directional) light.intensity *= 1.5f;
+        if (GetComponent<BlackoutRendering>() == null) gameObject.AddComponent<BlackoutRendering>();
     }
 
     void Start()
@@ -121,6 +131,7 @@ public class PowerSystem : MonoBehaviour
     {
         if (!HasPower) return;
 
+        ambientBlend = 0f; // No ambient fade is allowed to illuminate an outage.
         HasPower = false;
         Apply();
         OneShotAudio.PlayAt(powerDownSound, PlayerPosition());

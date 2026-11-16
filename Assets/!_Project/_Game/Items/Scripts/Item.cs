@@ -104,6 +104,13 @@ public class Item : MonoBehaviour
     Rigidbody rb;
     Collider[] colliders;
     float nextImpactTime;
+    public int ReleaseVersion { get; private set; }
+    public float PhysicsSpeed { get; private set; }
+
+    void FixedUpdate()
+    {
+        PhysicsSpeed = rb != null && !rb.isKinematic ? rb.linearVelocity.magnitude : 0f;
+    }
 
     // Every item that exists, stowed ones too (the replay recorder follows items off their shelves).
     static readonly System.Collections.Generic.List<Item> all = new System.Collections.Generic.List<Item>();
@@ -118,6 +125,7 @@ public class Item : MonoBehaviour
     {
         all.Add(this);
         rb = GetComponent<Rigidbody>();
+        if (!rb.isKinematic) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         // Every collider, not just the one on the root. The mop keeps two more on its
         // children, and leaving those live while carried let them swing across the
@@ -186,10 +194,13 @@ public class Item : MonoBehaviour
         gameObject.SetActive(true);
         isCarried = carried;
         isOnShelf = false;
+        if (!carried) ReleaseVersion++;
 
         if (rb != null)
         {
+            rb.collisionDetectionMode = carried ? CollisionDetectionMode.Discrete : CollisionDetectionMode.ContinuousSpeculative;
             rb.isKinematic = carried;
+            if (!carried) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rb.useGravity = !carried;
         }
 
@@ -215,6 +226,7 @@ public class Item : MonoBehaviour
 
         if (rb != null)
         {
+            rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
             rb.isKinematic = true;
             rb.useGravity = false;
         }

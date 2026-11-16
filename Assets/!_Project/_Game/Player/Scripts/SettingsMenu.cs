@@ -401,7 +401,8 @@ public sealed class SettingsMenu : MonoBehaviour
     // Along the bottom: back to the game, or out of the shift, each asked once.
     void DrawBar(Rect r)
     {
-        float gap = size * 0.5f, w = size * 7.5f;
+        float gap = Mathf.Min(size * 0.5f, r.width * 0.02f);
+        float w = Mathf.Max(0f, (r.width - gap * 3f) / 4f);
         if (fromMainMenu)
         {
             if (Button(new Rect(r.x, r.y, w, r.height), "BACK", true)) Close();
@@ -419,8 +420,8 @@ public sealed class SettingsMenu : MonoBehaviour
             return;
         }
         if (Button(new Rect(r.x, r.y, w, r.height), "RESUME", true)) Close();
-        if (Button(new Rect(r.x + w + gap, r.y, w * 1.25f, r.height), "RESTART SHIFT")) confirmingRestart = true;
-        if (Button(new Rect(r.x + w * 2.25f + gap * 2f, r.y, w * 1.1f, r.height), "MAIN MENU")) confirmingMenu = true;
+        if (Button(new Rect(r.x + w + gap, r.y, w, r.height), "RESTART")) confirmingRestart = true;
+        if (Button(new Rect(r.x + (w + gap) * 2f, r.y, w, r.height), "MAIN MENU")) confirmingMenu = true;
         if (Button(new Rect(r.xMax - w, r.y, w, r.height), Application.isEditor ? "STOP" : "QUIT")) Quit();
     }
 

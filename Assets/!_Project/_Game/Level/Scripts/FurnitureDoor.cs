@@ -12,10 +12,11 @@ public sealed class FurnitureDoor : HighlightInteractable
     public BoxCollider panel;
     public HingeDoor roomDoor;
     public bool IsOpen => roomDoor != null ? roomDoor.IsOpen : wantsOpen;
-    public bool IsFullyOpen => roomDoor != null ? roomDoor.IsOpen : Mathf.Abs(angle - openAngle) < 2f;
+    public bool IsFullyOpen => roomDoor != null ? roomDoor.IsOpen : Mathf.Abs(angle - chosenOpenAngle) < 2f;
 
     Quaternion closed;
     float angle;
+    float chosenOpenAngle;
     bool wantsOpen;
     readonly Collider[] overlaps = new Collider[32];
 
@@ -23,6 +24,7 @@ public sealed class FurnitureDoor : HighlightInteractable
     {
         base.Awake();
         closed = transform.localRotation;
+        chosenOpenAngle = openAngle;
         if (assembly == null) assembly = transform.parent;
         if (roomDoor == null && panel != null)
         {
@@ -41,7 +43,7 @@ public sealed class FurnitureDoor : HighlightInteractable
         else
         {
             if (GetComponent<FreezerAlarm>() is FreezerAlarm alarm && alarm.Ringing) alarm.Close();
-            else wantsOpen = !wantsOpen;
+            else UseFrom(player.transform.position);
         }
     }
     public override string GetPrompt() =>
@@ -49,11 +51,26 @@ public sealed class FurnitureDoor : HighlightInteractable
         : roomDoor != null && roomDoor.Locked ? "Locked" : (IsOpen ? "Close " : "Open ") + label;
     public void SetOpen(bool open) { if(roomDoor==null)wantsOpen=open; }
 
-    void Update()
+    public void UseFrom(Vector3 from)
+    {
+        if (!wantsOpen && Mathf.Abs(angle) < .1f && panel != null)
+        {
+            Vector3 along = panel.bounds.center - transform.position;
+            Vector3 toOpener = from - panel.bounds.center;
+            float magnitude = Mathf.Abs(openAngle);
+            chosenOpenAngle = Vector3.Dot(Quaternion.AngleAxis(magnitude, transform.up) * along, toOpener)
+                < Vector3.Dot(Quaternion.AngleAxis(-magnitude, transform.up) * along, toOpener) ? magnitude : -magnitude;
+        }
+        wantsOpen = !wantsOpen;
+    }
+
+    void Update() => StepSwing(Time.deltaTime);
+
+    public void StepSwing(float dt)
     {
         if (roomDoor != null || GamePause.Paused || panel == null) return;
-        float target = wantsOpen ? openAngle : 0f;
-        float remaining = Mathf.Min(Mathf.Abs(target - angle), degreesPerSecond * Time.deltaTime);
+        float target = wantsOpen ? chosenOpenAngle : 0f;
+        float remaining = Mathf.Min(Mathf.Abs(target - angle), degreesPerSecond * dt);
         // Subdivide even after a slow frame so a leaf cannot skip through the player.
         while (remaining > 0.001f)
         {
@@ -74,8 +91,11 @@ public sealed class FurnitureDoor : HighlightInteractable
         Vector3 centerInHinge = transform.InverseTransformPoint(panel.transform.TransformPoint(panel.center));
         Vector3 center = transform.position + worldRotation * Vector3.Scale(centerInHinge, scale);
         Vector3 size = Vector3.Scale(panel.size, panel.transform.lossyScale);
-        int count = Physics.OverlapBoxNonAlloc(center, size * 0.5f + Vector3.one * 0.008f,
-            overlaps, worldRotation, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < 3; i++) size[i] = Mathf.Max(.001f, Mathf.Abs(size[i]) * .5f - .005f);
+        Quaternion panelRotation = worldRotation * Quaternion.Inverse(transform.rotation) * panel.transform.rotation;
+        // Inset the query: a leaf resting flush above the floor must not block itself forever.
+        int count = Physics.OverlapBoxNonAlloc(center, size,
+            overlaps, panelRotation, ~0, QueryTriggerInteraction.Ignore);
         if (count == overlaps.Length) return true;
         for (int i = 0; i < count; i++)
         {

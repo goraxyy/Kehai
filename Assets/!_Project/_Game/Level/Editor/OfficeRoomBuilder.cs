@@ -96,7 +96,7 @@ public static class OfficeRoomBuilder
         Place("TallCabinet","Archive cabinet 02",21.75f,northFace-.3f,0);
         Place("TallPlant","Office northeast plant",East-.42f,northFace-.42f,0);
         Place("WallClock","Office clock",17.25f,northFace-.03f,0,2.65f);
-        Place("SecurityCamera","Office camera",East-.22f,northFace-.4f,90,2.9f);
+        // The old decorative office camera had no feed. Working StoreCameras are separate.
 
         for(int i=0;i<3;i++)Place("FilingCabinet","Filing cabinet "+(i+1),West+.325f,-129.2f-i*.85f,-90);
         Place("Binders","Filing reference binders",West+.2f,-130.05f,-90,1.36f);

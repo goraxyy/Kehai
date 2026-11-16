@@ -40,6 +40,7 @@ public static class EnvironmentFitBuilder
         var prior=GameObject.Find(RootName);if(prior!=null)Undo.DestroyObjectImmediate(prior);
         var root=new GameObject(RootName).transform;Undo.RegisterCreatedObjectUndo(root.gameObject,"Fit environment fixtures");
         RemoveRetiredProps();
+        FixturePresentation.ApplyPlacement();
         EnvironmentPolishBuilder.RefitDoorsAndUtilities();
         AlignSharedWall(root);FitLockersAndWhiteboard();FinishWallSurfaces();
         foreach(var lamp in Object.FindObjectsByType<Light>())

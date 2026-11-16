@@ -13,6 +13,40 @@ public static class ColdStoreBuilder
     public const float CabinetDepth=1.4f;
     static Material shell,trim,steel,glass;
     static Transform root;
+    [MenuItem("Kehai/Cold Storage/Move Existing Islands Closer")]
+    public static void MoveExistingIslandsCloser()
+    {
+        if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Move islands in edit mode.");
+        if (!MoveIslandsCloser()) return;
+        StaffRoomBuilder.BakeNavigation();
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+    }
+
+    // Preserve the authored cabinets, hinges, stock, hiding volumes and their references.
+    // Measure the assembly rather than its pivot (the original islands' pivots were at zero).
+    public static bool MoveIslandsCloser()
+    {
+        var islands = new Transform[2];
+        var bounds = new Bounds[2];
+        for (int i = 0; i < islands.Length; i++)
+        {
+            var go = SceneObjectNames.Find(RootName + "/Cold Storage Cabinets/Back-to-back island " + (i + 1));
+            if (go == null || !FixturePresentation.BoundsOf(go.transform, out bounds[i]))
+            {
+                Debug.LogWarning("Cold islands: exact authored pair was not found; nothing moved.");
+                return false;
+            }
+            islands[i] = go.transform;
+        }
+        for (int i = 0; i < islands.Length; i++)
+        {
+            float target = i == 0 ? 64.5f : 75.5f;
+            Undo.RecordObject(islands[i], "Move cold islands closer");
+            islands[i].position += Vector3.right * (target - bounds[i].center.x);
+        }
+        return true;
+    }
+
     public static Material Glass(string name,float alpha)
     {
         var m=StaffRoomModels.Material(name,new Color(.64f,.82f,.85f,alpha));
@@ -105,8 +139,9 @@ public static class ColdStoreBuilder
         WallRun(storage,-188.525f,-176.475f,84.925f,90,products,ref next,new int[0]);
         foreach(float x in new[]{55.775f,84.225f})foreach(float z in new[]{-175.775f,-189.225f})
             Primitive(storage,"Insulated corner closure",new Vector3(x,1.3f,z),new Vector3(CabinetDepth,2.6f,CabinetDepth),shell,true);
+        // 7.2m islands leave a 3.8m central passage; the north/south door aisles stay unchanged.
         int islandNumber=0;
-        foreach(float centre in new[]{62.2f,77.8f})
+        foreach(float centre in new[]{64.5f,75.5f})
         {
             var island=new GameObject("Back-to-back island "+(++islandNumber)).transform;island.SetParent(storage,false);
             foreach(float x in new[]{centre-2.7f,centre-.9f,centre+.9f,centre+2.7f})foreach(float z in new[]{-182.5f+CabinetDepth*.5f,-182.5f-CabinetDepth*.5f})
