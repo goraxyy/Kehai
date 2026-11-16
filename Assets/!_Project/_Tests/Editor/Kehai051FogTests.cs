@@ -65,4 +65,33 @@ public class Kehai051FogTests
         apply.Invoke(fog, new object[] { 2f });
         Assert.AreEqual(FogVisuals.Colour, RenderSettings.fogColor);
     }
+
+    [Test]
+    public void FogCloudsAreNeutralGreyAndStayHiddenInABlackout()
+    {
+        Mains();
+        GameObject cloud = KarenFogCloud();
+        ParticleSystem ps = cloud.GetComponent<ParticleSystem>();
+        FogVisuals.Neutralise(ps);
+        Color start = ps.main.startColor.color;
+        Assert.AreEqual(start.r, start.g, 0.001f);
+        Assert.AreEqual(start.g, start.b, 0.001f);
+        Color tint = cloud.GetComponent<ParticleSystemRenderer>().sharedMaterial.color;
+        Assert.AreEqual(tint.r, tint.b, 0.001f, "material tint is not blue");
+
+        var draw = typeof(FogVisuals).GetMethod("Draw", BindingFlags.Static | BindingFlags.NonPublic);
+        var renderer = cloud.GetComponent<Renderer>();
+        draw.Invoke(null, new object[] { ps, true });
+        Assert.IsTrue(renderer.enabled, "shown with the lights on");
+        power.CutPower();
+        draw.Invoke(null, new object[] { ps, true });
+        Assert.IsFalse(renderer.enabled, "a blackout hides the cloud, so it cannot glow");
+        power.RestorePower();
+        draw.Invoke(null, new object[] { ps, true });
+        Assert.IsTrue(renderer.enabled, "power back, the cloud returns");
+        draw.Invoke(null, new object[] { ps, false });
+        Assert.IsFalse(renderer.enabled, "still hidden from other rooms");
+    }
+
+    static GameObject KarenFogCloud() => Kehai.Karen.FogCloud.Build(Vector3.zero, 1f, 5f).gameObject;
 }

@@ -142,12 +142,12 @@ public sealed class SettingsMenu : MonoBehaviour
     {
         if (!Visible) return;
         GUI.depth = -100;
-        size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 42f, 15f, 36f));
+        size = UiSize(Screen.height);
         Styles();
 
         Fill(new Rect(0f, 0f, Screen.width, Screen.height), UiTheme.Scrim);
         // The Tricks tab is wider: a list beside a video.
-        float w = Mathf.Min(size * (tab == Tab.Tricks ? 46f : 34f), Screen.width - size * 2f);
+        float w = PanelWidth(Screen.width, size, tab == Tab.Tricks);
         var panel = new Rect((Screen.width - w) * 0.5f, size, w, Screen.height - size * 2f);
         Fill(panel, Black, size * 0.9f);
         Fill(new Rect(panel.x + size * 1.2f, panel.y + size * 0.45f, size * 2.4f, Mathf.Max(3f, size * 0.18f)), Red, size);
@@ -398,31 +398,67 @@ public sealed class SettingsMenu : MonoBehaviour
         }
     }
 
+    // ---- footer layout (pure, so the tests can check it at any resolution) ------------------------
+
+    public const int FooterSlots = 4;   // RESUME, RESTART, MAIN MENU, QUIT (BACK and the asks use the same slots)
+
+    // The menu's text size: a 42nd of the screen height, between 15 and 36 (there's no separate UI scale).
+    public static int UiSize(int screenHeight) => Mathf.RoundToInt(Mathf.Clamp(screenHeight / 42f, 15f, 36f));
+
+    public static float PanelWidth(int screenWidth, float size, bool tricks) =>
+        Mathf.Min(size * (tricks ? 46f : 34f), screenWidth - size * 2f);
+
+    // `count` equal buttons side by side across the bar: same top and height, the first on the bar's
+    // left edge and the last on its right edge, one gap between neighbours.
+    public static Rect[] FooterButtons(Rect bar, int count, float size)
+    {
+        float gap = Mathf.Min(size * 0.5f, bar.width * 0.02f);
+        float w = Mathf.Max(0f, (bar.width - gap * (count - 1)) / count);
+        var rects = new Rect[count];
+        for (int i = 0; i < count; i++) rects[i] = new Rect(bar.x + i * (w + gap), bar.y, w, bar.height);
+        return rects;
+    }
+
+    // Widest footer label is MAIN MENU (9 capitals, about 0.7 em each, plus padding): about 7.4 em.
+    public const float FooterLabelEm = 7.4f;
+
+    // The footer text size: the menu's, shrunk only if the widest label would not fit its button.
+    public static int FooterFontSize(float buttonWidth, int size) =>
+        Mathf.Clamp(Mathf.FloorToInt(buttonWidth / FooterLabelEm), 8, size);
+
     // Along the bottom: back to the game, or out of the shift, each asked once.
     void DrawBar(Rect r)
     {
-        float gap = Mathf.Min(size * 0.5f, r.width * 0.02f);
-        float w = Mathf.Max(0f, (r.width - gap * 3f) / 4f);
+        int was = centred.fontSize;
+        centred.fontSize = FooterFontSize(FooterButtons(r, FooterSlots, size)[0].width, size);
+        DrawBarButtons(r);
+        centred.fontSize = was;
+    }
+
+    void DrawBarButtons(Rect r)
+    {
+        Rect[] slot = FooterButtons(r, FooterSlots, size);
+        float w = slot[0].width, gap = slot[1].x - slot[0].xMax;
         if (fromMainMenu)
         {
-            if (Button(new Rect(r.x, r.y, w, r.height), "BACK", true)) Close();
+            if (Button(slot[0], "BACK", true)) Close();
             return;
         }
         if (confirmingRestart || confirmingMenu)
         {
             string question = confirmingRestart ? "Restart this shift? Its progress is lost." : "Leave the shift for the main menu?";
             GUI.Label(new Rect(r.x, r.y, r.width - (w + gap) * 2f, r.height), question, text);
-            if (Button(new Rect(r.xMax - w * 2f - gap, r.y, w, r.height), "YES", true))
+            if (Button(slot[2], "YES", true))
             {
                 if (confirmingRestart) restartNow = true; else menuNow = true;
             }
-            if (Button(new Rect(r.xMax - w, r.y, w, r.height), "NO")) confirmingRestart = confirmingMenu = false;
+            if (Button(slot[3], "NO")) confirmingRestart = confirmingMenu = false;
             return;
         }
-        if (Button(new Rect(r.x, r.y, w, r.height), "RESUME", true)) Close();
-        if (Button(new Rect(r.x + w + gap, r.y, w, r.height), "RESTART")) confirmingRestart = true;
-        if (Button(new Rect(r.x + (w + gap) * 2f, r.y, w, r.height), "MAIN MENU")) confirmingMenu = true;
-        if (Button(new Rect(r.xMax - w, r.y, w, r.height), Application.isEditor ? "STOP" : "QUIT")) Quit();
+        if (Button(slot[0], "RESUME", true)) Close();
+        if (Button(slot[1], "RESTART")) confirmingRestart = true;
+        if (Button(slot[2], "MAIN MENU")) confirmingMenu = true;
+        if (Button(slot[3], Application.isEditor ? "STOP" : "QUIT")) Quit();
     }
 
     // ---- the pieces ---------------------------------------------------------------------------

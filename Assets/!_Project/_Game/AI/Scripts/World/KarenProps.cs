@@ -190,7 +190,7 @@ namespace Kehai.Karen
             main.startLifetime = 9f;
             main.startSpeed = 0.25f;
             main.startSize = new ParticleSystem.MinMaxCurve(2.5f, 4.5f);
-            main.startColor = new Color(0.85f, 0.9f, 0.95f, 0.35f);
+            main.startColor = new Color(0.85f, 0.85f, 0.85f, 0.35f);   // 0.5.1: neutral grey, not blue
             main.maxParticles = 600;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
