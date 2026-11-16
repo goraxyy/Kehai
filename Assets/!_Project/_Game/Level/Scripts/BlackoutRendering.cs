@@ -19,9 +19,11 @@ public sealed class BlackoutRendering : MonoBehaviour
     readonly List<Surface> surfaces = new List<Surface>();
     readonly Dictionary<Light, bool> lightStates = new Dictionary<Light, bool>();
     readonly Dictionary<Camera, Color> backgrounds = new Dictionary<Camera, Color>();
-    readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+    // Made on first use: Unity forbids creating one in a field initialiser (it runs in the constructor).
+    MaterialPropertyBlock block;
     Color fogColour;
     bool dark;
+    float nextSweep;
 
     void OnEnable()
     {
@@ -40,7 +42,17 @@ public sealed class BlackoutRendering : MonoBehaviour
     void LateUpdate()
     {
         OnPower(PowerSystem.PowerOn);
-        if (dark) Suppress(); // A running flicker or room switch cannot relight the store.
+        if (!dark) return;
+        // A running flicker or room switch cannot relight the store: lights and fog every frame
+        // (cheap), the surfaces' overrides twice a second (thousands of renderers on an 8 GB M2).
+        KeepDark();
+        if (Time.unscaledTime >= nextSweep) { nextSweep = Time.unscaledTime + .5f; Suppress(); }
+    }
+
+    void KeepDark()
+    {
+        RenderSettings.fogColor = Color.black;
+        foreach (var pair in lightStates) if (pair.Key != null && pair.Key.enabled) pair.Key.enabled = false;
     }
 
     void Capture()
@@ -77,6 +89,7 @@ public sealed class BlackoutRendering : MonoBehaviour
 
     void Suppress()
     {
+        if (block == null) block = new MaterialPropertyBlock();
         RenderSettings.fogColor = Color.black;
         foreach (var pair in backgrounds) if (pair.Key != null) pair.Key.backgroundColor = Color.black;
         foreach (var pair in probes) if (pair.Key != null) pair.Key.intensity = 0f;

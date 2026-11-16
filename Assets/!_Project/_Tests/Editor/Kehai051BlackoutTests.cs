@@ -101,6 +101,7 @@ public class Kehai051BlackoutTests
         lamp.transform.position = new Vector3(18f, 2f, -142f);
         var sw = new GameObject("room switch").AddComponent<RoomLightSwitch>();
         sw.Configure(RoomLightSwitch.RoomOf(lamp.transform.position), new[] { lamp });
+        Call(sw, "OnEnable");   // EditMode doesn't run OnEnable: register the switch as the game would
         Mains();
         power.CutPower();
         Call(power.GetComponent<BlackoutRendering>(), "LateUpdate");
@@ -114,5 +115,6 @@ public class Kehai051BlackoutTests
         Assert.IsFalse(lamp.enabled, "restoring mains must not cancel a separate room-light effect");
         sw.Restore();
         Assert.IsTrue(lamp.enabled);
+        Call(sw, "OnDisable");
     }
 }
