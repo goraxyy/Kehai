@@ -17,6 +17,10 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 
 | What | Why it waits |
 |---|---|
+| 0.5.1, after it merges: in `~/Developer/Kehai`, with the store scene open, run **Kehai → Cold Storage → Move Existing Islands Closer** and **Kehai → Store Finish → Apply Door, Locker and Exterior Fit**, save the scene, then make a new `kehai-assets` release for the Windows PC | they move the cold-room islands, delete the dead office camera and save the door fix into the scene |
+| 0.5.1: turn webcam blinking on, consent, calibrate | the camera helper is built and found, but nobody has started your camera |
+| 0.5.1: coffee machine on the kitchen counter (now) or the dining table? | one line to change |
+| Play a shift on 0.5.1 | witnessed hiding, the 60 s pursuit, the stun and the new light are tested in code, not played |
 | Import the four new models: **Kehai → Props → Import Karen's Props** | until then the PA microphone, the camera box, the cameras and the screens are plain boxes |
 | Play a shift on 0.4.1 | her eyes are twice as far and twice as quick, and no test has measured that |
 | 0.5.0 scope is settled; later art review and external storage setup remain | adaptive ML bots are selected; long training remains after the build |
