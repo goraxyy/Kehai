@@ -32,16 +32,17 @@ namespace Kehai.Karen
         public bool TryImpact(Item item, float closingSpeed, float itemSpeed)
         {
             if (!isActiveAndEnabled || GamePause.Paused || item == null || !item.isActiveAndEnabled
-                || item.isCarried || item.isOnShelf || item.lastAuthor == NoiseAuthor.Karen
-                || !Finite(itemSpeed) || itemSpeed < MinimumSpeed) return false;
+                || item.isCarried || item.isOnShelf) return false;
             Rigidbody rigid = item.GetComponent<Rigidbody>();
             if (rigid == null || rigid.isKinematic) return false;
             if (releases.TryGetValue(item, out int release) && release == item.ReleaseVersion) return false;
+            // Any touch uses up this release, a stunning one or not: clutter she walks into, a
+            // graze, or a hit during the grace period can't come back off a wall or keep
+            // bouncing against her and stun her later. Only picking it up again re-arms it.
+            releases[item] = item.ReleaseVersion;
+            if (item.lastAuthor == NoiseAuthor.Karen || !Finite(itemSpeed) || itemSpeed < MinimumSpeed) return false;
             float duration = DurationFor(closingSpeed, rigid.mass);
             if (duration <= 0f) return false;
-            // A hit during the grace period is consumed too: it cannot turn into a delayed
-            // stun just because the same object keeps bouncing against her afterwards.
-            releases[item] = item.ReleaseVersion;
             if (recovery > 0f) return false;
             if (!IsStunned) episodeRemaining = MaximumDuration;
             remaining = Mathf.Min(episodeRemaining, Mathf.Max(remaining, duration));

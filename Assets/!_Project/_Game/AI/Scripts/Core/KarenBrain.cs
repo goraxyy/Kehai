@@ -319,6 +319,7 @@ namespace Kehai.Karen
             Sensorium.ForgetShift();
             Actions.Reset();
             AbortPlan();
+            ResetStunAndHunt();
             Body.Sight.ResetAwareness();
             if (PresentThisShift) Body.Warp(StartPosition());
             Body.SetMood(KarenBody.Mood.Calm);
@@ -373,7 +374,20 @@ namespace Kehai.Karen
             }
             Review.Compose();
             World.ClearShift();
+            ResetStunAndHunt();
             Body.Stop();
+        }
+
+        // A new shift, a restart or the end of one: no stun, no queued touch, no hunt clock left over.
+        void ResetStunAndHunt()
+        {
+            if (Body.Stun != null) Body.Stun.ResetState();
+            Body.ClearPendingTouches();
+            wasStunned = false;
+            chasing = false;   // a hunt left between plans at the shift's end doesn't carry over
+            Pursuit.Reset();
+            if (chaseDrain) Burnout?.SetChaseState(false);
+            chaseDrain = false;
         }
 
         // ---- the loop ---------------------------------------------------------------------
@@ -397,9 +411,15 @@ namespace Kehai.Karen
                 return;
             }
 
+            // The gate (0.5.1, item 14): hit by a thrown item, she neither moves, plans, runs a
+            // trick, dashes nor catches until the stun is over. Her senses go on below, so when it
+            // ends she decides again from what she senses then.
+            bool stunned = StunGate();
+            KeepHuntClock();
+
             if (!config.Features.Belief)
             {
-                if (!PursueWitnessedHide()) SimpleGuard(dt);
+                if (!stunned && !PursueWitnessedHide()) SimpleGuard(dt);
                 TickDirector(dt);
                 return;
             }
@@ -416,6 +436,8 @@ namespace Kehai.Karen
             // What her tricks' places paid, once a second (0.3.0).
             placeTimer += dt;
             if (placeTimer >= 1f) { placeTimer = 0f; using (ShiftTiming.Measure("places")) PlaceWatch.Tick(Ctx, Time.time); }
+
+            if (stunned) { ExpireClosures(); return; }
 
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
@@ -532,7 +554,11 @@ namespace Kehai.Karen
                 Observation o = Sensorium.Positive[i];
                 Sensed?.Invoke(o, i < Sensorium.Raw.Count ? Sensorium.Raw[i] : default);
                 if (Belief.Apply(o)) Note("BELIEF", $"lost the scent — everything ruled out, back to the prior (after {o.Label})");
-                if (o.Channel == SenseChannel.Hearing) heard.Add((Time.time, o.Position));
+                if (o.Channel == SenseChannel.Hearing)
+                {
+                    heard.Add((Time.time, o.Position));
+                    if (chasing) Pursuit.Heard(o.Position, Time.time);   // steers the hunt's search, never renews it
+                }
                 if (o.Channel != SenseChannel.Sight && o.Confidence > 0.3f) NoteSense(o);
             }
 
@@ -835,6 +861,7 @@ namespace Kehai.Karen
             Log.Write(Record("GOAL", $"GOAL     {HtnPlanner.Describe(Actions.LastOptions)}", Actions.LastOptions, goal.ToString(), because));
             Note("", $"  why    {because}");
 
+            if (chasing && goal != ActionId.Hunt) Pursuit.Ending($"{goal.Name()} won the decision ({because})");
             AbortPlan();
             PlanTree plan = HtnPlanner.Plan(goal, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why);
             if (plan == null)
@@ -880,7 +907,7 @@ namespace Kehai.Karen
             // A hunt is the Hunt action, whichever of its moves or tricks runs (0.2.0): the chase
             // state, its cost and the recovery after follow the action, not one step of it.
             if (plan.Action == ActionId.Hunt) { if (!chasing) SetChasing(true); }
-            else if (chasing) SetChasing(false);
+            else if (chasing) { Pursuit.Ending($"{plan.Action.Name()} won the decision"); SetChasing(false); }
             Log.Write(Record("PLAN", $"PLAN     {tactic.Id} → {why}", options, tactic.Id, why));
             if (tactic.Learnable) Note("PICK", PickLine(PickKey(plan.Action, tactic), brainPick != null ? brainPick.Value.chance : 1f, Ledger.Reading(tactic, LedgerStart.Current, (int)Director.CurrentPhase)));
             BrainPolicy?.AddReward(0f);
@@ -944,6 +971,7 @@ namespace Kehai.Karen
 
             Actions.Commit(pick.Action, Ctx);
             WriteBelief();
+            if (chasing && pick.Action != ActionId.Hunt) Pursuit.Ending($"the brain picked {pick.Action.Name()}");
             AbortPlan();
             PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
                                             prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
@@ -1129,6 +1157,7 @@ namespace Kehai.Karen
             Tactic t = TacticLibrary.Get(tacticId);
             if (t == null) { why = "no trick called " + tacticId; return false; }
             if (!ShiftActive) { why = "no shift running"; return false; }
+            if (Body.IsStunned) { why = "she is stunned"; return false; }
             Ctx.A = Appraised();
             Ctx.Last = LastTrickNow();
             if (!t.Available(Ctx, out why)) { why = why ?? "not available"; return false; }
@@ -1263,8 +1292,7 @@ namespace Kehai.Karen
 
         bool PursueWitnessedHide()
         {
-            // The stun gate sits here for now; the stun work moves it to the top of the brain.
-            if (Body.IsStunned) return true;
+            // Never reached while she is stunned: the gate at the top of Update holds it.
             WitnessedHide memory = Body.Sight.HiddenEntry;
             if (!memory.Active)
             {
@@ -1322,6 +1350,70 @@ namespace Kehai.Karen
             decideNow = true;
             Note("SENSE", "looked where she saw the entry into hiding; nothing to catch");
             return false;
+        }
+
+        // ---- the stun gate (0.5.1, item 14) -------------------------------------------------
+
+        // KarenStun says whether she is stunned; this is the one place the brain acts on it. On
+        // the hit her plan stops (a carried thing drops, a dash ends) but a hunt doesn't: its
+        // window goes on running, so a stun spends hunt time rather than adding any, and no
+        // second recovery or hunt start comes of it. On waking she decides again at once.
+        bool wasStunned;
+
+        bool StunGate()
+        {
+            bool stunned = Body.IsStunned;
+            if (stunned == wasStunned) return stunned;
+            wasStunned = stunned;
+            if (stunned)
+            {
+                float stun = Body.Stun != null ? Body.Stun.Remaining : 0f;
+                Note("STUN", $"STUN     hit by a thrown item: stunned for {stun:0.0}s"
+                             + (chasing ? $"; {Pursuit.Left(Time.time):0}s of the hunt left, and the stun spends them" : ""));
+                bool wasChasing = chasing;
+                chasing = false;   // the plan stops, the hunt doesn't
+                AbortPlan();
+                chasing = wasChasing;
+                Dash.Cancel(Ctx);  // a vanish is over once you've found her
+                Body.InterruptForStun();
+                Body.ClearPendingTouches();
+            }
+            else
+            {
+                Note("STUN", "STUN     back on her feet: deciding again from what she senses now");
+                decideNow = true;
+                hidingPathAt = -999f;   // a witnessed-hide approach finds its path again at once
+            }
+            return stunned;
+        }
+
+        // ---- the hunt's clock (0.5.1, item 13) ----------------------------------------------
+
+        // Every frame, after her eye: a confirmed sighting (she sees you, at her "seen" level)
+        // renews the hunt's window; with the window over and nothing in sight the hunt ends,
+        // whatever its plan is doing. Not on rungs A and B, whose guard keeps its own 4 s chase.
+        bool chaseDrain;
+
+        void KeepHuntClock()
+        {
+            SightSensor s = Body.Sight;
+            if (chasing && s.SeesNow && s.Awareness >= s.seeAt) Pursuit.ObserveSight(s.LastSeenTime, Time.time, config.huntMemorySeconds);
+            if (chasing && config.Features.Goals && !pursuingHide && !s.SeesNow && !Pursuit.Active(Time.time))
+                EndHunt($"{config.huntMemorySeconds:0}s since she last saw you: the hunt is over");
+
+            // The chase's extra drain on your energy is for being run after, not for her searching.
+            bool drain = chasing && !Pursuit.Searching;
+            if (drain == chaseDrain) return;
+            chaseDrain = drain;
+            Burnout?.SetChaseState(drain);
+        }
+
+        void EndHunt(string why)
+        {
+            Pursuit.Ending(why);
+            if (CurrentPlan != null && CurrentPlan.Action == ActionId.Hunt) AbortPlan();
+            if (chasing) SetChasing(false);
+            decideNow = true;
         }
 
         void OnPaSpeech(PaAnnouncement a)
@@ -1423,6 +1515,7 @@ namespace Kehai.Karen
         void Kill()
         {
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
+            if (Body.IsStunned) return;   // stunned, she catches nobody (0.5.1, item 14)
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             KilledThisShift = true;
             Stats.Caught();
@@ -1442,6 +1535,8 @@ namespace Kehai.Karen
                                 "contact — the shift starts again"));
             Debug.Log($"{GameNames.Antagonist} got the employee at {Map.Describe(Body.Position)} after {ShiftTime:0}s: {doing}, pace {Body.CurrentPace}, chasing {chasing}");
             chasing = false;
+            chaseDrain = false;
+            Pursuit.Clear();
             World.PlayTell(TellKind.RevealSting, Body.Position, 0f);
             KarenNarrator.Say(StoryKind.Chase, $"{GameNames.Antagonist} got you. The shift starts again.", Body.Position);
             StartCoroutine(Consequences.Death(this, config.deathScreenSeconds));
@@ -1477,13 +1572,21 @@ namespace Kehai.Karen
         {
             if (chasing == on) return;
             chasing = on;
+            if (on)
+            {
+                Pursuit.Start(Body.Sight.LastSeenTime, Time.time, config.huntMemorySeconds);
+                Note("HUNT", $"HUNT     the hunt starts: {Pursuit.Left(Time.time):0}s from her last sight of you, renewed only by seeing you again");
+            }
             if (on && config.Features.Goals) Director.TrySpend(config.huntTensionCost);
             if (!on)
             {
+                Note("HUNT", $"HUNT     the hunt ends: {Pursuit.EndWhy ?? "she turned to something else"} ({Pursuit.SpotsSearched} spots searched)");
+                Pursuit.Clear();
                 Director.NoteHuntEnded();
                 ThrewThisHunt = false;
                 replannedForSighting = -999f;
             }
+            chaseDrain = on;
             Burnout?.SetChaseState(on);
             if (ShiftActive) KarenNarrator.Say(StoryKind.Chase, on ? GameNames.Antagonist + " is chasing you — run!" : GameNames.Antagonist + " gave up the chase.", Body.Position);
             Body.SetMood(on ? KarenBody.Mood.Hunt : KarenBody.Mood.Calm);
@@ -1496,6 +1599,8 @@ namespace Kehai.Karen
         // ---- where you're going, once a hunt has lost you (0.2.0) ------------------------------
 
         public RoutePredictor Predictor { get; private set; }
+        // The hunt's one window and its search (0.5.1, item 13: PostSightPursuit, Pursue).
+        public PostSightPursuit Pursuit { get; } = new PostSightPursuit();
         public bool ThrewThisHunt { get; set; }      // Throw: once a hunt
         float predictorTimer, replannedForSighting = -999f;
         float[] shiftHabitPrior;
@@ -1774,6 +1879,7 @@ namespace Kehai.Karen
             Director?.Index.NoteBlink();
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             Stats.BlinkSeen();
+            if (Body.IsStunned) return;   // no dash while stunned
             Dash.OnBlink(Ctx);
         }
 
@@ -1786,7 +1892,9 @@ namespace Kehai.Karen
             {
                 if (!ShiftActive) return GameNames.Antagonist + " is off duty until you clock in.";
                 if (KilledThisShift) return GameNames.Antagonist + " got you.";
+                if (Body != null && Body.IsStunned) return GameNames.Antagonist + " is stunned.";
                 if (Dash.Lurking) return GameNames.Antagonist + " is nowhere to be seen.";
+                if (chasing && Pursuit.Searching) return GameNames.Antagonist + " is searching for you.";
                 if (chasing) return GameNames.Antagonist + " is chasing you!";
                 if (CurrentPlan == null) return GameNames.Antagonist + " is thinking.";
                 string doing = CurrentPlan.Tactic != null ? KarenNarrator.Tactic(CurrentPlan.Tactic.Id) : KarenNarrator.ActionName(CurrentPlan.Action);

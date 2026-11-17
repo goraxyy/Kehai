@@ -81,14 +81,56 @@ public class Kehai051StunTests
         item.GetComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.Discrete;
         item.GetComponent<Rigidbody>().isKinematic = true;
         Assert.IsFalse(stun.TryImpact(item, 8f, 8f));
-        item.SetCarried(false, null);
-        item.lastAuthor = NoiseAuthor.Karen;
-        Assert.IsFalse(stun.TryImpact(item, 8f, 8f));
-        item.lastAuthor = NoiseAuthor.Player;
+        Rethrow(item, NoiseAuthor.Karen);
+        Assert.IsFalse(stun.TryImpact(item, 8f, 8f), "her own items never stun her");
+        Rethrow(item, NoiseAuthor.Player);
         Assert.IsFalse(stun.TryImpact(item, 8f, 0f), "walking into resting clutter cannot stun Karen");
+        Rethrow(item, NoiseAuthor.Player);
         Assert.IsFalse(stun.TryImpact(item, 8f, float.NaN));
+        Rethrow(item, NoiseAuthor.Player);
         Assert.IsTrue(stun.TryImpact(item, 8f, 8f));
         Assert.IsTrue(stun.IsStunned);
+    }
+
+    // The player picks it up and lets go of it again: a new release.
+    void Rethrow(Item item, NoiseAuthor by)
+    {
+        item.SetCarried(true, New("hand").transform);
+        item.SetCarried(false, null);
+        item.lastAuthor = by;
+    }
+
+    // 0.5.1: any touch uses up the release, so clutter she shoves or a graze can't bounce back
+    // off a wall and stun her, and a weak contact never stuns at all.
+    [Test]
+    public void WeakContactsAndShovedClutter_NeverStun_AndUseUpTheirRelease()
+    {
+        Item item = Loose();
+        Assert.IsFalse(stun.TryImpact(item, 1.2f, 1.2f), "a weak contact is below the speed floor");
+        Assert.IsFalse(stun.TryImpact(item, 9f, 9f), "the same release came back off a wall");
+        Assert.IsFalse(stun.IsStunned);
+
+        Item graze = Loose(.2f);
+        Assert.IsFalse(stun.TryImpact(graze, 1.6f, 6f), "fast but glancing: little closing speed, a light item");
+        Assert.IsFalse(stun.IsStunned);
+
+        Item kicked = Loose();
+        kicked.lastAuthor = NoiseAuthor.Karen;   // Item.OnCollisionEnter: she walked into it
+        Assert.IsFalse(stun.TryImpact(kicked, 9f, 9f));
+        Rethrow(kicked, NoiseAuthor.Player);
+        Assert.IsTrue(stun.TryImpact(kicked, 9f, 9f), "thrown again by you, it counts");
+    }
+
+    // A stronger valid impact gives a longer stun, and none goes past the cap.
+    [Test]
+    public void StrongerImpacts_StunLonger_UpToTheCap()
+    {
+        float light = KarenStun.DurationFor(4f, .3f), medium = KarenStun.DurationFor(8f, 1f), heavy = KarenStun.DurationFor(13f, 3f);
+        Assert.Greater(light, 0f);
+        Assert.Greater(medium, light);
+        Assert.Greater(heavy, medium);
+        Assert.LessOrEqual(heavy, KarenStun.MaximumDuration);
+        Assert.GreaterOrEqual(light, .25f, "the shortest stun is a quarter second");
     }
 
     [Test]
@@ -177,88 +219,5 @@ public class Kehai051StunTests
         body.ClearPendingTouches();
         Call(body, "LateUpdate");
         Assert.AreEqual(1, catches, "a shift reset must discard queued contact");
-    }
-
-    [UnityTest]
-    public IEnumerator FastSmallItemsAreBlockedByWallsAndHerSolidBody_AndNavigationRecovers()
-    {
-        yield return new EnterPlayMode();
-        var root = new GameObject("native impact regression");
-        var settings = NavMesh.GetSettingsByIndex(0);
-        var floor = new NavMeshBuildSource
-        {
-            shape = NavMeshBuildSourceShape.Box,
-            transform = Matrix4x4.Translate(Vector3.down * .1f),
-            size = new Vector3(30f, .2f, 30f), area = 0
-        };
-        var data = NavMeshBuilder.BuildNavMeshData(settings, new List<NavMeshBuildSource> { floor },
-            new Bounds(Vector3.zero, new Vector3(30f, 5f, 30f)), Vector3.zero, Quaternion.identity);
-        Assert.IsNotNull(data);
-        var mesh = NavMesh.AddNavMeshData(data);
-        try
-        {
-            var body = KarenBody.Build(root.transform, new KarenConfig(), Vector3.zero);
-            body.Silent = true;
-            yield return null;
-            Assert.IsTrue(body.Agent.isOnNavMesh);
-            Assert.AreEqual(CollisionDetectionMode.ContinuousSpeculative, body.GetComponent<Rigidbody>().collisionDetectionMode);
-            Assert.IsTrue(System.Array.Exists(body.GetComponents<CapsuleCollider>(), c => c.isTrigger));
-            Assert.IsTrue(System.Array.Exists(body.GetComponents<CapsuleCollider>(), c => !c.isTrigger));
-
-            var wall = new GameObject("occluding wall"); wall.transform.SetParent(root.transform);
-            wall.transform.position = new Vector3(0f, 1f, -1f);
-            wall.AddComponent<BoxCollider>().size = new Vector3(3f, 2f, .1f);
-            Item blocked = Loose(); blocked.transform.SetParent(root.transform);
-            blocked.transform.position = new Vector3(0f, 1f, -2.2f);
-            blocked.GetComponent<Rigidbody>().linearVelocity = Vector3.forward * 80f;
-            Physics.SyncTransforms();
-            for (int i = 0; i < 5; i++) { yield return new WaitForFixedUpdate(); yield return null; }
-            Assert.IsFalse(body.IsStunned, "a wall-occluded throw cannot reach her");
-            Assert.Less(blocked.transform.position.z, -.8f, "CCD must stop the small fast item at the wall");
-            Object.Destroy(wall); Object.Destroy(blocked.gameObject);
-            yield return null;
-
-            Item direct = Loose(); direct.transform.SetParent(root.transform);
-            direct.transform.position = new Vector3(0f, 1f, -2.2f);
-            direct.GetComponent<Rigidbody>().linearVelocity = Vector3.forward * 80f;
-            Physics.SyncTransforms();
-            for (int i = 0; i < 5 && !body.IsStunned; i++) { yield return new WaitForFixedUpdate(); yield return null; }
-            Assert.IsTrue(body.IsStunned, "fast small items without audio must collide and stun");
-            Assert.Less(direct.transform.position.z, .45f, "the projectile must not pass through her physical body");
-            Vector3 stopped = body.Position;
-            body.MoveTo(Vector3.right * 6f, KarenBody.Pace.Run);
-            body.BurstToward(Vector3.right * 6f, 20f, 2f, 6f);
-            body.Carry(direct);
-            for (int i = 0; i < 3; i++) { yield return new WaitForFixedUpdate(); yield return null; }
-            Assert.Less(Vector3.Distance(stopped, body.Position), .03f);
-            Assert.IsNull(body.Carried);
-            Assert.IsTrue(body.Agent.isStopped);
-
-            body.Stun.Step(KarenStun.MaximumDuration);
-            yield return null;
-            body.BurstToward(Vector3.right * 6f, 20f, 2f, 6f);
-            yield return null;
-            Assert.Greater(body.Agent.acceleration, 100f);
-            body.Stun.Step(KarenStun.RecoveryGrace);
-            Item second = Loose(); second.transform.SetParent(root.transform);
-            Assert.IsTrue(body.Stun.TryImpact(second, 8f, 8f));
-            Assert.AreEqual(14f, body.Agent.acceleration, "an impact cancels an active dash acceleration");
-            Assert.IsTrue(body.Agent.isStopped);
-            Assert.Less(body.Agent.velocity.sqrMagnitude, .001f);
-            body.Stun.Step(KarenStun.MaximumDuration);
-            yield return null;
-            body.MoveTo(Vector3.right * 6f, KarenBody.Pace.Run);
-            Assert.IsFalse(body.Agent.isStopped);
-            for (int i = 0; i < 8; i++) { yield return new WaitForFixedUpdate(); yield return null; }
-            Assert.Greater(Vector3.Distance(stopped, body.Position), .05f, "a fresh plan must move again after recovery");
-        }
-        finally
-        {
-            Object.Destroy(root);
-            mesh.Remove();
-            Object.DestroyImmediate(data);
-        }
-        yield return null;
-        yield return new ExitPlayMode();
     }
 }

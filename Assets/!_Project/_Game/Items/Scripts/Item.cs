@@ -157,6 +157,12 @@ public class Item : MonoBehaviour
     // Held and shelved items are kinematic with their collider off, so they never get here.
     void OnCollisionEnter(Collision collision)
     {
+        // Karen walked into it (0.5.1): it was all but still before her solid body shoved it, so
+        // whatever it knocks into now is her doing, not a noise of yours she can hear, and it
+        // can't stun her on the rebound (KarenStun ignores her own items).
+        if (!isCarried && !isOnShelf && PhysicsSpeed < KarenStun.MinimumSpeed
+            && collision.rigidbody != null && collision.rigidbody.GetComponent<KarenStun>() != null)
+            lastAuthor = NoiseAuthor.Karen;
         if (impactSound == null || isCarried || isOnShelf) return;
         if (Time.time < nextImpactTime) return;
 

@@ -96,9 +96,13 @@ namespace Kehai.Karen
             rb.isKinematic = true;
             rb.useGravity = false;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-            // Solid item contact is separate from the wider touch/catch sensor.
+            // Solid item contact (0.5.1, item 14) is separate from the wider touch/catch sensor,
+            // and kept TouchMargin inside it: whoever walks into her solid body is already inside
+            // her touch, or the solid body would hold them off it and she could never catch by touch.
+            // Her own eye skips it (SightSensor.ignoreRoot), and the agent's NavMeshModifier keeps
+            // it out of every runtime bake (KarenArea.StoreRebake).
             var solid = root.AddComponent<CapsuleCollider>();
-            solid.radius = config.bodyRadius;
+            solid.radius = SolidRadius(config);
             solid.height = config.bodyHeight;
             solid.center = Vector3.up * config.bodyHeight * .5f;
             body.Stun = root.AddComponent<KarenStun>();
@@ -120,6 +124,12 @@ namespace Kehai.Karen
             if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) body.Agent.Warp(hit.position);
             return body;
         }
+
+        // More than a CharacterController's default skin (0.08 m) plus contact offset.
+        public const float TouchMargin = 0.15f;
+
+        public static float SolidRadius(KarenConfig config) =>
+            Mathf.Max(0.15f, Mathf.Min(config.bodyRadius, config.catchRadius - TouchMargin));
 
         // How she looks, and nothing else: a black capsule the size of a person (the player's own
         // size, from KarenBootstrap), and the spot light of her gaze, under `root`. A silhouette
