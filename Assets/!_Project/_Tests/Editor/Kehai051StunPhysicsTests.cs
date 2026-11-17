@@ -112,7 +112,8 @@ public class Kehai051StunPhysicsTests
         blocked.transform.position = new Vector3(0f, 1f, -2.2f);
         blocked.GetComponent<Rigidbody>().linearVelocity = Vector3.forward * ThrowSpeed;
         Physics.SyncTransforms();
-        for (int i = 0; i < 10; i++) { yield return new WaitForFixedUpdate(); yield return null; }
+        yield return For(0.4f);
+        Assert.Greater(blocked.transform.position.z, -1.6f, "the throw really flew (physics stepped)");
         Assert.IsFalse(body.IsStunned, "a wall-occluded throw cannot reach her");
         Assert.Less(blocked.transform.position.z, -.9f, "CCD must stop the small fast item at the wall");
         Object.Destroy(wall);
@@ -123,7 +124,7 @@ public class Kehai051StunPhysicsTests
         direct.transform.position = new Vector3(0f, 1f, -2.2f);
         direct.GetComponent<Rigidbody>().linearVelocity = Vector3.forward * ThrowSpeed;
         Physics.SyncTransforms();
-        for (int i = 0; i < 10 && !body.IsStunned; i++) { yield return new WaitForFixedUpdate(); yield return null; }
+        yield return For(0.4f, () => body.IsStunned);
         Assert.IsTrue(body.IsStunned, "fast small items without audio must collide and stun");
         Assert.Less(direct.transform.position.z, solid.radius, "the item must not pass through her physical body");
 
@@ -132,7 +133,7 @@ public class Kehai051StunPhysicsTests
         body.MoveTo(Vector3.right * 6f, KarenBody.Pace.Run);
         body.BurstToward(Vector3.right * 6f, 20f, 2f, 6f);
         body.Carry(direct);
-        for (int i = 0; i < 3; i++) { yield return new WaitForFixedUpdate(); yield return null; }
+        yield return For(0.3f);
         Assert.Less(Vector3.Distance(stopped, body.Position), .03f);
         Assert.IsNull(body.Carried);
         Assert.IsTrue(body.Agent.isStopped);
@@ -155,7 +156,16 @@ public class Kehai051StunPhysicsTests
         yield return null;
         body.MoveTo(Vector3.right * 6f, KarenBody.Pace.Run);
         Assert.IsFalse(body.Agent.isStopped);
-        for (int i = 0; i < 8; i++) { yield return new WaitForFixedUpdate(); yield return null; }
+        yield return For(0.5f);
         Assert.Greater(Vector3.Distance(stopped, body.Position), .05f, "a fresh plan must move again after recovery");
+    }
+
+    // Waits in game time, not frames: in batch mode a frame can take well under a millisecond, so
+    // ten frames may not hold a single 20 ms physics step (the first version of this test waited
+    // ten frames, and its wall half passed without the item ever moving).
+    static System.Collections.IEnumerator For(float seconds, System.Func<bool> done = null)
+    {
+        float until = Time.time + seconds;
+        while (Time.time < until && (done == null || !done())) yield return null;
     }
 }
