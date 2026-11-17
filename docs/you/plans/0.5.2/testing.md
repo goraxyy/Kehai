@@ -29,6 +29,8 @@ How each one was measured is in [§11](#11-how-this-was-measured).
 | A 6.5 GB clone left on disk | Each script deletes its clone in an `EXIT` trap. A trap can't run when the process is killed outright (a crash, `kill -9`, a session or the Mac stopping), and nothing cleans up afterwards |
 | The editor prefs left pointing at the clone | The same trap restores them. It also always writes `~/Developer/Kehai`, whatever they said before, so it would undo a switch to another project (HANDOVER names `.claude/worktrees/0.5.0-build` as the current 0.5.0 project) |
 | Hand-run set-up and clean-up | The recipe is five steps in [HANDOVER §6](../../../agents/HANDOVER.md#6-how-to-work-on-it), copied into four scripts. Build sessions also wrote their own one-off runners: 61 `kehai`-named files and folders sit in `/private/tmp`, mostly logs and scripts |
+| The run register can be left stuck too | Its own short lock "is never automatically stolen if stale", and a killed wrapper leaves only a start event ([its README](../../../../tools/reports/README.md)) |
+| Two full copies of your private files | The main folder and `.claude/worktrees/0.5.0-build` (4.4 GB, HANDOVER's "current 0.5.0 project"). Compared on 17 November: the same store scene, the same art files (bar two ML-Agents timer files), and project settings that differ only in the version number (0.1.0 against 0.5.0). Which one is the source decides what a test clones (Q20) |
 | Leftovers | Three old verify data folders (`Kehai-verify`, `-041`, `-main`: 25 MB in all) and their three prefs files. Two of them may belong to the 0.5.1 session working now, so nothing was touched |
 | Slow test starts | The clone copies **all** of `~/Developer/Kehai`, worktrees included, then deletes `.claude/worktrees`: 78,202 files copied for nothing (41 s, §11). In 0.5.1's first test run (15 November), Unity spent **87.7 s** importing and compiling before **22 tests ran in 10 s**; the scripts compiled twice, the second time because "define symbols changed" |
 | The clone can test the wrong code | `git archive HEAD \| tar -x` lays the branch over a copy of the main folder. It adds and overwrites files but never deletes, so a file the branch removed or renamed stays in the clone and still compiles |
@@ -36,7 +38,7 @@ How each one was measured is in [§11](#11-how-this-was-measured).
 | The same seed, different results | One shift with the same seed ran 183, 200 or 208 s ([KAREN_RESULTS](../../../agents/results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november)). 0.4.0's build notes blame timers that read the wall clock (`Time.unscaledTime`) in the blink and PA code while batch mode runs on a fixed step |
 | Runs lost when interrupted | An ablation starts again from nothing (its list of finished shifts lives only in memory). Training can continue, but only by hand (`--resume`). The belief fits resume by stage, added on 13 November after a session's death lost the first try |
 | Nothing says when a run ends | No run sends a notice. The marketing pipeline has a Telegram sender, but its bot token isn't set on this Mac (checked that it's empty, not read) |
-| Windows by hand | `kehai-assets` has one release (11 November): a zip of project files (88.6 MB, 4,413 files) and a zip of game data (508 MB). The repo itself holds only a README: no history, no Git LFS. This Mac has no SSH entry for the PC and no `git-lfs` |
+| Windows by hand | `kehai-assets` has one release (11 November): two zips, one of project files and one of game data (sizes on the [scenes page](scenes.md#5-art-and-data-to-windows)). The repo itself holds only a README: no history, no Git LFS. This Mac has no SSH entry for the PC and no `git-lfs` |
 | Sessions hit the usage limit | Uncommitted work lost and subagents killed; three Opus subagents at once used it up fastest. Long jobs were children of the session that started them |
 | Missing doc | `tools/learn/` has no README |
 
@@ -69,7 +71,8 @@ How each one was measured is in [§11](#11-how-this-was-measured).
 | C. Keep the recipe by hand, with a checklist | — | nothing to build | the same leftovers again |
 
 **Heavy steps stay one at a time and watched** (your rule). The command runs one job; when it
-ends it can *print* the next step's command, but it never starts it (Q4).
+ends it can *print* the next step's command, but it never starts it. Whether a progress line and
+a notice at the end count as "watched" is Q4.
 
 **Cost:** a few hours of agent work; testing it needs no Unity time (the stand-in).
 
@@ -135,7 +138,7 @@ and the [0.4.0 plan's C0.2](../0.4.0-build-plan.md#phase-0-before-building).
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
-| **A. Re-measure, then hunt (my pick)** | one shift (rung E, efficient player, seed 1000) on the 0.2.0 tag, on `main`, and on `main` as a development player; if the gap is still over 1.3×, split the commits between 0.2.0 and 0.3.0 in halves until one shows it | the first step may show nothing's left; each half-split is one short run | *estimate* 2–4 h of Unity in all |
+| **A. Re-measure, then hunt (my pick)** | one shift (rung E, efficient player, seed 1000) on the 0.2.0 tag, on `main`, and on `main` as a development player; if the gap is still over 1.3×, split the commits between 0.2.0 and 0.3.0 in halves until one shows it | the first step may show nothing's left; each half-split is one short run | Unity time on the PC (the estimate is in the plan's [computers table](../0.5.2-plan.md#4-who-builds-what-and-on-which-computer)) |
 | B. The profiler in batch mode | Unity's `-profiler-enable` and `-profiler-log-file` flags | shows where the frame goes | the docs don't say they capture in batch mode: a thing to try once, not a promise |
 | C. Run ablations in a built player, not the editor | the eval player exists (Kehai → Eval → Build Eval Player) | skips the editor's own cost | the cause stays unknown; builds take time |
 | D. Leave it | multiply every time by the factor | no work | if 2.25× still holds, the training times in [TESTING.md](../../TESTING.md#the-times) could be about twice what they need |
@@ -152,7 +155,7 @@ player, unzip, run in PowerShell, bring `results/` back. Nothing shows progress 
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
-| **A. A private network plus SSH (my pick)** | Tailscale on both computers, and Windows' own OpenSSH Server switched on. `kehai-run --on pc <job>` starts the job there, detached, and returns; `kehai-run status` shows it | works from anywhere; free (Personal plan, 6 users, [Tailscale's docs](https://tailscale.com/docs/account/manage-plans/free-plans-discounts.md), April 2026: check); scripted | one app on each computer; you do the set-up (Claude writes the steps) |
+| **A. A private network plus SSH (my pick)** | Tailscale on both computers, and Windows' own OpenSSH Server switched on. `kehai-run --on pc <job>` starts the job there, detached, and returns; `kehai-run status` shows it | works from anywhere; free (Personal plan, 6 users, [Tailscale's docs](https://tailscale.com/docs/account/manage-plans/free-plans-discounts), April 2026; check, as some sites say it's for personal use only); scripted | one app on each computer; you do the set-up (Claude writes the steps) |
 | B. SSH on your home network only | the same, without Tailscale | no extra app | only at home; the PC's address can change |
 | C. A GitHub runner on the PC | GitHub's self-hosted runner, attached to the **private** `kehai-assets` repo, never the public `Kehai` repo (a stranger's pull request could run code on your PC) | logs and an email from GitHub; start a job with `gh workflow run` | a service running on your PC; GitHub's time limit per job (check before relying on it) |
 | D. Remote desktop | Windows Remote Desktop, Chrome Remote Desktop or Parsec | nothing to build; you see the screen | all by hand; no progress on the Mac |
@@ -176,11 +179,12 @@ morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12
 | Ablation | starts again from nothing: a new file each run, and the list of finished shifts is only in memory | `AblationRunner.cs` |
 | Training | continues, by hand (`--resume`); a checkpoint every 50,000 steps, the last 10 (Employee) or 20 (Vital) kept | `tools/rl/*.yaml` |
 | Belief fits | resume by stage (since 13 November) | `tools/belief/` |
+| Belief recording | starts again: `record.sh` runs two whole leagues, then its checks | `tools/belief/record.sh` |
 | EditMode suite | starts again | — |
 
 | Option (the ablation) | How | Pros | Cons |
 |---|---|---|---|
-| **A. Resume at careers (my pick)** | `-ablation-resume <file>` reads what's written, skips finished careers, plays any half-finished career again from its start | results stay paired by seed; simple to check | a half-finished career is played twice |
+| **A. Resume at careers (my pick)** | `-ablation-resume <file>` reads what's written, skips finished careers, plays any half-finished career again from its start | each career already starts with a fresh Ledger (`freshLedger = true`), so it's a clean unit; seeds stay paired | a half-finished career is played twice |
 | B. Resume at shifts | continue mid-career | nothing replayed | a career's shifts share her Ledger and the store, which would have to be saved and restored exactly |
 | C. One career per job | a queue of small jobs, files joined at the end (`analyze_ablation.py` already drops repeated rows) | each job is short | many Unity starts (about 90 s each, measured) |
 
@@ -189,11 +193,17 @@ morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12
   never after you stop it.
 - **Jobs live apart from the session:** started by `kehai-run` under the Mac's own scheduler
   (launchd) or Windows' Task Scheduler, so a session hitting its limit doesn't kill them.
-- **The wall-clock timers** ([§1](#1-what-gets-in-the-way-today)) move to game time, so a resumed
-  or repeated run matches. This changes play slightly against `main`, so it's checked the usual way
-  (the same shift, the same seeds) and is Opus work.
+- **Exact repeats aren't possible today, resumed or not.** The [eval README](../../../../tools/eval/README.md)
+  says the first shift after Unity starts replays exactly, and later shifts drift a little (the
+  NavMesh and crowd updates run on several threads). So a resumed run is checked like any other:
+  the same rows, none twice, and results within the spread of two runs that weren't stopped.
+- **The jitter's cause is found first, then fixed** ([§1](#1-what-gets-in-the-way-today)): 0.4.0's
+  notes only *suspect* the wall-clock timers. Any fix that changes play is checked against `main`
+  the usual way, and is Opus work.
+- **Recordings resume by stage:** `record.sh`'s steps (the training league, the validation league,
+  the checks) skip what's already done.
 
-**Model:** Opus 5.5 for the ablation's resume and the timers (pairing and determinism), Sonnet 5.5 for the wrappers.
+**Model:** Opus 5.5 for the ablation's resume and the jitter (pairing and repeatability), Sonnet 5.5 for the wrappers.
 
 ---
 
@@ -259,3 +269,5 @@ timings are one try each, not averages.
 | The ablation's log: about 2,000 messages | counted in the 12 November run's `unity.log` |
 | Leftovers | `ls` of `~/Library/Application Support/TokenLimit` and `~/Library/Preferences` |
 | `kehai-assets` | `gh release view` and `gh api` on the private repo |
+| The two private copies | `cmp` of the two scenes, `diff` of the project settings, and the two lists of non-code files under `Assets` |
+| Each career's fresh Ledger | read in `AblationRunner.cs` |
