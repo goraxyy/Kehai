@@ -26,13 +26,16 @@ public class BurnoutUI : MonoBehaviour
         if (burnout != null) shown = burnout.Energy01;
     }
 
-    void Update()
+    void Update() => Step(Time.deltaTime);
+
+    // One frame of the bar over `dt` seconds. Public so tests can step it with a known time.
+    public void Step(float dt)
     {
         if (burnout == null || fill == null) return;
 
         float target = burnout.Energy01;
         shown = smoothing > 0f
-            ? Mathf.MoveTowards(shown, target, smoothing * Time.deltaTime)
+            ? Mathf.MoveTowards(shown, target, smoothing * dt)
             : target;
 
         // Stretch the fill across the backing strip by anchor, so no sprite is needed.
