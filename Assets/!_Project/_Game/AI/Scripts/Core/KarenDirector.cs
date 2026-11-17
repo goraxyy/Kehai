@@ -410,8 +410,9 @@ namespace Kehai.Karen
                     break;
                 default:
                     AutoDoubleDoor door = Object.FindAnyObjectByType<AutoDoubleDoor>();
-                    if (door != null) OneShotAudio.PlayAt(door.openChime, door.transform.position, 0.6f);
-                    c.Think("DIRECTOR", "environmental: the door chime, and nobody there");
+                    // The chime is powered (0.5.1, item 6): silent in a blackout.
+                    if (door != null && PowerSystem.PowerOn) OneShotAudio.PlayAt(door.openChime, door.transform.position, 0.6f);
+                    c.Think("DIRECTOR", PowerSystem.PowerOn ? "environmental: the door chime, and nobody there" : "environmental: no chime, the power's off");
                     break;
             }
         }
