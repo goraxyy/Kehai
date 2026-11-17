@@ -52,6 +52,11 @@ public class Kehai051BlackoutTests
     {
         lit = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         unlit = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        lit.EnableKeyword("_EMISSION");                    // a lamp panel that glows
+        lit.SetColor("_EmissionColor", Color.white);
+        var plainMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));   // a wall: no glow
+        var wall = Box("plain wall", null, Vector3.right * 3f, Vector3.one).GetComponent<Renderer>();
+        wall.sharedMaterial = plainMaterial;
         var fixture = Box("mixed fixture", null, Vector3.zero, Vector3.one).GetComponent<Renderer>();
         fixture.sharedMaterials = new[] { lit, unlit };
         var original = new MaterialPropertyBlock();
@@ -82,6 +87,8 @@ public class Kehai051BlackoutTests
         Assert.AreEqual(.37f, actual.GetFloat("_TestValue"));
         fixture.GetPropertyBlock(actual, 1);
         Assert.AreEqual(Color.black, actual.GetColor("_BaseColor"), "unlit lamp panels and CCTV textures must not glow");
+        wall.GetPropertyBlock(actual, 0);
+        Assert.IsTrue(actual.isEmpty, "a material that doesn't glow is left alone (it stays on the fast batched path)");
         Assert.AreEqual(.65f, actual.GetFloat("_InheritedValue"));
         power.RestorePower();
         Call(power.GetComponent<BlackoutRendering>(), "LateUpdate");
@@ -92,6 +99,8 @@ public class Kehai051BlackoutTests
         Assert.IsTrue(actual.isEmpty, "remove the temporary indexed override so the renderer block applies again");
         Assert.AreEqual(.72f, probe.intensity);
         Assert.AreEqual(Color.blue, camera.backgroundColor);
+        Assert.IsFalse(wall.HasPropertyBlock(), "restoring leaves no block behind on untouched renderers");
+        Object.DestroyImmediate(plainMaterial);
     }
 
     [Test]

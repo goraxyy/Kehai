@@ -62,12 +62,18 @@ public sealed class BlackoutRendering : MonoBehaviour
         foreach (var probe in FindObjectsByType<ReflectionProbe>(FindObjectsInactive.Include)) probes[probe] = probe.intensity;
         foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsInactive.Include))
         {
+            // Her eye is no fixture: it keeps glowing in the dark, as it did before 0.5.1.
+            if (renderer.GetComponentInParent<KarenBody>() != null) continue;
             var materials = renderer.sharedMaterials;
             for (int i = 0; i < materials.Length; i++)
             {
                 var material = materials[i];
                 if (material == null) continue;
-                bool emission = material.HasProperty("_EmissionColor");
+                // Only materials that actually glow. Every URP Lit material has _EmissionColor, and a
+                // property block on all of them (10,000+ slots in the store) took renderers off the
+                // fast batched path: a view rendered 3x slower in a blackout (measured on the clone).
+                bool emission = material.HasProperty("_EmissionColor") && material.IsKeywordEnabled("_EMISSION")
+                    && material.GetColor("_EmissionColor").maxColorComponent > 0.001f;
                 // Includes ceiling panels, live CCTV pictures, and world-space fixture text.
                 bool unlit = material.shader != null &&
                     (material.shader.name.IndexOf("Unlit", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -119,8 +125,10 @@ public sealed class BlackoutRendering : MonoBehaviour
         RenderSettings.fogColor = fogColour;
         foreach (var pair in backgrounds) if (pair.Key != null) pair.Key.backgroundColor = pair.Value;
         foreach (var pair in probes) if (pair.Key != null) pair.Key.intensity = pair.Value;
+        // An empty block is cleared, not set: a set (even empty) block keeps the renderer off the
+        // batched path, so the store stayed 3x slower after the power came back (measured).
         foreach (var surface in surfaces)
-            if (surface.renderer != null) surface.renderer.SetPropertyBlock(surface.saved, surface.index);
+            if (surface.renderer != null) surface.renderer.SetPropertyBlock(surface.saved.isEmpty ? null : surface.saved, surface.index);
         foreach (var pair in lightStates)
         {
             if (pair.Key == null || !pair.Value || !PowerSystem.PowerOn) continue;
