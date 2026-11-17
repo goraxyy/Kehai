@@ -23,9 +23,8 @@ public sealed class FurnitureDoor : HighlightInteractable
     protected override void Awake()
     {
         base.Awake();
-        closed = transform.localRotation;
-        chosenOpenAngle = openAngle;
-        if (assembly == null) assembly = transform.parent;
+        EnsureReady();
+        if (roomDoor != null) roomDoor.MarkWrapped();   // the room door hears E through this, only
         if (roomDoor == null && panel != null)
         {
             var obstacle = panel.gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
@@ -37,9 +36,23 @@ public sealed class FurnitureDoor : HighlightInteractable
         }
     }
 
+    bool ready;
+    void EnsureReady()
+    {
+        if (ready) return;
+        ready = true;
+        closed = transform.localRotation;
+        chosenOpenAngle = openAngle;
+        if (assembly == null) assembly = transform.parent;
+    }
+
     public override void Interact(PlayerInteract player)
     {
-        if (roomDoor != null) roomDoor.Use(player.transform.position, NoiseAuthor.Player);
+        if (roomDoor != null)
+        {
+            roomDoor.MarkWrapped();
+            roomDoor.Use(player.transform.position, NoiseAuthor.Player);
+        }
         else
         {
             if (GetComponent<FreezerAlarm>() is FreezerAlarm alarm && alarm.Ringing) alarm.Close();
@@ -49,26 +62,104 @@ public sealed class FurnitureDoor : HighlightInteractable
     public override string GetPrompt() =>
         roomDoor != null && roomDoor.Blocker != null && roomDoor.Blocker.IsBlocking ? roomDoor.Blocker.PromptFor(PlayerInteract.Local)
         : roomDoor != null && roomDoor.Locked ? "Locked" : (IsOpen ? "Close " : "Open ") + label;
-    public void SetOpen(bool open) { if(roomDoor==null)wantsOpen=open; }
+    public void SetOpen(bool open) { if (roomDoor == null) { EnsureReady(); wantsOpen = open; } }
 
+    // E on a furniture leaf. It opens outward, the way its openAngle was authored, whichever
+    // side the opener stands: away from the opener would swing a cabinet, fridge or locker leaf
+    // into its own cabinet. Only if the outward pose is blocked (a wall, a neighbour) and the
+    // inward one is clear does it open the other way. A leaf whose inward side is its own
+    // cabinet has no two-way clearance, so it stays one-way: that is the geometry, not an
+    // exception (0.5.1 item 11). E mid-swing turns it round: opening -> closing, and closing ->
+    // opening again to the same side, from the angle it has reached.
     public void UseFrom(Vector3 from)
     {
-        if (!wantsOpen && Mathf.Abs(angle) < .1f && panel != null)
-        {
-            Vector3 along = panel.bounds.center - transform.position;
-            Vector3 toOpener = from - panel.bounds.center;
-            float magnitude = Mathf.Abs(openAngle);
-            chosenOpenAngle = Vector3.Dot(Quaternion.AngleAxis(magnitude, transform.up) * along, toOpener)
-                < Vector3.Dot(Quaternion.AngleAxis(-magnitude, transform.up) * along, toOpener) ? magnitude : -magnitude;
-        }
+        EnsureReady();
+        if (!wantsOpen && Mathf.Abs(angle) < .1f && panel != null) chosenOpenAngle = ChooseSide();
         wantsOpen = !wantsOpen;
     }
+
+    float ChooseSide()
+    {
+        float outward = openAngle;
+        if (SideBlocked(outward) && !SideBlocked(-outward)) return -outward;
+        return outward;
+    }
+
+    // Half-way and fully open: a leaf hinged at its cabinet's corner ends a 105-degree inward
+    // swing outside the cabinet, but passes through it on the way.
+    bool SideBlocked(float degrees) => PoseBlocked(degrees * 0.5f) || PoseBlocked(degrees);
+
+    const float PoseInset = 0.03f, HingeInset = 0.1f;
+
+    // Would the leaf, fully open at `degrees`, sit in something fixed? Unlike the swing check
+    // below, its own cabinet counts here: a pose inside the cabinet's bounds is blocked even
+    // where the cabinet is hollow (the cold hiding cabinets).
+    bool PoseBlocked(float degrees)
+    {
+        Quaternion parent = transform.parent == null ? Quaternion.identity : transform.parent.rotation;
+        Quaternion shutWorld = parent * closed;
+        Quaternion fromShut = parent * closed * Quaternion.Euler(0f, degrees, 0f) * Quaternion.Inverse(shutWorld);
+        Quaternion toShut = shutWorld * Quaternion.Inverse(transform.rotation);   // the leaf may be part-open now
+        Vector3 hinge = transform.position;
+        Vector3 shut = hinge + toShut * (panel.transform.TransformPoint(panel.center) - hinge);
+        Quaternion shutRotation = toShut * panel.transform.rotation;
+
+        Vector3 half = Vector3.Scale(panel.size, panel.transform.lossyScale);
+        for (int i = 0; i < 3; i++) half[i] = Mathf.Abs(half[i]) * 0.5f;
+        Vector3 along = shut - hinge;
+        int axis = 0;
+        float best = -1f;
+        for (int i = 0; i < 3; i++)
+        {
+            float d = along.sqrMagnitude < 1e-6f ? 0f : Mathf.Abs(Vector3.Dot(shutRotation * Unit(i), along.normalized));
+            if (d > best) { best = d; axis = i; }
+        }
+        // Pulled in all round, and further at the hinge end: flush contact is not a block.
+        for (int i = 0; i < 3; i++) half[i] = Mathf.Max(.001f, half[i] - PoseInset);
+        float outward = Mathf.Sign(Vector3.Dot(shutRotation * Unit(axis), along));
+        float trim = Mathf.Min(HingeInset, half[axis] - .001f) * 0.5f;
+        half[axis] -= trim;
+
+        Quaternion openRotation = fromShut * shutRotation;
+        Vector3 openCentre = hinge + fromShut * (shut - hinge) + openRotation * Unit(axis) * (outward * trim);
+
+        if (assembly != null && AssemblyBounds(out Bounds cabinet) && cabinet.Contains(openCentre)) return true;
+
+        int count = Physics.OverlapBoxNonAlloc(openCentre, half, overlaps, openRotation, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            Collider other = overlaps[i];
+            if (other == null || other.isTrigger || other == panel || other.transform.IsChildOf(transform)) continue;
+            Rigidbody body = other.attachedRigidbody;
+            if (body != null && !body.isKinematic) continue;
+            if (other.GetComponentInParent<Item>() != null || other.GetComponentInParent<CharacterController>() != null
+                || other.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null) continue;
+            return true;
+        }
+        return false;
+    }
+
+    // The cabinet's own solid body, without this leaf.
+    bool AssemblyBounds(out Bounds bounds)
+    {
+        bounds = default;
+        bool any = false;
+        foreach (Collider c in assembly.GetComponentsInChildren<Collider>())
+        {
+            if (c == null || c.isTrigger || !c.enabled || c == panel || c.transform.IsChildOf(transform)) continue;
+            if (any) bounds.Encapsulate(c.bounds); else { bounds = c.bounds; any = true; }
+        }
+        return any;
+    }
+
+    static Vector3 Unit(int i) => i == 0 ? Vector3.right : i == 1 ? Vector3.up : Vector3.forward;
 
     void Update() => StepSwing(Time.deltaTime);
 
     public void StepSwing(float dt)
     {
         if (roomDoor != null || GamePause.Paused || panel == null) return;
+        EnsureReady();
         float target = wantsOpen ? chosenOpenAngle : 0f;
         float remaining = Mathf.Min(Mathf.Abs(target - angle), degreesPerSecond * dt);
         // Subdivide even after a slow frame so a leaf cannot skip through the player.

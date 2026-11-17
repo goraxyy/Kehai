@@ -86,8 +86,14 @@ public static class EnvironmentPolishBuilder
                     Box(leaf.transform,"Handle plate",new Vector3(side*.045f/.065f,-.11f/2.4f,.7f/1.84f),new Vector3(.02f/.065f,.36f/2.4f,.14f/1.84f),metal,false);
                     Box(leaf.transform,"Horizontal lever",new Vector3(side*.09f/.065f,-.11f/2.4f,.7f/1.84f),new Vector3(.065f/.065f,.035f/2.4f,.22f/1.84f),metal,false);
                 }
-                var use=door.GetComponent<FurnitureDoor>()??door.gameObject.AddComponent<FurnitureDoor>();
-                use.roomDoor=door;use.panel=leaf.GetComponent<BoxCollider>();use.label="door";door.aimedInteraction=true;
+                // 0.5.1: these doors are prefab instances. A field set from code without recording it
+                // is not saved as an override, which is how Door_03..06 kept aimedInteraction off
+                // and heard one E twice (the wrapper, then their own nearby-E check).
+                var use=door.GetComponent<FurnitureDoor>();
+                if(use==null)use=Undo.AddComponent<FurnitureDoor>(door.gameObject);
+                Undo.RecordObject(use,"Aimed room door");Undo.RecordObject(door,"Aimed room door");
+                use.roomDoor=door;use.panel=leaf.GetComponent<BoxCollider>();use.label="door";door.aimedInteraction=true;door.fixedSwingDirection=false;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(use);PrefabUtility.RecordPrefabInstancePropertyModifications(door);
                 var outline=door.GetComponent<OutlineHighlight>();AssignOutline(outline);
                 leaf.layer=LayerMask.NameToLayer("Interactable");
                 var frame=new GameObject("White frame - "+door.name).transform;frame.SetParent(root,false);frame.SetPositionAndRotation(door.transform.position,door.transform.rotation);

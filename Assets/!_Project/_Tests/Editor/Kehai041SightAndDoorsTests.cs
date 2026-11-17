@@ -259,6 +259,11 @@ public class Kehai041SightAndDoorsTests
         finally { Power(true); Object.DestroyImmediate(person); Object.DestroyImmediate(door.gameObject); }
     }
 
+    // 0.5.1 item 11. A furniture leaf opens outward, its authored side, from either approach;
+    // the other way only where the outward pose is blocked and the inward one is clear. (The
+    // first 0.5.1 draft of this test wanted "away from the opener", which swings a cabinet leaf
+    // into its own cabinet, and it never ran Awake, so the leaf had no shut pose: its overlap box
+    // sat in the floor at the hinge and it never moved.)
     [Test]
     public void FurnitureDoorFlushWithFloorOpensBothWaysAndReverses()
     {
@@ -268,20 +273,37 @@ public class Kehai041SightAndDoorsTests
         panel.transform.SetParent(hinge.transform, true);
         var door = hinge.AddComponent<FurnitureDoor>();
         door.panel = panel.GetComponent<BoxCollider>();
+        typeof(FurnitureDoor).GetMethod("Awake", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(door, null);
+        float Angle() => Mathf.DeltaAngle(0f, hinge.transform.eulerAngles.y);
+
         door.UseFrom(Vector3.back);
         door.StepSwing(.2f);
-        float first = Mathf.DeltaAngle(0f, hinge.transform.eulerAngles.y);
+        float first = Angle();
         Assert.Greater(Mathf.Abs(first), 5f, "floor contact must not freeze the leaf");
         door.UseFrom(Vector3.forward);
         door.StepSwing(1f);
         Assert.Less(Quaternion.Angle(Quaternion.identity, hinge.transform.rotation), .1f);
         door.UseFrom(Vector3.forward);
         door.StepSwing(.2f);
-        float other = Mathf.DeltaAngle(0f, hinge.transform.eulerAngles.y);
-        Assert.Less(first * other, 0f, "opposite approaches choose opposite swings");
+        Assert.Greater(first * Angle(), 0f, "outward from either side, never into its cabinet");
         door.UseFrom(Vector3.forward);
+        door.StepSwing(1f);
+
+        // A wall where the leaf would open outward (the authored +105 swings it to -z).
+        Box("wall on the outward side", new Vector3(-.1f, 1f, -.6f), new Vector3(.6f, 2f, .4f));
+        door.UseFrom(Vector3.back);
+        door.StepSwing(.2f);
+        float other = Angle();
+        Assert.Less(first * other, 0f, "the other way, where outward is blocked and inward is clear");
+
+        door.UseFrom(Vector3.back);
         door.StepSwing(.05f);
+        float turned = Angle();
+        Assert.Less(Mathf.Abs(turned), Mathf.Abs(other), "E while opening closes it");
         door.UseFrom(Vector3.back);
         Assert.IsTrue(door.IsOpen, "closing reverses immediately");
+        door.StepSwing(.05f);
+        Assert.Greater(Mathf.Abs(Angle()), Mathf.Abs(turned), "and opens again from where it was");
+        Assert.Greater(other * Angle(), 0f, "to the same side");
     }
 }
