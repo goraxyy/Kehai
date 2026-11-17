@@ -1249,36 +1249,79 @@ namespace Kehai.Karen
             Note("EFFECT", $"EFFECT   {label} ({by} {Time.time - toldAt:0.0}s before)");
 
         void OnPaChime(PaAnnouncement a) => RecordTell(TellKind.PaChime, Body.Position, PaSystem.ChimeSeconds);   // storewide; logged where she is
-        HidingPlace pursuingHide;
+        // 0.5.1, item 2: she saw you go into a hiding place. She runs to the closest point she can
+        // reach to where her eye last saw you, and the game ends once she is within 3 m of that
+        // point while you are still in there: the eye answers yes or no
+        // (SightSensor.CanCatchWitnessedHide), and she never gets your hidden position. If you
+        // slipped out, she still goes, looks for a second, finds nothing and goes back to deciding,
+        // so nothing she does before the catch depends on whether you are still inside.
+        bool pursuingHide, hidingRepathed;
+        int pursuedEntry = -1;
         Vector3 hidingDestination;
-        float hidingPathAt;
+        float hidingPathAt, hidingArrivedAt = -1f;
+        const float HidingLookSeconds = 1f;
 
         bool PursueWitnessedHide()
         {
+            // The stun gate sits here for now; the stun work moves it to the top of the brain.
             if (Body.IsStunned) return true;
             WitnessedHide memory = Body.Sight.HiddenEntry;
             if (!memory.Active)
             {
-                if (pursuingHide != null) { pursuingHide = null; decideNow = true; }
+                if (pursuingHide) { pursuingHide = false; decideNow = true; }
                 return false;
             }
-            if (pursuingHide != memory.Place)
+            if (!pursuingHide || pursuedEntry != memory.Entry)
             {
-                pursuingHide = memory.Place;
+                pursuingHide = true;
+                pursuedEntry = memory.Entry;
+                // AbortPlan ends a chase; this one goes on, so hold it across the abort rather
+                // than end and restart it (a recovery window, narration and stats twice).
+                bool wasChasing = chasing;
+                chasing = false;
                 AbortPlan();
-                hidingPathAt = -999f;
+                chasing = wasChasing;
                 if (!chasing) SetChasing(true);
-                Note("SENSE", "saw entry into hiding; approaching the remembered entrance");
-            }
-            if (Body.Sight.CanCatchWitnessedHide(Body.Position)) { Kill(); return true; }
-            if (Time.time - hidingPathAt >= 1f)
-            {
-                hidingPathAt = Time.time;
                 hidingDestination = HidingApproach.ClosestReachable(Body.Agent, memory.Position);
-                Body.MoveTo(hidingDestination, KarenBody.Pace.Run);
+                hidingPathAt = -999f;
+                hidingArrivedAt = -1f;
+                hidingRepathed = false;
+                Note("SENSE", "saw entry into hiding; approaching where she saw it");
             }
-            if (Body.Arrived(0.4f)) Body.TurnToward(memory.Position + Vector3.up);
-            return true;
+            if (Body.Sight.CanCatchWitnessedHide(Body.Position))
+            {
+                memory.Clear();
+                pursuingHide = false;
+                Kill();
+                return true;
+            }
+            if (hidingArrivedAt < 0f)
+            {
+                if (Time.time - hidingPathAt >= 1f)
+                {
+                    hidingPathAt = Time.time;
+                    Body.MoveTo(hidingDestination, KarenBody.Pace.Run);
+                }
+                if (Body.PathFailed && !hidingRepathed)
+                {
+                    // Once: the route may have changed (a door) since she worked it out.
+                    hidingRepathed = true;
+                    hidingDestination = HidingApproach.ClosestReachable(Body.Agent, memory.Position);
+                    hidingPathAt = -999f;
+                    return true;
+                }
+                if (!Body.PathFailed && !Body.Arrived(0.4f)) return true;
+                hidingArrivedAt = Time.time;
+            }
+            Body.TurnToward(memory.Position + Vector3.up);
+            if (Time.time - hidingArrivedAt < HidingLookSeconds) return true;
+
+            // As close as she could get, and nothing to catch: the search is over.
+            memory.Clear();
+            pursuingHide = false;
+            decideNow = true;
+            Note("SENSE", "looked where she saw the entry into hiding; nothing to catch");
+            return false;
         }
 
         void OnPaSpeech(PaAnnouncement a)

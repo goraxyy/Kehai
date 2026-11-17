@@ -6,6 +6,9 @@ namespace Kehai.Karen
     // A code-authored empty interior, not the bounds of the solid furniture. Coverage is
     // the fraction of the current controller's body envelope inside it. It is independent
     // of the observer: an open cabinet or a ray under a rack does not defeat concealment.
+    //
+    // A sense: SightSensor asks it where the player is hiding. The memory of a seen entry is
+    // WitnessedHide, in its own file, which never reads the player.
     [DisallowMultipleComponent]
     public sealed class HidingPlace : MonoBehaviour
     {
@@ -13,10 +16,17 @@ namespace Kehai.Karen
         public Bounds interior;
         public bool requiresCrouch;
         static readonly List<HidingPlace> places = new List<HidingPlace>();
-        void OnEnable() { if (!places.Contains(this)) places.Add(this); }
-        void OnDisable() { places.Remove(this); }
+
+        // Registered on enable and when authored: in edit mode (tests, builders) OnEnable never
+        // runs, so authoring registers too. Disabled or destroyed entries are skipped.
+        void OnEnable() => Register(this);
+        void OnDisable() => places.Remove(this);
+        static void Register(HidingPlace place) { if (!places.Contains(place)) places.Add(place); }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => places.Clear();
+
+        // Not isActiveAndEnabled: that stays false in edit mode for a script that doesn't run there.
+        public bool Usable => this != null && enabled && gameObject.activeInHierarchy;
 
         public static bool Conceals(float coverage) => coverage >= CoveredThreshold;
         public static float OverlapFraction(Bounds body, Bounds space)
@@ -42,9 +52,10 @@ namespace Kehai.Karen
         {
             coverage = 0f;
             HidingPlace best = null;
+            places.RemoveAll(p => p == null);
             foreach (var place in places)
             {
-                if (place == null || !place.isActiveAndEnabled) continue;
+                if (!place.Usable) continue;
                 float value = place.Coverage(player);
                 bool conceals = place.Conceals(player, value);
                 bool bestConceals = best != null && best.Conceals(player, coverage);
@@ -57,38 +68,11 @@ namespace Kehai.Karen
 
         public static HidingPlace Author(GameObject owner, Bounds interior, bool crouch = false)
         {
-            var place = owner.GetComponent<HidingPlace>() ?? owner.AddComponent<HidingPlace>();
+            if (!owner.TryGetComponent(out HidingPlace place)) place = owner.AddComponent<HidingPlace>();
             place.interior = interior;
             place.requiresCrouch = crouch;
+            Register(place);
             return place;
         }
-    }
-
-    // Only perceptual evidence starts this memory. Occupancy can invalidate a catch, never
-    // start one or update the destination. Escape keeps the fixed search destination but
-    // permanently revokes the catch, including if the player returns unseen.
-    public sealed class WitnessedHide
-    {
-        public const float CatchDistance = 3f;
-        public const float Lifetime = 60f;
-        public bool Active { get; private set; }
-        public Vector3 Position { get; private set; }
-        public HidingPlace Place { get; private set; }
-        public bool CatchEligible { get; private set; }
-        float expires;
-        public void Remember(HidingPlace place, Vector3 observedPosition, float now)
-        {
-            Place = place; Position = observedPosition; expires = now + Lifetime;
-            Active = CatchEligible = true;
-        }
-        public void UpdateOccupancy(HidingPlace occupied, bool concealed, float now)
-        {
-            if (!Active) return;
-            if (Place == null || !Place.isActiveAndEnabled || now >= expires) { Clear(); return; }
-            if (occupied != Place || !concealed) CatchEligible = false;
-        }
-        public bool CanCatch(Vector3 observer, Vector3 occupant) =>
-            Active && CatchEligible && Vector3.Distance(observer, occupant) <= CatchDistance;
-        public void Clear() { Active = CatchEligible = false; Place = null; }
     }
 }

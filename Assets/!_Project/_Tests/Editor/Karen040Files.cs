@@ -3,13 +3,18 @@ using System.IO;
 
 // The 0.4.0 files outside Belief/ and Decision/ that the "she never reads the player" scan must
 // cover (KarenTests.BodyBeliefAndDecisions_NeverReadThePlayer). Belief/ and Decision/ are scanned
-// whole, so their new files are covered without being listed.
+// whole, so their new files are covered without being listed. 0.5.1 adds its files that are not
+// senses (SightSensor and HidingPlace are senses and read the player for their own checks).
 public static class Karen040Files
 {
     public static readonly string[] Listed =
     {
         "Diagnostics/LearningRecord.cs",
         "Perception/SenseModel.cs",
+        "Perception/HidingApproach.cs",
+        "Perception/WitnessedHide.cs",
+        "Core/PostSightPursuit.cs",
+        "Core/KarenStun.cs",
     };
 
     public static IEnumerable<string> UnderTheRule(string aiRoot)

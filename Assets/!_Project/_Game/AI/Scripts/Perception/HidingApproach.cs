@@ -7,6 +7,8 @@ namespace Kehai.Karen
     {
         // Sample around the remembered entry, then compare reachable path ends. A closet
         // interior often has no NavMesh; a partial path ending at its door is useful too.
+        // Its only input about you is `remembered`, where her eye last saw you (WitnessedHide):
+        // the brain works this out once per seen entry. With no agent on a NavMesh, the point itself.
         public static Vector3 ClosestReachable(NavMeshAgent agent, Vector3 remembered)
         {
             if (agent == null || !agent.isOnNavMesh) return remembered;
@@ -15,7 +17,7 @@ namespace Kehai.Karen
             float bestTravel = float.PositiveInfinity;
             var path = new NavMeshPath();
             var filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = agent.areaMask };
-            for (int ring = 0; ring < 7; ring++)
+            for (int ring = 0; ring < 7 && bestDistance > 0.25f; ring++)
             for (int direction = 0; direction < (ring == 0 ? 1 : 16); direction++)
             {
                 float angle = direction * Mathf.PI / 8f;

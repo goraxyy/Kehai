@@ -32,6 +32,7 @@ public class KarenRuleTests
     {
         "PlayerPosition = KarenDirector.TruePlayerPosition",   // the replay record, labelled debug-only
         "if (other is CharacterController) Touched?.Invoke(other);",   // touch is a sense: being caught is contact
+        "if (other is CharacterController) pendingTouch = other;",   // touch is a sense: being caught is contact
         "hit.collider.GetComponent<CharacterController>() == null) continue;",   // vantage: a body in the way isn't a wall
     };
 

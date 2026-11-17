@@ -19,7 +19,10 @@ using UnityEngine;
 // targets are halved: walking 10 m away in a lit aisle, seen within 0.35 s (was 0.7); 15 m
 // and off-centre, within 0.75 s (was 1.5). And 0.2.0's third target, "crouched in the dim,
 // never", is replaced by the eye-to-eye rule: with no line to your eyes, never; with one, she
-// does see you, slowly.
+// does see you.
+//
+// 0.5.1 (item 1): a line to your eyes is all of you. 0.4.1 counted the eyes alone as half,
+// so a head over a short shelf was noticed at half speed: that was the 0.5.0 playtest fault.
 public class AwarenessTests
 {
     const float Frame = 1f / 60f;
@@ -40,8 +43,8 @@ public class AwarenessTests
     // The six cases of the design notes (§3), and the second target.
     static readonly Pass TenCentre = Walk("walking, 10 m, dead centre, lit", 10f, 0f);
     static readonly Pass FifteenOff = Walk("walking, 15 m, 45° off-centre, lit", 15f, 45f);
-    // Crouched in the dim with only your eyes over cover (SightSensor.ExposureOf: a half), and
-    // the same with no line to your eyes at all.
+    // Crouched in the dim with only your eyes over cover (SightSensor.ExposureOf: all of you
+    // since 0.5.1, a half in 0.4.1), and the same with no line to your eyes at all.
     static readonly Pass Crouched = new Pass
     {
         Name = "crouched, only your eyes showing, 10 m, 45° off, dim",
@@ -127,25 +130,30 @@ public class AwarenessTests
     [Test]
     public void WithNoLineToYourEyes_YouStayUnseen_EvenWhereSheExpectsYou()
     {
-        // Eye to eye (0.4.1): chest and feet in plain view count for nothing without it.
+        // Eye to eye (0.4.1, kept): chest and feet in plain view count for nothing without it.
+        // (Outside hiding places; inside one you're hidden even with the line: Kehai051HidingTests.)
         Assert.AreEqual(0f, eye.Detect(Hidden.Angle, Hidden.Distance, Hidden.Light, Hidden.Salience, Hidden.Exposure));
         Assert.IsTrue(float.IsInfinity(SecondsToSeen(eye, Hidden, 1f)));
 
-        // Your eyes over the cover, and she does see you: slower than in the open.
+        // Your eyes over the cover, and she sees you as fast as all of you in the open (0.5.1).
+        // 0.4.1 asserted "slower": a head over a short shelf seen at half speed, which was the
+        // 0.5.0 playtest fault the owner reported.
         float peeking = SecondsToSeen(eye, Crouched);
         Pass open = Crouched;
         open.Exposure = 1f;
         Assert.IsFalse(float.IsInfinity(peeking), "a line to your eyes should be seen");
-        Assert.Greater(peeking, SecondsToSeen(eye, open), "only your eyes showing should take longer than all of you");
+        Assert.AreEqual(SecondsToSeen(eye, open), peeking, 1e-6f, "a short shelf she sees over must not slow her");
     }
 
     [Test]
-    public void Exposure_IsNothingWithoutTheEyes_AndHalfWithThemAlone()
+    public void Exposure_IsNothingWithoutTheEyes_AndAllOfYouWithThem()
     {
+        // 0.5.1: the eyes alone are full exposure. 0.4.1's 0.5 / 0.75 / 1 steps (eyes, + chest,
+        // + feet) were the 0.5.0 playtest fault: small shelves slowed her when she saw over them.
         Assert.AreEqual(0f, SightSensor.ExposureOf(false, true, true));
         Assert.AreEqual(0f, SightSensor.ExposureOf(false, false, false));
-        Assert.AreEqual(0.5f, SightSensor.ExposureOf(true, false, false));
-        Assert.AreEqual(0.75f, SightSensor.ExposureOf(true, true, false));
+        Assert.AreEqual(1f, SightSensor.ExposureOf(true, false, false));
+        Assert.AreEqual(1f, SightSensor.ExposureOf(true, true, false));
         Assert.AreEqual(1f, SightSensor.ExposureOf(true, true, true));
     }
 
