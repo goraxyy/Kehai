@@ -87,9 +87,10 @@ public class Kehai051BlackoutTests
         Assert.AreEqual(.37f, actual.GetFloat("_TestValue"));
         fixture.GetPropertyBlock(actual, 1);
         Assert.AreEqual(Color.black, actual.GetColor("_BaseColor"), "unlit lamp panels and CCTV textures must not glow");
-        wall.GetPropertyBlock(actual, 0);
-        Assert.IsTrue(actual.isEmpty, "a material that doesn't glow is left alone (it stays on the fast batched path)");
         Assert.AreEqual(.65f, actual.GetFloat("_InheritedValue"));
+        var wallBlock = new MaterialPropertyBlock();
+        wall.GetPropertyBlock(wallBlock, 0);
+        Assert.IsTrue(wallBlock.isEmpty, "a material that doesn't glow is left alone (it stays on the fast batched path)");
         power.RestorePower();
         Call(power.GetComponent<BlackoutRendering>(), "LateUpdate");
         fixture.GetPropertyBlock(actual, 0);
