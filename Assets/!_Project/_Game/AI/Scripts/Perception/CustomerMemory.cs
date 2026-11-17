@@ -65,6 +65,10 @@ namespace Kehai.Karen
         {
             PlayerPresence player = PlayerPresence.Current;
             if (player == null) return;
+            // Hidden in a fridge, closet, stall or under a rack: shoppers can't see you either,
+            // even with a clear line in (0.5.1, item 1; the same rule as every SightSensor).
+            HidingPlace place = HidingPlace.At(player, out float coverage);
+            if (place != null && place.Conceals(player, coverage)) return;
 
             Vector3 eye = transform.position + Vector3.up * 1.6f;
             Vector3 d = player.Chest - eye;
