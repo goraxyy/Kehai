@@ -2015,3 +2015,47 @@ provenance and negative results, mark missing metrics unavailable, and reserve h
 before execution. The retail Gameplay edition does not expose evaluation. Training/Testing can
 run the nonlearning benchmark with explicit Gameplay career semantics; missing frozen models
 fail capability checks instead of silently becoming scripted opponents.
+
+## 21. Kehai 0.5.1: the playtest fixes that touch Karen
+
+The owner's 0.5.0 playtest; the items are in [the 0.5.1 plan](../../you/plans/0.5.1-plan.md), the
+code entry points in [the implementation notes](../integration/0.5.1-plan.md).
+
+### 21.1 Her eyes (item 1)
+
+0.4.1's eye-to-eye rule stays: no clear line to your eyes, nothing seen. Two changes:
+
+| You are | 0.4.1 – 0.5.0 | 0.5.1 | Why |
+|---|---|---|---|
+| Standing behind a short shelf, her eyes see yours over it | seen at **half speed** (exposure 0.5) | seen at **full speed** (exposure 1) | the owner: small shelves don't reduce sight. This was the reported fault |
+| Inside a cold hiding cabinet, locker, toilet stall, changing cabin or the WC's empty cupboard, door open, clear line to your eyes | seen | **hidden** | an authored hiding interior conceals at ≥ 80 % of your body inside it |
+| Crouched under a stockroom rack, ≥ 80 % of you under the boards | hidden only if the boards broke the line | **hidden** | the same rule (racks need crouching) |
+| Standing at a rack, or less than 80 % inside | — | seen as usual | |
+
+- `SightSensor.ExposureOf(eyes, chest, feet)` is now 1 with the eyes and 0 without.
+- `HidingPlace` (Perception) is an authored empty interior in the furniture's own axes; coverage is
+  the share of the live controller's body envelope inside it (`PlayerPresence.BodyEnvelopeIn`).
+  A crouched body is 1.0 m tall (the capsule can't be shorter than its 0.5 m radius × 2).
+- `HidingPlaceAuthoring` adds the interiors at load by object name, so the owner's scene needs no
+  rebuild: 8 cold hiding cabinets and 10 lockers and the empty WC cupboard (`ColdHideInterior`),
+  10 toilet stalls, 2 changing cabins, 28 stockroom racks (crouch). The stocked cleaning cupboard
+  is not one (its shelves fill it).
+- Every `SightSensor` (hers, the store's cameras, Kenji, a possessed shopper) and `CustomerMemory`
+  (shoppers' testimony) skip a concealed player.
+- The light level she uses was not retuned (the carried-over 0.001 ambient was reverted).
+
+### 21.2 Seeing you hide (item 2)
+
+| Step | Rule | What it reads |
+|---|---|---|
+| Witnessed | on the step into concealment, an eye saw you within 0.5 s, within 0.6 m of that place, and you moved at most 1.5 m since | her own last sighting (`WitnessedHide.Witnessed`) |
+| Approach | she runs once per entry to the reachable point closest to where she saw you go in (`HidingApproach`) | the remembered entry, never your live position |
+| Catch | within 3 m of that remembered spot, if you are still hiding in that same place: the shift ends | a yes/no from her senses (`SightSensor.CanCatchWitnessedHide`) |
+| Revoked | you leave, change hiding place, a new sighting supersedes it, or 60 s pass | |
+| Nothing found | on arrival with no catch she looks for 1 s, forgets the entry and decides again | |
+
+- Unwitnessed hiding never arms it, even with a clear line in.
+- The 3 m is measured from where she saw the entry, not from you: on a long rack she can catch
+  you more than 3 m from your live position, or miss you though close. A literal "3 m from the
+  player" would need your live position, which the fairness contract forbids (§9 rule 1).
+- `WitnessedHide` and `HidingApproach` are under the "she never reads the player" scan.
