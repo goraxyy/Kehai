@@ -1822,7 +1822,7 @@ Three calls by the owner, all in `SightSensor` and `KarenConfig`.
 | "Nothing here" sweep | 120 cells a tick | **240** (the cone is twice as long) |
 
 **Eye to eye.** One rule for cover: an eye sees you only along a clear line from it to your eyes
-(your camera).
+(your camera). *(0.5.1 changed two rows below: eyes over a short shelf now count in full, and hiding interiors conceal; see [§21.1](#211-her-eyes-item-1).)*
 
 | You are | Before | Now | Why |
 |---|---|---|---|
