@@ -22,6 +22,10 @@ namespace Kehai.Karen
         public KarenStun Stun { get; private set; }
         public bool IsStunned => Stun != null && Stun.IsStunned;
 
+        // Part of her body (0.5.1: she has a solid capsule for thrown items). Lines that look
+        // past people (vantage, fairness, planning) treat her as see-through, as they always did.
+        public static bool IsHers(Collider c) => c != null && c.GetComponentInParent<KarenBody>() != null;
+
         public Vector3 Position => transform.position;
         public Vector3 Forward => transform.forward;
         public bool Silent { get; set; }

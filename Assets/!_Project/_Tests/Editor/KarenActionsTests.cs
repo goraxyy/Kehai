@@ -192,17 +192,8 @@ public class KarenActionsTests
         Assert.AreEqual(0f, c.Director.ActionPermission(ActionId.Hunt, c), "a hunt in a recovery");
     }
 
-    [TestCase(true, 0f, 0.2f, 0f, false, 0f, false, TestName = "Seeing you, she keeps going")]
-    [TestCase(false, 3f, 8f, 3f, false, 0f, false, TestName = "Lost, but not there yet, she keeps going")]
-    [TestCase(false, 2f, 1f, 2f, false, 0f, true, TestName = "There, and you're not: hand over")]
-    [TestCase(false, 7f, 6f, 7f, false, 0f, true, TestName = "Six seconds with nothing new: hand over")]
-    [TestCase(false, 7f, 6f, 1f, false, 0f, false, TestName = "Lost, but a fresh clue: she keeps going")]
-    [TestCase(true, 0f, 3f, 0f, true, 0f, true, TestName = "A recovery: hand over")]
-    [TestCase(true, 0f, 3f, 0f, false, 0.9f, true, TestName = "You went outside: hand over")]
-    public void Hunt_HandsOver_ByTheRules(bool sees, float lostFor, float toGoal, float staleness, bool recovery, float outside, bool expected)
-    {
-        Assert.AreEqual(expected, Pursue.HandOver(sees, lostFor, toGoal, staleness, recovery, outside, 6f, out string why), why);
-    }
+    // 0.2.0's hand-over rule (an empty guess or six seconds ended a hunt) was replaced in 0.5.1 by
+    // the 60 s window and its search: Kehai051PursuitTests.TheHuntRunsThenSearches_AndEndsOnlyByTheRules.
 
     // ---- phase 3: Throw ----------------------------------------------------------------------
 

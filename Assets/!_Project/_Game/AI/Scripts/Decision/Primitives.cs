@@ -536,20 +536,6 @@ namespace Kehai.Karen
             why = "running on to where you'd be";
             return Next.Run;
         }
-
-        // 0.2.0's rule, which 0.5.1 replaced with Rule: an empty guess or a few seconds with
-        // nothing new ended the hunt, and a fresh clue (a noise) kept it going. Nothing calls it;
-        // it stays only while KarenActionsTests.Hunt_HandsOver_ByTheRules still pins it.
-        public static bool HandOver(bool sees, float lostFor, float toGoal, float staleness, bool inRecovery,
-                                    float outsideMass, float memory, out string why)
-        {
-            why = null;
-            if (outsideMass > 0.5f) why = "you went outside: she can't follow you there";
-            else if (inRecovery) why = "a recovery: she lets you go";
-            else if (!sees && lostFor > 0.5f && toGoal < 1.5f) why = "got to where you'd be, and you weren't there";
-            else if (!sees && lostFor > memory && staleness > memory) why = $"nothing new for {memory:0}s";
-            return why != null;
-        }
     }
 
     public static class SightExtensions

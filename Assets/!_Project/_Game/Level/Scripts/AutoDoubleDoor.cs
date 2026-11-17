@@ -304,6 +304,9 @@ public class AutoDoubleDoor : MonoBehaviour
     static bool IsCharacter(Collider other)
     {
         if (other == null || other.isTrigger || other.GetComponentInParent<Item>() != null) return false;
+        // Karen's solid body (0.5.1) is not a sensor occupant: her doors open through OpenForKaren,
+        // and a sensor chime for her would reach her own ears as a customer's.
+        if (Kehai.Karen.KarenBody.IsHers(other)) return false;
         return other.GetComponentInParent<CharacterController>() != null
             || other.GetComponentInParent<CustomerNPC>() != null
             || other.GetComponentInParent<NavMeshAgent>() != null;

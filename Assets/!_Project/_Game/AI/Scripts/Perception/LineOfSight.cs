@@ -18,7 +18,7 @@ namespace Kehai.Karen
             for (int i = 0; i < count; i++)
             {
                 Collider col = hits[i].collider;
-                if (col is CharacterController) continue;
+                if (col is CharacterController || KarenBody.IsHers(col)) continue;
                 if (col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic) continue;
                 return false;
             }
