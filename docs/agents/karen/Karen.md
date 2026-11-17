@@ -1399,8 +1399,8 @@ kind stays "GOAL" because the tools read it.
 - **After she loses you,** she runs to her best guess at where you're going (below), so she keeps
   hunting on belief instead of stopping where she last saw you.
 - **She hands over to Search** when she gets there and you're not, after 6 s with nothing new
-  (`huntMemorySeconds`), in a recovery, or with you outside. Hunt's score fades over those 6 s
-  (`Pursue.HandOver`).
+  (`huntMemorySeconds`), in a recovery, or with you outside. *Replaced in 0.5.1 by a 60 s window
+  that searches instead of handing over: [§21.3](#213-the-hunt-after-she-loses-you-item-13).*
 - **The Director paces it** (`KarenDirector.HuntAllowed`): refused while you settle in and during
   a recovery; 0.6 tension; a 90 s cooldown; a recovery when it ends. That's one cost and one
   cooldown for the action, whichever of its moves runs: the run, Cut or Throw.
@@ -2059,3 +2059,43 @@ code entry points in [the implementation notes](../integration/0.5.1-plan.md).
   you more than 3 m from your live position, or miss you though close. A literal "3 m from the
   player" would need your live position, which the fairness contract forbids (§9 rule 1).
 - `WitnessedHide` and `HidingApproach` are under the "she never reads the player" scan.
+
+### 21.3 The hunt after she loses you (item 13)
+
+One clock for the whole hunt, `PostSightPursuit`, with `huntMemorySeconds` = 60 (was 6).
+
+| Event | Effect on the 60 s window |
+|---|---|
+| Starts | when the hunt starts, from her last sighting |
+| Renews | only a confirmed sighting during the hunt (`SeesNow` and awareness at "seen") |
+| Never renews | noises (they steer the search), new plans, a stun, an empty spot |
+| Ends | window over with nothing in sight; a recovery; belief that you're outside; another action winning; a catch. Logged: `HUNT the hunt ends: <why> (N spots searched)` |
+| Empty destination | "got there and you weren't there", or as close as she can get: `Pursue` switches to searching in the same step |
+
+- **Search order** (`PursuitSearch`, pure): the newest unsearched noise (last 15 s), then the end
+  of each route guess (weight ≥ 5 %), then where she last saw you, then her belief's peak. At each
+  spot she sweeps her head 1.6 s; anything within 3 m counts as searched; a spot out of reach for
+  20 s is given up; a newer noise re-steers her; a sighting ends the search and she runs at you.
+- **Fairness:** inputs are her sighting memory, hearing, route guesses and belief only; the files
+  are in the scan.
+- **Recovery** is unchanged and can end a hunt before 60 s; the Director's spike and the
+  habituation guard still cap it. **Stun** spends the window. Rungs A and B keep their 4 s chase.
+- The chase's extra burnout drain applies only while she runs at you, not while she searches.
+
+### 21.4 Hits and stun (item 14)
+
+| Rule | Value |
+|---|---|
+| Counts | a loose, non-kinematic item, not carried, not shelved, not hers; speed before contact ≥ 1.5 m/s and closing speed along the contact normal ≥ 1.5 m/s |
+| Strength | closing speed (≤ 20 m/s) × √mass (0.05–5 kg); under 2 is a graze |
+| Stun | 0.25 + (strength − 2) × 0.18 s, at most 3 s (1 kg at 6 m/s ≈ 1 s; at 13 m/s ≈ 2.2 s) |
+| Repeats | one touch per item per release (picking it up re-arms it); hits within a stun can't stretch it past 3 s from the first; 0.5 s grace afterwards; clutter she shoves becomes hers |
+| Blocked while stunned | walking, turning, dashing, carrying, plans and tricks (aborted, carried item dropped), the witnessed-hide approach, the blink dash, `Kill` and touch catches (a hit beats a catch in the same frame) |
+| Still running | her senses, belief, Director, route guesses; on waking she decides again |
+| Reset | new shift, end of shift/restart, body disabled; pause freezes it |
+
+- Her body has a solid capsule (radius min(body, touch − 0.15) = 0.35 m) for items, separate from
+  the touch trigger; her eye, vantage, fairness and planning lines and the door sensors ignore it
+  (`KarenBody.IsHers`).
+- Checked in play mode on the clone: a 20 m/s item hits and stuns her for the 3 s cap; a wall stops
+  one thrown behind it.

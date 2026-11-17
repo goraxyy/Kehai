@@ -7,6 +7,8 @@
   - **Names** float over the clocks, the time clock, the coffee machine, the PA box and microphone, the breakers and the other fixtures you can use. The PA microphone, stuck 3 m up the wall, now stands on its own small table.
   - **Doors:** the cold-room and stockroom doors open on one press (one press reached them twice and shut them again). Room doors open away from you from either side. In a blackout the automatic doors are dead (no chime, nobody opens them), and you can slide one open by hand.
   - **Burnout:** holding Shift while standing still no longer drains you at the sprint rate.
+  - **The hunt:** after she loses sight of you she keeps hunting for up to 60 s from her last real sighting, searching where she heard you, where she guesses you went and where she last saw you, instead of giving up after about 6 s. Noises steer her but don't extend it.
+  - **Throwing things at her:** a loose item that hits her hard enough stuns her (up to 3 s): she stops moving, can't catch you, then carries on. Grazes don't count; the same throw can't stun twice.
   - **Fog** is neutral grey, not blue. **The settings footer** has four equal buttons and says "Restart". **The cold room's** two islands are closer together. **The office camera** prop that never worked is gone. **The webcam helper** builds itself on a Mac and ships inside Mac builds.
 
 - **2026-11-12 — 0.4.1 branch, not released.** Seventeen things the owner asked for.
