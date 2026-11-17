@@ -65,13 +65,17 @@ nothing touched):
   measures to the remembered point and keeps the memory in a file the scan covers. Its tests were
   still being fixed.
 
+**Answered on 17 November (Q12): "0.5.2 extends it."** 0.5.1 keeps building visible hiding and
+ships it. 0.5.2 builds on top of what 0.5.1 ships and doesn't move or rewrite 0.5.1's version.
+The options below are kept as the record of what was weighed.
+
 | Option | How | Pros | Cons |
 |---|---|---|---|
-| **A. 0.5.1 finishes and ships it; 0.5.2 extends it (my pick)** | 0.5.2 starts from merged 0.5.1 and adds §3's interactions on top | no two sessions on the same files; it's tested before anything builds on it | 0.5.2 waits for 0.5.1's merge |
+| **A. 0.5.1 finishes and ships it; 0.5.2 extends it (your answer)** | 0.5.2 starts from merged 0.5.1 and adds §3's interactions on top | no two sessions on the same files; it's tested before anything builds on it | 0.5.2 waits for 0.5.1's merge |
 | B. 0.5.2 takes it over | 0.5.1 drops item 2; 0.5.2 builds it | one place for all hiding work | throws away work in progress; 0.5.1's other items (her sight, pursuit, stun) touch the same brain code anyway |
 | C. Both build parts at once | split by file | quicker on paper | the same brain and sight files: conflicts, and two fairness reviews of one feature |
 
-**What 0.5.2 would add on top of it (with A):**
+**What 0.5.2 adds on top of it:**
 - the same memory filled by her cameras (I2) and by a customer (I3), with less certainty;
 - her search when a catch fails: which nearby places she checks next, in an order that doesn't
   depend on where you are;
