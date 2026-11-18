@@ -299,7 +299,7 @@ namespace Kehai.Karen
                 float d = Vector3.Distance(p, target);
                 if (d < 8f) continue;
                 Vector3 eye = p + Vector3.up * 1.8f;
-                if (Physics.Linecast(eye, target, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) &&
+                if (Physics.Linecast(eye, target, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) && !KarenBody.IsHers(hit.collider) &&
                     hit.collider.GetComponent<CharacterController>() == null) continue;
                 float score = Vector3.Distance(p, c.Body.Position) + Mathf.Abs(d - 11f) * 2f;
                 if (score < best) { best = score; vantage = p; }

@@ -19,7 +19,10 @@ using UnityEngine;
 // ends at the visibility while you're in the fog. (Elsewhere: Minecraft's render distance fog.)
 public sealed class FogVisuals : MonoBehaviour
 {
-    public static readonly Color Colour = new Color(0.82f, 0.85f, 0.88f);
+    // 0.5.1: neutral grey, not blue. The clouds use the same grey (FogCloud.Build starts them
+    // bluish, so Neutralise recolours them) with their own see-through alpha.
+    public static readonly Color Colour = new Color(0.85f, 0.85f, 0.85f);
+    public static readonly Color CloudColour = new Color(Colour.r, Colour.g, Colour.b, 0.35f);
 
     static FogVisuals instance;
     readonly Dictionary<string, List<ParticleSystem>> pouring = new Dictionary<string, List<ParticleSystem>>();
@@ -64,6 +67,7 @@ public sealed class FogVisuals : MonoBehaviour
         {
             FogCloud cloud = FogCloud.Build(new Vector3(source.x, FloorUnder(source), source.z), 1.6f, 9999f);
             ParticleSystem ps = cloud.GetComponent<ParticleSystem>();
+            Neutralise(ps);
             var main = ps.main;
             main.loop = true;
             main.startLifetime = 14f;
@@ -122,11 +126,21 @@ public sealed class FogVisuals : MonoBehaviour
         else Restore();
     }
 
+    // Recolours a fog cloud's particles to the neutral grey (FogCloud.Build's start colour is blue-white).
+    public static void Neutralise(ParticleSystem ps)
+    {
+        if (ps == null) return;
+        var main = ps.main;
+        main.startColor = CloudColour;
+    }
+
+    // Clouds are drawn only for someone standing in their room, and never in a blackout:
+    // a lit cloud in the dark would light the room. Called every frame, so they return with the power.
     static void Draw(ParticleSystem ps, bool show)
     {
         if (ps == null) return;
         Renderer r = ps.GetComponent<Renderer>();
-        if (r != null && r.enabled != show) r.enabled = show;
+        if (r != null && r.enabled != (show && PowerSystem.PowerOn)) r.enabled = show && PowerSystem.PowerOn;
     }
 
     void Apply(float visibility)
@@ -145,7 +159,7 @@ public sealed class FogVisuals : MonoBehaviour
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogStartDistance = Mathf.Min(0.3f, visibility * 0.2f);
         RenderSettings.fogEndDistance = visibility;
-        RenderSettings.fogColor = Colour;
+        RenderSettings.fogColor = PowerSystem.PowerOn ? Colour : Color.black;
     }
 
     void Restore()

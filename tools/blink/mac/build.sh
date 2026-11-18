@@ -3,7 +3,7 @@
 # Needs only the Xcode command line tools (run `xcode-select --install` once if swiftc is missing).
 set -e
 cd "$(dirname "$0")"
-mkdir -p build
+mkdir -p build/ModuleCache
 
 # The usage string macOS shows when it asks for camera access.
 cat > build/Info.plist <<'PLIST'
@@ -16,7 +16,7 @@ cat > build/Info.plist <<'PLIST'
 </dict></plist>
 PLIST
 
-swiftc -O BlinkVision.swift -o build/BlinkVision \
+xcrun --sdk macosx swiftc -module-cache-path build/ModuleCache -O BlinkVision.swift -o build/BlinkVision \
   -framework AVFoundation -framework Vision -framework CoreMedia -framework Network \
   -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker build/Info.plist
 

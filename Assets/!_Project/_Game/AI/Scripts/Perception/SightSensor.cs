@@ -19,13 +19,9 @@ namespace Kehai.Karen
     // 0.3.0: fog blinds every eye the same (FogState). In a fogged room, or looking into one, an
     // eye sees no further than the fog's visibility — hers, a camera's, Kenji's, and yours.
     //
-    // 0.4.1: one rule for cover, eye to eye. An eye sees you only along a clear line from it to
-    // your eyes (your camera). A low thing on the floor between you — a short shelf, a box —
-    // doesn't hide you if she can look over it into your eyes; and with that line blocked — you're
-    // under the stockroom racks, the boards between her eyes and yours — she doesn't see you,
-    // however clear the floor is. Until now it was three rays (feet, chest, head) and any one
-    // would do, so feet showing under a rack gave you away. How much of the rest of you shows
-    // still counts, but only for how fast she notices (ExposureOf).
+    // 0.5.1: solid cover still blocks the eyes. Clear eyes over a low shelf give full
+    // exposure. Authored hiding interiors override that ray at 80% body-envelope coverage.
+    // Witnessed entry is a separate, fixed-location memory; unseen occupancy is never evidence.
     //
     // Every ray starts at the eye (hers is at the top of her body, about your own eye height),
     // and stops at anything solid on any layer: walls, shelving, doors, people. Triggers, your
@@ -69,6 +65,31 @@ namespace Kehai.Karen
         // Colliders on the owner that must never block its own view.
         [System.NonSerialized] public Transform ignoreRoot;
 
+        // What this eye saw go into a hiding place (WitnessedHide). Only her eye's is acted on.
+        public WitnessedHide HiddenEntry { get; } = new WitnessedHide();
+        bool hasLastVisible;
+        Vector3 lastVisiblePosition;
+        float lastVisibleAt;
+        bool wasConcealed;
+        HidingPlace wasConcealedIn;
+
+        // The catch for a witnessed hide (0.5.1, item 2). The eye checks, as a sense, whether you
+        // are still concealed in the place it saw you enter; the distance is from `observer` to
+        // where it saw you, never to you. The brain gets only this yes or no.
+        public bool CanCatchWitnessedHide(Vector3 observer)
+        {
+            var player = PlayerPresence.Current;
+            HidingPlace place = null;
+            bool concealed = false;
+            if (player != null)
+            {
+                place = HidingPlace.At(player, out float coverage);
+                concealed = place != null && place.Conceals(player, coverage);
+            }
+            HiddenEntry.UpdateOccupancy(place, concealed, Time.time);
+            return HiddenEntry.CanCatch(observer);
+        }
+
         public float Awareness { get; private set; }
         public float DetectNow { get; private set; }
         public float Exposure { get; private set; }
@@ -98,12 +119,45 @@ namespace Kehai.Karen
             Awareness = 0f;
             DetectNow = 0f;
             unseenFor = 0f;
+            HiddenEntry.Clear();
+            hasLastVisible = false;
+            wasConcealed = false;
+            wasConcealedIn = null;
+            LastSeenTime = -999f;
+            LastSeenVelocity = Vector3.zero;
         }
 
         public void Tick(float dt)
         {
             PlayerPresence player = PlayerPresence.Current;
-            float score = player != null ? Score(player) : 0f;
+            float coverage = 0f;
+            HidingPlace place = player != null ? HidingPlace.At(player, out coverage) : null;
+            bool concealed = place != null && place.Conceals(player, coverage);
+            float now = Time.time;
+            HiddenEntry.UpdateOccupancy(place, concealed, now);
+            // A witnessed entry: on the step into concealment (or into another place), the eye
+            // saw you beside that place a moment ago (WitnessedHide.Witnessed). One sighting
+            // witnesses one entry, so an unseen return can't re-arm the catch. A clear eye ray
+            // into the hiding place now is not evidence: concealed, the score is 0.
+            if (concealed && (!wasConcealed || place != wasConcealedIn) && hasLastVisible &&
+                WitnessedHide.Witnessed(place, lastVisiblePosition, lastVisibleAt, player.Position, now))
+            {
+                HiddenEntry.Remember(place, lastVisiblePosition, now);
+                hasLastVisible = false;
+            }
+            wasConcealed = concealed;
+            wasConcealedIn = concealed ? place : null;
+
+            float score = player != null && !concealed ? Score(player) : 0f;
+            if (concealed || player == null) { Exposure = 0f; IsWatched = false; }
+            if (score > scoreFloor)
+            {
+                hasLastVisible = true;
+                lastVisiblePosition = player.Position;
+                lastVisibleAt = now;
+                // Seeing you again supersedes the hiding-place search.
+                if (HiddenEntry.Active) HiddenEntry.Clear();
+            }
             float expected = score > scoreFloor && Expectation != null ? Expectation(player.Position) : 0f;
             Integrate(score, dt, expected);
 
@@ -149,8 +203,7 @@ namespace Kehai.Karen
             bool close = distance < CloseRange;
             if (angle > HalfAngle && !close) return 0f;
 
-            // Eye to eye first (0.4.1): no clear line to your eyes, nothing seen. Then how much
-            // of the rest of you shows, for how fast she notices.
+            // Eye to eye (0.5.1): ordinary low cover never slows a clear eye sighting.
             Exposure = ExposureTo(player.Head, player.Chest, player.Feet, player);
             if (Exposure <= 0f) return 0f;
 
@@ -161,19 +214,21 @@ namespace Kehai.Karen
             return Detect(angle, distance, player.LightLevel, player.MotionSalience, Exposure);
         }
 
-        // How much of you an eye has, 0 to 1, from which of its three lines are clear: to your
-        // eyes, your chest, your feet. Without the line to your eyes it has nothing (0.4.1); with
-        // it, half, and a quarter more each for the chest and the feet. So a head over a short
-        // shelf is seen, at half speed, and feet under a rack are not.
+        // Clear eyes over ordinary low cover give full sight (0.5.1, item 1). 0.4.1 gave half for
+        // the eyes alone and a quarter more each for the chest and feet, so a head over a short
+        // shelf was noticed at half speed: that was the 0.5.0 playtest fault. Concealment is the
+        // authored interiors' job (HidingPlace), checked before this ray. The chest and feet are
+        // kept in the signature for the callers; they no longer count.
         public static float ExposureOf(bool eyes, bool chest, bool feet) =>
-            !eyes ? 0f : 0.5f + (chest ? 0.25f : 0f) + (feet ? 0.25f : 0f);
+            eyes ? 1f : 0f;
 
-        // The same, cast: this eye's lines to someone's eyes, chest and feet, through whatever
-        // stands in the scene. `player` is whose body the lines may pass through (null in a test).
+        // The same, cast: this eye's line to someone's eyes through whatever stands in the scene
+        // (only the eye line counts since 0.5.1). `player` is whose body the line may pass
+        // through (null in a test).
         public float ExposureTo(Vector3 eyes, Vector3 chest, Vector3 feet, PlayerPresence player = null)
         {
             if (!Clear(player, eyes)) return 0f;
-            return ExposureOf(true, Clear(player, chest), Clear(player, feet));
+            return 1f;
         }
 
         // The score for someone `angle` degrees off this eye's forward and `distance` metres

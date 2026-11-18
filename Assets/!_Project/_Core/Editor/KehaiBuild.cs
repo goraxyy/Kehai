@@ -125,6 +125,7 @@ public static class KehaiBuild
             return null;
         }
 
+        if (target == BuildTarget.StandaloneOSX && selected != KehaiEdition.Training) EnsureBlinkHelper();
         if (selected != KehaiEdition.Training) IncludeRuntimeShaders();
         Directory.CreateDirectory(Path.GetDirectoryName(appPath));
         var watch = Stopwatch.StartNew();
@@ -202,17 +203,47 @@ public static class KehaiBuild
             Run("/usr/libexec/PlistBuddy", $"-c \"Add :NSCameraUsageDescription string {CameraReason}\" \"{plist}\"", "adding the camera line");
     }
 
+    [MenuItem("Kehai/Blink/Build Camera Helper")]
+    public static void EnsureBlinkHelper()
+    {
+        string folder = Path.Combine(ProjectRoot, "tools", "blink", "mac");
+        string helper = Path.Combine(folder, "build", "BlinkVision");
+        string source = Path.Combine(folder, "BlinkVision.swift");
+        string script = Path.Combine(folder, "build.sh");
+        if (!File.Exists(source) || !File.Exists(script))
+            throw new InvalidOperationException("Blink helper sources are missing from tools/blink/mac.");
+        if (BlinkHelperUpToDate()) return;
+        if (UnityEngine.Application.platform != UnityEngine.RuntimePlatform.OSXEditor)
+            throw new InvalidOperationException("Build the macOS blink helper on a Mac before packaging it.");
+        if (Run("/bin/sh", "\"" + script + "\"", "building the camera helper") == null || !File.Exists(helper))
+            throw new InvalidOperationException("Camera helper compilation failed. Install Xcode command line tools and use Kehai → Blink → Build Camera Helper.");
+        Debug.Log("Camera helper built. It starts only when webcam blinking is enabled with consent.");
+    }
+
+    // Built and newer than its source and build script: nothing to do.
+    public static bool BlinkHelperUpToDate()
+    {
+        string folder = Path.Combine(ProjectRoot, "tools", "blink", "mac");
+        string helper = Path.Combine(folder, "build", "BlinkVision");
+        string source = Path.Combine(folder, "BlinkVision.swift");
+        string script = Path.Combine(folder, "build.sh");
+        return File.Exists(helper) && File.Exists(source) && File.Exists(script)
+            && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(source)
+            && File.GetLastWriteTimeUtc(helper) >= File.GetLastWriteTimeUtc(script);
+    }
+
+    public static string BlinkHelperScript => Path.Combine(ProjectRoot, "tools", "blink", "mac", "build.sh");
+
     static void CopyBlinkHelper(string appPath)
     {
+        EnsureBlinkHelper();
         string helper = Path.Combine(ProjectRoot, "tools", "blink", "mac", "build", "BlinkVision");
-        string beside = Path.Combine(Path.GetDirectoryName(appPath), "BlinkVision");
-        if (!File.Exists(helper))
-        {
-            Debug.LogWarning("Kehai build: the blink helper isn't built (tools/blink/mac/build.sh), so the build has no webcam blinking.");
-            return;
-        }
-        File.Copy(helper, beside, overwrite: true);
-        Run("/bin/chmod", $"+x \"{beside}\"", "making the blink helper runnable");
+        // Keep the helper with the app when a player moves it out of the download folder.
+        string embedded = Path.Combine(appPath, "Contents", "Helpers", "BlinkVision");
+        Directory.CreateDirectory(Path.GetDirectoryName(embedded));
+        File.Copy(helper, embedded, overwrite: true);
+        if (Run("/bin/chmod", $"+x \"{embedded}\"", "making the blink helper runnable") == null)
+            throw new InvalidOperationException("Could not make the packaged camera helper executable.");
     }
 
     // ---- playtest builds ----------------------------------------------------------------------
@@ -304,9 +335,11 @@ public static class KehaiBuild
             {
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true,
             });
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
+            var outputRead = process.StandardOutput.ReadToEndAsync();
+            var errorRead = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
+            string output = outputRead.GetAwaiter().GetResult();
+            string error = errorRead.GetAwaiter().GetResult();
             if (process.ExitCode == 0) return output;
             if (what != null) Debug.LogWarning($"Kehai build: {what} failed: {error.Trim()}");
         }

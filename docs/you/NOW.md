@@ -1,12 +1,13 @@
 # Now
 
-Updated 2026-11-14. One page: what's being built, what waits on you, what's next. Agents keep it
+Updated 2026-11-17. One page: what's being built, what waits on you, what's next. Agents keep it
 current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md).
 
 ## Being built
 
 | What | State | Where |
 |---|---|---|
+| **Kehai 0.5.1** | built: all 14 items in one PR from branch `0.5.1`; checks and what waits on you are on the plan page. PR #87 can be closed once it merges | [the plan](plans/0.5.1-plan.md) |
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
 | **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | merged as PR #85 on 14 November | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
 | **Kehai 0.5.0** | source delivered in PR #82; owner chose merge now, further checks later on 14 November. Completed native checks and open follow-ups are in the [build status](plans/0.5.0/implementation-status.md) | [PR #82](https://github.com/goraxyy/Kehai/pull/82) |
@@ -16,6 +17,10 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 
 | What | Why it waits |
 |---|---|
+| 0.5.1, after it merges: in `~/Developer/Kehai`, with the store scene open, run **Kehai → Cold Storage → Move Existing Islands Closer** and **Kehai → Store Finish → Apply Door, Locker and Exterior Fit**, save the scene, then make a new `kehai-assets` release for the Windows PC | they move the cold-room islands, delete the dead office camera and save the door fix into the scene |
+| 0.5.1: turn webcam blinking on, consent, calibrate | the camera helper is built and found, but nobody has started your camera |
+| 0.5.1: coffee machine on the kitchen counter (now) or the dining table? | one line to change |
+| Play a shift on 0.5.1 | witnessed hiding, the 60 s pursuit, the stun and the new light are tested in code, not played |
 | Import the four new models: **Kehai → Props → Import Karen's Props** | until then the PA microphone, the camera box, the cameras and the screens are plain boxes |
 | Play a shift on 0.4.1 | her eyes are twice as far and twice as quick, and no test has measured that |
 | 0.5.0 scope is settled; later art review and external storage setup remain | adaptive ML bots are selected; long training remains after the build |

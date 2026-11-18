@@ -176,13 +176,17 @@ namespace Kehai.Karen
                     if (c.Belief.OutsideMass > 0.5f) { why = "you're outside: she can't follow you there"; return 0f; }
                     if (a.Awareness >= s.confirmAt) { why = $"sighting confirmed ({a.Awareness:0.00})"; return 1.05f; }
                     if (a.Awareness >= s.seeAt) { why = $"seen ({a.Awareness:0.00})"; return 0.55f + (a.Awareness - s.seeAt); }
-                    // A hunt that has lost you keeps going on her reckoning, fading over its memory
-                    // instead of dropping to 0 the moment awareness does (0.2.0).
-                    float lost = s.Time_SinceSeen(), memory = c.Config.huntMemorySeconds;
-                    if (c.Brain != null && c.Brain.IsChasing && lost < memory)
+                    // A hunt that has lost you keeps going on her reckoning, then searching, for one
+                    // window from her last confirmed sighting (0.5.1: PostSightPursuit), fading over
+                    // it instead of dropping to 0 the moment awareness does. Noises don't renew it.
+                    PostSightPursuit pursuit = c.Brain != null ? c.Brain.Pursuit : null;
+                    if (c.Brain != null && c.Brain.IsChasing && pursuit != null && pursuit.Active(c.Now))
                     {
-                        why = $"lost you {lost:0.0}s ago: running on to where you'd be";
-                        return 1.05f - 0.3f * (lost / memory) * (lost / memory);
+                        float window = Mathf.Max(1f, pursuit.Seconds), left = pursuit.Left(c.Now);
+                        float gone = Mathf.Clamp01(1f - left / window);
+                        why = pursuit.Searching ? $"searching for you, {left:0}s of the hunt left"
+                                                : $"lost you {s.Time_SinceSeen():0.0}s ago: running on to where you'd be ({left:0}s left)";
+                        return 1.05f - 0.3f * gone * gone;
                     }
                     why = "not seen";
                     return 0f;

@@ -16,7 +16,7 @@ in a folder you choose; `label_blinks.py` adds your own labels beside them.
 The Mac helper, `mac/BlinkVision.swift`, uses Apple's own Vision face landmarks, so it
 needs nothing beyond the Xcode command line tools.
 
-1. **Build the helper once** (from the project folder):
+1. **Build the helper once** using **Kehai → Blink → Build Camera Helper** in Unity, or from the project folder:
 
    ```bash
    tools/blink/mac/build.sh
@@ -257,3 +257,12 @@ and nothing is sent anywhere. Delete the folder to delete the data.
 
 `capture` → `sent` is the pipeline's own latency; the game subtracts it to date the true start
 of each blink, and Karen acts in whatever is left of the ~300 ms.
+
+### macOS player packaging (0.5.1)
+
+Testing and Gameplay macOS builds compile a missing or outdated helper before building,
+and include it inside `Kehai.app/Contents/Helpers/BlinkVision`. Moving the app preserves
+webcam support. Older side-by-side helpers are still found. A failed helper compilation
+stops the build instead of silently shipping without it. Training does not require it.
+Compilation does not open the camera; consent still happens in the game. Windows helper
+packaging remains separate and is not verified by the macOS build.

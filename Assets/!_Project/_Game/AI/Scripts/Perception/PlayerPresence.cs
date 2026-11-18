@@ -75,6 +75,9 @@ namespace Kehai.Karen
                 }
             }
 
+            // Karen's light sense, not the rendering: kept at 0.12 / 0.02 in 0.5.1. Item 3 darkens
+            // the rendered store; retuning how fast she notices you in the dim waits for a check
+            // of this input against the rendered state (0.5.1 implementation notes).
             float ambient = PowerSystem.PowerOn && RoomLightSwitch.Allows(position) ? 0.12f : 0.02f;
             return Mathf.Clamp01(best * 0.88f + ambient);
         }
@@ -135,6 +138,28 @@ namespace Kehai.Karen
         public Vector3 Position => transform.position;
 
         public bool IsCrouching => motor != null && motor.IsCrouching;
+
+        // Upright capsule envelope in the hiding place's axes. Horizontal radius is rotation
+        // invariant, so turning beside a cabinet cannot change coverage. Height/centre follow
+        // the live controller, including the intermediate frames of a crouch.
+        public Bounds BodyEnvelopeIn(Transform frame)
+        {
+            Vector3 centre = controller != null ? transform.TransformPoint(controller.center) : Position + Vector3.up * 0.9f;
+            float radius = controller != null ? controller.radius * Mathf.Max(Mathf.Abs(transform.lossyScale.x), Mathf.Abs(transform.lossyScale.z)) : 0.5f;
+            float height = controller != null ? Mathf.Max(controller.height, controller.radius * 2f) * Mathf.Abs(transform.lossyScale.y) : 1.8f;
+            return EnvelopeIn(frame, centre, radius, height);
+        }
+
+        // An upright body `radius` wide and `height` tall, centred on `centre` (world), in
+        // `frame`'s axes. Shared with the scene checks that fit a body into each hiding place.
+        public static Bounds EnvelopeIn(Transform frame, Vector3 centre, float radius, float height)
+        {
+            Vector3 scale = frame.lossyScale;
+            return new Bounds(frame.InverseTransformPoint(centre), new Vector3(
+                2f * radius / Mathf.Max(0.001f, Mathf.Abs(scale.x)),
+                height / Mathf.Max(0.001f, Mathf.Abs(scale.y)),
+                2f * radius / Mathf.Max(0.001f, Mathf.Abs(scale.z))));
+        }
 
         public MotionState Motion
         {

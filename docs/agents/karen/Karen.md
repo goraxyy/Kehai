@@ -1399,8 +1399,8 @@ kind stays "GOAL" because the tools read it.
 - **After she loses you,** she runs to her best guess at where you're going (below), so she keeps
   hunting on belief instead of stopping where she last saw you.
 - **She hands over to Search** when she gets there and you're not, after 6 s with nothing new
-  (`huntMemorySeconds`), in a recovery, or with you outside. Hunt's score fades over those 6 s
-  (`Pursue.HandOver`).
+  (`huntMemorySeconds`), in a recovery, or with you outside. *Replaced in 0.5.1 by a 60 s window
+  that searches instead of handing over: [§21.3](#213-the-hunt-after-she-loses-you-item-13).*
 - **The Director paces it** (`KarenDirector.HuntAllowed`): refused while you settle in and during
   a recovery; 0.6 tension; a 90 s cooldown; a recovery when it ends. That's one cost and one
   cooldown for the action, whichever of its moves runs: the run, Cut or Throw.
@@ -1822,7 +1822,7 @@ Three calls by the owner, all in `SightSensor` and `KarenConfig`.
 | "Nothing here" sweep | 120 cells a tick | **240** (the cone is twice as long) |
 
 **Eye to eye.** One rule for cover: an eye sees you only along a clear line from it to your eyes
-(your camera).
+(your camera). *(0.5.1 changed two rows below: eyes over a short shelf now count in full, and hiding interiors conceal; see [§21.1](#211-her-eyes-item-1).)*
 
 | You are | Before | Now | Why |
 |---|---|---|---|
@@ -2015,3 +2015,87 @@ provenance and negative results, mark missing metrics unavailable, and reserve h
 before execution. The retail Gameplay edition does not expose evaluation. Training/Testing can
 run the nonlearning benchmark with explicit Gameplay career semantics; missing frozen models
 fail capability checks instead of silently becoming scripted opponents.
+
+## 21. Kehai 0.5.1: the playtest fixes that touch Karen
+
+The owner's 0.5.0 playtest; the items are in [the 0.5.1 plan](../../you/plans/0.5.1-plan.md), the
+code entry points in [the implementation notes](../integration/0.5.1-plan.md).
+
+### 21.1 Her eyes (item 1)
+
+0.4.1's eye-to-eye rule stays: no clear line to your eyes, nothing seen. Two changes:
+
+| You are | 0.4.1 – 0.5.0 | 0.5.1 | Why |
+|---|---|---|---|
+| Standing behind a short shelf, her eyes see yours over it | seen at **half speed** (exposure 0.5) | seen at **full speed** (exposure 1) | the owner: small shelves don't reduce sight. This was the reported fault |
+| Inside a cold hiding cabinet, locker, toilet stall, changing cabin or the WC's empty cupboard, door open, clear line to your eyes | seen | **hidden** | an authored hiding interior conceals at ≥ 80 % of your body inside it |
+| Crouched under a stockroom rack, ≥ 80 % of you under the boards | hidden only if the boards broke the line | **hidden** | the same rule (racks need crouching) |
+| Standing at a rack, or less than 80 % inside | — | seen as usual | |
+
+- `SightSensor.ExposureOf(eyes, chest, feet)` is now 1 with the eyes and 0 without.
+- `HidingPlace` (Perception) is an authored empty interior in the furniture's own axes; coverage is
+  the share of the live controller's body envelope inside it (`PlayerPresence.BodyEnvelopeIn`).
+  A crouched body is 1.0 m tall (the capsule can't be shorter than its 0.5 m radius × 2).
+- `HidingPlaceAuthoring` adds the interiors at load by object name, so the owner's scene needs no
+  rebuild: 8 cold hiding cabinets and 10 lockers and the empty WC cupboard (`ColdHideInterior`),
+  10 toilet stalls, 2 changing cabins, 28 stockroom racks (crouch). The stocked cleaning cupboard
+  is not one (its shelves fill it).
+- Every `SightSensor` (hers, the store's cameras, Kenji, a possessed shopper) and `CustomerMemory`
+  (shoppers' testimony) skip a concealed player.
+- The light level she uses was not retuned (the carried-over 0.001 ambient was reverted).
+
+### 21.2 Seeing you hide (item 2)
+
+| Step | Rule | What it reads |
+|---|---|---|
+| Witnessed | on the step into concealment, an eye saw you within 0.5 s, within 0.6 m of that place, and you moved at most 1.5 m since | her own last sighting (`WitnessedHide.Witnessed`) |
+| Approach | she runs once per entry to the reachable point closest to where she saw you go in (`HidingApproach`) | the remembered entry, never your live position |
+| Catch | within 3 m of that remembered spot, if you are still hiding in that same place: the shift ends | a yes/no from her senses (`SightSensor.CanCatchWitnessedHide`) |
+| Revoked | you leave, change hiding place, a new sighting supersedes it, or 60 s pass | |
+| Nothing found | on arrival with no catch she looks for 1 s, forgets the entry and decides again | |
+
+- Unwitnessed hiding never arms it, even with a clear line in.
+- The 3 m is measured from where she saw the entry, not from you: on a long rack she can catch
+  you more than 3 m from your live position, or miss you though close. A literal "3 m from the
+  player" would need your live position, which the fairness contract forbids (§9 rule 1).
+- `WitnessedHide` and `HidingApproach` are under the "she never reads the player" scan.
+
+### 21.3 The hunt after she loses you (item 13)
+
+One clock for the whole hunt, `PostSightPursuit`, with `huntMemorySeconds` = 60 (was 6).
+
+| Event | Effect on the 60 s window |
+|---|---|
+| Starts | when the hunt starts, from her last sighting |
+| Renews | only a confirmed sighting during the hunt (`SeesNow` and awareness at "seen") |
+| Never renews | noises (they steer the search), new plans, a stun, an empty spot |
+| Ends | window over with nothing in sight; a recovery; belief that you're outside; another action winning; a catch. Logged: `HUNT the hunt ends: <why> (N spots searched)` |
+| Empty destination | "got there and you weren't there", or as close as she can get: `Pursue` switches to searching in the same step |
+
+- **Search order** (`PursuitSearch`, pure): the newest unsearched noise (last 15 s), then the end
+  of each route guess (weight ≥ 5 %), then where she last saw you, then her belief's peak. At each
+  spot she sweeps her head 1.6 s; anything within 3 m counts as searched; a spot out of reach for
+  20 s is given up; a newer noise re-steers her; a sighting ends the search and she runs at you.
+- **Fairness:** inputs are her sighting memory, hearing, route guesses and belief only; the files
+  are in the scan.
+- **Recovery** is unchanged and can end a hunt before 60 s; the Director's spike and the
+  habituation guard still cap it. **Stun** spends the window. Rungs A and B keep their 4 s chase.
+- The chase's extra burnout drain applies only while she runs at you, not while she searches.
+
+### 21.4 Hits and stun (item 14)
+
+| Rule | Value |
+|---|---|
+| Counts | a loose, non-kinematic item, not carried, not shelved, not hers; speed before contact ≥ 1.5 m/s and closing speed along the contact normal ≥ 1.5 m/s |
+| Strength | closing speed (≤ 20 m/s) × √mass (0.05–5 kg); under 2 is a graze |
+| Stun | 0.25 + (strength − 2) × 0.18 s, at most 3 s (1 kg at 6 m/s ≈ 1 s; at 13 m/s ≈ 2.2 s) |
+| Repeats | one touch per item per release (picking it up re-arms it); hits within a stun can't stretch it past 3 s from the first; 0.5 s grace afterwards; clutter she shoves becomes hers |
+| Blocked while stunned | walking, turning, dashing, carrying, plans and tricks (aborted, carried item dropped), the witnessed-hide approach, the blink dash, `Kill` and touch catches (a hit beats a catch in the same frame) |
+| Still running | her senses, belief, Director, route guesses; on waking she decides again |
+| Reset | new shift, end of shift/restart, body disabled; pause freezes it |
+
+- Her body has a solid capsule (radius min(body, touch − 0.15) = 0.35 m) for items, separate from
+  the touch trigger; her eye, vantage, fairness and planning lines and the door sensors ignore it
+  (`KarenBody.IsHers`).
+- Checked in play mode on the clone: a 20 m/s item hits and stuns her for the 3 s cap; a wall stops
+  one thrown behind it.

@@ -257,8 +257,9 @@ namespace Kehai.Karen
             {
                 if (!door.IsOpen)
                 {
-                    door.PhantomCycle();
-                    NoiseBus.Emit(door.transform.position, 0.55f, NoiseKind.AutoDoor, NoiseAuthor.Karen);
+                    // A dead door can't cycle (0.5.1, item 6): no chime and no noise in a blackout.
+                    if (door.PhantomCycle())
+                        NoiseBus.Emit(door.transform.position, 0.55f, NoiseKind.AutoDoor, NoiseAuthor.Karen);
                 }
                 yield return new WaitForSeconds(PhantomPeriod);
             }

@@ -64,7 +64,7 @@ public sealed class PaBox : HighlightInteractable
         go.transform.SetParent(parent, false);
         go.transform.localPosition = local;
         go.transform.localScale = Vector3.one * 0.024f;
-        Object.Destroy(go.GetComponent<Collider>());
+        CctvWall.Drop(go.GetComponent<Collider>());   // edit-mode safe (0.5.1 tests build it)
         return go.GetComponent<Renderer>();
     }
 

@@ -80,8 +80,8 @@ namespace Kehai.Karen
         public float fasterThanPlayer = 1.05f;
         [Tooltip("Hunt's sprint as a multiple of the player's sprint: 7.5 m/s against 6.5.")]
         public float sprintsFasterThanPlayer = 7.5f / 6.5f;
-        [Tooltip("How long a hunt keeps running on her belief after she loses you, with nothing new.")]
-        public float huntMemorySeconds = 6f;
+        [Tooltip("Seconds of pursuit and search after the last actual sighting. Sounds can steer the search but do not renew it.")]
+        public float huntMemorySeconds = 60f;
         [Tooltip("What a hunt costs from the Director's tension budget, and how long after one before the next: the Hunt action's pacing, whatever trick it runs.")]
         public float huntTensionCost = 0.6f;
         public float huntCooldownSeconds = 90f;

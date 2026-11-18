@@ -1,11 +1,11 @@
 # Scene map: SampleScene
 
-Generated on 2026-11-06 by `tools/scene/scene_map.py` from `Assets/!_Project/_Core/Scenes/SampleScene.unity`. Don't edit by hand: rerun the script after changing the scene.
+Generated on 2026-11-17 by `tools/scene/scene_map.py` from `Assets/!_Project/_Core/Scenes/SampleScene.unity`. Don't edit by hand: rerun the script after changing the scene.
 
 The scene and the art aren't in git (the repository is code and docs only), so this file is how the repository records **where everything is**. Karen's own map of the same store (regions, links, chokepoints) is [`STORE_MAP.md`](STORE_MAP.md); the building, products and stocking are in [`STORE.md`](STORE.md); room plans in [`LEVEL_DESIGN.md`](LEVEL_DESIGN.md) and [`INTERIOR_MODELS.md`](INTERIOR_MODELS.md).
 
 - **Coordinates:** world metres, shown as (x, y, z). The street is north (high Z), the store runs south along −Z to the stockroom, and east is +X. y is height.
-- **Size:** 5777 objects in the hierarchy, 972 of them prefab instances, 7 top-level objects.
+- **Size:** 5776 objects in the hierarchy, 971 of them prefab instances, 7 top-level objects.
 - **How it's organised:** `Kehai → Scene → Organize by Area and Name Objects` (`SceneHierarchyOrganizer.cs`) puts everything under a few roots by area and gives objects stable names.
 
 ## Top level
@@ -13,7 +13,7 @@ The scene and the art aren't in git (the repository is code and docs only), so t
 | object | where | objects inside |
 |---|---|---|
 | **Models_Island** | (13.0, 0.0, -37.3) | 1464 |
-| **Supermarket** | (0.0, 0.0, 0.0) | 3336 |
+| **Supermarket** | (0.0, 0.0, 0.0) | 3335 |
 | **Exterior** | (0.0, 0.0, 0.0) | 792 |
 | **Game_Systems** | (0.0, 0.0, 0.0) | 38 |
 | **Authoring_References** | (0.0, 0.0, 0.0) | 115 |
@@ -255,7 +255,7 @@ Three levels down from each root. Long lists of similar objects are summarised b
       - **Floor_01** at (37.0, 0.1, 93.0)
     - *24 children:* Cold_Hiding_Cabinet, Public_Bin, Outdoor_Waste_Container, Service_Workbench, Bollard, Service_Cage, Wall_Lamp, Storage_Chiller, Flashlight, Recycling_Bin, Bike_Rack, Poster_Frame, and 12 more kinds
   - **Catalogue_Floor_01** at (60.0, -0.0, 60.0)
-- **Supermarket** at (0.0, 0.0, 0.0) — 3336 objects inside
+- **Supermarket** at (0.0, 0.0, 0.0) — 3335 objects inside
   - **Cold_Room** at (0.0, 0.0, 0.0) — 271 objects inside
     - **Refrigeration** at (0.0, 0.0, 0.0) — 169 objects inside
       - **Cold_Storage_Cabinets_01** at (0.0, 0.0, 0.0) — 168 objects inside
@@ -355,12 +355,12 @@ Three levels down from each root. Long lists of similar objects are summarised b
       - **Ceiling_Light_Sources_01** at (0.0, 0.0, 0.0) — 240 objects inside
     - **Wall_Finishes** at (0.0, 0.0, 0.0) — 7 objects inside
       - **Shared_Room_Wall_02** at (25.0, 5.3, -142.5)
-      - **Shared_Room_Wall_05** at (25.0, 4.0, -123.3)
       - **Shared_Room_Wall_06** at (25.0, 5.3, -116.7)
-      - **Shared_Room_Wall_04** at (25.0, 5.3, -130.0)
       - **Shared_Room_Wall_07** at (25.0, 4.0, -112.9)
-      - **Shared_Room_Wall_01** at (25.0, 4.0, -146.7)
+      - **Shared_Room_Wall_04** at (25.0, 5.3, -130.0)
+      - **Shared_Room_Wall_05** at (25.0, 4.0, -123.3)
       - **Shared_Room_Wall_03** at (25.0, 4.0, -136.2)
+      - **Shared_Room_Wall_01** at (25.0, 4.0, -146.7)
     - **Doors** at (0.0, 0.0, 0.0) — 80 objects inside
       - **Automatic_Doors_01** at (20.0, 0.0, -124.9) — 52 objects inside
       - **Hinged_Doors_01** at (20.0, 0.0, -124.9) — 26 objects inside
@@ -385,7 +385,7 @@ Three levels down from each root. Long lists of similar objects are summarised b
       - **Cardboards_01** at (35.6, 0.3, -184.2) — 11 objects inside
     - **Architecture** at (0.0, 0.0, 0.0) — 56 objects inside
       - *56 children:* Panel_Rib ×24, Charcoal_Plinth ×12, Cream_Wall_Panel ×12, Wall_Beside_Open_Service_Access ×4, Upper_Cream_Cladding, Parapet, Red_Brand_Fascia, Parapet_Cap
-  - **Office** at (0.0, 0.0, 0.0) — 107 objects inside
+  - **Office** at (0.0, 0.0, 0.0) — 106 objects inside
     - **Doors_And_Wall_Finishes** at (0.0, 0.0, 0.0) — 4 objects inside
       - **Finished_Wall_Wall_03** at (10.0, 2.0, -127.5)
       - **Finished_Wall_Wall_01** at (10.0, 2.0, -132.5)
@@ -428,8 +428,8 @@ Three levels down from each root. Long lists of similar objects are summarised b
       - **Archive_Cabinet_02** `TallCabinet.prefab` at (21.8, 0.0, -123.7)
     - **Architecture** at (0.0, 0.0, 0.0) — 18 objects inside
       - *18 children:* Panel_Rib ×6, Wall_Beside_Open_Service_Access ×4, Cream_Wall_Panel ×2, Charcoal_Plinth ×2, Office_Floor, West_Lining, Office_Lowered_Ceiling, Office_WC_Partition
-    - **Furniture_And_Props** at (0.0, 0.0, 0.0) — 34 objects inside
-      - *34 children:* Briefing_Chair_South ×4, Briefing_Chair_North ×4, Back ×3, Foot ×3, Oak_Top ×2, Visitor_Chair ×2, Manager_Keyboard, Backboard, Office_Water_Dispenser, Office_Camera, Meeting_Papers, In_Tray, and 10 more kinds
+    - **Furniture_And_Props** at (0.0, 0.0, 0.0) — 33 objects inside
+      - *33 children:* Briefing_Chair_South ×4, Briefing_Chair_North ×4, Back ×3, Foot ×3, Oak_Top ×2, Visitor_Chair ×2, Manager_Keyboard, Backboard, Office_Water_Dispenser, Meeting_Papers, In_Tray, Printer_Paper, and 9 more kinds
   - **Sales_Floor** at (0.0, 0.0, 0.0) — 753 objects inside
     - **Signage** at (0.0, 0.0, 0.0) — 261 objects inside
       - **Aisle_Signs_01** at (0.0, 0.0, 0.0) — 260 objects inside
@@ -438,7 +438,7 @@ Three levels down from each root. Long lists of similar objects are summarised b
     - **Shelving** at (0.0, 0.0, 0.0) — 215 objects inside
       - **Maze_Shelves_01** at (82.0, 0.0, -162.5) — 214 objects inside
     - **Doors_And_Wall_Finishes** at (0.0, 0.0, 0.0) — 66 objects inside
-      - *54 children:* Finished_Wall_Wall ×50, White_Automatic_Portal ×2, White_Frame_Door ×2
+      - *54 children:* Finished_Wall_Wall ×50, White_Frame_Door ×2, White_Automatic_Portal ×2
     - **Checkouts** at (0.0, 0.0, 0.0) — 23 objects inside
       - **Checkout_Impulse_Shelf_01** `Checkout.prefab` at (29.5, 0.0, -132.5)
       - **Counter_Facing_01** at (44.8, 0.9, -132.5)
@@ -626,7 +626,6 @@ Three levels down from each root. Long lists of similar objects are summarised b
 - **Authoring_References** at (0.0, 0.0, 0.0) — 115 objects inside
   - **Builder_Containers** at (0.0, 0.0, 0.0) — 10 objects inside
     - **WC_Furnished_01** at (0.0, 0.0, 0.0)
-    - **Environment_Fit_Corrections_01** at (0.0, 0.0, 0.0)
     - **Layout_15x15_01** at (20.0, 0.0, -124.9)
     - **Store_Finished_01** at (0.0, 0.0, 0.0)
     - **Staff_Room_Furnished_01** at (0.0, 0.0, 0.0)
@@ -635,6 +634,7 @@ Three levels down from each root. Long lists of similar objects are summarised b
     - **Parking_Finished_01** at (0.0, 0.0, 0.0)
     - **Environment_Refined_01** at (0.0, 0.0, 0.0)
     - **Lobby_Furnished_01** at (0.0, 0.0, 0.0)
+    - **Environment_Fit_Corrections_01** at (0.0, 0.0, 0.0)
   - **Inactive_Prototypes** at (0.0, 0.0, 0.0) — 2 objects inside
     - **Trashcan_02** `Trashcan.prefab` *(inactive)* at (38.7, 0.0, -124.3)
     - **Trashcan_01** `Trashcan.prefab` *(inactive)* at (38.9, 0.0, -127.0)
@@ -698,7 +698,6 @@ The time clock, tools, doors, coolers, bins, spawn points and the like (first of
 | Supermarket / Office / Cabinets_And_Storage / Archive_Cabinet_01 | (20.6, 0.0, -123.7) | TallCabinet.prefab |
 | Supermarket / Office / Doors | (0.0, 0.0, 0.0) |  |
 | Supermarket / Office / Doors_And_Wall_Finishes | (0.0, 0.0, 0.0) |  |
-| Supermarket / Office / Furniture_And_Props / Office_Camera_01 | (24.7, 2.9, -123.8) | SecurityCamera.prefab |
 | Supermarket / Office / Inactive_Originals / Door_Header_01 | (25.0, 5.3, -130.0) |  |
 | Supermarket / Office / Recycling / Filing_Reference_Binders_01 | (10.3, 1.4, -130.1) | Binders.prefab |
 | Supermarket / Office / Recycling / Office_Furnished_Recycling_01 / Paper_Bin_01 | (24.6, 0.0, -127.3) | RecyclingBin.prefab |
@@ -821,7 +820,8 @@ The time clock, tools, doors, coolers, bins, spawn points and the like (first of
 | Models_Island / Catalogue_Labels_01 / Label_Time_Clock_0_38_0_16_0_5_M_01 | (0.0, 0.0, 10.7) |  |
 | Models_Island / Catalogue_Labels_01 / Label_Toilet_Cabin_2_65_3_48_2_7_M_01 | (0.0, 0.0, 48.7) |  |
 | Models_Island / Catalogue_Labels_01 / Label_Toilet_Cabin_Open_Interior_2_65_3_4_2_7_M_01 | (0.0, 0.0, 60.7) |  |
-| … 73 more | | |
+| Models_Island / Catalogue_Labels_01 / Label_Utility_Cabinet_1_6_0_77_2_2_M_01 | (0.0, 0.0, 90.7) |  |
+| … 72 more | | |
 
 ## Most-used prefabs
 

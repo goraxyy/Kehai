@@ -120,20 +120,26 @@ public class BurnoutSystem : MonoBehaviour
         depthOfField.gaussianEnd.value = restedBlurStart;
     }
 
-    void Update()
+    void Update() => Step(Time.deltaTime);
+
+    // One frame of the bar over `dt` seconds: the drain (only while a shift runs), then the
+    // vision fade. Public so tests can step it with a known time.
+    public void Step(float dt)
     {
         if (ShouldDrain())
         {
             float perSecond = drainPerMinute / 60f;
 
-            // Running wears you out faster.
-            if (playerMotor != null && playerMotor.IsSprinting())
+            // Running wears you out faster. Holding Shift while standing still, or while
+            // stunned, isn't running (0.5.1 item 9): it costs what walking costs, as it
+            // already does for Karen, who only hears sprinting from moving feet.
+            if (playerMotor != null && playerMotor.IsMoving && playerMotor.IsSprinting())
                 perSecond *= sprintDrainMultiplier;
 
-            energy -= perSecond * Time.deltaTime;
+            energy -= perSecond * dt;
 
             if (isInChase)
-                energy -= extraDrainDuringChase * Time.deltaTime;
+                energy -= extraDrainDuringChase * dt;
 
             energy = Mathf.Clamp01(energy);
         }

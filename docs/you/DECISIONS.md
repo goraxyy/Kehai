@@ -6,6 +6,9 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-16 | Finish all fourteen 0.5.1 items now, in one PR from branch `0.5.1` built on the saved 15 November work; Opus for Karen, doors and burnout, Sonnet for the smaller items; no training or long runs | [0.5.1 plan](plans/0.5.1-plan.md) |
+| 2026-11-15 | Start 0.5.1 with Astra and extra sight supervision: low shelves do not conceal, hiding interiors and 80% under-stock-shelf coverage do; witnessed hiding allows approach and a catch within 3 m. Place fixtures logically and label clock/puncher and other interactables | [0.5.1 plan](plans/0.5.1-plan.md) |
+| 2026-11-15 | Create a 0.5.1 branch and planning PR for fourteen playtest fixes; no building yet. Karen approaches witnessed hiding and catches if reachable; manual doors open both ways and E reverses a closing door | [0.5.1 plan](plans/0.5.1-plan.md) |
 | 2026-11-14 | Merge 0.5.0 now with the completed correctness checks; defer further playtesting, platform builds, visual review, remaining setup and long training until later. Keep unverified acceptance tasks open | [build status](plans/0.5.0/implementation-status.md) |
 | 2026-11-14 | 0.5.0 uses adaptive trained bots with within-shift memory and across-shift sensed history; no language-model players or judges | [0.5.0](plans/0.5.0/agents.md) |
 | 2026-11-14 | Escape learning combines consented central refits on Windows with local counts settled at shift end; no local neural training or player warning | [0.5.0](plans/0.5.0/build-decisions.md) |

@@ -50,8 +50,31 @@ public static class EnvironmentFitBuilder
         Debug.Log("Door fit, shared wall, locker positions, whiteboard, recycling and exterior corrected.");
     }
 
+    // The decorative office camera (Supermarket/Office/Furniture_And_Props/Office_Camera_01, built
+    // by OfficeRoomBuilder as "Office camera"): a bare mesh with no Camera and no StoreCamera, so
+    // no feed. Deleted with Undo, and its stale name entries dropped from SceneObjectNames. The
+    // six working feeds (StoreCameras) and the office monitors are never matched. Returns how many.
+    public static int RemoveRetiredOfficeCamera()
+    {
+        int removed=0;
+        foreach(var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+        {
+            if(t==null||!FixturePresentation.IsRetiredOfficeCamera(t.gameObject))continue;
+            Undo.DestroyObjectImmediate(t.gameObject);removed++;
+        }
+        foreach(var map in Object.FindObjectsByType<SceneObjectNames>(FindObjectsInactive.Include))
+        {
+            if(!map.entries.Exists(e=>e.target==null))continue;
+            Undo.RecordObject(map,"Drop stale scene names");
+            map.entries.RemoveAll(e=>e.target==null);EditorUtility.SetDirty(map);
+        }
+        SceneObjectNames.Invalidate();
+        return removed;
+    }
+
     static void RemoveRetiredProps()
     {
+        RemoveRetiredOfficeCamera();
         var extra=GameObject.Find("Layout_15x15/Backstreet/ElectricBox_02");
         var keep=GameObject.Find("Layout_15x15/Backstreet/ElectricBox_01");
         if(extra!=null&&keep!=null)

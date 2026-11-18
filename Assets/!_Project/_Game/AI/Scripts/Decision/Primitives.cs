@@ -358,16 +358,31 @@ namespace Kehai.Karen
 
     // ---- pursuit ------------------------------------------------------------------
 
-    // Hunt's run (0.2.0): at you while she sees you; when she loses you, on to where her
-    // reckoning says you'll be (TacticHelpers.Forecast), not where you were. It hands over —
-    // to Search, as the brain decides next — when she gets there and you're not, after
-    // huntMemorySeconds with nothing new, in a recovery, or when her belief puts you outside,
-    // where she can't follow (the run stops at the pavement's edge).
+    // Hunt's run (0.2.0) and, since 0.5.1 (item 13), its search. At you while she sees you; when
+    // she loses you, on to where her reckoning says you'll be (her route guesses, or until she has
+    // them, the way you went). Getting there and finding nobody doesn't end the hunt any more: she
+    // searches, in this same step, the noises she heard since, the ends of her guesses and where
+    // she last saw you (PursuitSearch). The hunt ends only when the brain's one window
+    // (PostSightPursuit, huntMemorySeconds from her last confirmed sighting) runs out, in a
+    // recovery, or when her belief puts you outside, where she can't follow (the run stops at
+    // the pavement's edge). Seeing you again ends the search: she runs at you.
     public sealed class Pursue : Primitive
     {
+        public enum Next { Run, Search, End }
+
+        // At a search spot she stands and sweeps her head for this long.
+        public const float LookSeconds = 1.6f;
+        // A spot she can't get to inside this long is given up as searched.
+        public const float SpotTimeout = 20f;
+
         readonly float max;
         float t, lostFor, retarget;
         Vector3 goal;
+
+        // The search, inside this step: one spot at a time.
+        bool searching, haveSpot, looking;
+        PursuitSearch.Spot spot;
+        float spotSetAt, lookFor, noiseSeen, walkAgain;
 
         public Pursue(float max = 25f)
         {
@@ -375,60 +390,152 @@ namespace Kehai.Karen
             Label = "pursue";
         }
 
-        protected override void Begin(KarenContext c) => goal = c.Body.Sight.LastSeenPosition;
+        protected override void Begin(KarenContext c)
+        {
+            goal = c.Body.Sight.LastSeenPosition;
+            // A new plan in the same hunt carries on its search rather than running again to a
+            // guess she already found empty.
+            PostSightPursuit p = c.Brain != null ? c.Brain.Pursuit : null;
+            searching = p != null && p.Searching && !c.Body.Sight.SeesNow;
+        }
 
         protected override Status Tick(KarenContext c, float dt)
         {
             t += dt;
             SightSensor sight = c.Body.Sight;
+            PostSightPursuit p = c.Brain != null ? c.Brain.Pursuit : null;
             bool sees = sight.SeesNow;
             if (sees) lostFor = 0f; else lostFor += dt;
-
-            retarget -= dt;
-            if (retarget <= 0f)
+            if (sees && searching)
             {
-                retarget = 0.25f;
-                // Seen: lead you a little along the way you were moving. Lost: on to where you'd
-                // be two seconds from now — by her best guess of your route (RoutePredictor), or
-                // until she has one, by walking on the way you went.
-                if (sees || sight.Time_SinceSeen() < 0.5f)
-                    goal = sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f);
-                else if (c.Brain.Predictor != null && c.Brain.Predictor.Active)
-                    goal = c.Brain.Predictor.Expected(Time.time, 2f, sight.LastSeenVelocity.magnitude);
-                else
-                    goal = TacticHelpers.Forecast(c, 2f);
-                c.Body.MoveTo(goal, KarenBody.Pace.Run);
+                searching = haveSpot = looking = false;
+                c.Body.SweepHead(0f);
+                p?.StopSearching();
+                c.Think("HUNT", "HUNT     she sees you again: the search is over, she runs at you");
             }
 
-            // Once she has guesses about your route, the hunt stops its run once to choose again:
-            // cutting you off (Cut) may now beat running on.
-            if (!sees && lostFor > 0.75f && c.Brain.Predictor != null && c.Brain.Predictor.Active
-                && c.Brain.MayReplanHunt(sight.LastSeenTime))
-                return Status.Success;
+            if (!searching)
+            {
+                retarget -= dt;
+                if (retarget <= 0f)
+                {
+                    retarget = 0.25f;
+                    // Seen: lead you a little along the way you were moving. Lost: on to where you'd
+                    // be two seconds from now — by her best guess of your route (RoutePredictor), or
+                    // until she has one, by walking on the way you went.
+                    if (sees || sight.Time_SinceSeen() < 0.5f)
+                        goal = sight.LastSeenPosition + Vector3.ClampMagnitude(sight.LastSeenVelocity * 0.5f, 3f);
+                    else if (c.Brain.Predictor != null && c.Brain.Predictor.Active)
+                        goal = c.Brain.Predictor.Expected(Time.time, 2f, sight.LastSeenVelocity.magnitude);
+                    else
+                        goal = TacticHelpers.Forecast(c, 2f);
+                    c.Body.MoveTo(goal, KarenBody.Pace.Run);
+                }
+
+                // Once she has guesses about your route, the hunt stops its run once to choose again:
+                // cutting you off (Cut) may now beat running on.
+                if (!sees && lostFor > 0.75f && c.Brain.Predictor != null && c.Brain.Predictor.Active
+                    && c.Brain.MayReplanHunt(sight.LastSeenTime))
+                    return Status.Success;
+            }
 
             Vector3 d = c.Body.Position - goal;
             d.y = 0f;
-            if (HandOver(sees, lostFor, d.magnitude, c.Belief.Staleness, c.Director.InRecovery, c.Belief.OutsideMass,
-                         c.Config.huntMemorySeconds, out string why))
+            // As close as she can get counts as getting there: a goal off her floor, a partial path
+            // (a locked door, a crate wall, dead automatic doors) or no path at all.
+            bool cantGetCloser = !sees && lostFor > 1f && (c.Body.PathFailed || c.Body.Arrived(1.2f));
+            float left = p != null ? p.Left(Time.time) : c.Config.huntMemorySeconds - sight.Time_SinceSeen();
+            Next next = Rule(sees, lostFor, d.magnitude, cantGetCloser, searching, c.Director.InRecovery, c.Belief.OutsideMass,
+                             left, c.Config.huntMemorySeconds, out string why);
+            if (next == Next.End)
             {
+                p?.Ending(why);
                 c.Think("HUNT", "HUNT     " + why);
                 return Status.Failure;
+            }
+            if (next == Next.Search)
+            {
+                if (!searching)
+                {
+                    searching = true;
+                    haveSpot = looking = false;
+                    p?.BeginSearch();
+                    c.Think("HUNT", $"HUNT     {why} ({left:0}s of the hunt left)");
+                }
+                Search(c, p, dt);
+                return Status.Running;
             }
             return t >= max ? Status.Success : Status.Running;
         }
 
-        // When a hunt gives up, and why. Pure, so the rules can be tested.
-        public static bool HandOver(bool sees, float lostFor, float toGoal, float staleness, bool inRecovery,
-                                    float outsideMass, float memory, out string why)
+        // One spot at a time: go there, stand and sweep, mark it searched, pick the next. A noise
+        // newer than the spot she's on steers her to it at once.
+        void Search(KarenContext c, PostSightPursuit p, float dt)
         {
-            why = null;
-            if (outsideMass > 0.5f) why = "you went outside: she can't follow you there";
-            else if (inRecovery) why = "a recovery: she lets you go";
-            else if (!sees && lostFor > 0.5f && toGoal < 1.5f) why = "got to where you'd be, and you weren't there";
-            else if (!sees && lostFor > memory && staleness > memory) why = $"nothing new for {memory:0}s";
-            return why != null;
+            if (p == null) return;
+            float now = Time.time;
+            float newestNoise = p.Noises.Count > 0 ? p.Noises[p.Noises.Count - 1].t : float.NegativeInfinity;
+            if (!haveSpot || newestNoise > noiseSeen)
+            {
+                noiseSeen = newestNoise;
+                var ends = PursuitSearch.Ends(c.Brain.Predictor, c.Map);
+                spot = PursuitSearch.Choose(p, ends, c.Body.Sight.LastSeenPosition, c.Belief.PeakPosition, now);
+                haveSpot = true;
+                looking = false;
+                spotSetAt = t;
+                walkAgain = 0f;
+                c.Body.SweepHead(0f);
+                c.Think("HUNT", $"HUNT     searching {c.Where(spot.At)}: {spot.Why}");
+            }
+
+            if (!looking)
+            {
+                // Sent again twice a second, like a following MoveTo. Within 3 s of a sighting she
+                // runs: below a run her personal space would park her short of where she saw you.
+                walkAgain -= dt;
+                if (walkAgain <= 0f)
+                {
+                    walkAgain = 0.5f;
+                    bool hurry = spot.Fresh || c.Body.Sight.Time_SinceSeen() < 3.5f;
+                    c.Body.MoveTo(spot.At, hurry ? KarenBody.Pace.Run : KarenBody.Pace.Hurry);
+                }
+                Vector3 to = c.Body.Position - spot.At;
+                to.y = 0f;
+                bool there = to.magnitude < 1.5f || t - spotSetAt > 0.5f && (c.Body.Arrived(1.2f) || c.Body.PathFailed);
+                if (!there && t - spotSetAt < SpotTimeout) return;
+                looking = true;
+                lookFor = 0f;
+                c.Body.Stop();
+            }
+
+            lookFor += dt;
+            c.Body.SweepHead(Mathf.Sin(lookFor / LookSeconds * Mathf.PI * 2f) * 70f);
+            if (lookFor < LookSeconds) return;
+            c.Body.SweepHead(0f);
+            p.Searched(spot.At);
+            haveSpot = looking = false;
         }
 
+        protected override void End(KarenContext c, bool aborted) => c.Body.SweepHead(0f);
+
+        // What the hunt does next (0.5.1). Pure, so the rules can be tested.
+        //   End:    you went outside, a recovery, or the window since her last confirmed sighting
+        //           is over (a noise never renews it: it only steers the search).
+        //   Run:    she sees you, or she hasn't reached where you'd be yet.
+        //   Search: she reached where you'd be and you weren't there, or she is already searching.
+        public static Next Rule(bool sees, float lostFor, float toGoal, bool cantGetCloser, bool searching, bool inRecovery,
+                                float outsideMass, float windowLeft, float window, out string why)
+        {
+            if (outsideMass > 0.5f) { why = "you went outside: she can't follow you there"; return Next.End; }
+            if (inRecovery) { why = "a recovery: she lets you go"; return Next.End; }
+            if (sees) { why = "she sees you"; return Next.Run; }
+            if (!(windowLeft > 0f)) { why = $"{window:0}s since she last saw you: the hunt is over"; return Next.End; }
+            if (searching) { why = "searching"; return Next.Search; }
+            if (lostFor > 0.5f && toGoal < 1.5f) { why = "got to where you'd be, and you weren't there: searching"; return Next.Search; }
+            if (cantGetCloser) { why = "as close as she can get to where you'd be, and no sign of you: searching"; return Next.Search; }
+            why = "running on to where you'd be";
+            return Next.Run;
+        }
     }
 
     public static class SightExtensions

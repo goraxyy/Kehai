@@ -1,5 +1,16 @@
 # Changelog
 
+- **2026-11-17 — 0.5.1 branch, not released.** The owner's fourteen 0.5.0 playtest fixes.
+  - **Karen's eyes:** a short shelf no longer slows her down if she can see your eyes over it. Inside a fridge cabinet, locker, toilet stall, changing cabin or the empty WC cupboard, or crouched under a stockroom rack, you're hidden even with the door open. Shoppers can't see you there either.
+  - **Seen hiding:** if she sees you go in, she runs to where you went in and catches you within 3 m of that spot if you're still there. Unseen, you stay hidden; slip out and her memory is useless.
+  - **Light:** stronger pools under the lamps and dark between them; the parking lot is dark; a blackout is pitch black (in 0.5.0 fog lit it white); power back restores the look.
+  - **Names** float over the clocks, the time clock, the coffee machine, the PA box and microphone, the breakers and the other fixtures you can use. The PA microphone, stuck 3 m up the wall, now stands on its own small table.
+  - **Doors:** the cold-room and stockroom doors open on one press (one press reached them twice and shut them again). Room doors open away from you from either side. In a blackout the automatic doors are dead (no chime, nobody opens them), and you can slide one open by hand.
+  - **Burnout:** holding Shift while standing still no longer drains you at the sprint rate.
+  - **The hunt:** after she loses sight of you she keeps hunting for up to 60 s from her last real sighting, searching where she heard you, where she guesses you went and where she last saw you, instead of giving up after about 6 s. Noises steer her but don't extend it.
+  - **Throwing things at her:** a loose item that hits her hard enough stuns her (up to 3 s): she stops moving, can't catch you, then carries on. Grazes don't count; the same throw can't stun twice.
+  - **Fog** is neutral grey, not blue. **The settings footer** has four equal buttons and says "Restart". **The cold room's** two islands are closer together. **The office camera** prop that never worked is gone. **The webcam helper** builds itself on a Mac and ships inside Mac builds.
+
 - **2026-11-12 — 0.4.1 branch, not released.** Seventeen things the owner asked for.
   - **Karen's eyes:** she sees twice as far (72 m) and notices you twice as fast. Cover is judged eye to eye: a short shelf doesn't hide you if she can see your eyes over it, and under a stockroom rack she can't see you unless she can see in under the boards.
   - **Cameras:** the store has six (cold room, stockroom, lobby, staff room, store front, backstreet), and the office's screens, now bigger, show them live. Two new tricks: **Camera watch** (she stands at the screens, and a camera that sees you tells her where) and **Camera break** (all six go dark until you hold the new camera box in the backstreet).

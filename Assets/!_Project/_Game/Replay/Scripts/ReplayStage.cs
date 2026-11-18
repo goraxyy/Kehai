@@ -488,7 +488,7 @@ namespace Kehai.Replay
                 RenderSettings.fogMode = FogMode.Linear;
                 RenderSettings.fogStartDistance = 0f;
                 RenderSettings.fogEndDistance = visibility * 1.5f;
-                RenderSettings.fogColor = new Color(0.82f, 0.84f, 0.86f);
+                RenderSettings.fogColor = FogVisuals.Colour;
             }
             else RestoreFog();
         }

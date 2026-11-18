@@ -104,7 +104,7 @@ namespace Kehai.Karen
         static bool Visible(Vector3 from, Vector3 to)
         {
             return !Physics.Linecast(from, to, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore)
-                || hit.collider is CharacterController;
+                || hit.collider is CharacterController || KarenBody.IsHers(hit.collider);
         }
 
         // Rule 6: every unfinished job, and the time clock, must stay reachable from wherever

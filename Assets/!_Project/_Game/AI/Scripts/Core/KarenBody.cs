@@ -19,6 +19,12 @@ namespace Kehai.Karen
         public NavMeshAgent Agent { get; private set; }
         public SightSensor Sight { get; private set; }
         public Transform Head { get; private set; }
+        public KarenStun Stun { get; private set; }
+        public bool IsStunned => Stun != null && Stun.IsStunned;
+
+        // Part of her body (0.5.1: she has a solid capsule for thrown items). Lines that look
+        // past people (vantage, fairness, planning) treat her as see-through, as they always did.
+        public static bool IsHers(Collider c) => c != null && c.GetComponentInParent<KarenBody>() != null;
 
         public Vector3 Position => transform.position;
         public Vector3 Forward => transform.forward;
@@ -42,6 +48,7 @@ namespace Kehai.Karen
         float burstSpeed;
         Vector3 burstFrom;
         float burstMax;
+        Collider pendingTouch;
 
         // Her eye's numbers (0.2.0, phase 4). The walk-by set (AwarenessTests) builds its eye
         // with this too, so it times exactly hers.
@@ -92,6 +99,17 @@ namespace Kehai.Karen
             var rb = root.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             rb.useGravity = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            // Solid item contact (0.5.1, item 14) is separate from the wider touch/catch sensor,
+            // and kept TouchMargin inside it: whoever walks into her solid body is already inside
+            // her touch, or the solid body would hold them off it and she could never catch by touch.
+            // Her own eye skips it (SightSensor.ignoreRoot), and the agent's NavMeshModifier keeps
+            // it out of every runtime bake (KarenArea.StoreRebake).
+            var solid = root.AddComponent<CapsuleCollider>();
+            solid.radius = SolidRadius(config);
+            solid.height = config.bodyHeight;
+            solid.center = Vector3.up * config.bodyHeight * .5f;
+            body.Stun = root.AddComponent<KarenStun>();
 
             body.feet = root.AddComponent<AudioSource>();
             body.feet.spatialBlend = 1f;
@@ -110,6 +128,12 @@ namespace Kehai.Karen
             if (NavMesh.SamplePosition(at, out NavMeshHit hit, 5f, KarenArea.AgentMask)) body.Agent.Warp(hit.position);
             return body;
         }
+
+        // More than a CharacterController's default skin (0.08 m) plus contact offset.
+        public const float TouchMargin = 0.15f;
+
+        public static float SolidRadius(KarenConfig config) =>
+            Mathf.Max(0.15f, Mathf.Min(config.bodyRadius, config.catchRadius - TouchMargin));
 
         // How she looks, and nothing else: a black capsule the size of a person (the player's own
         // size, from KarenBootstrap), and the spot light of her gaze, under `root`. A silhouette
@@ -159,6 +183,7 @@ namespace Kehai.Karen
 
         public void MoveTo(Vector3 destination, Pace pace)
         {
+            if (IsStunned) return;
             CurrentPace = pace;
             turning = false;
             if (Agent == null || !Agent.isActiveAndEnabled || !Agent.isOnNavMesh) return;
@@ -206,6 +231,7 @@ namespace Kehai.Karen
 
         public void TurnToward(Vector3 point)
         {
+            if (IsStunned) return;
             lookTarget = point;
             turning = true;
         }
@@ -217,6 +243,7 @@ namespace Kehai.Karen
         // time — honest movement, only faster than anyone would choose to be seen moving.
         public void BurstToward(Vector3 point, float speed, float seconds, float maxDistance)
         {
+            if (IsStunned) return;
             burstFrom = transform.position;
             burstSpeed = speed;
             burstMax = maxDistance;
@@ -230,8 +257,9 @@ namespace Kehai.Karen
 
         public void Carry(Item item)
         {
-            if (item == null) return;
+            if (item == null || IsStunned) return;
             carried = item;
+            item.lastAuthor = NoiseAuthor.Karen;
             item.SetCarried(true, hand);
         }
 
@@ -261,8 +289,27 @@ namespace Kehai.Karen
             if (eyeRenderer != null) eyeRenderer.sharedMaterial = KarenProps.Emissive(c, mood == Mood.Hunt ? 6f : 3f);
         }
 
+        public void InterruptForStun()
+        {
+            burstUntil = -1f;
+            turning = false;
+            pendingTouch = null;
+            stepTimer = 0f;
+            if (Agent != null)
+            {
+                Agent.acceleration = 14f;
+                if (Agent.isActiveAndEnabled && Agent.isOnNavMesh)
+                {
+                    Agent.velocity = Vector3.zero;
+                    Agent.ResetPath();
+                    Agent.isStopped = true;
+                }
+            }
+        }
+
         void Update()
         {
+            if (IsStunned) { InterruptForStun(); return; }
             // Burst windows end on time or distance, whichever comes first.
             if (burstUntil > 0f && (Time.time > burstUntil || Vector3.Distance(transform.position, burstFrom) > burstMax))
             {
@@ -335,7 +382,29 @@ namespace Kehai.Karen
 
         void OnTriggerEnter(Collider other)
         {
-            if (other is CharacterController) Touched?.Invoke(other);
+            QueueTouch(other);
         }
+
+        void OnTriggerStay(Collider other) => QueueTouch(other);
+
+        void QueueTouch(Collider other)
+        {
+            if (other is CharacterController) pendingTouch = other;
+        }
+
+        // All collision callbacks run before LateUpdate. Resolving here gives an item hit
+        // priority over a catch even when PhysX reports the catch trigger first. Stay also
+        // allows contact to catch again after recovery without leaving/re-entering her.
+        void LateUpdate()
+        {
+            Collider contact = pendingTouch;
+            pendingTouch = null;
+            if (GamePause.Paused || IsStunned || (Stun != null && Stun.HitThisFrame)) return;
+            if (contact != null && contact.enabled && contact.gameObject.activeInHierarchy) Touched?.Invoke(contact);
+        }
+
+        public void ClearPendingTouches() => pendingTouch = null;
+
+        void OnDisable() => ClearPendingTouches();
     }
 }
