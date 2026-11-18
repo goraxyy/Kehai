@@ -31,7 +31,11 @@ hide, and she moves when you blink. She's perfectly polite, and one touch ends t
 What we may claim is in [`facts.json`](../../../tools/marketing/facts.json). It's checked against the
 repository, and the agents read it, so change it there first.
 
-**0.4.1 wording (branch, not released):** seventeen live tricks, with three Throw choices
+**0.5.1 wording (merged, current):** twenty-two live tricks, with three Throw choices
+(twenty-four learner choices in all). New since 0.4.1: Flash sale, Screen loop, Room lights,
+Freezer alarm and The complaint. Five drafts are still not playable features.
+
+**0.4.1 wording (merged):** seventeen live tricks, with three Throw choices
 (nineteen learner choices in all). New: the store has six cameras you can watch from the office;
 she can watch them too (Camera watch) or break them (Camera break). You announce closing time on
 the PA. Her eyes reach further and judge cover eye to eye; no test has measured the new eyes, so
