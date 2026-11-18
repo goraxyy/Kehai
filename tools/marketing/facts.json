@@ -70,10 +70,10 @@
     {
       "id": "tactics",
       "status": "qualified",
-      "say": "The 0.3.0 branch has fifteen live tricks: Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy and the overtime. Throw has three item choices, making seventeen live choices for the learner. Five other tricks are disabled drafts.",
-      "evidence": [{ "file": "README.md", "contains": "fifteen live tricks (seventeen choices for the learner)" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }],
+      "say": "Karen has 22 live tricks: Ask the customers, Shelf sweep, Cut, Phantom chime, Spill, Bin tamper, Ambush, Throw, Tool theft, Fog, Block door, Camera bolt-on, Blackout, the understudy, the overtime, Camera watch, Camera break, Flash sale, Screen loop, Room lights, Freezer alarm and The complaint. Throw has three item choices. Five other tricks are disabled drafts.",
+      "evidence": [{ "file": "README.md", "contains": "22 live: Blackout, Fog, Camera watch, Camera break" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "public static IEnumerable<Tactic> Live => All.Where(t => !t.Draft);" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "new FreezerAlarmTactic(), new ComplaintTactic()" }, { "file": "Assets/!_Project/_Game/AI/Scripts/Decision/Tactic.cs", "contains": "\"crate_wall\", \"shelf_relocation\", \"mimicry\", \"stalk\", \"favour\"," }],
       "avoid": ["35 tactics", "34 tactics"],
-      "why": "Count tricks separately from their item choices and from actions such as Hunt. Do not present disabled drafts as playable tricks."
+      "why": "Count tricks separately from Throw's item choices and from her own moves such as Hunt and Patrol. Do not present the five disabled drafts as playable tricks. The count changes between versions: recheck it against TacticLibrary.Live before quoting it."
     },
     {
       "id": "the_store",
