@@ -119,6 +119,8 @@ namespace Kehai.Karen
         float[] hearingDistance;
         long noiseCursor;
         int sweepOffset;
+        bool sawGlow;
+        Vector3 lastGlow;
         float sprintHeardUntil;
 
         public Sensorium(StoreMap map, EnergyBelief energy)
@@ -138,6 +140,7 @@ namespace Kehai.Karen
 
         public void ForgetShift()
         {
+            sawGlow = false;
             tracesRead.Clear();
             polled.Clear();
             infrastructure.Clear();
@@ -244,6 +247,15 @@ namespace Kehai.Karen
 
         void CollectTraces(SightSensor sight, Transform bodyRoot)
         {
+            bool visible = sight.TryHiddenTorchGlow(out Vector3 glow);
+            if (visible && (!sawGlow || (glow - lastGlow).sqrMagnitude >= 1f))
+            {
+                Senses.Trace(TraceKind.TorchGlow, 1f, 0f, out float trust, out float spread);
+                Positive.Add(new Observation(SenseChannel.Trace, glow, trust, spread, "light from a torch"));
+                Raw.Add(new SenseRaw { Channel = SenseChannel.Trace, Kind = (int)TraceKind.TorchGlow, Freshness = 1f });
+                lastGlow = glow;
+            }
+            sawGlow = visible;
             TraceRegistry.Prune();
             foreach (Trace t in TraceRegistry.All)
             {

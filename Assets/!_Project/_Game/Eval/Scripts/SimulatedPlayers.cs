@@ -544,6 +544,11 @@ namespace Kehai.Eval
             Region hide = placed ? options.Take(8).FirstOrDefault(r => WayKeepsClear(r.Centroid, from, 2.5f)) ?? options.FirstOrDefault() : options.FirstOrDefault();
             if (hide == null) yield break;
 
+            // Both scripted and learned Hide choices use this route. The counter only
+            // inspects the employee's own active hand.
+            CarrySlot hand = env.Driver.GetComponent<CarrySlot>();
+            Flashlight torch = hand != null && hand.IsCarrying ? hand.currentItem.GetComponent<Flashlight>() : null;
+            if (torch != null && torch.IsOn) torch.SetOn(false);
             Hides++;
             Memory.Hid(hide.Name);
             if (!MindActive) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = hide.Name, Chance = 1f }, hide.Centroid);

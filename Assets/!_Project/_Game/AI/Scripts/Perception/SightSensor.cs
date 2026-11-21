@@ -304,6 +304,27 @@ namespace Kehai.Karen
             return true;
         }
 
+        // An illuminated surface can give away a light even when its holder is concealed.
+        // The ray ends at the first solid surface. Looking at the other side of a cupboard
+        // door cannot reveal a beam that struck the inside.
+        public bool TryHiddenTorchGlow(out Vector3 spot)
+        {
+            spot = default;
+            PlayerPresence player = PlayerPresence.Current;
+            Flashlight torch = player != null ? player.HeldTorch : null;
+            if (torch == null || !torch.IsOn || torch.beam == null ||
+                !torch.beam.isActiveAndEnabled || torch.beam.intensity <= 0f) return false;
+            HidingPlace place = HidingPlace.At(player, out float coverage);
+            if (place == null || !place.Conceals(player, coverage)) return false;
+            Transform beam = torch.beam.transform;
+            if (!Physics.Raycast(beam.position, beam.forward, out RaycastHit hit,
+                                 torch.beam.range, ~0, QueryTriggerInteraction.Ignore)) return false;
+            if (player.Owns(hit.collider) || Vector3.Dot(Eye - hit.point, hit.normal) <= 0f)
+                return false;
+            spot = hit.point + hit.normal * 0.015f;
+            return CanSee(spot);
+        }
+
         // Line of sight from this eye to an arbitrary point — for sweeping cells as empty.
         public bool CanSee(Vector3 point, Transform ignore = null)
         {

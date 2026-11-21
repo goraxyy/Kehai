@@ -187,15 +187,9 @@ namespace Kehai.Karen
         }
 
         // A torch in hand and switched on lights you up far more than any ceiling panel.
-        public bool TorchOn
-        {
-            get
-            {
-                if (carry == null || !carry.IsCarrying) return false;
-                Flashlight torch = carry.currentItem.GetComponent<Flashlight>();
-                return torch != null && torch.IsOn;
-            }
-        }
+        public Flashlight HeldTorch => carry != null && carry.IsCarrying
+            ? carry.currentItem.GetComponent<Flashlight>() : null;
+        public bool TorchOn => HeldTorch is Flashlight torch && torch.IsOn;
 
         public float LightLevel => TorchOn ? 1f : LightProbe.LevelAt(transform.position);
 

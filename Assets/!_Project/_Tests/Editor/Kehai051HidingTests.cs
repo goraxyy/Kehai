@@ -140,6 +140,32 @@ public class Kehai051HidingTests
         Assert.AreEqual(destination, HidingApproach.ClosestReachable(null, eye.HiddenEntry.Position));
     }
 
+    [Test] public void TorchGlowNeedsLightOnTheVisibleSideOfASurface()
+    {
+        var hand = player.gameObject.AddComponent<CarrySlot>();
+        Awake(player);
+        At(6f);
+        var torch = new GameObject("torch").AddComponent<Flashlight>();
+        hand.items[0] = torch.GetComponent<Item>();
+        torch.beam = new GameObject("lens").AddComponent<Light>();
+        torch.beam.transform.SetParent(torch.transform);
+        torch.beam.range = 8f;
+        torch.transform.position = new Vector3(0f, 1.6f, 6.7f);
+        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        wall.transform.position = new Vector3(0f, 1.6f, 9f);
+        Physics.SyncTransforms();
+        Assert.IsFalse(eye.TryHiddenTorchGlow(out _));
+        torch.SetOn(true);
+        Assert.IsTrue(eye.TryHiddenTorchGlow(out Vector3 spot));
+        Assert.Greater(spot.z, 8f, "the clue locates the patch of light");
+        Assert.IsFalse(eye.SeesNow);
+        Assert.IsFalse(eye.HiddenEntry.Active);
+        wall.transform.position = new Vector3(0f, 1.6f, 5f);
+        torch.transform.forward = Vector3.back;
+        Physics.SyncTransforms();
+        Assert.IsFalse(eye.TryHiddenTorchGlow(out _), "the closed door catches the beam on its inside");
+    }
+
     [TestCase(true, true, 1)]
     [TestCase(false, true, 0)]
     [TestCase(true, false, 0)]
