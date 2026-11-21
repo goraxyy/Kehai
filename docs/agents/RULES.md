@@ -65,6 +65,9 @@ showpiece.
 ## Handy commands
 
 ```bash
+# EditMode tests on a safe clone of your project, cleaned up afterwards (0.5.2)
+tools/run/kehai-run tests
+
 # EditMode tests, editor closed
 /Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics -projectPath . -runTests -testPlatform EditMode -testResults results.xml
 
