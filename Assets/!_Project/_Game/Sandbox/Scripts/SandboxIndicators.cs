@@ -27,7 +27,8 @@ namespace Kehai.Sandbox
         public bool showReadout = true, showEyeLine = true, showMeters = true;
 
         TextMesh headMeter;
-        LineRenderer eyeLine;
+        Renderer sawLight;   // the "saw you go in" light: red over her head while her eye holds a witnessed entry
+        readonly LineRenderer[] eyeLines = new LineRenderer[3];   // to your eyes, chest and feet
         GUIStyle style;
 
         public static SandboxIndicators Build(Transform parent, KarenBody body, string title)
@@ -62,15 +63,41 @@ namespace Kehai.Sandbox
         {
             if (body == null) return;
             headMeter = SandboxButton.Label(body.transform, "", new Vector3(0f, (body.Head != null ? body.Head.localPosition.y : 1.85f) + 0.6f, 0f), 0.04f);
-            var line = new GameObject("Her eye line");
-            line.transform.SetParent(transform, false);
-            eyeLine = line.AddComponent<LineRenderer>();
-            eyeLine.positionCount = 2;
-            eyeLine.widthMultiplier = 0.02f;
-            eyeLine.useWorldSpace = true;
-            eyeLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            eyeLine.receiveShadows = false;
-            eyeLine.sharedMaterial = KarenProps.Emissive(Color.white, 1f);
+            float top = (body.Head != null ? body.Head.localPosition.y : 1.85f) + 0.9f;
+            GameObject lamp = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            lamp.name = "Saw you go in";
+            Object.Destroy(lamp.GetComponent<Collider>());
+            lamp.transform.SetParent(body.transform, false);
+            lamp.transform.localPosition = new Vector3(0f, top, 0f);
+            lamp.transform.localScale = Vector3.one * 0.16f;
+            sawLight = lamp.GetComponent<Renderer>();
+            sawLight.sharedMaterial = KarenProps.Emissive(new Color(1f, 0.15f, 0.1f), 3f);
+            sawLight.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sawLight.enabled = false;
+            string[] to = { "eyes", "chest", "feet" };
+            for (int i = 0; i < eyeLines.Length; i++)
+            {
+                var line = new GameObject("Her sight line to your " + to[i]);
+                line.transform.SetParent(transform, false);
+                LineRenderer r = line.AddComponent<LineRenderer>();
+                r.positionCount = 2;
+                r.widthMultiplier = i == 0 ? 0.02f : 0.012f;
+                r.useWorldSpace = true;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                r.sharedMaterial = KarenProps.Emissive(Color.white, 1f);
+                eyeLines[i] = r;
+            }
+        }
+
+        // One of her three sight lines (her eye tests your eyes, chest and feet, SightSensor.ExposureTo):
+        // green when nothing stands between and you're where she can see (in her cone, or within
+        // arm's length), red when it's blocked or you're outside her cone.
+        public static bool LineSees(SightSensor eye, Vector3 point)
+        {
+            Vector3 to = point - eye.Eye;
+            bool where = to.magnitude <= SightSensor.CloseRange || Vector3.Angle(eye.Forward, to) <= eye.HalfAngle;
+            return where && LineOfSight.Clear(eye.Eye, point);
         }
 
         // The numbers, each frame. Public and pure enough for the tests.
@@ -104,19 +131,19 @@ namespace Kehai.Sandbox
                 headMeter.color = eye.Awareness >= eye.confirmAt ? new Color(1f, 0.3f, 0.25f) : eye.Awareness >= eye.glimpseAt ? new Color(1f, 0.75f, 0.25f) : Color.white;
                 if (view != null) headMeter.transform.rotation = Quaternion.LookRotation(headMeter.transform.position - view.transform.position);
             }
-            if (eyeLine != null)
+            if (sawLight != null) sawLight.enabled = showMeters && eye.HiddenEntry.Active;
+            for (int i = 0; i < eyeLines.Length; i++)
             {
+                LineRenderer line = eyeLines[i];
+                if (line == null) continue;
                 bool show = showEyeLine && player != null;
-                eyeLine.enabled = show;
-                if (show)
-                {
-                    eyeLine.SetPosition(0, eye.Eye);
-                    eyeLine.SetPosition(1, player.Head);
-                    // Exposure is her eye's own answer this frame: 1 when the line to your eyes is
-                    // clear and you're in her cone, 0 when it's blocked, you're hidden or behind her.
-                    Color c = eye.Exposure > 0f ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.25f, 0.25f);
-                    eyeLine.startColor = eyeLine.endColor = c;
-                }
+                line.enabled = show;
+                if (!show) continue;
+                Vector3 point = i == 0 ? player.Head : i == 1 ? player.Chest : player.Feet;
+                line.SetPosition(0, eye.Eye);
+                line.SetPosition(1, point);
+                Color c = LineSees(eye, point) ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.25f, 0.25f);
+                line.startColor = line.endColor = c;
             }
             for (int i = 0; i < places.Count; i++)
             {

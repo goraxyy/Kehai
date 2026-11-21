@@ -99,6 +99,13 @@ public class SightSandboxPlayTests
         yield return Wait(0.7f);
         Assert.Less(Vector3.Distance(held, karen.Body.transform.position), 0.1f, "Freeze stops her");
 
+        // Her three sight lines (eyes, chest, feet) and the "saw you go in" light, off until she sees one (C11.4).
+        var lines = System.Array.FindAll(sandbox.GetComponentsInChildren<LineRenderer>(), l => l.name.StartsWith("Her sight line to your"));
+        Assert.AreEqual(3, lines.Length, "a sight line to your eyes, chest and feet");
+        Transform lamp = karen.Body.transform.Find("Saw you go in");
+        Assert.IsNotNull(lamp, "the saw-you-go-in light");
+        Assert.IsFalse(lamp.GetComponent<Renderer>().enabled, "off: she hasn't seen you go in anywhere");
+
         // F4 hides every indicator and shows them again (C11.4).
         Assert.IsTrue(sandbox.Indicators.AnyShown);
         sandbox.Press(KeyCode.F4);
