@@ -179,8 +179,24 @@ namespace Kehai.Sandbox
             bot.Sprint = false;
         }
 
+        // The setup for a check about what follows a sighting: frozen but seeing (as the sight
+        // checks are), she watches you until she's sure, with her eye's own numbers; then her
+        // brain starts. Without it her first plan can turn her away before she ever looks.
+        IEnumerator SeenFirst(float seconds)
+        {
+            sandbox.Freeze();
+            float until = Time.time + seconds;
+            while (Eye.Awareness < Eye.confirmAt && Time.time < until)
+            {
+                Eye.Tick(Time.deltaTime);
+                yield return null;
+            }
+            sandbox.StartRunning();
+        }
+
         IEnumerator FridgeExpiry()
         {
+            yield return SeenFirst(HuntStartLimit);
             yield return Until(() => Confirmed, HuntStartLimit);
             if (!Confirmed) { MissedHunt(); yield break; }
 
