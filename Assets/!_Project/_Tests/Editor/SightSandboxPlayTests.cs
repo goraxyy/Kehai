@@ -116,6 +116,16 @@ public class SightSandboxPlayTests
         yield return Wait(1.5f);
         Assert.Greater(karen.Body.Sight.Awareness, karen.Body.Sight.glimpseAt, "standing in the open, 5 m in front of her, you're seen");
 
+        // The panel's buttons do what the keys do (C11.3): RESTART clears her, START and FREEZE.
+        SandboxButton Button(string label) => System.Array.Find(sandbox.GetComponentsInChildren<SandboxButton>(), b => b.label == label);
+        Button("RESTART").Interact(null);
+        Assert.AreEqual(0f, karen.Body.Sight.Awareness, "the panel's RESTART clears her awareness");
+        Assert.AreEqual(SandboxKaren.State.Frozen, karen.Current);
+        Button("START").Interact(null);
+        Assert.AreEqual(SandboxKaren.State.Moving, karen.Current, "the panel's START sets her going");
+        Button("FREEZE").Interact(null);
+        Assert.AreEqual(SandboxKaren.State.Frozen, karen.Current, "the panel's FREEZE stops her");
+
         // Inside the fridge: hidden, her awareness drains and nothing more is seen.
         karen.Restart();
         Vector3 inside = SightSandbox.FridgeFront + Vector3.right * (SandboxKit.FridgeInside.z * 0.5f);
