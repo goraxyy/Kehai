@@ -71,6 +71,28 @@ public class Kehai051FixtureTests
         Assert.IsNotNull(hit.collider.GetComponentInParent<ClosingMic>());
     }
 
+    // 0.5.2 (C12.2): the scene's radio, 2.1 m up, comes down onto its wall within reach.
+    [Test]
+    public void TheRadio_ComesDownOntoItsWall_WithinReach_AndStaysThere()
+    {
+        StaffWall();
+        float z = ClockZ + 2f;
+        var look = Box("Radio", null, new Vector3(WallFace - 0.4f, FloorTop + 2.1f, z), new Vector3(0.3f, 0.2f, 0.15f));
+        look.AddComponent<MusicBox>();
+        Physics.SyncTransforms();
+
+        MusicBox radio = KarenFixtures.PlaceRadio();
+        Assert.IsNotNull(radio);
+        FixturePresentation.BoundsOf(radio.transform, out Bounds b);
+        Assert.AreEqual(FloorTop + KarenFixtures.RadioHeight, b.center.y, 0.02f, "its centre 1.4 m over the floor, below your eyes");
+        Assert.AreEqual(WallFace, b.max.x, 0.03f, "its back against the wall");
+        Assert.AreEqual(z, b.center.z, 0.01f, "the same spot along the wall");
+
+        Vector3 placed = radio.transform.position;
+        KarenFixtures.PlaceRadio();
+        Assert.AreEqual(placed, radio.transform.position, "within reach already: it isn't moved again");
+    }
+
     [Test]
     public void WallBoxes_AreMeasuredFromTheFloor_NotFromWhatHangsAboveTheClock()
     {
