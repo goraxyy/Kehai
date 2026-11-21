@@ -9,6 +9,15 @@ namespace Kehai.Karen
         public static bool StepsAudible => Enabled;
         public static bool ConeVisible => Enabled;
 
+        // The sandboxes (0.5.2) turn the aids on for you; F3 still toggles them. Does nothing in a
+        // player release.
+        public static void SetEnabled(bool on)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            show = on;
+#endif
+        }
+
         public static bool Enabled
         {
             get
