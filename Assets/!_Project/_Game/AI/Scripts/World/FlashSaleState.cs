@@ -7,7 +7,7 @@ namespace Kehai.Karen
         static readonly SaleRules rules = new SaleRules();
         public static bool Active => rules.Active;
         public static event Action<bool> Changed;
-        public static int Cap(int configured) => rules.Cap(configured);
+        public static int Cap(int configured, int? lessonCap = null) => rules.Cap(configured, lessonCap);
         public static bool Start(ShiftManager shift, PaSystem pa)
         {
             if (!rules.Start(shift != null && shift.IsShiftActive && !shift.DoorsClosed,

@@ -8,7 +8,11 @@ namespace Kehai.Karen
         public const int NormalCap = 2, SaleCap = 4, Ceiling = 5;
         public const float HoldSeconds = 20f;
         public bool Active { get; private set; }
-        public int Cap(int configured) => Math.Max(0, Math.Min(Ceiling, Active ? SaleCap : configured));
+        public int Cap(int configured, int? lessonCap = null)
+        {
+            int limit = Math.Max(0, Math.Min(Ceiling, Active ? SaleCap : configured));
+            return lessonCap.HasValue ? Math.Min(limit, Math.Max(0, lessonCap.Value)) : limit;
+        }
         public bool Start(bool open, bool powered)
         {
             if (!open || !powered || Active) return false;
