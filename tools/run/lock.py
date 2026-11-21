@@ -50,7 +50,8 @@ def alive(pid: int, started: str | None = None) -> bool:
     except PermissionError:
         pass
     if started:
-        return start_time(pid) == started
+        observed = start_time(pid)
+        return observed is None or observed == started
     return True
 
 

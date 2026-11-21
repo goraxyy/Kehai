@@ -31,6 +31,7 @@ if data_root:
     d = Path(data_root) / seen['product'] / 'shift_records'
     d.mkdir(parents=True, exist_ok=True)
     (d / 'shift_001.json').write_text('{}')
+    (d / 'shift_001.krec').write_bytes(b'fixture replay')
 time.sleep(float(os.environ.get('STANDIN_SLEEP', '0')))
 results = arg('-testResults')
 if results:

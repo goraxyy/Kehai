@@ -161,7 +161,12 @@ def write_prefs(s: Settings, values: dict) -> None:
 
 
 def unity_open(s: Settings) -> bool:
-    return subprocess.run(['pgrep', '-f', s.unity_pattern], capture_output=True).returncode == 0
+    probe = subprocess.run(['pgrep', '-f', s.unity_pattern], capture_output=True, text=True)
+    if probe.returncode == 1 and not probe.stderr.strip():
+        return False
+    if probe.returncode == 0:
+        return True
+    raise OSError('cannot inspect the process list: ' + (probe.stderr.strip() or str(probe.returncode)))
 
 
 def free_gb(path: Path) -> float:
@@ -186,6 +191,7 @@ def record(s: Settings, card: Card, state: str, **extra) -> None:
     event = {'id': card.id, 'state': state, 'kind': card.job, 'commit': card.commit,
              'computer': socket.gethostname(), 'time': time.strftime('%Y-%m-%dT%H:%M:%S%z'), **extra}
     try:
+        append(Path(card.out) / 'run.jsonl', event)
         append(s.register, event)
     except (ValueError, OSError) as err:
         print(f'kehai-run: the register refused the event ({err})', file=sys.stderr)
@@ -257,6 +263,7 @@ def janitor(s: Settings, log=print) -> list[str]:
             continue
         if heavy.alive(card.pid, card.started or None):
             continue
+        copy_out(card)
         cleanup(s, card, log)
         record(s, card, 'interrupted', exit=INTERRUPTED, note='cleaned up by a later run: its process had died')
         cleaned.append(card.id)
@@ -308,25 +315,29 @@ def progress_line(log: Path) -> str:
 
 def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min: float = 90.0,
         test_filter: str | None = None, dry_run: bool = False, log=print) -> int:
-    janitor(s, log)
-    if unity_open(s):
-        log('kehai-run: Unity is open. Close the editor first (this Mac cannot run two), or use the PC.')
+    if '-kehai-no-records' in extra and (job in ('tests', 'ablation') or 'EvalBatch.Play' in extra):
+        log('kehai-run: test shifts must keep their records and replays.')
+        return 2
+    rid = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:6]
+    commit = git(s.repo, 'rev-parse', '--verify', ref + '^{commit}')
+    product = 'Kehai-run-' + rid
+    out = s.runs / rid
+    clone = s.home / 'clones' / rid
+    args = [s.unity] + unity_args(job, clone, out, extra, test_filter)
+    if dry_run:
+        log(' '.join(args))
+        return 0
+    try:
+        if unity_open(s):
+            log('kehai-run: Unity is open. Close the editor first, or use the PC.')
+            return 3
+    except OSError as err:
+        log(f'kehai-run: {err}')
         return 3
     s.home.mkdir(parents=True, exist_ok=True)
     if free_gb(s.home) < s.min_free_gb:
         log(f'kehai-run: less than {s.min_free_gb:g} GB free; not starting.')
         return 4
-    rid = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:6]
-    commit = git(s.repo, 'rev-parse', '--short', ref)
-    product = 'Kehai-run-' + rid[-6:]
-    out = s.runs / rid
-    out.mkdir(parents=True, exist_ok=True)
-    clone = s.home / 'clones' / rid
-    args = [s.unity] + unity_args(job, clone, out, extra, test_filter)
-    if dry_run:
-        log(' '.join(args))
-        shutil.rmtree(out, ignore_errors=True)
-        return 0
     try:
         ok, dead = heavy.take(s.lock, f'kehai-run {job} {commit} ({rid})')
     except OSError as err:
@@ -338,6 +349,12 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         return heavy.BUSY_EXIT
     if dead:
         log(f"kehai-run: took over a lock left by a stopped job: {dead.get('job', 'unknown')} (pid {dead.get('pid', '?')})")
+    try:
+        janitor(s, log)
+        out.mkdir(parents=True)
+    except Exception:
+        heavy.release(s.lock)
+        raise
     card = Card(id=rid, job=job, pid=os.getpid(), started=heavy.start_time(os.getpid()) or '', clone=str(clone),
                 out=str(out), product=product, data=str(s.data_root / product),
                 prefs_plist=str(s.prefs_root / f'unity.TokenLimit.{product}.plist'),
@@ -350,7 +367,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     proc = None
     try:
         log(f'kehai-run: {rid}: cloning the project')
-        make_clone(s, clone, ref)
+        make_clone(s, clone, commit)
         set_product(clone, product)
         log(f'kehai-run: {rid}: running Unity ({job}), at most {timeout_min:g} min; log {out / "unity.log"}')
         proc = subprocess.Popen(args, start_new_session=True)
@@ -380,10 +397,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     finally:
         for sig, handler in old.items():
             signal.signal(sig, handler)
-        try:
-            copy_out(card)
-        finally:
-            cleanup(s, card, log)
+        # If preservation fails, leave the source data and card for recovery.
+        copy_out(card)
+        cleanup(s, card, log)
     minutes = (time.time() - began) / 60
     record(s, card, state, exit=code, minutes=round(minutes, 1), note=note)
     summary = f'{job} on {commit}: {state}' + (f' ({note})' if note else '') + f', {minutes:.0f} min. Results: {out}'
@@ -420,7 +436,15 @@ def doctor(s: Settings, clean: bool = False, log=print) -> int:
             found += 1
             log(f'dead run {card.id} ({card.job}): clone {card.clone}')
     if clean:
-        janitor(s, log)
+        try:
+            if unity_open(s):
+                log('kehai-run: close Unity before recovering interrupted runs.')
+                return 3
+            with heavy.held('recover interrupted runs', s.lock, log=log):
+                janitor(s, log)
+        except (heavy.Busy, OSError) as err:
+            log(f'kehai-run: {err}')
+            return 3
     for p in sorted(s.data_root.glob('Kehai-verify*')) if s.data_root.exists() else []:
         found += 1
         log(f'not made by kehai-run, left alone (ask before deleting): {p}')

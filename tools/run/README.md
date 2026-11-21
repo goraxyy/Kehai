@@ -25,12 +25,12 @@ The offline command reads the imported libraries from `KEHAI_RUN_MAIN`. It compi
    (not the worktrees), with the commit laid on and every file the commit doesn't have removed.
 4. **Unity,** silent, with a time limit (`--timeout-min`, default 90) and a progress line.
 5. **Clean-up:** results and the run's game data copied to `~/TokenLimit/runs/out/<run id>/`
-   (every test shift recorded), the prefs put back to the card's values, the clone, its data
+   (including replay and shift files the job produced, plus its own `run.jsonl`), the prefs put back to the card's values, the clone, its data
    folder and its prefs file removed, the lock freed. Start and end go into the run register
    (`~/TokenLimit/runs/runs.jsonl`), and a silent banner says how it ended.
 
 Ctrl-C, closing the terminal or a session ending all clean up. A crash or `kill -9` can't: the next
-run, or `doctor --clean`, finds the dead run's card and cleans up for it.
+run, or `doctor --clean`, finds the dead run's card, preserves its existing output, and cleans up for it. A dry run only prints the command. An unavailable process list blocks execution and recovery.
 
 **The lock** is `tools/run/lock.py`: the same directory the marketing tools use
 (`~/TokenLimit/marketing/state/heavy.lock`), with the holder's start time added so a reused process

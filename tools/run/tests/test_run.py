@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -107,8 +108,22 @@ class RunTests(Fixture):
         self.assertTrue(seen['art'], 'the private art comes from the main folder')
         self.assertTrue(seen['product'].startswith('Kehai-run-'), 'its own product name, so its data stays apart')
         self.assertTrue((out / 'shift_records' / 'shift_001.json').exists(), 'the run\'s records are kept (Q1)')
+        self.assertEqual(b'fixture replay', (out / 'shift_records/shift_001.krec').read_bytes())
+        self.assertEqual(self.events(), [json.loads(line) for line in (out / 'run.jsonl').read_text().splitlines()])
+        self.assertEqual(out.name, self.events()[0]['id'])
         states = [e['state'] for e in self.events()]
         self.assertEqual(['running', 'completed'], states)
+
+    def test_unknown_editor_state_stops_before_cleanup(self):
+        result = subprocess.CompletedProcess([], 1, '', 'cannot get process list')
+        with patch.object(kr, 'git', return_value='abc'), patch('subprocess.run', return_value=result):
+            self.assertEqual(3, kr.run(self.s, 'tests', [], log=lambda *_: None))
+        self.assertFalse(self.s.home.exists())
+
+    def test_recording_cannot_be_disabled_for_a_test_shift(self):
+        for job, args in [('ablation', []), ('tests', []), ('unity', ['-executeMethod', 'EvalBatch.Play'])]:
+            self.assertEqual(2, kr.run(self.s, job, args + ['-kehai-no-records'], log=lambda *_: None))
+        self.assertFalse(self.s.home.exists())
 
     def test_unity_failing_still_cleans_up(self):
         os.environ['STANDIN_EXIT'] = '1'
