@@ -74,6 +74,34 @@ say where you are. **F1** opens her map with her belief, as in the store.
 box says "lost you 2.3 s ago, running on" and then "searching, 41 s of the hunt left, 2 spots
 searched". Hide in the fridge after she's lost you; cut through the gap; let her catch you.
 
+**Run the recorded pursuit checks** from **Kehai → Sandbox → Run Pursuit Checks**. For a batch
+run, use the following command with the editor closed and the checks on the selected ref.
+
+```sh
+tools/run/kehai-run unity -- -executeMethod PursuitSandboxChecks.Run
+```
+
+The bot sprints through the shelf gap to check loss of sight, running on and searching. It takes
+the east aisle into the fridge to check that an unseen entry holds and that the hunt ends 60 seconds
+after the last sighting. It peeks out from behind the shelf in a separate run to check that a fresh
+sighting renews the window, then tests contact and Restart in a fourth run.
+
+Each run writes `report.md`, `report.json` and the case replays under
+`<persistent data>/sandbox_checks/pursuit_<time>/`. The clone runner copies that folder out with
+the other run results. Exit 0 means all rows passed, 1 means a check failed, and 2 means the run
+timed out. **Kehai → Sandbox → Watch Pursuit Check Replay** opens a `.krec` in the generated room.
+
+The replay renderer can make a silent clip from an individual check in a graphics-enabled clone
+under the heavy-work lock. Set the recording path, output path and time range for the clip.
+
+```sh
+"$KEHAI_UNITY" -batchmode -projectPath "$KEHAI_CLONE" \
+  -executeMethod PursuitSandboxChecks.Render -krec "$KEHAI_RECORDING" \
+  -from 0 -to 12 -shot chase -size 1280x720 -fps 30 -out "$KEHAI_CLIP"
+```
+
+The batch check and video render were added as code. The recorded runs still need to be played.
+
 ## For agents
 
 - Code: `Assets/!_Project/_Game/Sandbox/` (`SandboxKit` the parts, `SandboxKaren` her

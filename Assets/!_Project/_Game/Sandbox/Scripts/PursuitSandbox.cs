@@ -47,6 +47,7 @@ namespace Kehai.Sandbox
         public KarenBrain Brain { get; private set; }
         public PlayerPresence Player { get; private set; }
         public HidingPlace Fridge { get; private set; }
+        public SandboxDoor FridgeDoor { get; private set; }
         public HidingPlace Rack { get; private set; }
         public SandboxIndicators Indicators { get; private set; }
         public bool Built { get; private set; }
@@ -68,17 +69,10 @@ namespace Kehai.Sandbox
             Built = true;
             transform.position = Centre;
             Transform root = transform;
-            Vector3 doorway = SandboxKit.Room(root, new Vector3(0f, 0f, -2f), new Vector2(RoomSize.x + 4f, RoomSize.y + 8f), Vector3.zero, RoomSize, DoorWidth);
-            SandboxDoor door = SandboxKit.Door(root, doorway, DoorWidth);
-            int n = 0;
-            foreach (Vector3 at in Shelves()) SandboxKit.ShelfUnit(root, "Tall shelf " + (++n), at, 0f, SandboxKit.TallShelf);
-            Fridge = SandboxKit.StockFridge(root, FridgeFront, 90f);
-            Rack = SandboxKit.StockRack(root, RackCentre, 0f);
-            Transform lights = SandboxKit.CeilingLights(root);
-            foreach (float x in new[] { -8f, 0f, 8f })
-            foreach (float z in new[] { 5.5f, 0f, -5.5f })
-                SandboxKit.Lamp(lights, new Vector3(x, 2.9f, z));
-            SandboxKit.Lamp(lights, new Vector3(0f, 2.9f, -10f), 1.4f);
+            SandboxDoor door = BuildRoom(root, out HidingPlace fridge, out HidingPlace rack);
+            Fridge = fridge;
+            Rack = rack;
+            FridgeDoor = Fridge.transform.parent.GetComponentInChildren<SandboxDoor>();
             door.Set(true, instantly: true);
             Physics.SyncTransforms();
             SandboxKit.Bake(gameObject);
@@ -90,6 +84,23 @@ namespace Kehai.Sandbox
 
             Panel(root, "Panel outside", new Vector3(-2.2f, PanelHeight, -RoomSize.y * 0.5f - SandboxKit.WallThickness * 0.5f - 0.02f), 180f);
             Panel(root, "Panel inside", new Vector3(-2.2f, PanelHeight, -RoomSize.y * 0.5f + SandboxKit.WallThickness * 0.5f + 0.02f), 0f);
+        }
+
+        // The same room is built for a replay, without an active player, brain or NavMesh.
+        internal static SandboxDoor BuildRoom(Transform root, out HidingPlace fridge, out HidingPlace rack)
+        {
+            Vector3 doorway = SandboxKit.Room(root, new Vector3(0f, 0f, -2f), new Vector2(RoomSize.x + 4f, RoomSize.y + 8f), Vector3.zero, RoomSize, DoorWidth);
+            SandboxDoor door = SandboxKit.Door(root, doorway, DoorWidth);
+            int n = 0;
+            foreach (Vector3 at in Shelves()) SandboxKit.ShelfUnit(root, "Tall shelf " + (++n), at, 0f, SandboxKit.TallShelf);
+            fridge = SandboxKit.StockFridge(root, FridgeFront, 90f);
+            rack = SandboxKit.StockRack(root, RackCentre, 0f);
+            Transform lights = SandboxKit.CeilingLights(root);
+            foreach (float x in new[] { -8f, 0f, 8f })
+            foreach (float z in new[] { 5.5f, 0f, -5.5f })
+                SandboxKit.Lamp(lights, new Vector3(x, 2.9f, z));
+            SandboxKit.Lamp(lights, new Vector3(0f, 2.9f, -10f), 1.4f);
+            return door;
         }
 
         KarenBrain BuildBrain()
