@@ -875,10 +875,11 @@ namespace Kehai.Karen
             {
                 Note("PLAN", $"PLAN     {goal.Name()}: nothing workable ({why}) → roam");
                 plan = HtnPlanner.Plan(ActionId.Roam, Ctx, Interrupt, out tactic, out options, out why);
-                if (plan == null) return;
+                if (plan == null) { EndHeldHunt($"{goal.Name()}: nothing workable"); return; }
             }
 
             Adopt(plan, tactic, options, why);
+            EndHeldHunt($"{plan.Action.Name()} couldn't go ahead");
         }
 
         // A plan she's going ahead with: its cost, the record of it, and on (the planner's and the
@@ -982,9 +983,10 @@ namespace Kehai.Karen
             AbortPlanFor(pick.Action);
             PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
                                             prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
-            if (plan == null) return false;
+            if (plan == null) return false;   // the planner's path decides next, and ends a held hunt it doesn't go on with
             brainPick = (legal.ConvertAll(p => p.Key).ToArray(), tactic == pick.Tactic ? chance : 0f, index == plannerPick);
             Adopt(plan, tactic, options, why);
+            EndHeldHunt($"{pick.Action.Name()} couldn't go ahead");
             return true;
         }
 
@@ -1203,6 +1205,15 @@ namespace Kehai.Karen
             if (hold) chasing = false;
             AbortPlan();
             if (hold) chasing = true;
+        }
+
+        // After a decision: a hunt held across the abort that no hunt plan took up (nothing
+        // workable, or over the tension budget at the last moment) ends there, as it did before.
+        void EndHeldHunt(string why)
+        {
+            if (!chasing || CurrentPlan != null && CurrentPlan.Action == ActionId.Hunt) return;
+            Pursuit.Ending(why);
+            SetChasing(false);
         }
 
         void AbortPlan()

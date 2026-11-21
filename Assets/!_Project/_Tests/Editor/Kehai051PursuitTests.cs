@@ -40,6 +40,7 @@ public class Kehai051PursuitTests
     }
 
     static object Call(object target, string name) => target.GetType().GetMethod(name, Private).Invoke(target, null);
+    static object CallWith(object target, string name, params object[] args) => target.GetType().GetMethod(name, Private).Invoke(target, args);
     static T Field<T>(object target, string name) => (T)target.GetType().GetField(name, Private).GetValue(target);
     static void SetField(object target, string name, object value) => target.GetType().GetField(name, Private).SetValue(target, value);
 
@@ -219,14 +220,25 @@ public class Kehai051PursuitTests
         PropertyInfo plan = typeof(KarenBrain).GetProperty("CurrentPlan");
         plan.SetValue(brain, new PlanTree("hunt", ActionId.Hunt, null, new List<Primitive>(), _ => false));
 
-        brain.GetType().GetMethod("AbortPlanFor", Private).Invoke(brain, new object[] { ActionId.Hunt });
+        CallWith(brain, "AbortPlanFor", ActionId.Hunt);
         Assert.IsTrue(brain.IsChasing, "the hunt goes on");
         Assert.IsNull(brain.CurrentPlan, "its old plan is dropped for the new one");
         Assert.AreEqual(deadline, brain.Pursuit.Deadline, "its window is the same one: not retired, not restarted");
         Assert.IsTrue(brain.Pursuit.Active(now));
 
+        // A held hunt that no hunt plan takes up (nothing workable, or over budget) still ends.
+        CallWith(brain, "EndHeldHunt", "nothing workable");
+        Assert.IsFalse(brain.IsChasing, "with no hunt plan adopted, the held hunt ends");
+        Assert.IsFalse(brain.Pursuit.Active(now));
+
+        brain.Pursuit.Start(now - 5f + 0.01f, now, Window);
+        SetField(brain, "chasing", true);
         plan.SetValue(brain, new PlanTree("hunt", ActionId.Hunt, null, new List<Primitive>(), _ => false));
-        brain.GetType().GetMethod("AbortPlanFor", Private).Invoke(brain, new object[] { ActionId.Roam });
+        CallWith(brain, "EndHeldHunt", "a hunt plan is running");
+        Assert.IsTrue(brain.IsChasing, "with a hunt plan running, nothing ends");
+
+        plan.SetValue(brain, new PlanTree("hunt", ActionId.Hunt, null, new List<Primitive>(), _ => false));
+        CallWith(brain, "AbortPlanFor", ActionId.Roam);
         Assert.IsFalse(brain.IsChasing, "another goal ends the hunt");
         Assert.IsFalse(brain.Pursuit.Active(now));
     }
