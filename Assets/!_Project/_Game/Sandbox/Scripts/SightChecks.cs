@@ -173,16 +173,42 @@ namespace Kehai.Sandbox
                       $"you {(p != null ? p.Position.ToString() : "missing")}, light {(p != null ? p.LightLevel : 0f):0.00}; " +
                       $"now {eye.DetectNow:0.00}, exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}");
             // All the way to the back, so the body ends well past the 80% that hides it.
-            yield return Bot.WalkTo(inside + Vector3.right * 0.15f);
+            bool walking = true;
+            StartCoroutine(Walk(inside + Vector3.right * 0.15f, () => walking = false));
+            float nextTrace = 0f;
+            for (float t = 0f; walking; t += Time.deltaTime)
+            {
+                if (t >= nextTrace)
+                {
+                    nextTrace += 0.5f;
+                    Debug.Log($"SightChecks: walk t={t:0.0} feet {Bot.Feet} move {Bot.MoveWorld} door {(FridgeDoorNow() is SandboxDoor d ? $"{(d.IsOpen ? "open" : "shut")} {d.transform.localEulerAngles.y:0}" : "none")}");
+                }
+                yield return null;
+            }
             yield return null;
             HidingPlace place = p != null ? HidingPlace.At(p, out _) : null;
             endCoverage = place != null ? place.Coverage(p) : 0f;
             Debug.Log($"SightChecks: walked in to {Bot.Feet}: {endCoverage * 100f:0}% inside; entry {(eye.HiddenEntry.Active ? "seen" : "not seen")}");
+            if (!HidingPlace.Conceals(endCoverage))
+            {
+                var names = Physics.OverlapCapsule(Bot.Feet + Vector3.up * 0.6f, Bot.Feet + Vector3.up * 1.5f, 0.62f)
+                    .Where(c => c.transform != Sandbox.Player.transform && !c.transform.IsChildOf(Sandbox.Player.transform))
+                    .Select(c => c.name + (c.isTrigger ? " (trigger)" : ""));
+                Debug.Log("SightChecks: stopped short; touching " + string.Join(", ", names));
+            }
         }
+
+        IEnumerator Walk(Vector3 target, System.Action done)
+        {
+            yield return Bot.WalkTo(target);
+            done();
+        }
+
+        SandboxDoor FridgeDoorNow() => Sandbox.Fridge != null ? Sandbox.Fridge.transform.parent.GetComponentInChildren<SandboxDoor>() : null;
 
         void SetFridgeDoor(bool open)
         {
-            SandboxDoor door = Sandbox.Fridge != null ? Sandbox.Fridge.transform.parent.GetComponentInChildren<SandboxDoor>() : null;
+            SandboxDoor door = FridgeDoorNow();
             if (door != null) door.Set(open, instantly: true);
             Physics.SyncTransforms();
         }
