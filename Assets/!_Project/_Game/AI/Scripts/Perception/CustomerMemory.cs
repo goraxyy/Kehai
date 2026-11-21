@@ -23,6 +23,8 @@ namespace Kehai.Karen
         public void ClearConversation() => HasSpokenToKaren = false;
 
         public bool HasSighting => lastSeenTime > -900f && Time.time - lastSeenTime < memorySeconds;
+        public bool SawHidingEntry { get; private set; }
+        bool lastLookWasVisible;
         public Vector3 LastSeenAt { get; private set; }
         public float LastSeenTime => lastSeenTime;
         public float Age => Time.time - lastSeenTime;
@@ -36,6 +38,7 @@ namespace Kehai.Karen
         [System.NonSerialized] public bool possessed;
 
         float lastSeenTime = -999f;
+        const float LookInterval = 0.5f;
         float nextLook;
         float jumpyUntil = -1f;
         CustomerNPC npc;
@@ -56,7 +59,7 @@ namespace Kehai.Karen
         {
             if (Time.time >= nextLook)
             {
-                nextLook = Time.time + 0.5f;
+                nextLook = Time.time + LookInterval;
                 Look();
             }
         }
@@ -64,11 +67,23 @@ namespace Kehai.Karen
         void Look()
         {
             PlayerPresence player = PlayerPresence.Current;
+            bool sawPreviousLook = lastLookWasVisible;
+            lastLookWasVisible = false;
             if (player == null) return;
             // Hidden in a fridge, closet, stall or under a rack: shoppers can't see you either,
             // even with a clear line in (0.5.1, item 1; the same rule as every SightSensor).
             HidingPlace place = HidingPlace.At(player, out float coverage);
-            if (place != null && place.Conceals(player, coverage)) return;
+            if (place != null && place.Conceals(player, coverage))
+            {
+                if (sawPreviousLook && WitnessedHide.Witnessed(place, LastSeenAt, lastSeenTime, player.Position, Time.time, LookInterval + 0.1f))
+                {
+                    // The location stays at the last visible sample. Her conversation with
+                    // this witness carries a fading lead, never the right to catch at it.
+                    SawHidingEntry = true;
+                    lastSeenTime = Time.time;
+                }
+                return;
+            }
 
             Vector3 eye = transform.position + Vector3.up * 1.6f;
             Vector3 d = player.Chest - eye;
@@ -87,6 +102,8 @@ namespace Kehai.Karen
                 return;   // something solid in the way
             }
 
+            lastLookWasVisible = true;
+            SawHidingEntry = false;
             lastSeenTime = Time.time;
             LastSeenAt = player.Position;
             float confidence = 1f - distance / range * 0.6f;
@@ -104,7 +121,7 @@ namespace Kehai.Karen
             float decayed = SightingConfidence * Mathf.Clamp01(1f - Age / memorySeconds);
             float sigma = (senses ?? SenseModel.Hand()).TestimonySigma(Age);
             return new Observation(SenseChannel.Testimony, LastSeenAt, decayed, sigma,
-                                   $"testimony({name}, {Age:0}s old)");
+                                   $"testimony({name}, {(SawHidingEntry ? "saw entry into hiding, " : "")}{Age:0}s old)");
         }
 
         public static void MakeNearbyJumpy(Vector3 position, float radius, float seconds)

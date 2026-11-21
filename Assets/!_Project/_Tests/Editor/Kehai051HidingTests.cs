@@ -140,6 +140,54 @@ public class Kehai051HidingTests
         Assert.AreEqual(destination, HidingApproach.ClosestReachable(null, eye.HiddenEntry.Position));
     }
 
+    [TestCase(true, true, 1)]
+    [TestCase(false, true, 0)]
+    [TestCase(true, false, 0)]
+    public void CameraReportsOnlyANewEntryOnALiveFeed(bool sawApproach, bool liveFeed, int expected)
+    {
+        int reports = 0;
+        Vector3 lastVisible = Vector3.forward * 4.95f;
+        void Receive(HidingPlace seenPlace, Vector3 seenAt)
+        {
+            Assert.AreSame(place, seenPlace);
+            Assert.AreEqual(lastVisible, seenAt);
+            reports++;
+        }
+        InfrastructureFeed.CameraSawEntry += Receive;
+        try
+        {
+            if (sawApproach) At(lastVisible);
+            player.transform.position = Vector3.forward * 5.31f;
+            Physics.SyncTransforms();
+            InfrastructureFeed.TickCamera(eye, 0.02f, liveFeed);
+            InfrastructureFeed.TickCamera(eye, 0.02f);
+            Assert.AreEqual(expected, reports);
+        }
+        finally { InfrastructureFeed.CameraSawEntry -= Receive; }
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void CustomerTestimonyRetainsOnlyWhatTheCustomerSaw(bool sawApproach)
+    {
+        var shopper = new GameObject("shopper").AddComponent<CustomerMemory>();
+        var look = typeof(CustomerMemory).GetMethod("Look", Private);
+        shopper.transform.forward = sawApproach ? Vector3.forward : Vector3.back;
+        At(4.95f);
+        look.Invoke(shopper, null);
+        At(5.31f);
+        look.Invoke(shopper, null);
+        Assert.AreEqual(sawApproach, shopper.SawHidingEntry);
+        Assert.IsFalse(shopper.HasSpokenToKaren);
+        if (sawApproach)
+        {
+            var report = shopper.ToObservation();
+            Assert.AreEqual(Vector3.forward * 4.95f, report.Position);
+            Assert.AreEqual(SenseChannel.Testimony, report.Channel);
+            StringAssert.Contains("entry into hiding", report.Label);
+        }
+    }
+
     [Test]
     public void UnwitnessedEntry_NeverArmsCatch_EvenWithClearEyes()
     {

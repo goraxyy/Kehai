@@ -127,6 +127,7 @@ namespace Kehai.Karen
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
             NoiseBus.Emitted += OnOwnNoise;
+            InfrastructureFeed.CameraSawEntry += OnCameraSawEntry;
             World.Pa.ChimeStarted += OnPaChime;
             World.Pa.SpeechStarted += OnPaSpeech;
             GameEvents.ShelfRestocked += OnRestocked;
@@ -174,6 +175,7 @@ namespace Kehai.Karen
         {
             NoiseBus.Emitted -= OnNoise;
             NoiseBus.Emitted -= OnOwnNoise;
+            InfrastructureFeed.CameraSawEntry -= OnCameraSawEntry;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.SpillCleaned -= OnSpillRoute;
             GameEvents.BinBagged -= OnBinRoute;
@@ -1292,6 +1294,16 @@ namespace Kehai.Karen
         Vector3 hidingDestination;
         float hidingPathAt, hidingArrivedAt = -1f;
         const float HidingLookSeconds = 1f;
+
+        void OnCameraSawEntry(HidingPlace place, Vector3 lastSeen)
+        {
+            if (!isActiveAndEnabled || !ShiftActive || !PresentThisShift || Body.IsStunned ||
+                !Sensorium.UseInfrastructure || KilledThisShift) return;
+            // Copy the observed doorway point at the instant it is reported. Her own eye
+            // maintains the usual leave-before-arrival cancellation from this frame on.
+            Body.Sight.HiddenEntry.Remember(place, lastSeen, Time.time);
+            Note("SENSE", "camera witnessed an entry into hiding");
+        }
 
         bool PursueWitnessedHide()
         {

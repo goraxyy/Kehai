@@ -10,8 +10,25 @@ namespace Kehai.Karen
     {
         public static event System.Action<Observation> Reported;
 
+        public static event System.Action<HidingPlace, Vector3> CameraSawEntry;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetStatics() => Reported = null;
+        static void ResetStatics()
+        {
+            Reported = null;
+            CameraSawEntry = null;
+        }
+
+        // Only the transition witnessed on this tick is delivered. A camera that comes
+        // online after concealment cannot report the occupant or replay an old entry.
+        public static void TickCamera(SightSensor eye, float dt, bool liveFeed = true)
+        {
+            int previous = eye.HiddenEntry.Entry;
+            eye.Tick(dt);
+            WitnessedHide entry = eye.HiddenEntry;
+            if (liveFeed && entry.Active && entry.Entry != previous)
+                CameraSawEntry?.Invoke(entry.Place, entry.Position);
+        }
 
         public static void Report(in Observation observation) => Reported?.Invoke(observation);
     }
@@ -250,7 +267,7 @@ namespace Kehai.Karen
             foreach (CustomerMemory m in CustomerMemory.All)
             {
                 if (m == null || !m.HasSighting) continue;
-                if ((m.transform.position - bodyPosition).sqrMagnitude > 2.2f * 2.2f && !m.possessed) continue;
+                if ((m.transform.position - bodyPosition).sqrMagnitude > 2.2f * 2.2f && (!m.possessed || m.SawHidingEntry)) continue;
                 if (polled.TryGetValue(m, out float when) && when >= m.LastSeenTime) continue;
 
                 polled[m] = m.LastSeenTime;
