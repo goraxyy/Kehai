@@ -9,10 +9,19 @@ function bucket() {
   const store = new Map();
   return {
     store,
-    async put(key, body, opts) { store.set(key, { body: new Uint8Array(body), opts, uploaded: new Date() }); },
+    async put(key, body, opts) {
+      if (opts.onlyIf?.get("If-None-Match") === "*" && store.has(key)) return null;
+      const row = { body: new Uint8Array(body), opts, uploaded: new Date() };
+      store.set(key, row);
+      return row;
+    },
+    async head(key) {
+      const row = store.get(key);
+      return row && { size: row.body.byteLength, checksums: { sha256: row.opts.sha256 }, etag: "original" };
+    },
     async get(key) {
       const o = store.get(key);
-      return o ? { body: o.body, size: o.body.byteLength } : null;
+      return o ? { body: new Response(o.body).body, size: o.body.byteLength } : null;
     },
     async delete(key) { store.delete(key); },
     async list({ prefix }) {
@@ -81,4 +90,24 @@ test("keys compare whole, and a missing or short secret matches nothing", () => 
 test("it says it's up", async () => {
   const r = await call(env(), "GET", "/");
   assert.equal(r.status, 200);
+});
+
+test("simultaneous uploads keep the first receipt, including on later retries", async () => {
+  const e = env();
+  const path = "/sessions/round1/T07/20261004_101500.zip";
+  const send = body => call(e, "PUT", path, { headers: { "X-Kehai-Key": UPLOAD }, body });
+  const first = zip(), second = zip();
+  second[7] = 123;
+  const results = await Promise.all([send(first), send(second)]);
+  assert.deepEqual(results.map(r => r.status).sort(), [201, 409]);
+  const winner = results[0].status === 201 ? first : second;
+  const loser = winner === first ? second : first;
+  const row = e.SESSIONS.store.get(path.slice(1));
+  assert.equal((await send(winner)).status, 200);
+  assert.equal((await send(loser)).status, 409);
+  delete row.opts.sha256; // Sessions received by the older Worker.
+  assert.equal((await send(winner)).status, 200);
+  assert.equal((await send(loser)).status, 409);
+  assert.equal(e.SESSIONS.store.get(path.slice(1)), row);
+  assert.deepEqual(row.body, winner);
 });

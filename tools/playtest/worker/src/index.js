@@ -57,11 +57,41 @@ async function upload(request, env, match) {
   if (head[0] !== 0x50 || head[1] !== 0x4b || head[2] !== 0x03 || head[3] !== 0x04) return text(400, "not a zip\n");
   const [, round, code, launch] = match;
   const key = `sessions/${round}/${code}/${launch}.zip`;
-  await env.SESSIONS.put(key, body, {
+  const digest = await crypto.subtle.digest("SHA-256", body);
+  const stored = await env.SESSIONS.put(key, body, {
+    onlyIf: new Headers({ "If-None-Match": "*" }),
+    sha256: digest,
     httpMetadata: { contentType: "application/zip" },
     customMetadata: { received: new Date().toISOString(), round, code, launch },
   });
-  return json(201, { key, bytes: body.byteLength });
+  const receipt = { key, bytes: body.byteLength };
+  if (stored) return json(201, receipt);
+
+  // A previous PUT may have succeeded while its acknowledgement was lost.
+  const previous = await env.SESSIONS.head(key);
+  if (!previous) return text(503, "session changed during receipt; retry\n");
+  if (previous.size === body.byteLength) {
+    const checksum = previous.checksums?.sha256;
+    if (checksum) {
+      if (equalBytes(new Uint8Array(digest), new Uint8Array(checksum))) return json(200, receipt);
+    } else {
+      // Older uploads have no SHA-256. Compare in chunks to avoid buffering a second ZIP.
+      const original = await env.SESSIONS.get(key, { onlyIf: { etagMatches: previous.etag } });
+      if (!original?.body) return text(503, "session changed during receipt; retry\n");
+      const expected = new Uint8Array(body);
+      let offset = 0;
+      for await (const chunk of original.body) {
+        if (!equalBytes(chunk, expected.subarray(offset, offset + chunk.length))) break;
+        offset += chunk.length;
+      }
+      if (offset === expected.length) return json(200, receipt);
+    }
+  }
+  return text(409, "session ID already contains different bytes\n");
+}
+
+function equalBytes(a, b) {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 async function list(env, url) {
