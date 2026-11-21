@@ -869,7 +869,7 @@ namespace Kehai.Karen
             Note("", $"  why    {because}");
 
             if (chasing && goal != ActionId.Hunt) Pursuit.Ending($"{goal.Name()} won the decision ({because})");
-            AbortPlan();
+            AbortPlanFor(goal);
             PlanTree plan = HtnPlanner.Plan(goal, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why);
             if (plan == null)
             {
@@ -979,7 +979,7 @@ namespace Kehai.Karen
             Actions.Commit(pick.Action, Ctx);
             WriteBelief();
             if (chasing && pick.Action != ActionId.Hunt) Pursuit.Ending($"the brain picked {pick.Action.Name()}");
-            AbortPlan();
+            AbortPlanFor(pick.Action);
             PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
                                             prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
             if (plan == null) return false;
@@ -1190,6 +1190,19 @@ namespace Kehai.Karen
             why = "developer builds only";
             return false;
 #endif
+        }
+
+        // A decision that picks the hunt again while she hunts (a forced re-decision on a fresh
+        // sighting, or a replan with her guesses in hand) goes on with the same hunt: the chase
+        // is held across the abort, as the witnessed-hide pursuit does. Ending it here retired
+        // the sighting that started it, so the "new" hunt began with 0 s left and ended the next
+        // frame, over and over (found by the pursuit sandbox's checks, 0.5.2 C11.7).
+        void AbortPlanFor(ActionId next)
+        {
+            bool hold = chasing && next == ActionId.Hunt;
+            if (hold) chasing = false;
+            AbortPlan();
+            if (hold) chasing = true;
         }
 
         void AbortPlan()

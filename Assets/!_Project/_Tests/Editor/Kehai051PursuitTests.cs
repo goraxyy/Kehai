@@ -206,6 +206,31 @@ public class Kehai051PursuitTests
         Assert.IsTrue(Field<bool>(brain, "decideNow"), "on waking she decides again from what she senses now");
     }
 
+    // 0.5.2 (C11.7, found by the pursuit sandbox): a re-decision that picks the hunt again keeps
+    // the hunt and its window; one that picks anything else ends it.
+    [Test]
+    public void ChoosingTheHuntAgain_KeepsTheHuntAndItsWindow_AnythingElseEndsIt()
+    {
+        KarenBrain brain = Brain(out _);
+        float now = Time.time;
+        brain.Pursuit.Start(now - 5f, now, Window);
+        SetField(brain, "chasing", true);
+        float deadline = brain.Pursuit.Deadline;
+        PropertyInfo plan = typeof(KarenBrain).GetProperty("CurrentPlan");
+        plan.SetValue(brain, new PlanTree("hunt", ActionId.Hunt, null, new List<Primitive>(), _ => false));
+
+        brain.GetType().GetMethod("AbortPlanFor", Private).Invoke(brain, new object[] { ActionId.Hunt });
+        Assert.IsTrue(brain.IsChasing, "the hunt goes on");
+        Assert.IsNull(brain.CurrentPlan, "its old plan is dropped for the new one");
+        Assert.AreEqual(deadline, brain.Pursuit.Deadline, "its window is the same one: not retired, not restarted");
+        Assert.IsTrue(brain.Pursuit.Active(now));
+
+        plan.SetValue(brain, new PlanTree("hunt", ActionId.Hunt, null, new List<Primitive>(), _ => false));
+        brain.GetType().GetMethod("AbortPlanFor", Private).Invoke(brain, new object[] { ActionId.Roam });
+        Assert.IsFalse(brain.IsChasing, "another goal ends the hunt");
+        Assert.IsFalse(brain.Pursuit.Active(now));
+    }
+
     [Test]
     public void WithTheWindowOverAndNothingInSight_TheHuntEnds_AndSaysWhy()
     {
