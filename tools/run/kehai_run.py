@@ -267,7 +267,7 @@ def copy_out(card: Card) -> None:
     """What the run produced in its data folder: shift records, replays, eval output (Q1)."""
     data = Path(card.data)
     out = Path(card.out)
-    for name in ('shift_records', 'kehai_eval', 'karen_logs', 'replays'):
+    for name in ('shift_records', 'kehai_eval', 'karen_logs', 'replays', 'sandbox_checks'):
         if (data / name).exists():
             shutil.copytree(data / name, out / name, dirs_exist_ok=True)
 

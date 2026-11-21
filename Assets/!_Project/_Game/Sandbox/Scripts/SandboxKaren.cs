@@ -70,6 +70,17 @@ namespace Kehai.Sandbox
             turnTimer = 0f;
         }
 
+        // For the scripted checks: put her somewhere else, facing a given way, frozen and cleared.
+        public void PlaceAt(Vector3 at, float yaw)
+        {
+            Freeze();
+            if (Body == null) return;
+            if (Body.Agent != null && Body.Agent.isActiveAndEnabled) Body.Warp(at);
+            else Body.transform.position = at;
+            Body.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            Body.Sight.ResetAwareness();
+        }
+
         public void ToggleRoute()
         {
             CurrentRoute = CurrentRoute == Route.Loop ? Route.StandAndTurn : Route.Loop;
