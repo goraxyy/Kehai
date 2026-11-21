@@ -43,6 +43,9 @@ namespace Kehai.Sandbox
         public readonly List<Row> Rows = new List<Row>();
 
         public SightSandbox Sandbox { get; private set; }
+        System.Action watching;
+
+        void Update() => watching?.Invoke();
         public SandboxBot Bot { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -110,15 +113,19 @@ namespace Kehai.Sandbox
             Sandbox.Karen.PlaceAt(check.Karen, check.KarenYaw);
             yield return null;
             Sandbox.Karen.Body.Sight.ResetAwareness();
-            yield return check.Act(this);
             SightSensor eye = Sandbox.Karen.Body.Sight;
-            float start = Time.time, max = eye.Awareness, seenAt = eye.Awareness >= eye.glimpseAt ? 0f : -1f;
-            while (Time.time - start < Watch)
+            // Her eye is watched through the whole check, the setup included (a walk-in is seen
+            // during the walk, not after it).
+            float start = Time.time, max = 0f, seenAt = -1f;
+            watching = () =>
             {
-                yield return null;
                 max = Mathf.Max(max, eye.Awareness);
                 if (seenAt < 0f && eye.Awareness >= eye.glimpseAt) seenAt = Time.time - start;
-            }
+            };
+            yield return check.Act(this);
+            float end = Time.time + Watch;
+            while (Time.time < end) yield return null;
+            watching = null;
             bool witnessed = eye.HiddenEntry.Active;
             var row = new Row { Name = check.Name, What = check.What, Expected = check.Expect.ToString(), MaxAwareness = max, SecondsToSee = seenAt };
             switch (check.Expect)
@@ -148,7 +155,15 @@ namespace Kehai.Sandbox
         {
             SetFridgeDoor(true);
             Bot.Teleport(front);
-            yield return new WaitForSeconds(0.6f);   // in front of it, where she can see you
+            SightSensor eye = Sandbox.Karen.Body.Sight;
+            for (float t = 0f; t < 0.6f; t += Time.deltaTime)   // in front of it, where she can see you
+            {
+                yield return null;
+            }
+            PlayerPresence p = PlayerPresence.Current;
+            Debug.Log($"SightChecks: walk-in from {Bot.Feet}; her eye at {eye.Eye} facing {eye.Forward}; " +
+                      $"you {(p != null ? p.Position.ToString() : "missing")}, light {(p != null ? p.LightLevel : 0f):0.00}; " +
+                      $"now {eye.DetectNow:0.00}, exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}");
             yield return Bot.WalkTo(inside);
         }
 
