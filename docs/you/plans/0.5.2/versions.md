@@ -82,7 +82,7 @@ Each trained Karen (Basic and Vital) gets her own number, apart from the game's:
 - **Example:** game 0.6.0 accepts basic 1.x and vital 1.x. Basic 1.3.0, trained in January,
   passes the gate and reaches testers without a new build. Basic 2.0.0, with a new input, needs
   game 0.7.0.
-- **Names** come on top: "Karen Legend 1.3" would be `basic 1.3.0` (Q21). The code keeps `basic`
+- **Names** come on top: "Karen Kitsune 1.3" would be `basic 1.3.0` (Q21). The code keeps `basic`
   and `vital`.
 
 ---
