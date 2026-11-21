@@ -12,8 +12,14 @@ namespace Kehai.Sandbox
 
         void Awake()
         {
-            transform.position = PursuitSandbox.Centre;
-            PursuitSandbox.BuildRoom(transform, out var fridge, out _);
+            Kehai.Karen.HidingPlace fridge;
+            if (ReplayMode.SceneOf(recording) == SightSandbox.ReplayScene)
+                SightSandbox.BuildRoom(transform, out _, out fridge, out _);
+            else
+            {
+                transform.position = PursuitSandbox.Centre;
+                PursuitSandbox.BuildRoom(transform, out fridge, out _);
+            }
             SandboxDoor door = fridge.transform.parent.GetComponentInChildren<SandboxDoor>();
             // ReplayStage binds its Door entities to HingeDoors by their recorded position.
             // Attach an inactive pose target to the hinge without enabling game interaction.

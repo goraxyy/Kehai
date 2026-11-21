@@ -22,6 +22,7 @@ namespace Kehai.Sandbox
     public sealed class SightSandbox : MonoBehaviour
     {
         public static readonly Vector2 RoomSize = new Vector2(16f, 12f);
+        public const string ReplayScene = "Sight sandbox";
         public const float DoorWidth = 1.4f;
         public const float PanelHeight = 1.3f;   // within reach: below eye level (1.6 m)
         public static readonly Vector3 KarenSpot = new Vector3(-6.2f, 0f, 3.6f);
@@ -57,18 +58,10 @@ namespace Kehai.Sandbox
             if (Built) return;
             Built = true;
             Transform root = transform;
-            Vector3 doorway = SandboxKit.Room(root, new Vector3(0f, 0f, -2f), new Vector2(RoomSize.x + 4f, RoomSize.y + 8f), Vector3.zero, RoomSize, DoorWidth);
-            Door = SandboxKit.Door(root, doorway, DoorWidth);
-            Fridge = SandboxKit.StockFridge(root, FridgeFront, 90f);   // opening west, inside towards the east wall
-            Rack = SandboxKit.StockRack(root, RackCentre, 0f);
-            for (int i = 0; i < TallShelves.Length; i++)
-                SandboxKit.ShelfUnit(root, "Tall shelf " + (i + 1), TallShelves[i], 0f, SandboxKit.TallShelf);
-            for (int i = 0; i < ShortShelves.Length; i++)
-                SandboxKit.ShelfUnit(root, "Short shelf " + (i + 1), ShortShelves[i], 0f, SandboxKit.ShortShelf);
-            Transform lights = SandboxKit.CeilingLights(root);
-            foreach (Vector3 at in new[] { new Vector3(-4f, 2.9f, 2.5f), new Vector3(4f, 2.9f, 2.5f), new Vector3(-4f, 2.9f, -3f), new Vector3(4f, 2.9f, -3f) })
-                SandboxKit.Lamp(lights, at);
-            SandboxKit.Lamp(lights, new Vector3(0f, 2.9f, -8f), 1.4f);   // outside, by the door
+            BuildRoom(root, out var door, out var fridge, out var rack);
+            Door = door;
+            Fridge = fridge;
+            Rack = rack;
             // Bake with the door open, so the doorway is walkable.
             Door.Set(true, instantly: true);
             Physics.SyncTransforms();
@@ -90,6 +83,22 @@ namespace Kehai.Sandbox
             float h = PanelHeight;
             Panel(root, "Panel outside", new Vector3(-2.2f, h, -RoomSize.y * 0.5f - SandboxKit.WallThickness * 0.5f - 0.02f), 180f);
             Panel(root, "Panel inside", new Vector3(-2.2f, h, -RoomSize.y * 0.5f + SandboxKit.WallThickness * 0.5f + 0.02f), 0f);
+        }
+
+        internal static void BuildRoom(Transform root, out SandboxDoor door, out HidingPlace fridge, out HidingPlace rack)
+        {
+            Vector3 doorway = SandboxKit.Room(root, new Vector3(0f, 0f, -2f), new Vector2(RoomSize.x + 4f, RoomSize.y + 8f), Vector3.zero, RoomSize, DoorWidth);
+            door = SandboxKit.Door(root, doorway, DoorWidth);
+            fridge = SandboxKit.StockFridge(root, FridgeFront, 90f);   // opening west, inside towards the east wall
+            rack = SandboxKit.StockRack(root, RackCentre, 0f);
+            for (int i = 0; i < TallShelves.Length; i++)
+                SandboxKit.ShelfUnit(root, "Tall shelf " + (i + 1), TallShelves[i], 0f, SandboxKit.TallShelf);
+            for (int i = 0; i < ShortShelves.Length; i++)
+                SandboxKit.ShelfUnit(root, "Short shelf " + (i + 1), ShortShelves[i], 0f, SandboxKit.ShortShelf);
+            Transform lights = SandboxKit.CeilingLights(root);
+            foreach (Vector3 at in new[] { new Vector3(-4f, 2.9f, 2.5f), new Vector3(4f, 2.9f, 2.5f), new Vector3(-4f, 2.9f, -3f), new Vector3(4f, 2.9f, -3f) })
+                SandboxKit.Lamp(lights, at);
+            SandboxKit.Lamp(lights, new Vector3(0f, 2.9f, -8f), 1.4f);   // outside, by the door
         }
 
         void Panel(Transform root, string name, Vector3 at, float yaw)

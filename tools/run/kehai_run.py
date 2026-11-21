@@ -281,9 +281,10 @@ def copy_out(card: Card) -> None:
 
 def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: str | None) -> list[str]:
     base = ['-batchmode', '-nographics', '-projectPath', str(clone), '-logFile', str(out / 'unity.log')]
-    if job == 'trick-clip':
+    if job in ('trick-clip', 'sandbox-clip'):
         base.remove('-nographics')
-        return base + ['-noaudio', '-executeMethod', 'Kehai.Replay.ReplayRenderBatch.Run',
+        entry = 'PursuitSandboxChecks.Render' if job == 'sandbox-clip' else 'Kehai.Replay.ReplayRenderBatch.Run'
+        return base + ['-noaudio', '-executeMethod', entry,
                        '-silent-video', '-out', str(out / 'clip.mp4')] + extra
     if job == 'tests':
         args = base + ['-runTests', '-testPlatform', 'EditMode', '-testResults', str(out / 'results.xml')]
@@ -385,7 +386,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
             (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(out / "unity.log")}\n')
             time.sleep(1.0)
         code = proc.returncode if not note else 124
-        if code == 0 and job == 'trick-clip':
+        if code == 0 and job in ('trick-clip', 'sandbox-clip'):
             from tools.run.trick_clip import verify_movie
             verify_movie(out)
         state = 'completed' if code == 0 else 'failed'
@@ -479,6 +480,11 @@ def main(argv=None) -> int:
     clip.add_argument('report', type=Path, help='the trick check TSV in the run output')
     clip.add_argument('trick', help='the tactic ID in the report')
     clip.add_argument('--dry-run', action='store_true')
+    room_clip = sub.add_parser('sandbox-clip', help='film a sight or pursuit recording from a retained run')
+    room_clip.add_argument('recording', type=Path)
+    room_clip.add_argument('--start', type=float, default=0)
+    room_clip.add_argument('--end', type=float, default=12)
+    room_clip.add_argument('--dry-run', action='store_true')
     offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
     offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
     offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
@@ -487,10 +493,13 @@ def main(argv=None) -> int:
     d.add_argument('--clean', action='store_true')
     a = p.parse_args(argv)
     s = Settings.from_env()
-    if a.cmd == 'trick-clip':
-        from tools.run.trick_clip import read_shot
+    if a.cmd in ('trick-clip', 'sandbox-clip'):
+        from tools.run.trick_clip import read_shot, sandbox_shot
         try:
-            commit, shot = read_shot(a.report, a.trick)
+            if a.cmd == 'sandbox-clip':
+                commit, shot = sandbox_shot(a.recording, a.start, a.end)
+            else:
+                commit, shot = read_shot(a.report, a.trick)
         except (OSError, ValueError) as err:
             p.error(str(err))
         return run(s, a.cmd, shot, ref=commit, dry_run=a.dry_run)

@@ -38,7 +38,7 @@ namespace Kehai.Sandbox
         readonly List<Row> rows = new List<Row>();
         PursuitSandbox sandbox;
         SandboxBot bot;
-        PursuitCheckRecording recording;
+        SandboxCheckRecording recording;
         string folder;
         Row row;
 
@@ -114,7 +114,7 @@ namespace Kehai.Sandbox
             previousPosition = Brain.Body.Position;
             wasHunting = false;
             row = new Row { name = name, expected = expected, replay = name + ".krec" };
-            recording = new PursuitCheckRecording(Path.Combine(folder, row.replay), sandbox);
+            recording = new SandboxCheckRecording(Path.Combine(folder, row.replay), sandbox);
             sandbox.StartRunning();
             yield return check();
             sandbox.Freeze();

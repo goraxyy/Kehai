@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from tools.run.kehai_run import unity_args
-from tools.run.trick_clip import read_shot, verify_movie
+from tools.run.trick_clip import read_shot, sandbox_shot, verify_movie
 
 
 class TrickClipTests(unittest.TestCase):
@@ -40,6 +40,20 @@ class TrickClipTests(unittest.TestCase):
             with self.subTest(rows=rows), self.assertRaises(ValueError):
                 self.report.write_text(self.header + rows)
                 read_shot(self.report, 'blackout')
+
+    def test_sight_and_pursuit_clips_use_the_room_playback_entry(self):
+        for room in ['sight', 'pursuit']:
+            case = self.run / 'sandbox_checks' / (room + '_TIME') / 'case.krec'
+            case.parent.mkdir(parents=True)
+            case.write_bytes(b'fixture')
+            commit, shot = sandbox_shot(case, 2.5, 9)
+            args = unity_args('sandbox-clip', self.run, self.run, shot, None)
+            self.assertEqual(commit, self.commit)
+            self.assertEqual(args[args.index('-krec') + 1], str(case))
+            self.assertIn('PursuitSandboxChecks.Render', args)
+            self.assertNotIn('-nographics', args)
+            with self.assertRaises(ValueError):
+                sandbox_shot(case, 8, 2)
 
     def test_rejects_inconsistent_run_commit(self):
         (self.run / 'run.jsonl').write_text('{"commit":"main"}\n')

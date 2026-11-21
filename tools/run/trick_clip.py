@@ -13,10 +13,7 @@ def read_shot(report: Path, tactic: str) -> tuple[str, list[str]]:
     if report.parent.name != 'kehai_eval':
         raise ValueError('choose the TSV inside the retained run’s kehai_eval folder')
     out = report.parent.parent
-    events = [json.loads(line) for line in (out / 'run.jsonl').read_text().splitlines() if line]
-    commits = {event.get('commit') for event in events}
-    if len(commits) != 1 or not re.fullmatch('[0-9a-f]{40}', next(iter(commits)) or ''):
-        raise ValueError('run.jsonl needs one recorded commit')
+    commit = recorded_commit(out)
     with report.open(newline='', encoding='utf-8-sig') as source:
         rows = [row for row in csv.DictReader(source, delimiter='\t') if row.get('id') == tactic]
     if len(rows) != 1:
@@ -35,9 +32,28 @@ def read_shot(report: Path, tactic: str) -> tuple[str, list[str]]:
         raise ValueError(f'missing retained recording for {tactic}: {replay}')
     subject = 'you' if tactic in ('blackout', 'fog', 'phantom_chime', 'camera_break', 'understudy') else 'karen'
     begin = max(0.0, landed - 6)
-    return commits.pop(), ['-krec', str(replay), '-from', f'{begin:.2f}', '-to', f'{begin + 14:.2f}',
+    return commit, ['-krec', str(replay), '-from', f'{begin:.2f}', '-to', f'{begin + 14:.2f}',
                            '-shot', 'chase', '-subject', subject, '-layers', 'none',
                            '-size', '1280x720', '-fps', '30']
+
+
+def recorded_commit(out: Path) -> str:
+    events = [json.loads(line) for line in (out / 'run.jsonl').read_text().splitlines() if line]
+    commits = {event.get('commit') for event in events if isinstance(event, dict)}
+    if len(commits) != 1 or not re.fullmatch('[0-9a-f]{40}', next(iter(commits)) or ''):
+        raise ValueError('run.jsonl needs one recorded commit')
+    return commits.pop()
+
+
+def sandbox_shot(replay: Path, start: float, end: float) -> tuple[str, list[str]]:
+    replay = replay.resolve()
+    folder = replay.parent.parent
+    if folder.name != 'sandbox_checks' or replay.suffix != '.krec' or not replay.is_file():
+        raise ValueError('choose a retained .krec under sandbox_checks/<check run>/')
+    if not (math.isfinite(start) and math.isfinite(end) and 0 <= start < end):
+        raise ValueError('choose a finite interval with 0 <= start < end')
+    return recorded_commit(folder.parent), ['-krec', str(replay), '-from', str(start), '-to', str(end),
+                                            '-shot', 'chase', '-layers', 'none', '-size', '1280x720', '-fps', '30']
 
 
 def verify_movie(out: Path) -> None:

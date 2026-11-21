@@ -41,30 +41,37 @@ public static class PursuitSandboxChecks
     }
 
     [MenuItem("Kehai/Sandbox/Watch Pursuit Check Replay")]
-    public static void Watch()
+    public static void Watch() => ChooseReplay(PursuitCheckPlayback.SceneId);
+
+    [MenuItem("Kehai/Sandbox/Watch Sight Check Replay")]
+    public static void WatchSight() => ChooseReplay(SightSandbox.ReplayScene);
+
+    static void ChooseReplay(string scene)
     {
         string folder = System.IO.Path.Combine(Application.persistentDataPath, "sandbox_checks");
-        string path = EditorUtility.OpenFilePanel("Open a pursuit sandbox replay", folder, "krec");
-        if (path.Length > 0) OpenReplay(path);
+        string path = EditorUtility.OpenFilePanel("Open a " + scene + " replay", folder, "krec");
+        if (path.Length > 0) OpenReplay(path, scene);
     }
 
     [MenuItem("Kehai/Sandbox/Run Pursuit Checks", true)]
     [MenuItem("Kehai/Sandbox/Watch Pursuit Check Replay", true)]
+    [MenuItem("Kehai/Sandbox/Watch Sight Check Replay", true)]
     static bool CanOpen() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
     // Run with graphics enabled and the replay renderer's -krec/-from/-to/-out flags.
     public static void Render() => OpenReplay(ReplayMode.Arg("-krec"));
 
-    static void OpenReplay(string path)
+    static void OpenReplay(string path, string expected = null)
     {
-        if (string.IsNullOrEmpty(path) || ReplayMode.SceneOf(path) != PursuitCheckPlayback.SceneId)
+        string scene = string.IsNullOrEmpty(path) ? null : ReplayMode.SceneOf(path);
+        if ((scene != SightSandbox.ReplayScene && scene != PursuitCheckPlayback.SceneId) || (expected != null && scene != expected))
         {
-            Debug.LogError("PursuitSandboxChecks: choose a pursuit sandbox .krec file");
+            Debug.LogError("PursuitSandboxChecks: choose a recording from the requested sandbox");
             if (Application.isBatchMode) EditorApplication.Exit(1);
             return;
         }
         if (!OpenEmptyScene()) return;
-        new GameObject("Pursuit sandbox (replay)").AddComponent<PursuitCheckPlayback>().recording = path;
+        new GameObject(scene + " (replay)").AddComponent<PursuitCheckPlayback>().recording = path;
         EditorApplication.EnterPlaymode();
     }
 

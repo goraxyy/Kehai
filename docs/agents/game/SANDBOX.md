@@ -53,7 +53,9 @@ shelf, standing and crouched; in front of and crouched under the rack; inside th
 into the fridge while she watches, and behind her back. Each row says what was expected and what
 her eye did (her highest awareness, and how soon she noticed). The report is
 `sandbox_checks/sight_<time>.md` in the game's data folder; `kehai-run` keeps it in the run's
-folder. Headless, Unity exits 0 when every check passes and 1 when one fails.
+folder. Each row links to a case recording in the sibling `sight_<time>/` directory.
+**Kehai → Sandbox → Watch Sight Check Replay** reconstructs the sight room and plays the
+recorded actors, fridge hinge and observation. Headless, Unity exits 0 when every check passes and 1 when one fails.
 
 Both sandboxes' checks fix each frame at 1/60 s of game time (`SandboxBot.FixFrames`, as KehaiEnv
 does for ablations). Without it a batch Unity runs hundreds of frames a second, each frame's step
@@ -110,13 +112,12 @@ Each run writes `report.md`, `report.json` and the case replays under
 the other run results. Exit 0 means all rows passed, 1 means a check failed, and 2 means the run
 timed out. **Kehai → Sandbox → Watch Pursuit Check Replay** opens a `.krec` in the generated room.
 
-The replay renderer can make a silent clip from an individual check in a graphics-enabled clone
-under the heavy-work lock. Set the recording path, output path and time range for the clip.
+For sight and pursuit recordings made with the silent renderer, the runner uses the source
+commit and reconstructs the recorded room. Preview the command below. With a go for that
+render, omit `--dry-run`. The new run contains `clip.mp4`, `clip.json` and the render log.
 
 ```sh
-"$KEHAI_UNITY" -batchmode -projectPath "$KEHAI_CLONE" \
-  -executeMethod PursuitSandboxChecks.Render -krec "$KEHAI_RECORDING" \
-  -from 0 -to 12 -shot chase -size 1280x720 -fps 30 -out "$KEHAI_CLIP"
+tools/run/kehai-run sandbox-clip "$KEHAI_RECORDING" --start 0 --end 12 --dry-run
 ```
 
 **What the runs found (21 November, on a safe copy): 4 of 4 pass at 744b734.**

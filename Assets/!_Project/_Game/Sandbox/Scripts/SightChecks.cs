@@ -30,7 +30,7 @@ namespace Kehai.Sandbox
 
         public sealed class Row
         {
-            public string Name, What, Expected, Observed;
+            public string Name, What, Expected, Observed, Replay;
             public bool Pass;
             public float MaxAwareness, SecondsToSee = -1f;
         }
@@ -46,8 +46,16 @@ namespace Kehai.Sandbox
         System.Action watching;
         float endCoverage = -1f;   // a walk-in's last coverage, so a bot that stopped short is told apart
 
+        string stem;
+        SandboxCheckRecording recording;
+
+        void LateUpdate() => recording?.Sample();
         void Update() => watching?.Invoke();
-        void OnDestroy() => SandboxBot.FreeFrames();
+        void OnDestroy()
+        {
+            recording?.Dispose();
+            SandboxBot.FreeFrames();
+        }
         public SandboxBot Bot { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -100,6 +108,9 @@ namespace Kehai.Sandbox
             Sandbox.Karen.Body.Silent = true;
             SandboxBot.FixFrames();
             Bot = new SandboxBot(Sandbox.Player.GetComponent<PlayerMotor>());
+            string dir = Path.Combine(Application.persistentDataPath, "sandbox_checks");
+            stem = Path.Combine(dir, "sight_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss_fff"));
+            Directory.CreateDirectory(stem);
             foreach (Check check in All())
             {
                 yield return Run(check);
@@ -126,6 +137,9 @@ namespace Kehai.Sandbox
                 max = Mathf.Max(max, eye.Awareness);
                 if (seenAt < 0f && eye.Awareness >= eye.glimpseAt) seenAt = Time.time - start;
             };
+            string file = check.Name + ".krec";
+            recording = new SandboxCheckRecording(Path.Combine(stem, file), Sandbox);
+            recording.Mark("CHECK", check.What);
             yield return check.Act(this);
             float end = Time.time + Watch;
             while (Time.time < end) yield return null;
@@ -147,6 +161,10 @@ namespace Kehai.Sandbox
                 row.Pass = false;
                 row.Observed += $"; the bot stopped {endCoverage * 100f:0}% inside, short of hidden: the check itself failed";
             }
+            recording.Mark("CHECK", row.Observed);
+            recording.Finish();
+            recording = null;
+            row.Replay = Path.GetFileName(stem) + "/" + file;
             Rows.Add(row);
             Debug.Log($"SightChecks: {(row.Pass ? "PASS" : "FAIL")} {row.Name}: expected {row.Expected}; {row.Observed}");
         }
@@ -220,14 +238,11 @@ namespace Kehai.Sandbox
         void Finish()
         {
             int failed = Rows.Count(r => !r.Pass);
-            string dir = Path.Combine(Application.persistentDataPath, "sandbox_checks");
-            Directory.CreateDirectory(dir);
-            string stem = Path.Combine(dir, "sight_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             var md = new StringBuilder();
             md.AppendLine("# Sight sandbox checks").AppendLine();
             md.AppendLine($"{Rows.Count - failed} of {Rows.Count} passed. Her eye is the game's; each check watched it for {Watch:0} s.").AppendLine();
-            md.AppendLine("| Check | What | Expected | What happened | Result |").AppendLine("|---|---|---|---|---|");
-            foreach (Row r in Rows) md.AppendLine($"| {r.Name} | {r.What} | {r.Expected} | {r.Observed} | {(r.Pass ? "pass" : "**FAIL**")} |");
+            md.AppendLine("| Check | What | Expected | What happened | Result | Replay |").AppendLine("|---|---|---|---|---|---|");
+            foreach (Row r in Rows) md.AppendLine($"| {r.Name} | {r.What} | {r.Expected} | {r.Observed} | {(r.Pass ? "pass" : "**FAIL**")} | [replay]({r.Replay}) |");
             File.WriteAllText(stem + ".md", md.ToString());
             var json = new StringBuilder("[");
             for (int i = 0; i < Rows.Count; i++)
@@ -235,6 +250,7 @@ namespace Kehai.Sandbox
                 Row r = Rows[i];
                 json.Append(i > 0 ? "," : "").Append("\n {")
                     .Append($"\"name\":\"{r.Name}\",\"expected\":\"{r.Expected}\",\"pass\":{(r.Pass ? "true" : "false")},")
+                    .Append($"\"replay\":\"{r.Replay}\",")
                     .Append($"\"max_awareness\":{r.MaxAwareness.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)},")
                     .Append($"\"seconds_to_see\":{r.SecondsToSee.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}}}");
             }
