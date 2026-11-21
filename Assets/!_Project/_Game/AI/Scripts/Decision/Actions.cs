@@ -229,6 +229,8 @@ namespace Kehai.Karen
         public static bool Gated(Tactic t, KarenContext c, out string why)
         {
             if (t.Draft) { why = "draft"; return false; }
+            // A sandbox's Karen (0.5.2): walking, looking, hunting and searching only. Off in the game.
+            if (c.Config != null && c.Config.sandboxNoTricks && t.Tier > 0) { why = "sandbox: tricks off"; return false; }
             // Not a pacing gate, so it holds on every rung, the shield or no shield.
             if (t.LeavesChore && FairnessGuard.DoorsClosed(c)) { why = FairnessGuard.ClosedWhy; return false; }
             why = null;

@@ -16,7 +16,11 @@ namespace Kehai.Sandbox
     //   - a readout in the corner: all of the above in numbers, her state, and the keys
     public sealed class SandboxIndicators : MonoBehaviour
     {
-        public SandboxKaren karen;
+        public KarenBody body;
+        // The first line of the readout (her state in this sandbox), any extra lines, and the keys.
+        public System.Func<string> status = () => "";
+        public System.Func<IEnumerable<string>> extra = () => System.Array.Empty<string>();
+        public string keys = "";
         public readonly List<HidingPlace> places = new List<HidingPlace>();
         public readonly List<TextMesh> placeMeters = new List<TextMesh>();
         public string title = "Sandbox";
@@ -26,12 +30,12 @@ namespace Kehai.Sandbox
         LineRenderer eyeLine;
         GUIStyle style;
 
-        public static SandboxIndicators Build(Transform parent, SandboxKaren karen, string title)
+        public static SandboxIndicators Build(Transform parent, KarenBody body, string title)
         {
             var go = new GameObject("Sandbox indicators");
             go.transform.SetParent(parent, false);
             var view = go.AddComponent<SandboxIndicators>();
-            view.karen = karen;
+            view.body = body;
             view.title = title;
             KarenFx.SetEnabled(true);   // her floor cone
             return view;
@@ -47,8 +51,8 @@ namespace Kehai.Sandbox
 
         void Start()
         {
-            if (karen == null) return;
-            headMeter = SandboxButton.Label(karen.Body.transform, "", new Vector3(0f, karen.Config.bodyHeight + 0.45f, 0f), 0.04f);
+            if (body == null) return;
+            headMeter = SandboxButton.Label(body.transform, "", new Vector3(0f, (body.Head != null ? body.Head.localPosition.y : 1.85f) + 0.6f, 0f), 0.04f);
             var line = new GameObject("Her eye line");
             line.transform.SetParent(transform, false);
             eyeLine = line.AddComponent<LineRenderer>();
@@ -79,8 +83,8 @@ namespace Kehai.Sandbox
 
         void LateUpdate()
         {
-            if (karen == null || karen.Body == null) return;
-            SightSensor eye = karen.Body.Sight;
+            if (body == null) return;
+            SightSensor eye = body.Sight;
             PlayerPresence player = PlayerPresence.Current;
             Camera view = Camera.main;
 
@@ -117,13 +121,13 @@ namespace Kehai.Sandbox
 
         void OnGUI()
         {
-            if (!showReadout || karen == null || karen.Body == null) return;
+            if (!showReadout || body == null) return;
             if (style == null) style = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 15, wordWrap = true };
-            SightSensor eye = karen.Body.Sight;
+            SightSensor eye = body.Sight;
             PlayerPresence player = PlayerPresence.Current;
             var lines = new List<string>
             {
-                $"{title}   {GameNames.Antagonist}: {(karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen")}, {(karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning")}",
+                $"{title}   {GameNames.Antagonist}: {status()}",
                 "Her eye: " + EyeReport(eye),
                 $"Eye line to you: {(eye.Exposure > 0f ? "clear" : "blocked, hidden or out of her cone")}",
             };
@@ -135,9 +139,10 @@ namespace Kehai.Sandbox
                 HidingPlace place = HidingPlace.At(player, out float coverage);
                 if (place != null && coverage > 0.01f) lines.Add($"Hiding place: {(place.transform.parent != null ? place.transform.parent.name : place.name)}: {PlaceReport(place, player)}");
             }
+            lines.AddRange(extra());
             PlayerInteract interact = PlayerInteract.Local;
             if (interact != null && interact.CurrentTarget != null) lines.Add("E: " + interact.CurrentTarget.GetPrompt());
-            lines.Add("F5 start   F6 restart   F7 freeze   F8 route   F3 her cone   Ctrl crouch   Esc frees the mouse");
+            lines.Add(keys);
             GUI.Box(new Rect(12f, 12f, 640f, 26f + lines.Count * 21f), string.Join("\n", lines), style);
         }
     }

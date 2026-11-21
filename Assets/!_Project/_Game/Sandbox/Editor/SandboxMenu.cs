@@ -10,12 +10,17 @@ using UnityEngine;
 public static class SandboxMenu
 {
     [MenuItem("Kehai/Sandbox/Sight")]
-    public static void OpenSight()
+    public static void OpenSight() => Open<SightSandbox>("Sight sandbox");
+
+    [MenuItem("Kehai/Sandbox/Pursuit")]
+    public static void OpenPursuit() => Open<PursuitSandbox>("Pursuit sandbox");
+
+    static void Open<T>(string name) where T : Component
     {
         if (EditorApplication.isPlaying) EditorApplication.isPlaying = false;
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        new GameObject("Sight sandbox").AddComponent<SightSandbox>();
+        new GameObject(name).AddComponent<T>();
         EditorApplication.EnterPlaymode();
     }
 }

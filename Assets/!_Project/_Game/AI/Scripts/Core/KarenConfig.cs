@@ -218,6 +218,13 @@ namespace Kehai.Karen
         [Tooltip("Where the Ledger lives. Empty = the player's own save. Eval runs point this elsewhere so they never touch it.")]
         public string ledgerPath = "";
 
+        // The sandboxes (0.5.2, Phase 11). Both off in the game: a sandbox turns them on for its own Karen.
+        [Header("Sandboxes (0.5.2)")]
+        [Tooltip("Sandbox only: her movement tactics alone (tier 0: patrol, investigate, sweep, ask the customers, withdraw, hunt), never a trick.")]
+        public bool sandboxNoTricks;
+        [Tooltip("Sandbox only: a catch freezes the test (KarenBrain.SandboxCaught) instead of ending the shift.")]
+        public bool sandboxCatchFreezes;
+
         public RungFeatures Features => new RungFeatures(rung);
 
         // The Director's pacing off (0.4.0, C5.4): Vital, and the hunter (the planner with the same

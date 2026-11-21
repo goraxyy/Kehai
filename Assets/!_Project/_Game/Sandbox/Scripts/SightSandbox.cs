@@ -79,7 +79,10 @@ namespace Kehai.Sandbox
             else Player = PlayerPresence.Current;
 
             Karen = SandboxKaren.Build(root, KarenSpot, KarenYaw, Loop);
-            Indicators = SandboxIndicators.Build(root, Karen, "Sight sandbox");
+            Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
+            Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
+                (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
+            Indicators.keys = "F5 start   F6 restart   F7 freeze   F8 route   F3 her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.5f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 

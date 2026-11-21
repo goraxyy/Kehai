@@ -1517,6 +1517,19 @@ namespace Kehai.Karen
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             if (Body.IsStunned) return;   // stunned, she catches nobody (0.5.1, item 14)
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
+            if (config.sandboxCatchFreezes)
+            {
+                // A sandbox (0.5.2): the catch is shown and the test freezes; no stats, no Ledger,
+                // no death screen. Off in the game.
+                KilledThisShift = true;
+                AbortPlan();
+                Body.Stop();
+                chasing = false;
+                Pursuit.Clear();
+                Log.Write(Record("CAUGHT", $"CAUGHT   sandbox: she reached you at {Map.Describe(Body.Position)} ({doing})", null, null, "the sandbox freezes"));
+                SandboxCaught?.Invoke();
+                return;
+            }
             KilledThisShift = true;
             Stats.Caught();
             Stats.CatchCauses.Add(CauseOfCatch());
@@ -1903,6 +1916,8 @@ namespace Kehai.Karen
         }
 
         public bool IsChasing => chasing;
+        // Raised instead of the catch's consequences when config.sandboxCatchFreezes is on (0.5.2).
+        public event System.Action SandboxCaught;
 
         void NarratePlan(PlanTree plan)
         {
