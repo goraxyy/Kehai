@@ -44,6 +44,7 @@ namespace Kehai.Sandbox
 
         public SightSandbox Sandbox { get; private set; }
         System.Action watching;
+        float endCoverage = -1f;   // a walk-in's last coverage, so a bot that stopped short is told apart
 
         void Update() => watching?.Invoke();
         public SandboxBot Bot { get; private set; }
@@ -113,6 +114,7 @@ namespace Kehai.Sandbox
             Sandbox.Karen.PlaceAt(check.Karen, check.KarenYaw);
             yield return null;
             Sandbox.Karen.Body.Sight.ResetAwareness();
+            endCoverage = -1f;
             SightSensor eye = Sandbox.Karen.Body.Sight;
             // Her eye is watched through the whole check, the setup included (a walk-in is seen
             // during the walk, not after it).
@@ -137,6 +139,12 @@ namespace Kehai.Sandbox
             }
             row.Observed = $"awareness up to {max:0.00}" + (seenAt >= 0f ? $", noticed after {seenAt:0.0} s" : ", never noticed") +
                            (witnessed ? ", saw you go in" : "");
+            if (endCoverage >= 0f && !HidingPlace.Conceals(endCoverage))
+            {
+                // Not her eye's failure: the bot didn't get far enough in to be hidden.
+                row.Pass = false;
+                row.Observed += $"; the bot stopped {endCoverage * 100f:0}% inside, short of hidden: the check itself failed";
+            }
             Rows.Add(row);
             Debug.Log($"SightChecks: {(row.Pass ? "PASS" : "FAIL")} {row.Name}: expected {row.Expected}; {row.Observed}");
         }
@@ -164,15 +172,12 @@ namespace Kehai.Sandbox
             Debug.Log($"SightChecks: walk-in from {Bot.Feet}; her eye at {eye.Eye} facing {eye.Forward}; " +
                       $"you {(p != null ? p.Position.ToString() : "missing")}, light {(p != null ? p.LightLevel : 0f):0.00}; " +
                       $"now {eye.DetectNow:0.00}, exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}");
-            IEnumerator walk = Bot.WalkTo(inside);
-            while (walk.MoveNext())
-            {
-                yield return walk.Current;
-                HidingPlace place = p != null ? HidingPlace.At(p, out float cov) : null;
-                float coverage = place != null ? place.Coverage(p) : 0f;
-                Debug.Log($"SightChecks: walking in: you {Bot.Feet}, coverage {coverage:0.00}, now {eye.DetectNow:0.00}, " +
-                          $"exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}, entry {(eye.HiddenEntry.Active ? "seen" : "no")}");
-            }
+            // All the way to the back, so the body ends well past the 80% that hides it.
+            yield return Bot.WalkTo(inside + Vector3.right * 0.15f);
+            yield return null;
+            HidingPlace place = p != null ? HidingPlace.At(p, out _) : null;
+            endCoverage = place != null ? place.Coverage(p) : 0f;
+            Debug.Log($"SightChecks: walked in to {Bot.Feet}: {endCoverage * 100f:0}% inside; entry {(eye.HiddenEntry.Active ? "seen" : "not seen")}");
         }
 
         void SetFridgeDoor(bool open)
