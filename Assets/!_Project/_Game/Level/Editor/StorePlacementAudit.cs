@@ -125,8 +125,21 @@ public static class StorePlacementAudit
         foreach (var door in behaviours.OfType<HingeDoor>().Where(d => d.isActiveAndEnabled && d.ListensForE))
             Write(PathOf(door.transform), nameof(HingeDoor), probe.CheckNearbyDoor(door));
 
-        foreach (var slot in ShelfSlot.All)
-            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), probe.CheckSlot(slot));
+        foreach (var bay in ShelfSlot.All.GroupBy(slot => slot.owner))
+        {
+            var cold = bay.Key != null ? bay.Key.GetComponent<ColdFixture>() : null;
+            var door = cold != null && cold.retail ? cold.GetComponentInChildren<FurnitureDoor>() : null;
+            if (door != null && door.isActiveAndEnabled && door.panel != null && door.roomDoor == null &&
+                probe.Check(door).Standing is Vector3 opener)
+            {
+                door.InspectOpenPose(opener, () => WriteSlots(bay, probe, door.IsFullyOpen
+                    ? "Measured after opening the reachable chiller door."
+                    : "Measured with the reachable chiller door at its swing limit."));
+            }
+            else
+                WriteSlots(bay, probe, cold != null && cold.retail
+                    ? "Measured as found; no reachable chiller door was established." : null);
+        }
 
         foreach (Type type in new[] { typeof(ElectricBox), typeof(BreakerSwitch), typeof(FogBox), typeof(CameraBox),
                      typeof(PaBox), typeof(ClosingMic), typeof(Puncher), typeof(RoomLightSwitch), typeof(MusicBox),
@@ -141,6 +154,17 @@ public static class StorePlacementAudit
             Missing(nameof(AutoDoorHandle), "A sliding door produced no hand controls");
 
         Debug.Log($"Placement audit {layout}: {rows} rows and {findings} findings so far.");
+    }
+
+    static void WriteSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence)
+    {
+        foreach (var slot in slots)
+        {
+            var result = probe.CheckSlot(slot);
+            if (doorEvidence != null)
+                result.Evidence = string.IsNullOrEmpty(result.Evidence) ? doorEvidence : doorEvidence + " " + result.Evidence;
+            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
+        }
     }
 
     static void Missing(string target, string detail) => Write(target, "", new PlacementProbe.Result

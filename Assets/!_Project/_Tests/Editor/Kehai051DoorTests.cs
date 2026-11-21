@@ -176,6 +176,26 @@ public class Kehai051DoorTests
     static float Yaw(Transform t) => Mathf.DeltaAngle(0f, t.localEulerAngles.y);
 
     [Test]
+    public void PlacementProbeOpensAPausedLeafAndRestoresItOnFailure()
+    {
+        FurnitureDoor door = Leaf(null, out var hinge);
+        var before = hinge.localRotation;
+        GamePause.Set(true);
+        try
+        {
+            Assert.Throws<System.InvalidOperationException>(() => door.InspectOpenPose(Vector3.back, () =>
+            {
+                Assert.IsTrue(GamePause.Paused && door.IsFullyOpen);
+                Assert.Greater(Quaternion.Angle(before, hinge.localRotation), 90f);
+                throw new System.InvalidOperationException();
+            }));
+            Assert.IsFalse(door.IsOpen);
+            Assert.Less(Quaternion.Angle(before, hinge.localRotation), .01f);
+        }
+        finally { GamePause.Set(false); }
+    }
+
+    [Test]
     public void AFurnitureLeaf_ReversesMidSwing_BothWays_FromWhereItIs()
     {
         Box("floor", new Vector3(0f, -.1f, 0f), new Vector3(10f, .2f, 10f));
