@@ -119,13 +119,13 @@ under the heavy-work lock. Set the recording path, output path and time range fo
   -from 0 -to 12 -shot chase -size 1280x720 -fps 30 -out "$KEHAI_CLIP"
 ```
 
-**What the first runs found (21 November, on a safe copy):**
+**What the runs found (21 November, on a safe copy): 4 of 4 pass at 744b734.**
 
 | Check | Result | Why |
 |---|---|---|
 | corner-search | pass | ran on 8.5 m with sight blocked, then searched |
-| fridge-expiry | **fails: the check's setup** | at the start she sweeps toward her belief's peak, turns away down her path and never looks along the aisle, so no hunt starts within 8 s. Her eye is fine: at the first setup's 16 m her eye's strength is a fifth (`SightSensor.Falloff`) and a still player is never confirmed, so it now starts at 10 m. It still needs a setup that makes sure she confirms you first. |
-| reacquire | pass | a fresh sighting renewed the 60 s window |
+| fridge-expiry | pass | the unseen entry held, she searched 30 spots, and the hunt ended 60.0 s after the last sighting. It starts with her sure of you, frozen but seeing, as the sight checks do: left to her first plan she turned away and never confirmed you, and at the first setup's 16 m her eye's strength is a fifth (`SightSensor.Falloff`). |
+| reacquire | pass | a fresh sighting renewed the 60 s window (the check reads the renewal, not whether she still sees you the next frame) |
 | catch-restart | pass | contact froze the sandbox; Restart cleared her |
 
 The first run passed only catch-restart. The other two failures were a real bug in her brain, in
