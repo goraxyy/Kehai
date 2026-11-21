@@ -95,6 +95,7 @@ run), then the clone is deleted (29 s). The timings are in [§11](#11-how-this-w
 | D. Fix the second compile only | find why "define symbols changed" at every batch start, and pin it | estimate: 10–20 s a run, in every option | needs Unity to check |
 
 **My pick:** D in every case; B on the Mac if you agree to the disk, else C.
+**Your answer (Q6, 21 November):** C, on the PC, until you have the external SSD.
 
 ---
 
@@ -110,6 +111,7 @@ run), then the clone is deleted (29 s). The timings are in [§11](#11-how-this-w
 | D. A second Unity on the Mac | — | — | no: 8 GB, and the rule |
 
 **My pick:** A for every change, B for the full suite and long jobs, C only when you ask.
+**Your answer (Q7, 21 November):** A yes; C no.
 
 ---
 
@@ -219,7 +221,8 @@ Nothing left behind. Next step waits for your go: `kehai-run trick-check`." (Mad
 | C. Email | anywhere | needs an email account set up for sending |
 | D. A third-party push service | quick | sends run names to an outside company |
 
-**My pick:** A and B together; B alone until the bot exists (Q9).
+**My pick:** A and B together; B alone until the bot exists.
+**Your answer (Q9, 21 November):** A and B.
 
 ---
 
