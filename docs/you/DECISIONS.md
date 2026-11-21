@@ -6,6 +6,10 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-21 | Your focus for 0.5.2: sandboxes for sight, pursuit, tricks and interactions; the named interactions (seen hiding, fridge check, kneel check, hit stun); usable things within reach; the scenes; training; the test pipeline and draft builds. Build the sight sandbox, then pursuit, and keep building | [0.5.2 plan](plans/0.5.2-plan.md) |
+| 2026-11-21 | The Karens' names: Hotaru (an easy mode, later), Satori (the game's, `basic`), Oni (the catcher, `vital`); code ids unchanged | [0.5.2 plan](plans/0.5.2-plan.md), Q21 |
+| 2026-11-21 | 0.5.2: start now, one PR; test everything once after it merges, recording every test shift. Hunt the batch slowdown first; usage-limit rules into RULES.md; game data by direct copy; Git LFS in private repos with locks; four scenes as a base and layers (Testing, Training, a shared Workshop, dev layers); camera, customer and torch interactions, with what she saw counting for more | [0.5.2 plan](plans/0.5.2-plan.md), Q1–Q20 |
+| 2026-11-17 | 0.5.1 ships visible hiding; 0.5.2 extends it | [0.5.2 plan](plans/0.5.2-plan.md), Q12 |
 | 2026-11-16 | Finish all fourteen 0.5.1 items now, in one PR from branch `0.5.1` built on the saved 15 November work; Opus for Karen, doors and burnout, Sonnet for the smaller items; no training or long runs | [0.5.1 plan](plans/0.5.1-plan.md) |
 | 2026-11-15 | Start 0.5.1 with Astra and extra sight supervision: low shelves do not conceal, hiding interiors and 80% under-stock-shelf coverage do; witnessed hiding allows approach and a catch within 3 m. Place fixtures logically and label clock/puncher and other interactables | [0.5.1 plan](plans/0.5.1-plan.md) |
 | 2026-11-15 | Create a 0.5.1 branch and planning PR for fourteen playtest fixes; no building yet. Karen approaches witnessed hiding and catches if reachable; manual doors open both ways and E reverses a closing door | [0.5.1 plan](plans/0.5.1-plan.md) |

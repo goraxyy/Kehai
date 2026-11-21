@@ -13,8 +13,8 @@ where you hide, and she moves when you blink. Her touch kills.
 now is in [`docs/you/NOW.md`](docs/you/NOW.md), and what's left until release in
 [`docs/you/RELEASE_PLAN.md`](docs/you/RELEASE_PLAN.md).
 
-**Current work:** [Kehai 0.5.0](docs/you/plans/0.5.0-plan.md), implemented in PR #82;
-[verification and remaining checks](docs/you/plans/0.5.0/implementation-status.md).
+**Current work:** [Kehai 0.5.2](docs/you/plans/0.5.2-plan.md), being built; the sandboxes so far are
+in [`docs/agents/game/SANDBOX.md`](docs/agents/game/SANDBOX.md).
 
 **Karen's full design:** [`docs/agents/karen/Karen.md`](docs/agents/karen/Karen.md). The same on
 one page, in plain words: [`docs/you/HOW_KAREN_WORKS.md`](docs/you/HOW_KAREN_WORKS.md).

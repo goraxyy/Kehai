@@ -54,6 +54,14 @@ showpiece.
 - **Explain plainly:** short bullets, tables, a concrete example.
 - **Explain new terms in three parts:** what it is, how Kehai uses it, and a real-world example from apps or products people know.
 
+**Working within the usage limits** (the owner's yes, 21 November)
+- **At most one Opus subagent at a time,** and two subagents in all. Mechanical subagents use Sonnet.
+- **Commit every finished step** on the local branch, and push the branch at the end of each phase (no PR until the work is ready, unless the owner asks for a draft).
+- **A step is at most about an hour of agent work.** It ends in a commit and a note in the shared notes folder, in the shape of [`notes-template.md`](notes-template.md).
+- **Long jobs run apart from the session** (detached, or under the run command once it exists), never as a child of it.
+- **Check the usage before a long step,** and stop at a safe point when it's nearly used.
+- **The session's model fits the work:** tooling in a Sonnet session, Karen's work in an Opus session, one at a time.
+
 ## Handy commands
 
 ```bash
