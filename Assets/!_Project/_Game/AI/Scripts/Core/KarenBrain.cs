@@ -124,6 +124,7 @@ namespace Kehai.Karen
             if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
             PlaceWatch.Placed += OnPlaced;
+            Body.Sight.SawHidingBoundary += OnSawHidingBoundary;
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
             NoiseBus.Emitted += OnOwnNoise;
@@ -173,6 +174,7 @@ namespace Kehai.Karen
         // subscription is undone here or the old Karen would go on listening.
         void OnDestroy()
         {
+            if (Body != null && Body.Sight != null) Body.Sight.SawHidingBoundary -= OnSawHidingBoundary;
             NoiseBus.Emitted -= OnNoise;
             NoiseBus.Emitted -= OnOwnNoise;
             InfrastructureFeed.CameraSawEntry -= OnCameraSawEntry;
@@ -1294,6 +1296,12 @@ namespace Kehai.Karen
         Vector3 hidingDestination;
         float hidingPathAt, hidingArrivedAt = -1f;
         const float HidingLookSeconds = 1f;
+
+        void OnSawHidingBoundary(Vector3 observed)
+        {
+            if (ShiftActive && PresentThisShift && !Body.IsStunned)
+                Ledger.ObserveWitnessedHide(Map, Map.RegionAt(observed));
+        }
 
         void OnCameraSawEntry(HidingPlace place, Vector3 lastSeen)
         {

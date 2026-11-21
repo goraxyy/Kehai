@@ -1,5 +1,6 @@
 using System.IO;
 using Kehai.Karen;
+using Kehai.Store;
 using NUnit.Framework;
 
 public class Karen050LearningTests
@@ -19,6 +20,27 @@ public class Karen050LearningTests
         shift = shift, layout = layout, from = "clock", path = new[] { "left" },
         karen = new float[] { 0, 0 }, topThree = new[] { "left" }, t = 2f, end = "shift_end"
     };
+
+    [Test] public void WitnessedHideAddsWeightAndBothSourcesFadeOnAnUnusedShift()
+    {
+        var ledger = new KarenLedger(config) { Persistent = true };
+        ledger.Load();
+        ledger.BeginShift(1);
+        var map = new StoreMap();
+        map.Regions.Add(new Region { Key = "seen" });
+        map.Regions.Add(new Region { Key = "inferred" });
+        for (int region = 0; region < 2; region++)
+            ledger.ObservePlayer(map, region, 1f, true, MotionState.Still, 0f);
+        ledger.ObserveWitnessedHide(map, 0);
+        ledger.EndShift(10f, 1f, true);
+        float seen = ledger.Data.regions.Find(r => r.key == "seen").concealment;
+        float inferred = ledger.Data.regions.Find(r => r.key == "inferred").concealment;
+        Assert.AreEqual(5f * inferred, seen, 1e-5);
+        ledger.BeginShift(2);
+        ledger.EndShift(10f, 1f, true);
+        Assert.AreEqual(seen * .35f, ledger.Data.regions.Find(r => r.key == "seen").concealment, 1e-5);
+        Assert.AreEqual(inferred * .35f, ledger.Data.regions.Find(r => r.key == "inferred").concealment, 1e-5);
+    }
 
     [Test] public void Ledger_TruthIsInvisibleUntilEndAndEndIsIdempotent()
     {

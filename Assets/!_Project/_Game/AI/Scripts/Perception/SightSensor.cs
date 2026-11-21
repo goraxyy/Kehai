@@ -67,6 +67,8 @@ namespace Kehai.Karen
 
         // What this eye saw go into a hiding place (WitnessedHide). Only her eye's is acted on.
         public WitnessedHide HiddenEntry { get; } = new WitnessedHide();
+        // Emitted by this eye only. The Ledger subscribes to Karen’s own eye.
+        public event System.Action<Vector3> SawHidingBoundary;
         bool hasLastVisible;
         Vector3 lastVisiblePosition;
         float lastVisibleAt;
@@ -139,10 +141,12 @@ namespace Kehai.Karen
             // saw you beside that place a moment ago (WitnessedHide.Witnessed). One sighting
             // witnesses one entry, so an unseen return can't re-arm the catch. A clear eye ray
             // into the hiding place now is not evidence: concealed, the score is 0.
+            HidingPlace previousPlace = wasConcealedIn;
             if (concealed && (!wasConcealed || place != wasConcealedIn) && hasLastVisible &&
                 WitnessedHide.Witnessed(place, lastVisiblePosition, lastVisibleAt, player.Position, now))
             {
                 HiddenEntry.Remember(place, lastVisiblePosition, now);
+                SawHidingBoundary?.Invoke(lastVisiblePosition);
                 hasLastVisible = false;
             }
             wasConcealed = concealed;
@@ -152,6 +156,8 @@ namespace Kehai.Karen
             if (concealed || player == null) { Exposure = 0f; IsWatched = false; }
             if (score > scoreFloor)
             {
+                if (previousPlace != null && previousPlace.DistanceTo(player.Position) <= WitnessedHide.EntryReach)
+                    SawHidingBoundary?.Invoke(player.Position);
                 hasLastVisible = true;
                 lastVisiblePosition = player.Position;
                 lastVisibleAt = now;

@@ -20,4 +20,4 @@ def test_ledger_persistence_migration_and_shift_end(tmp_path):
     sources += [ROOT / "Assets/!_Project/_Game/AI/Scripts/Diagnostics/EscapeRecorder.cs",
                 ROOT / "Assets/!_Project/_Tests/Editor/Karen050LearningTests.cs",
                 Path(__file__).parent / "fixtures/LedgerSupport.cs"]
-    assert "passed 8 ledger tests" in offline_csharp.run(sources, tmp_path)
+    assert "passed 9 ledger tests" in offline_csharp.run(sources, tmp_path)
