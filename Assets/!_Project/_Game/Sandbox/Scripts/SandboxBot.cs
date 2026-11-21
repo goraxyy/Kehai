@@ -25,6 +25,15 @@ namespace Kehai.Sandbox
             motor.externalInput = this;
         }
 
+        // Every frame of a check is 1/60 s of game time, as KehaiEnv does for the ablations. A
+        // batch Unity runs frames uncapped (hundreds a second): each frame's step is then shorter
+        // than the CharacterController's least move, so it's dropped and the bot crawls at a tenth
+        // of walking pace. A fixed step also makes the checks the same on every computer.
+        public const float FrameSeconds = 1f / 60f;
+
+        public static void FixFrames() => Time.captureDeltaTime = FrameSeconds;
+        public static void FreeFrames() => Time.captureDeltaTime = 0f;
+
         public Vector3 Feet => motor.transform.position;
 
         // Put the body somewhere at once (between checks, never during one).

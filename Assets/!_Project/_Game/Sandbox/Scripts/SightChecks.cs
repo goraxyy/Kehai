@@ -47,6 +47,7 @@ namespace Kehai.Sandbox
         float endCoverage = -1f;   // a walk-in's last coverage, so a bot that stopped short is told apart
 
         void Update() => watching?.Invoke();
+        void OnDestroy() => SandboxBot.FreeFrames();
         public SandboxBot Bot { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -97,6 +98,7 @@ namespace Kehai.Sandbox
             if (!Sandbox.Built) Sandbox.Build();
             yield return null;
             Sandbox.Karen.Body.Silent = true;
+            SandboxBot.FixFrames();
             Bot = new SandboxBot(Sandbox.Player.GetComponent<PlayerMotor>());
             foreach (Check check in All())
             {

@@ -80,6 +80,7 @@ namespace Kehai.Sandbox
             }
 
             Brain.Body.Silent = true;
+            SandboxBot.FixFrames();
             bot = new SandboxBot(sandbox.Player.GetComponent<PlayerMotor>());
             var listener = sandbox.Player.GetComponentInChildren<AudioListener>();
             if (listener != null) listener.enabled = false;
@@ -312,7 +313,11 @@ namespace Kehai.Sandbox
         string HuntState() => $"Sees player: {Eye.SeesNow}. Chasing: {Brain.IsChasing}. " +
             $"Searching: {Pursuit.Searching}. Window left: {Pursuit.Left(Time.time):0.00} s. Caught: {sandbox.Caught}.";
 
-        void OnDestroy() => recording?.Dispose();
+        void OnDestroy()
+        {
+            recording?.Dispose();
+            SandboxBot.FreeFrames();
+        }
 
         void Finish()
         {
