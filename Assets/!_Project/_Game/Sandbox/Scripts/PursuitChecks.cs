@@ -88,7 +88,9 @@ namespace Kehai.Sandbox
             yield return Run("corner-search", "A tall shelf blocks sight. Karen runs on and searches an empty spot.",
                 GapNorth, PursuitSandbox.KarenSpot, CornerSearch);
             yield return Run("fridge-expiry", "The unseen fridge entry holds. Karen searches and gives up 60 seconds after the last sighting.",
-                new Vector3(8f, 0f, 1.4f), new Vector3(-8f, 0f, 1.4f), FridgeExpiry);
+                // 10 m apart, as in corner-search: at 16 m her eye's strength is a fifth
+                // (SightSensor.Falloff), and a still player is never confirmed.
+                new Vector3(2f, 0f, 1.4f), new Vector3(-8f, 0f, 1.4f), FridgeExpiry);
             yield return Run("reacquire", "A new confirmed sighting after the gap ends the search and renews the 60-second window.",
                 GapNorth, PursuitSandbox.KarenSpot, Reacquire);
             yield return Run("catch-restart", "Contact freezes the sandbox with its shift active. Restart clears the catch, awareness and hunt.",
