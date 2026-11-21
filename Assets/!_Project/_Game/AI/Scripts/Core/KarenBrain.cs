@@ -404,7 +404,8 @@ namespace Kehai.Karen
                 if (ShiftActive) TickDirector(dt);
                 return;
             }
-            using (ShiftTiming.Measure("sight")) Body.Sight.Tick(dt);
+            // Stunned, she neither sees nor hears (0.5.2, C9.10, the owner's item 4).
+            using (ShiftTiming.Measure("sight")) { if (Body.IsStunned) Body.Sight.Blind(dt); else Body.Sight.Tick(dt); }
             if (!ShiftActive)
             {
                 Body.Stop();
@@ -412,8 +413,9 @@ namespace Kehai.Karen
             }
 
             // The gate (0.5.1, item 14): hit by a thrown item, she neither moves, plans, runs a
-            // trick, dashes nor catches until the stun is over. Her senses go on below, so when it
-            // ends she decides again from what she senses then.
+            // trick, dashes nor catches until the stun is over. Since 0.5.2 (C9.10) she neither sees
+            // nor hears either (above, and Believe); when it ends she decides again from what she
+            // senses then.
             bool stunned = StunGate();
             KeepHuntClock();
 
@@ -547,7 +549,8 @@ namespace Kehai.Karen
         void Believe(float dt)
         {
             Energy.Tick(dt);
-            Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
+            if (Body.IsStunned) Sensorium.CollectNothing();   // 0.5.2, C9.10
+            else Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
 
             for (int i = 0; i < Sensorium.Positive.Count; i++)
             {

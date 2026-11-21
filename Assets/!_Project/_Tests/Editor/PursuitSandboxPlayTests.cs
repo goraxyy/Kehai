@@ -109,5 +109,28 @@ public class PursuitSandboxPlayTests
         Assert.IsFalse(sandbox.Caught);
         Assert.IsFalse(brain.IsChasing);
         Assert.Less(Vector3.Distance(spot, brain.Body.transform.position), 0.5f, "Restart puts her back on her spot");
+
+        // A hit stuns her senses too (C9.10): in plain view while stunned, she gains nothing;
+        // when the stun ends, she sees you.
+        sandbox.StartRunning();
+        Teleport(sandbox.Player, spot + brain.Body.transform.forward * 6f);
+        Assert.IsTrue(brain.Body.Stun.TryImpact(Thrown(), 9f, 9f), "a fast throw stuns her");
+        yield return Wait(0.8f);
+        Assert.IsTrue(brain.Body.IsStunned);
+        Assert.AreEqual(0f, brain.Body.Sight.Awareness, "stunned, she sees nothing, though you stand in plain view");
+        until = Time.time + 6f;
+        while (brain.Body.Sight.Awareness <= brain.Body.Sight.glimpseAt && Time.time < until) yield return null;
+        Assert.IsFalse(brain.Body.IsStunned);
+        Assert.Greater(brain.Body.Sight.Awareness, brain.Body.Sight.glimpseAt, "awake again, she sees you");
+    }
+
+    static Item Thrown()
+    {
+        var go = new GameObject("thrown item (test)");
+        go.AddComponent<BoxCollider>();
+        go.AddComponent<Rigidbody>().useGravity = false;
+        var item = go.AddComponent<Item>();
+        item.lastAuthor = NoiseAuthor.Player;
+        return item;
     }
 }

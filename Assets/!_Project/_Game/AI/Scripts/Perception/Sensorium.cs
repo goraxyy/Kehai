@@ -148,6 +148,20 @@ namespace Kehai.Karen
             infrastructure.Clear();
         }
 
+        // Stunned (0.5.2, C9.10): nothing sensed this tick, and the noises and the building's
+        // reports that came meanwhile are dropped, not kept for after the stun.
+        public void CollectNothing()
+        {
+            Positive.Clear();
+            Raw.Clear();
+            SweptCells.Clear();
+            SweptProbability.Clear();
+            LoudNoiseNearby = false;
+            HeardThisTick = 0;
+            NoiseBus.ReadSince(ref noiseCursor, noises);
+            infrastructure.Clear();
+        }
+
         void CollectSight(SightSensor sight)
         {
             if (!sight.SeesNow || sight.Awareness < sight.glimpseAt) return;
