@@ -63,7 +63,7 @@ namespace Kehai.Sandbox
             if (Body == null) return;
             if (Body.Agent != null && Body.Agent.isActiveAndEnabled) Body.Warp(Spot);
             else Body.transform.position = Spot;
-            Body.transform.rotation = Quaternion.Euler(0f, SpotYaw, 0f);
+            Face(SpotYaw);
             Body.Sight.ResetAwareness();
             NextWaypoint = 0;
             facing = 0;
@@ -77,8 +77,16 @@ namespace Kehai.Sandbox
             if (Body == null) return;
             if (Body.Agent != null && Body.Agent.isActiveAndEnabled) Body.Warp(at);
             else Body.transform.position = at;
-            Body.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            Face(yaw);
             Body.Sight.ResetAwareness();
+        }
+
+        // Face `yaw`, and keep facing it: her body turns towards the last thing she turned to (her
+        // personal-space turn, KarenBody.KeepPersonalSpace), so that is pointed this way too.
+        void Face(float yaw)
+        {
+            Body.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            Body.TurnToward(Body.transform.position + Body.transform.forward * 5f);
         }
 
         public void ToggleRoute()
