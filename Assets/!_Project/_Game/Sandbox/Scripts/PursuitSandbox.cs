@@ -144,7 +144,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(transform, Brain.Body, "Pursuit sandbox");
             Indicators.status = Status;
             Indicators.extra = Extra;
-            Indicators.keys = "F5 start   F6 restart   F7 freeze   F1 her map   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start   F6 restart   F7 freeze   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.5f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
             Ready = true;
@@ -211,12 +211,26 @@ namespace Kehai.Sandbox
             if (last != null) yield return "Last thought: " + last.Text;
         }
 
+        // The keys (C11.3): the same actions as the panel's buttons. Public so the tests press them.
+        public bool Press(KeyCode key)
+        {
+            if (!Ready) return false;
+            switch (key)
+            {
+                case KeyCode.F4: Indicators.ToggleAll(); return true;
+                case KeyCode.F5: StartRunning(); return true;
+                case KeyCode.F6: Restart(); return true;
+                case KeyCode.F7: Freeze(); return true;
+            }
+            return false;
+        }
+
+        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7 };
+
         void Update()
         {
             if (!Ready) return;
-            if (Input.GetKeyDown(KeyCode.F5)) StartRunning();
-            if (Input.GetKeyDown(KeyCode.F6)) Restart();
-            if (Input.GetKeyDown(KeyCode.F7)) Freeze();
+            foreach (KeyCode key in Keys) if (Input.GetKeyDown(key)) Press(key);
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 bool locked = Cursor.lockState == CursorLockMode.Locked;

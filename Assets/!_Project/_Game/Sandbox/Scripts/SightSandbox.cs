@@ -82,7 +82,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
-            Indicators.keys = "F5 start   F6 restart   F7 freeze   F8 route   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start   F6 restart   F7 freeze   F8 route   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.5f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 
@@ -101,13 +101,27 @@ namespace Kehai.Sandbox
                 ("ROUTE", "Switch: walk her loop, or stand and turn", new Color(0.55f, 0.35f, 0.7f), () => Karen.ToggleRoute()));
         }
 
+        // The keys (C11.3): the same actions as the panel's buttons. Public so the tests press them.
+        public bool Press(KeyCode key)
+        {
+            if (Karen == null) return false;
+            switch (key)
+            {
+                case KeyCode.F4: Indicators.ToggleAll(); return true;
+                case KeyCode.F5: Karen.StartMoving(); return true;
+                case KeyCode.F6: Karen.Restart(); return true;
+                case KeyCode.F7: Karen.Freeze(); return true;
+                case KeyCode.F8: Karen.ToggleRoute(); return true;
+            }
+            return false;
+        }
+
+        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8 };
+
         void Update()
         {
             if (Karen == null) return;
-            if (Input.GetKeyDown(KeyCode.F5)) Karen.StartMoving();
-            if (Input.GetKeyDown(KeyCode.F6)) Karen.Restart();
-            if (Input.GetKeyDown(KeyCode.F7)) Karen.Freeze();
-            if (Input.GetKeyDown(KeyCode.F8)) Karen.ToggleRoute();
+            foreach (KeyCode key in Keys) if (Input.GetKeyDown(key)) Press(key);
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 bool locked = Cursor.lockState == CursorLockMode.Locked;

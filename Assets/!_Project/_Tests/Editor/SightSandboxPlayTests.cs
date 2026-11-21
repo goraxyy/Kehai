@@ -86,21 +86,28 @@ public class SightSandboxPlayTests
         Assert.AreEqual(config.sightFov, karen.Body.Sight.fieldOfView);
         Assert.AreEqual(config.sightGain, karen.Body.Sight.gain);
 
-        // Start: she walks her loop.
+        // Start (F5, as the panel's START): she walks her loop.
         Vector3 spot = karen.Body.transform.position;
-        karen.StartMoving();
+        Assert.IsTrue(sandbox.Press(KeyCode.F5));
         yield return Wait(2f);
         Assert.Greater(Vector3.Distance(spot, karen.Body.transform.position), 0.5f, "Start sets her walking");
 
-        // Freeze: she stays put.
-        karen.Freeze();
+        // Freeze (F7): she stays put.
+        Assert.IsTrue(sandbox.Press(KeyCode.F7));
         yield return Wait(0.3f);
         Vector3 held = karen.Body.transform.position;
         yield return Wait(0.7f);
         Assert.Less(Vector3.Distance(held, karen.Body.transform.position), 0.1f, "Freeze stops her");
 
-        // In the open, in front of her: her awareness fills.
-        karen.Restart();
+        // F4 hides every indicator and shows them again (C11.4).
+        Assert.IsTrue(sandbox.Indicators.AnyShown);
+        sandbox.Press(KeyCode.F4);
+        Assert.IsFalse(sandbox.Indicators.AnyShown, "F4 hides the indicators");
+        sandbox.Press(KeyCode.F4);
+        Assert.IsTrue(sandbox.Indicators.AnyShown, "F4 again shows them");
+
+        // In the open, in front of her: her awareness fills. (Restart is F6.)
+        Assert.IsTrue(sandbox.Press(KeyCode.F6));
         yield return null;
         Assert.Less(Vector3.Distance(spot, karen.Body.transform.position), 0.3f, "Restart puts her back on her spot");
         Assert.AreEqual(0f, karen.Body.Sight.Awareness, "Restart clears her awareness");

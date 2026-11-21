@@ -128,6 +128,7 @@ public static class Controls
             K("F5", "Start her"),
             K("F6", "Restart: back to her spot, frozen"),
             K("F7", "Freeze her where she is"),
-            K("F8", "Sight sandbox: walk her loop, or stand and turn")),
+            K("F8", "Sight sandbox: walk her loop, or stand and turn"),
+            K("F4", "Hide the sandbox's indicators, or show them again")),
     };
 }

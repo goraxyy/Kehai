@@ -41,6 +41,15 @@ namespace Kehai.Sandbox
             return view;
         }
 
+        // F4 (C11.4): every indicator off, or all back on. Her floor cone is F3's, as in the store.
+        public void ToggleAll()
+        {
+            bool on = !(showReadout || showEyeLine || showMeters);
+            showReadout = showEyeLine = showMeters = on;
+        }
+
+        public bool AnyShown => showReadout || showEyeLine || showMeters;
+
         public void Watch(HidingPlace place, Vector3 meterAt)
         {
             places.Add(place);

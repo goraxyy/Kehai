@@ -143,6 +143,20 @@ public class SandboxTests
     }
 
     [Test]
+    public void Indicators_ExistOnlyInsideTheSandboxes()
+    {
+        // C11.4: nothing outside the sandboxes' own code makes or reads them, so no scene, edition or
+        // build of the game can show one.
+        string root = System.IO.Path.Combine(Application.dataPath, "!_Project");
+        foreach (string file in System.IO.Directory.GetFiles(root, "*.cs", System.IO.SearchOption.AllDirectories))
+        {
+            string f = file.Replace('\\', '/');
+            if (f.Contains("/_Game/Sandbox/") || f.Contains("/_Tests/")) continue;
+            StringAssert.DoesNotContain("SandboxIndicators", System.IO.File.ReadAllText(file), f);
+        }
+    }
+
+    [Test]
     public void Panel_ButtonsRunTheirActions_AndSayWhatTheyDo()
     {
         int started = 0;
