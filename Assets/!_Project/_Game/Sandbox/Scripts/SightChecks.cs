@@ -164,7 +164,15 @@ namespace Kehai.Sandbox
             Debug.Log($"SightChecks: walk-in from {Bot.Feet}; her eye at {eye.Eye} facing {eye.Forward}; " +
                       $"you {(p != null ? p.Position.ToString() : "missing")}, light {(p != null ? p.LightLevel : 0f):0.00}; " +
                       $"now {eye.DetectNow:0.00}, exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}");
-            yield return Bot.WalkTo(inside);
+            IEnumerator walk = Bot.WalkTo(inside);
+            while (walk.MoveNext())
+            {
+                yield return walk.Current;
+                HidingPlace place = p != null ? HidingPlace.At(p, out float cov) : null;
+                float coverage = place != null ? place.Coverage(p) : 0f;
+                Debug.Log($"SightChecks: walking in: you {Bot.Feet}, coverage {coverage:0.00}, now {eye.DetectNow:0.00}, " +
+                          $"exposure {eye.Exposure:0.00}, awareness {eye.Awareness:0.00}, entry {(eye.HiddenEntry.Active ? "seen" : "no")}");
+            }
         }
 
         void SetFridgeDoor(bool open)
