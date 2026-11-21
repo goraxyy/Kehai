@@ -71,6 +71,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   | **Scene** | `Organize by Area and Name Objects` (`SceneHierarchyOrganizer.cs`) and its undo |
   | **Map** | `Export STORE_MAP.md`, `Log Map Summary` |
   | **Endless** | open the endless maze |
+  | **Sandbox** | `Sight` and `Pursuit`: small test rooms, built in an empty scene ([SANDBOX.md](game/SANDBOX.md)) |
   | **Eval** | env server (port 5555), quick and full ablations, an eval build, watch one bot shift |
   | **Replay** | open the latest shift, or any shift |
   | **RL** | set up ML-Agents, build training players |
@@ -207,6 +208,7 @@ The short rules are in [`RULES.md`](RULES.md). The longer how-to:
   /Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics -projectPath <project> -runTests -testPlatform EditMode -testResults <xml>
   ```
   Ablations use `-executeMethod EvalBatch.Play -kehai-ablation …` ([`tools/eval/README.md`](../../tools/eval/README.md)).
+- **The one command (0.5.2):** [`tools/run/kehai-run`](../../tools/run/README.md) does the whole clone recipe below, safely, and cleans up even after a crash: `tools/run/kehai-run tests`. The steps below are what it does, kept for reference.
 - **Verification while the editor is open.** Run on an **APFS clone**:
   1. `cp -Rc ~/Developer/Kehai <scratch>/clone`, then delete the clone's `Temp/` and `.claude/worktrees`.
   2. Lay the branch on with `git archive HEAD | tar -x -C <clone>`.

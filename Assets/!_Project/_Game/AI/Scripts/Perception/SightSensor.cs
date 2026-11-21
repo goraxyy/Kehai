@@ -174,6 +174,26 @@ namespace Kehai.Karen
             }
         }
 
+        // Stunned (0.5.2, C9.10, the owner's item 4): she sees nothing for the stun's length. Her
+        // awareness can only drain, no sighting is remembered, and no entry into a hiding place
+        // can be witnessed. The one check kept is the player's protection: leaving the hiding
+        // place she saw you enter still takes her catch away (WitnessedHide.UpdateOccupancy),
+        // which can never tell her anything.
+        public void Blind(float dt)
+        {
+            PlayerPresence player = PlayerPresence.Current;
+            float coverage = 0f;
+            HidingPlace place = player != null ? HidingPlace.At(player, out coverage) : null;
+            bool concealed = place != null && place.Conceals(player, coverage);
+            HiddenEntry.UpdateOccupancy(place, concealed, Time.time);
+            wasConcealed = concealed;
+            wasConcealedIn = concealed ? place : null;
+            hasLastVisible = false;
+            Exposure = 0f;
+            IsWatched = false;
+            Integrate(0f, dt, 0f);
+        }
+
         // One step of the meter, from a score and how much her belief expected you where it
         // came from (0–1). Above the floor it fills, faster where she expected you; below it,
         // it holds for the grace and then drains. Pure, so the walk-by set can drive it.

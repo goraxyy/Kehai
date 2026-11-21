@@ -16,12 +16,14 @@ lock=~/TokenLimit/marketing/state/heavy.lock
 clone="${KEHAI_CLONE:-/private/tmp/kehai-verify-train}"
 venv="$here/.venv"; [ -x "$venv/bin/mlagents-learn" ] || venv="$HOME/Developer/Kehai/tools/rl/.venv"
 if pgrep -f "Unity.app/Contents/MacOS/Unity" >/dev/null; then echo "Unity is open: close the editor first." >&2; exit 1; fi
-mkdir "$lock" 2>/dev/null || { echo "the heavy-work lock is held: $(cat $lock/job 2>/dev/null)" >&2; exit 1; }
-echo $$ > "$lock/pid"; echo "kehai 0.4.0 training: $run" > "$lock/job"
+# The shared heavy-work lock: a dead job's lock is taken over (0.5.2, C1.1).
+python3 "$(cd "$(dirname "$0")/../.." && pwd)/tools/run/lock.py" take "kehai 0.4.0 training: $run" --pid $$ --lock "$lock" || exit 75
+prefs_before=$(for k in LastUsedProjectPath kProjectBasePath kWorkspacePath; do printf "%s=%s\n" "$k" "$(defaults read com.unity3d.UnityEditor5.x "$k" 2>/dev/null || echo __unset__)"; done)
 cleanup() {
   [ -n "${up:-}" ] && kill "$up" 2>/dev/null || true
-  for k in LastUsedProjectPath kProjectBasePath kWorkspacePath; do defaults write com.unity3d.UnityEditor5.x "$k" "$HOME/Developer/Kehai" 2>/dev/null || true; done
-  rm -rf "$clone" "$HOME/Library/Application Support/TokenLimit/Kehai-verify"; rm -f "$HOME/Library/Preferences/unity.TokenLimit.Kehai-verify.plist"; rm -rf "$lock"
+  # The editor prefs back to what they were (not to a fixed path: 0.5.2, C1.4).
+  while IFS="=" read -r k v; do [ -z "$k" ] && continue; if [ "$v" = "__unset__" ]; then defaults delete com.unity3d.UnityEditor5.x "$k" 2>/dev/null || true; else defaults write com.unity3d.UnityEditor5.x "$k" "$v" 2>/dev/null || true; fi; done <<< "$prefs_before"
+  rm -rf "$clone" "$HOME/Library/Application Support/TokenLimit/Kehai-verify"; rm -f "$HOME/Library/Preferences/unity.TokenLimit.Kehai-verify.plist"; python3 "$(cd "$(dirname "$0")/../.." && pwd)/tools/run/lock.py" release --pid $$ --lock "$lock"
 }
 trap cleanup EXIT
 rm -rf "$clone"; cp -Rc ~/Developer/Kehai "$clone"; rm -rf "$clone/Temp" "$clone/.claude/worktrees"
