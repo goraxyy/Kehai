@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-21 | The staff room's radio comes down to 1.4 m on its wall, moved in code at load (it sat at 2.1 m, above eye level) | [0.5.2 plan](plans/0.5.2-plan.md), C12.2 |
 | 2026-11-21 | Your focus for 0.5.2: sandboxes for sight, pursuit, tricks and interactions; the named interactions (seen hiding, fridge check, kneel check, hit stun); usable things within reach; the scenes; training; the test pipeline and draft builds. Build the sight sandbox, then pursuit, and keep building | [0.5.2 plan](plans/0.5.2-plan.md) |
 | 2026-11-21 | The Karens' names: Hotaru (an easy mode, later), Satori (the game's, `basic`), Oni (the catcher, `vital`); code ids unchanged | [0.5.2 plan](plans/0.5.2-plan.md), Q21 |
 | 2026-11-21 | 0.5.2: start now, one PR; test everything once after it merges, recording every test shift. Hunt the batch slowdown first; usage-limit rules into RULES.md; game data by direct copy; Git LFS in private repos with locks; four scenes as a base and layers (Testing, Training, a shared Workshop, dev layers); camera, customer and torch interactions, with what she saw counting for more | [0.5.2 plan](plans/0.5.2-plan.md), Q1–Q20 |
