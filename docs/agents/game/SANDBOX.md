@@ -25,7 +25,8 @@ and no tricks, no hunt, no catch. She starts frozen on her spot in the north-wes
 | ROUTE | F8 | switches between walking her loop and standing while turning a quarter every 3 s |
 
 There's a panel outside by the door and one inside. Look at a button and press **E**.
-**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F3** toggles her floor cone.
+**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F3** toggles her floor cone, **F4**
+hides the other indicators (and shows them again).
 
 **What it shows you:**
 
@@ -41,8 +42,20 @@ There's a panel outside by the door and one inside. Look at a button and press *
 (seen: your eyes show over it); crouch under the rack; get into the fridge while she watches (the
 corner box says SAW YOU GO IN) and while her back is turned.
 
-**What it isn't yet:** the bot that runs these checks by itself and records them (C11.6). The
-furniture is plain boxes at real sizes.
+**The bot's checks** (C11.6): **Kehai → Sandbox → Run Sight Checks**, or headless on a safe copy:
+
+```bash
+tools/run/kehai-run unity -- -executeMethod SandboxChecks.Sight
+```
+
+A bot plays eight checks with the player's real body: standing in the open at 8 m; behind a short
+shelf, standing and crouched; in front of and crouched under the rack; inside the fridge; walking
+into the fridge while she watches, and behind her back. Each row says what was expected and what
+her eye did (her highest awareness, and how soon she noticed). The report is
+`sandbox_checks/sight_<time>.md` in the game's data folder; `kehai-run` keeps it in the run's
+folder. Headless, Unity exits 0 when every check passes and 1 when one fails.
+
+The furniture is plain boxes at real sizes.
 
 ## The pursuit sandbox
 
