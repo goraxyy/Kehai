@@ -4,7 +4,7 @@ Part of the [Kehai 0.5.2 plan](../0.5.2-plan.md), item 3, added on 21 November (
 version-control design, yes"). It says how the game, its scenes and art, and each Karen are
 numbered, so that any version can be rebuilt and every record says what made it. The tasks are
 the plan's [Phase 10](../0.5.2-plan.md#phase-10-versions-and-releases-c--sonnet-55-opus-55-for-c103--this-mac).
-The Karens' names are Q21 ([the options](../0.5.2-plan.md#q21-names-for-the-two-karens)).
+The Karens' names are Satori and Oni, with Hotaru for an easy mode later (Q21, [the options weighed](../0.5.2-plan.md#q21-names-for-the-two-karens)).
 
 1. [What exists today](#1-what-exists-today)
 2. [The game's version](#2-the-games-version)
@@ -66,24 +66,25 @@ The Karens' names are Q21 ([the options](../0.5.2-plan.md#q21-names-for-the-two-
 
 ## 4. Each Karen's version
 
-Each trained Karen (Basic and Vital) gets her own number, apart from the game's:
+Each trained Karen gets her own number, apart from the game's: **Satori** (the game's Karen,
+`basic` in code) and **Oni** (the catcher, `vital`), the names you chose on 21 November (Q21):
 
 | Part | Changes when | Example |
 |---|---|---|
-| `MAJOR` | her inputs or her tricks change, so she needs new game code | basic 2.0.0 after a new sense joins her inputs |
-| `MINOR` | trained again, on the same inputs | basic 1.3.0 after a refresh round |
-| `PATCH` | exported again, nothing new learned | basic 1.2.1 |
+| `MAJOR` | her inputs or her tricks change, so she needs new game code | Satori 2.0.0 after a new sense joins her inputs |
+| `MINOR` | trained again, on the same inputs | Satori 1.3.0 after a refresh round |
+| `PATCH` | exported again, nothing new learned | Satori 1.2.1 |
 
 - **It maps onto what exists:** MAJOR is the pack's inputs version plus its list of tricks;
   MINOR is today's publish number.
 - **A game version accepts any Karen with the same MAJOR.** A newer MINOR reaches players
   without a new build of the game, and **the publish gate still runs** on every one (with no
   per-model yes from you, your call of 12 November).
-- **Example:** game 0.6.0 accepts basic 1.x and vital 1.x. Basic 1.3.0, trained in January,
-  passes the gate and reaches testers without a new build. Basic 2.0.0, with a new input, needs
+- **Example:** game 0.6.0 accepts Satori 1.x and Oni 1.x. Satori 1.3.0, trained in January,
+  passes the gate and reaches testers without a new build. Satori 2.0.0, with a new input, needs
   game 0.7.0.
-- **Names** come on top: "Karen Kitsune 1.3" would be `basic 1.3.0` (Q21). The code keeps `basic`
-  and `vital`.
+- **Names** are for people: "Karen Satori 1.3" is `basic 1.3.0` in code, and Hotaru waits for an
+  easy mode. The code keeps `basic` and `vital`.
 
 ---
 
@@ -114,6 +115,6 @@ Every build carries four things: **the game's version** (with its label), **the 
 | Every shift record and replay | nothing | all four |
 | A playtest upload | the version | all four |
 
-**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Basic 1.3.0 · Vital 1.1.0`.
+**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Satori 1.3.0 · Oni 1.1.0`.
 A bug report, a tester's session or a training record then says exactly which game and which
 Karen made it, which is what the recorded test pass after the merge (Q1) needs.

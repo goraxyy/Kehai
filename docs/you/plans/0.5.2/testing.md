@@ -182,7 +182,7 @@ morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12
 | Job | If it stops halfway today | Code |
 |---|---|---|
 | Ablation | starts again from nothing: a new file each run, and the list of finished shifts is only in memory | `AblationRunner.cs` |
-| Training | continues, by hand (`--resume`); a checkpoint every 50,000 steps, the last 10 (Employee) or 20 (Vital) kept | `tools/rl/*.yaml` |
+| Training | continues, by hand (`--resume`); a checkpoint every 50,000 steps, the last 10 (Employee) or 20 (Oni, `karen_vital.yaml`) kept | `tools/rl/*.yaml` |
 | Belief fits | resume by stage (since 13 November) | `tools/belief/` |
 | Belief recording | starts again: `record.sh` runs two whole leagues, then its checks | `tools/belief/record.sh` |
 | EditMode suite | starts again | — |

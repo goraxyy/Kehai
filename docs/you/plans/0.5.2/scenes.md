@@ -49,15 +49,14 @@ own page: [versions](versions.md).
 
 ## 2. The scenes you asked for
 
-Your answers (21 November): four scenes, and a dev layer each for you, the sound designer and
-the artist. You also work in the Training scene, mostly.
+Your answers (21 November): four scenes, with sound and models sharing one **Workshop** scene, and
+a dev layer each for you, the sound designer and the artist. You also work in the Training scene, mostly.
 
 | Scene | What it's for | Who works in it | What's in it |
 |---|---|---|---|
 | **Testing** | the store as playtesters see it: they download the Testing build, play, and send their sessions back for the shared training; later the Gameplay build too | you, and the builder menus | everything: the quick-pass art, the sounds, the UI |
-| **Training** | benchmarking the two Karens, trying tricks and interactions; the PC's training copies | **you, mostly**, and the bots | the store's shape only: walls, shelves, doors, the NavMesh, the lights she senses, and one plain grey look on everything so you can still play it; no sound, no UI text |
-| **Sound** | placing and mixing every sound | the sound designer | the store with its sound sources |
-| **Models** | visual improvements | the artist | the store with its art |
+| **Training** | benchmarking the two Karens (Satori and Oni), trying tricks and interactions; the PC's training copies | **you, mostly**, and the bots | the store's shape only: walls, shelves, doors, the NavMesh, the lights she senses, and one plain grey look on everything so you can still play it; no sound, no UI text |
+| **Workshop** (sound and models) | placing and mixing every sound; visual improvements | the sound designer (sound layer), the artist (art layer) | the store with its art and its sound sources |
 | **Dev layers** | experiments: yours on Karen (over Training), the sound designer's and the artist's (over their scenes) | each person their own | only that person's experiments; never shipped |
 
 **How they fit together (my pick):** one **base** scene holds everything that plays (walls,
@@ -68,7 +67,7 @@ and a **sound layer** are scenes loaded on top of it ([§4](#4-one-scene-for-sou
 |---|---|
 | Testing | base + art layer + sound layer |
 | Training | base, generated light (grey look, no sound, no UI) by a menu, never edited by hand |
-| Sound and Models | base + art layer + sound layer, open together; each person edits only their own layer |
+| Workshop | base + art layer + sound layer, open together; each person edits only their own layer |
 | Dev | a layer on top of any of them |
 
 **Why Training is generated, not kept by hand:** what you change while working there is code
