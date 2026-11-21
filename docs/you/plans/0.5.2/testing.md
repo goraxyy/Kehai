@@ -38,7 +38,7 @@ How each one was measured is in [§11](#11-how-this-was-measured).
 | The same seed, different results | One shift with the same seed ran 183, 200 or 208 s ([KAREN_RESULTS](../../../agents/results/KAREN_RESULTS.md#karen-040-what-the-build-measured-1112-november)). 0.4.0's build notes blame timers that read the wall clock (`Time.unscaledTime`) in the blink and PA code while batch mode runs on a fixed step |
 | Runs lost when interrupted | An ablation starts again from nothing (its list of finished shifts lives only in memory). Training can continue, but only by hand (`--resume`). The belief fits resume by stage, added on 13 November after a session's death lost the first try |
 | Nothing says when a run ends | No run sends a notice. The marketing pipeline has a Telegram sender, but its bot token isn't set on this Mac (checked that it's empty, not read) |
-| Windows by hand | `kehai-assets` has one release (11 November): two zips, one of project files and one of game data (sizes on the [scenes page](scenes.md#5-art-and-data-to-windows)). The repo itself holds only a README: no history, no Git LFS. This Mac has no SSH entry for the PC and no `git-lfs` |
+| Windows by hand | `kehai-assets` has one release (11 November): two zips, one of project files and one of game data (sizes on the [scenes page](scenes.md#7-art-and-data-to-windows)). The repo itself holds only a README: no history, no Git LFS. This Mac has no SSH entry for the PC and no `git-lfs` |
 | Sessions hit the usage limit | Uncommitted work lost and subagents killed; three Opus subagents at once used it up fastest. Long jobs were children of the session that started them |
 | Missing doc | `tools/learn/` has no README |
 
@@ -226,7 +226,7 @@ Nothing left behind. Next step waits for your go: `kehai-run trick-check`." (Mad
 ## 9. Art and data to Windows
 
 This is the same question as version control for the scenes and art, so it's answered once, on
-the [scenes and version control page](scenes.md#5-art-and-data-to-windows). In short: project
+the [scenes and version control page](scenes.md#7-art-and-data-to-windows). In short: project
 files through the private repo with Git LFS (no hand-made zips), and game data (datasets, results)
 copied directly over the private network of [§6](#6-running-on-the-windows-pc-from-this-mac).
 
