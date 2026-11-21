@@ -64,7 +64,7 @@ namespace Kehai.Sandbox
             Vector3 fridgeFront = SightSandbox.FridgeFront + Vector3.left * 1.2f;
             // 3 m from the fridge's front: beyond arm's length (SightSensor.CloseRange, 2.2 m), where
             // she notices anyone, whichever way she faces.
-            Vector3 facingFridge = new Vector3(2.4f, 0f, 2.0f);
+            Vector3 facingFridge = new Vector3(1.9f, 0f, 2.0f);
             yield return new Check { Name = "open-8m", What = "standing still in the open, 8 m in front of her, lit",
                 Karen = new Vector3(-6f, 0f, -4f), KarenYaw = 90f, Expect = Expect.Seen,
                 Act = c => c.Place(new Vector3(2f, 0f, -4f)) };

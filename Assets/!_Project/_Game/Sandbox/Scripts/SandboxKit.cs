@@ -18,9 +18,10 @@ namespace Kehai.Sandbox
         public const float WallHeight = 3f;
         public const float WallThickness = 0.2f;
 
-        // The fridge: room inside for the player's 1 m-wide body (the staff lockers' opening is
-        // 1.08 m for the same reason), and a door that swings out.
-        public static readonly Vector3 FridgeInside = new Vector3(1.2f, 2.1f, 1.1f);
+        // The fridge: the store's own cold hiding cabinet inside (ColdHideInterior, 1.58 × 2.35 ×
+        // 1.85 m), and a door that swings out. Smaller is no good: the player's controller stands
+        // 8 cm above the floor (its skin) and is 2 m tall, so a 2.1 m opening stops it at the top.
+        public static readonly Vector3 FridgeInside = new Vector3(1.58f, 2.35f, 1.85f);
         public const float FridgeWall = 0.06f;
 
         // The rack: the lowest board's underside at 0.95 m clears a crouched body (0.8 m,

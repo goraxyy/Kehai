@@ -183,7 +183,7 @@ namespace Kehai.Sandbox
 
             // Round the east end of the north row. Its last shelf ends at x = 8.4 m.
             Vector3 corner = new Vector3(9.4f, 0f, 1.4f);
-            Vector3 front = new Vector3(9.4f, 0f, PursuitSandbox.FridgeFront.z);
+            Vector3 front = PursuitSandbox.FridgeFront + Vector3.left * 1.1f;
             // Walk just past the centre so the real controller clears the closing leaf.
             Vector3 inside = PursuitSandbox.FridgeFront + Vector3.right * (SandboxKit.FridgeInside.z * 0.6f);
             bot.Sprint = true;

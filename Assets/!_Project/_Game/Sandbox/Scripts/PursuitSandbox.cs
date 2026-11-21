@@ -28,7 +28,7 @@ namespace Kehai.Sandbox
         public static readonly Vector3 KarenSpot = new Vector3(-10f, 0f, 5.5f);   // local to Centre
         public const float KarenYaw = 90f;
         public static readonly Vector3 PlayerStart = new Vector3(0f, 0f, -11f);
-        public static readonly Vector3 FridgeFront = new Vector3(10.5f, 0f, 5f);
+        public static readonly Vector3 FridgeFront = new Vector3(9.9f, 0f, 5f);
         public static readonly Vector3 RackCentre = new Vector3(-5f, 0f, 7f);
         public const float RowZ = 3f;
         // Two rows of tall shelves along x, seven units each; the north row has a gap in the middle.
@@ -145,7 +145,7 @@ namespace Kehai.Sandbox
             Indicators.status = Status;
             Indicators.extra = Extra;
             Indicators.keys = "F5 start   F6 restart   F7 freeze   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
-            Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.5f, 0f));
+            Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
             Ready = true;
         }

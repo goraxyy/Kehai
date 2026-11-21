@@ -27,7 +27,7 @@ namespace Kehai.Sandbox
         public static readonly Vector3 KarenSpot = new Vector3(-6.2f, 0f, 3.6f);
         public const float KarenYaw = 90f;
         public static readonly Vector3 PlayerStart = new Vector3(0f, 0f, -9f);
-        public static readonly Vector3 FridgeFront = new Vector3(6.6f, 0f, 1.5f);
+        public static readonly Vector3 FridgeFront = new Vector3(5.9f, 0f, 1.5f);
         public static readonly Vector3 RackCentre = new Vector3(2.2f, 0f, 4.8f);
         public static readonly Vector3[] TallShelves = { new Vector3(-2.5f, 0f, 1.2f), new Vector3(-2.5f, 0f, -1.8f) };
         public static readonly Vector3[] ShortShelves = { new Vector3(2.0f, 0f, 1.0f), new Vector3(2.0f, 0f, -1.6f), new Vector3(-4.6f, 0f, -0.4f) };
@@ -83,7 +83,7 @@ namespace Kehai.Sandbox
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
             Indicators.keys = "F5 start   F6 restart   F7 freeze   F8 route   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
-            Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.5f, 0f));
+            Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 
             // Two panels: one outside by the door (start her before you go in), one inside.
