@@ -71,6 +71,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   | **Scene** | `Organize by Area and Name Objects` (`SceneHierarchyOrganizer.cs`) and its undo |
   | **Map** | `Export STORE_MAP.md`, `Log Map Summary` |
   | **Endless** | open the endless maze |
+  | **Sandbox** | `Sight`: the sight sandbox, built in an empty scene ([SANDBOX.md](game/SANDBOX.md)) |
   | **Eval** | env server (port 5555), quick and full ablations, an eval build, watch one bot shift |
   | **Replay** | open the latest shift, or any shift |
   | **RL** | set up ML-Agents, build training players |
