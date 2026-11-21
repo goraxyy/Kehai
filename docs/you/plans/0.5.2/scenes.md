@@ -106,20 +106,21 @@ where marked measured.
 - **What fewer assets do cut:** **load time,** because every shift reloads the whole scene, and
   **memory,** so more copies run at once on the PC.
 
-| Speed-up | What it does | Rough gain (*estimate*) | Catch |
-|---|---|---|---|
-| The light Training scene | quicker reloads, smaller copies | reloads perhaps 20–50% quicker; frames 0–10% | measured in C8.3 |
-| More copies at once on the PC | uses more of its cores | up to about 1.5× in all, if memory allows | measured with 0.5.0's Training player (its C7.3) |
-| A built Training player, not the editor | no editor costs | unknown; large if the batch slowdown lives in the editor | the Training player must connect first (0.5.0's C7.3) |
-| Fixing the batch slowdown | — | up to 2.25× if the old gap is still there | [testing §5](testing.md#5-the-batch-slowdown), Phase 6 |
-| Learning records off when a run doesn't use them | skips writing every choice | about 12% of a frame | the recordings that fit her need them on |
-| Fewer frames per simulated second (15 → 10) | a third fewer frames | up to 30% | she and the bots react in coarser steps; checked against today's shift |
-| Fewer customers in an easy first stage | less walking and pathfinding | 5–15% | it changes the game, so only as a first stage |
-| Several stores in one copy | shares the engine's fixed cost | perhaps 1.5–2× | a big change: the code assumes one store; not for 0.5.2 |
+**Does each need building?** You asked on 21 November. Every one is now a task in the plan:
 
-**My pick for 0.5.2:** the light Training scene and fixing the slowdown (both planned), learning
-records off where a run doesn't need them, and more copies once the PC is ready. The others need
-behaviour checks and wait.
+| Speed-up | What it does | Rough gain (*estimate*) | Building or a setting? | Task (phase) |
+|---|---|---|---|---|
+| The light Training scene | quicker reloads, smaller copies | reloads perhaps 20–50% quicker; frames 0–10% | **building:** a menu that makes the scene | C8.1–C8.3 (Phase 8) |
+| Fixing the batch slowdown | — | up to 2.25× if the old gap is still there ([testing §5](testing.md#5-the-batch-slowdown)) | **building:** find it, then fix it ("hunt first", Q10) | C6.3, C6.4 (Phase 6) |
+| A built Training player, not the editor | no editor costs | unknown; large if the slowdown lives in the editor | **mostly built** in 0.5.0; checking that it connects, and fixing it if not, is building | C6.6 (Phase 6) |
+| More copies at once on the PC | uses more of its cores | up to about 1.5× in all, if memory allows | **a setting** (the number of copies, `-Envs`), then measured | C6.7 (Phase 6; waits for the PC and C6.6) |
+| Learning records off when a run doesn't use them | skips writing every choice | about 12% of a frame | **a setting:** `-kehai-no-records` exists. Never on a test shift: those are all recorded (Q1) | C6.5 (Phase 6) |
+| Fewer frames per simulated second (15 → 10) | a third fewer frames | up to 30% | **a setting** (`-ablation-fps`, the league's `fps`), plus a check that she and the bots still play the same | C6.8 (Phase 6) |
+| Fewer customers in an easy first stage | less walking and pathfinding | 5–15% | **a small build:** a shopper-cap flag (today the cap is fixed in code), off unless a training config sets it | C6.9 (Phase 6); used only if you agree |
+| Several stores in one copy | shares the engine's fixed cost | perhaps 1.5–2× | **a big build:** the code assumes one store | C6.10 (Phase 6): the design and its cost only, nothing built in 0.5.2 |
+
+**In 0.5.2:** the first six are built or set; the shopper cap is built but stays off until you
+say; several stores in one copy is only designed.
 
 ---
 
@@ -144,6 +145,9 @@ project, so he never needs Karen or the game's code. Two ways to keep that with 
 
 **My lean:** the content project until version control exists (Phase 7), then the game's repo.
 
+**Your answer (Q15, 21 November): "go with the pick for one scene 2 people":** M1, one base
+with a layer each. Moving the layers into the game's repo changes the sound plan's §4 when it happens.
+
 ---
 
 ## 5. Version control for three people
@@ -161,6 +165,8 @@ artist, plus the agents (code only) and the PC (pulls only).
 | D. `kehai-assets` as the whole project, the public repo a code-only copy | a script publishes the code | one repo for helpers | the copy step can leak private files if it breaks; two histories for the code |
 | E. Perforce (P4) | the big studios' system, on a server you run (the PC could) | strong locks; huge art | a server to run; far more than three people need |
 | F. Zips, or a shared cloud folder | as today, or iCloud/Dropbox | nothing new | no history or merge; a project open on two computers gets corrupted |
+
+**Your answer (Q17, 21 November): "go with the pick":** A.
 
 Unity's merge tool works with A–E. Either way `kehai-assets` uses LFS, so **Q17 also answers
 the sound plan's Q4.**
@@ -216,7 +222,8 @@ the same day, with no conflict, because it's a different layer.
 | Game data: the Ledger, shift records, datasets, results | 508 MB zipped (11 November); sizes now in [storage](../0.5.0/storage.md) | **copied directly** over the private network of [testing §6](testing.md#6-running-on-the-windows-pc-from-this-mac) (`rsync` or `scp` over SSH); a scripted zip until the link exists | in LFS (uses the free download allowance fast) |
 | Training results back to the Mac | — | the same direct copy, and the run register's `import` (exists) | — |
 
-The choice for game data is Q18; the link to the PC is Q8, and the PC itself is on hold (Q19).
+**Your answer (Q18, 21 November): my suggestion:** a direct copy once the link exists, and a zip
+made by a script until then (C7.7). The link to the PC is still Q8, and the PC is on hold (Q19).
 
 ---
 

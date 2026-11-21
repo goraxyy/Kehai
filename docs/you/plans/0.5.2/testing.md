@@ -145,7 +145,10 @@ and the [0.4.0 plan's C0.2](../0.4.0-build-plan.md#phase-0-before-building).
 | C. Run ablations in a built player, not the editor | the eval player exists (Kehai → Eval → Build Eval Player) | skips the editor's own cost | the cause stays unknown; builds take time |
 | D. Leave it | multiply every time by the factor | no work | if 2.25× still holds, the training times in [TESTING.md](../../TESTING.md#the-times) could be about twice what they need |
 
-**Where:** Windows (it can run while your Mac editor is open), or the Mac with the editor closed.
+**Your answer (Q10, 21 November): "hunt first":** the slowdown is found before the long runs.
+
+**Where:** Windows (it can run while your Mac editor is open), or the Mac with the editor closed
+while the PC is on hold.
 **Model:** Opus 5.5: a deep bug that two sessions didn't find.
 
 ---
@@ -242,6 +245,8 @@ copied directly over the private network of [§6](#6-running-on-the-windows-pc-f
 | **A. Rules for agents, in `RULES.md` (my pick, Q11)** | the list below | every session follows them | a little slower when one session could have done more at once |
 | B. Leave it to each session | — | nothing to write | the same losses |
 | C. A reminder hook | Claude Code runs a small check at the end of each turn and warns about uncommitted work | catches what a rule forgets | must never commit by itself (it could commit junk) |
+
+**Your answer (Q11, 21 November): "yes"** to A, with no reminder.
 
 **The rules (A):**
 - **At most one Opus subagent at a time,** and two subagents in all. Mechanical subagents use Sonnet.
