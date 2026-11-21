@@ -4,6 +4,7 @@
 Python standard library only; run it from anywhere.
 
 ```bash
+tools/run/kehai-run offline                    # working-tree compile and engine-independent checks
 tools/run/kehai-run tests                      # the whole EditMode suite on the current commit
 tools/run/kehai-run tests --filter Sandbox     # part of it
 tools/run/kehai-run ablation -- -ablation-careers 1 -ablation-shifts 2 -ablation-rungs CE
@@ -13,7 +14,9 @@ tools/run/kehai-run status                     # the lock, what's running, the l
 tools/run/kehai-run doctor --clean             # clean up after runs that died
 ```
 
-**What a run does:**
+The offline command reads the imported libraries from `KEHAI_RUN_MAIN`. It compiles the editor runtime, editor tests and Gameplay sources, then executes the edition/career/guide NUnit fixture and the sale/complaint policy checks under .NET. All other native tests need Unity. Use `offline --references <project> --unity-app <Unity.app>` for another installation.
+
+**What a Unity run does:**
 1. **Checks:** your editor closed (this Mac can't run two Unitys), enough free disk, the
    heavy-work lock free. A lock whose holder has died is taken over, and it says so.
 2. **A run card** in `~/TokenLimit/runs/cards/`, written before anything is touched: the clone's

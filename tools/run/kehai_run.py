@@ -444,11 +444,17 @@ def main(argv=None) -> int:
         if name == 'tests':
             r.add_argument('--filter', help='a -testFilter for Unity')
         r.add_argument('rest', nargs=argparse.REMAINDER, help='after --: passed to Unity')
+    offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
+    offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
+    offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
     sub.add_parser('status')
     d = sub.add_parser('doctor')
     d.add_argument('--clean', action='store_true')
     a = p.parse_args(argv)
     s = Settings.from_env()
+    if a.cmd == 'offline':
+        from tools.run.offline import check
+        return check(Path(__file__).resolve().parents[2], a.unity_app, a.references or s.main)
     if a.cmd == 'status':
         status(s)
         return 0
