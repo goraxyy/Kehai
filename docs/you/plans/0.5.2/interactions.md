@@ -6,7 +6,7 @@ in 0.5.2; I will add later." The questions (Q numbers) are in the plan's
 [§5](#5-your-interactions).
 
 1. [What an interaction is here](#1-what-an-interaction-is-here)
-2. [Visible hiding: what 0.5.1 is building](#2-visible-hiding-what-051-is-building)
+2. [Visible hiding: what 0.5.1 shipped](#2-visible-hiding-what-051-shipped)
 3. [More of the same kind](#3-more-of-the-same-kind)
 4. [What "done" means for every interaction](#4-what-done-means-for-every-interaction)
 5. [Your interactions](#5-your-interactions)
@@ -40,16 +40,9 @@ unwinnable (rule 6) or ratchet without decay (rule 7).
 
 ---
 
-## 2. Visible hiding: what 0.5.1 is building
+## 2. Visible hiding: what 0.5.1 shipped
 
-**It's 0.5.1's item 2,** being built now by another session on local branch `claude/0-5-1-d01aca`
-(the plan is [PR #87](https://github.com/goraxyy/Kehai/pull/87)). Its "done when", in short: if she
-sees you go into a hiding place (crouching under stock shelving included), she gets as close as
-she can and ends the game within 3 m of you while you're still hiding; hiding unseen gives you
-away to nobody; leaving or changing places makes the old sighting useless.
-
-**What the branch does, as read on 17 November** (uncommitted work, still changing; read only,
-nothing touched):
+Merged in 0.5.1. Her eye remembers the last visible position beside the entrance. Leaving or changing hiding places cancels the catch, even if the player returns unseen. [PR #89](https://github.com/goraxyy/Kehai/pull/89)
 
 - **Hiding places are empty spaces set in code,** not the furniture's outline: the cold hiding
   cabinets, the staff lockers, the WC's empty cupboard, the toilet and changing cabins (standing),
@@ -61,14 +54,10 @@ nothing touched):
 - **"Still in there?" is a yes or no** from her eye's own check. It can take a catch away, never
   start one. If you slipped out, she looks for a moment, finds nothing and goes back to deciding.
 - **The memory expires** after a while, and a second entry counts as new.
-- **The 16 November review found two fairness slips** in the first version: the 3 m was measured
-  to your live position, and the memory sat outside the source scan. The 17 November working copy
-  measures to the remembered point and keeps the memory in a file the scan covers. Its tests were
-  still being fixed.
+- **Hit stun in the build branch** also suppresses sight and hearing. The eye can still cancel a witnessed catch when the player leaves.
 
-**Answered on 17 November (Q12): "0.5.2 extends it."** 0.5.1 keeps building visible hiding and
-ships it. 0.5.2 builds on top of what 0.5.1 ships and doesn't move or rewrite 0.5.1's version.
-The options below are kept as the record of what was weighed.
+Q12 chose option A.
+
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
