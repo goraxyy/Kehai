@@ -119,7 +119,24 @@ under the heavy-work lock. Set the recording path, output path and time range fo
   -from 0 -to 12 -shot chase -size 1280x720 -fps 30 -out "$KEHAI_CLIP"
 ```
 
-The batch check and video render were added as code. The recorded runs still need to be played.
+**What the first runs found (21 November, on a safe copy):**
+
+| Check | Result | Why |
+|---|---|---|
+| corner-search | pass | ran on 8.5 m with sight blocked, then searched |
+| fridge-expiry | **fails: the check's setup** | at the start she sweeps toward her belief's peak, turns away down her path and never looks along the aisle, so no hunt starts within 8 s. Her eye is fine: at the first setup's 16 m her eye's strength is a fifth (`SightSensor.Falloff`) and a still player is never confirmed, so it now starts at 10 m. It still needs a setup that makes sure she confirms you first. |
+| reacquire | pass | a fresh sighting renewed the 60 s window |
+| catch-restart | pass | contact froze the sandbox; Restart cleared her |
+
+The first run passed only catch-restart. The other two failures were a real bug in her brain, in
+the game too: a forced re-decision while she hunted (a sprint step close by is one, `OnNoise`)
+picked the hunt again, `AbortPlan` ended the hunt, which retired its sighting, and the new hunt
+started with 0 s left and ended the next frame, over and over. So sprinting away from her killed
+her 60 s pursuit. Fixed by `KarenBrain.AbortPlanFor` (a hunt chosen again goes on, its window
+kept) and `EndHeldHunt` (a held hunt that no hunt plan takes up still ends), with a test in
+`Kehai051PursuitTests`.
+
+The silent video clips are code only: none has been rendered yet.
 
 ## For agents
 
