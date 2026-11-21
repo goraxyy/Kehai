@@ -146,7 +146,6 @@ public static class StaffRoomBuilder
         Place("Kettle","Kettle",WestFace+.2f,-147.6f,-90,1.69f);
         // Functional props keep their original components and serialized references.
         Dress("CoffeeMachine","CoffeeMachine",new Vector3(WestFace+.42f,.97f,-148.04f),-90);
-        Dress("MusicBox","Radio",new Vector3(WestFace+.2f,1.69f,-146.65f),-90);
         Dress("Puncher","TimeClock",new Vector3(EastFace-.07f,1.2f,-139.3f),90);
 
         Place("DiningTable","Shared dining table",16.8f,-142.35f,0);
@@ -165,6 +164,8 @@ public static class StaffRoomBuilder
 
         Place("Sofa","Staff sofa",21.6f,SouthFace+.5f,180);
         Place("CoffeeTable","Lounge coffee table",21.5f,-147.5f,0);
+        // Face the sofa across the open side of the table. The model's origin is at its base.
+        Dress("MusicBox","Radio",new Vector3(21.15f,.43f,-147.5f),0);
         Place("LoungeChair","Lounge chair",19.65f,-147.1f,110);
         Place("SmallPlant","Lounge table plant",22f,-147.5f,0,.43f);
         Place("WallScreen","Staff screen",21.6f,SouthFace+.08f,180,1.65f);

@@ -55,9 +55,7 @@ public class HingeDoor : MonoBehaviour
         var playerObject = GameObject.FindGameObjectWithTag("Player");
         player = playerObject != null ? playerObject.transform : null;
 
-        // The panel is the widest solid collider that swings with the hinge.
-        foreach (BoxCollider box in GetComponentsInChildren<BoxCollider>())
-            if (!box.isTrigger && (panel == null || box.bounds.size.sqrMagnitude > panel.bounds.size.sqrMagnitude)) panel = box;
+        panel = FindPanel();
         closedCentre = panel != null ? panel.bounds.center : transform.position;
         if (HasWrapper()) wrapped = true;
 
@@ -82,6 +80,17 @@ public class HingeDoor : MonoBehaviour
     BoxCollider panel;
     Vector3 closedCentre;
     NavMeshObstacle openCarve;
+
+    // The widest solid collider that swings with the hinge is available during fixture
+    // installation, which can run before Start initializes the motion state.
+    internal BoxCollider FindPanel()
+    {
+        BoxCollider widest = null;
+        foreach (BoxCollider box in GetComponentsInChildren<BoxCollider>())
+            if (box.enabled && !box.isTrigger && (widest == null || box.bounds.size.sqrMagnitude > widest.bounds.size.sqrMagnitude))
+                widest = box;
+        return widest;
+    }
 
     void Update()
     {

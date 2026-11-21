@@ -201,8 +201,12 @@ public class PlayerInteract : MonoBehaviour
             return;
         }
 
-        Ray ray = new Ray(rayOrigin.position, rayOrigin.forward);
+        SetTarget(FindAimedTarget(new Ray(rayOrigin.position, rayOrigin.forward)));
+    }
 
+    // The placement check queries the same targeting rules without changing hover or using E.
+    public IInteractable FindAimedTarget(Ray ray)
+    {
         // Normal reach first: things with colliders (an item on the floor, a shopper, a tool)
         // and shelf slots, which are data and aimed at by ShelfAim. Whichever is nearer.
         ShelfSlot slot = ShelfAim.Find(ray, interactRange, out float slotDistance);
@@ -210,17 +214,9 @@ public class PlayerInteract : MonoBehaviour
             (slot == null || hit.distance <= slotDistance))
         {
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-            if (interactable != null)
-            {
-                SetTarget(interactable);
-                return;
-            }
+            if (interactable != null) return interactable;
         }
-        if (slot != null)
-        {
-            SetTarget(slot);
-            return;
-        }
+        if (slot != null) return slot;
 
         // Then a longer probe that only customers answer, so they can be served from
         // the far side of a till without shelves becoming reachable from a distance too.
@@ -228,14 +224,10 @@ public class PlayerInteract : MonoBehaviour
             Physics.Raycast(ray, out RaycastHit farHit, customerInteractRange, interactLayer))
         {
             CustomerNPC customer = farHit.collider.GetComponentInParent<CustomerNPC>();
-            if (customer != null)
-            {
-                SetTarget(customer);
-                return;
-            }
+            if (customer != null) return customer;
         }
 
-        SetTarget(null);
+        return null;
     }
 
     // Q: put down whatever is in hand — a bulky tool first, otherwise the active inventory item.

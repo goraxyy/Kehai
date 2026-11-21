@@ -85,8 +85,8 @@ public static class KarenFixtures
         ElectricBox breakers = Object.FindAnyObjectByType<ElectricBox>();
         if (breakers == null) return;
         BreakerPanel.FaceOf(breakers, out Vector3 face, out Vector3 facing, out Vector3 across, out float halfWidth);
-        Vector3 at = face + across * (halfWidth + FogBoxGap + FogBox.Size.x * 0.5f) + Vector3.up * (FloorY(face) + BoxHeight);
-        FogBox.Build(Wall(at, facing), facing, outline);
+        Vector3 at = face + across * (halfWidth + FogBoxGap + FogBox.Size.x * 0.5f);
+        FogBox.Build(WallBoxAt(at, facing), facing, outline);
     }
 
     // ---- the PA box (B2.2) -----------------------------------------------------------------
@@ -212,6 +212,14 @@ public static class KarenFixtures
     {
         Vector3 from = p + facing * 0.6f;
         return Physics.Raycast(from, -facing, out RaycastHit hit, 1.6f, ~0, QueryTriggerInteraction.Ignore) ? hit.point : p;
+    }
+
+    // Each box sits at the same height over the ground where the employee stands.
+    public static Vector3 WallBoxAt(Vector3 at, Vector3 facing)
+    {
+        at.y += BoxHeight;
+        at.y = FloorY(at, facing) + BoxHeight;
+        return Wall(at, facing);
     }
 
     // The floor in front of a wall fixture at `p`. Not straight down the wall line: that lands on

@@ -211,6 +211,7 @@ namespace Kehai.Karen
             for (int i = 0; i < 3; i++)
             {
                 Vector3 p = face + Vector3.up * 1.35f + across * ((i - 1f) * 0.28f);
+                p.y += KarenFixtures.FloorY(p, facing);
                 switches.Add(BreakerSwitch.Create(this, i, p, facing, new Color(0.9f, 0.75f, 0.2f)));
             }
             RefreshVisuals();

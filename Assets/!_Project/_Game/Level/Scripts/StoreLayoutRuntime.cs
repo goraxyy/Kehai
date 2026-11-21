@@ -66,15 +66,35 @@ public static class StoreLayoutRuntime
         string id = Choose(shift, seed, training, heldout);
         if (id == CurrentId) return false;
         Apply(id);
-        Physics.SyncTransforms();
-        var surface = KarenWorld.StoreSurface();
-        if (surface != null) using (new StoreRebake(surface)) surface.BuildNavMesh();
+        RebuildNavigation();
         StoreLayout.ApplyToScene();
         if (Edition.ShowUI) AisleSigns.Build();
         if (KarenBrain.Instance != null) KarenBrain.Instance.MazeChanged();
         else StoreMap.Rebuild();
         return true;
     }
+
+    static void RebuildNavigation()
+    {
+        Physics.SyncTransforms();
+        var surface = KarenWorld.StoreSurface();
+        if (surface != null) using (new StoreRebake(surface)) surface.BuildNavMesh();
+    }
+
+#if UNITY_EDITOR
+    // Batch placement checks use the store's real geometry, stock and bake without starting a shift.
+    public static void PreparePlacementAudit(string id)
+    {
+        if (!Application.isBatchMode || !Application.isPlaying)
+            throw new InvalidOperationException("Placement layout changes require batch Play mode.");
+        if (CurrentId != id)
+        {
+            Apply(id);
+            RebuildNavigation();
+        }
+        StoreLayout.ApplyToScene();
+    }
+#endif
 
     // Replays restore recorded geometry, never choose a training or career layout. This
     // performs no agent navigation/training and permits viewing a reserved layout's replay.
