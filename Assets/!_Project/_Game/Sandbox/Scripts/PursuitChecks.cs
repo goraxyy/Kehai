@@ -277,7 +277,9 @@ namespace Kehai.Sandbox
 
             float renewal = Pursuit.Deadline - originalDeadline;
             float window = Pursuit.Deadline - Pursuit.LastSighting;
-            Result(Confirmed && !Pursuit.Searching && Pursuit.LastSighting > originalSighting && renewal > 0f &&
+            // The renewal is the proof of a confirmed sighting (PostSightPursuit.ObserveSight runs
+            // only on one); whether she still sees you the frame after is a matter of timing.
+            Result(Hunting && !Pursuit.Searching && Pursuit.LastSighting > originalSighting && renewal > 0f &&
                 Mathf.Abs(window - HuntSeconds) < 0.05f,
                 $"Deadline extended by {(float.IsInfinity(renewal) ? "no measurable time" : $"{renewal:0.00} s")}. " + HuntState());
         }
