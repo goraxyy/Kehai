@@ -11,6 +11,7 @@ in 0.5.2; I will add later." The questions (Q numbers) are in the plan's
 4. [What "done" means for every interaction](#4-what-done-means-for-every-interaction)
 5. [Your interactions](#5-your-interactions)
 6. [When they land](#6-when-they-land)
+7. [The four you named (21 November)](#7-the-four-you-named-21-november)
 
 ---
 
@@ -134,9 +135,11 @@ anything's unclear.
 
 | # | You do | Her sense (if you know) | She does | Your answer | Notes |
 |---|---|---|---|---|---|
-| I8 | | | | | |
-| I9 | | | | | |
-| I10 | | | | | |
+| I8 | **Fridge check:** hide in a fridge | sight, by looking in | checks the fridge; if you're inside, you lose at once | stay out of the fridges she has reason to check | added 21 November; [§7](#7-the-four-you-named-21-november) |
+| I9 | **Kneel check:** crouch under a rack | sight, by kneeling to look | kneels at the rack; if you're under it within reach, you lose at once | pick a rack she has no reason to check | added 21 November; [§7](#7-the-four-you-named-21-november) |
+| I10 | **Hit stun:** hit her with a thrown item | touch | freezes, and stops seeing and hearing, for a time set by how hard it hit | aim, and run | added 21 November; extends 0.5.1's stun; [§7](#7-the-four-you-named-21-november) |
+| I11 | | | | | |
+| I12 | | | | | |
 
 ---
 
@@ -147,3 +150,37 @@ interaction changes what she can learn about you and what the bots learn to do, 
 them would have to be done again. This fits your rule: build everything first, then test and
 train once. On 21 November you set the same rule for 0.5.0's and 0.5.1's played tests: they
 wait for 0.5.2, and every test shift is recorded (Q1).
+
+---
+
+## 7. The four you named (21 November)
+
+You listed four interactions and asked for names and more suggestions. Short names, then what
+0.5.1 already built of each (read in merged `main` on 21 November), and what 0.5.2 adds.
+
+| Name | Your words | Built in 0.5.1 | What 0.5.2 adds |
+|---|---|---|---|
+| **Seen hiding** (I1) | "seeing the process of the player hiding" | yes: her eye remembers seeing you go in; she runs to the closest point she can reach and catches you within 3 m of where she last saw you, if you're still in | the sandbox's "saw you go in" light; her search when the catch fails; the bots hiding out of sight (C9.1) |
+| **Fridge check** (I8) | "checking if fridge has someone inside; once she checks and succeeds, instant lose" | no: she has no search action; hiding places conceal you whatever she does | a new action: she walks to a fridge, opens it and looks (about a second); if you're inside, you lose at once |
+| **Kneel check** (I9) | "'kneeling' to check if player is under a rack, if yes and within a reachable distance, instant lose" | no | a new action: she kneels at a rack and looks under it; if you're under it within reach (Q24), you lose at once |
+| **Hit stun** (I10) | "her being hit with objects freezes her and her perception for some time based on the 'velocity' of the hit" | **half:** a thrown item stuns her for 0.25–3 s, set by its speed and weight; while stunned she can't move, plan, catch or dash. **But her eyes and ears keep working:** nothing in her senses checks the stun | she stops seeing and hearing for the stun's length too, and the sandbox shows the stun timer |
+
+**What keeps the two checks fair:**
+- **She picks which place to check only from what she sensed:** a seen entry, a sound from it, a
+  customer's word, or her Ledger's habits for you (with what she saw counting for more, Q13), never
+  from where you really are. The source scan covers the new code.
+- **The check itself is the sense:** she has to walk there and look, and you can see her do it (the
+  door opens, she kneels). This is a deliberate step past 0.5.1's rule that her "still in there?"
+  answer can only take a catch away: a check she physically makes may start one.
+- **It's never certain she'll check:** a place she has no reason to suspect stays safe.
+
+**More of the same kind (my suggestions, Q26):**
+
+| Name | You do | Her sense | She does | Your answer |
+|---|---|---|---|---|
+| **Locker check** | hide in a locker, a cupboard, a toilet cabin or a changing cabin | sight, by opening it | the fridge check, for every closed hiding place | the same as the fridge |
+| **Decoy throw** | throw an item away from you | hearing: it lands with a noise | goes to where it landed and looks | lure her away, then move |
+| **Swinging door** | go through a door just before she looks | sight: a door still moving is a trace that someone just passed | heads through that door | close doors gently, or wait |
+
+The earlier picks stay: the camera (I2), the customer (I3) and the torch (I7), and what she saw
+counting for more (I6). Each new one is tested in the [interactions sandbox](sandboxes.md#4-the-four-sandboxes).
