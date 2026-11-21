@@ -55,6 +55,12 @@ her eye did (her highest awareness, and how soon she noticed). The report is
 `sandbox_checks/sight_<time>.md` in the game's data folder; `kehai-run` keeps it in the run's
 folder. Headless, Unity exits 0 when every check passes and 1 when one fails.
 
+Both sandboxes' checks fix each frame at 1/60 s of game time (`SandboxBot.FixFrames`, as KehaiEnv
+does for ablations). Without it a batch Unity runs hundreds of frames a second, each frame's step
+falls under the CharacterController's least move and is dropped, and the bot crawls: the unseen
+fridge walk-in once stopped 8% inside for that reason alone. A walk-in that stops short of hidden
+fails as "the check itself failed", never as her eye's fault.
+
 The furniture is plain boxes at real sizes.
 
 ## The pursuit sandbox
