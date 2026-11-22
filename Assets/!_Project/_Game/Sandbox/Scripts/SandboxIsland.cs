@@ -46,6 +46,7 @@ namespace Kehai.Sandbox
             SceneManager.sceneLoaded -= OnLoaded;
             SceneManager.sceneLoaded += OnLoaded;
             Active = SessionState.GetBool(SessionKey, false);
+            Debug.Log($"SandboxIsland: installed, sandbox {(Active ? "on" : "off")}");
             if (!Active) return;
             // The quiet store: her store self off and no shift; the career is never read or written.
             previousConfig = KarenBootstrap.Override;
@@ -65,7 +66,8 @@ namespace Kehai.Sandbox
 
         static void OnLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (mode != LoadSceneMode.Single || scene.path != StoreScene) return;
+            Debug.Log($"SandboxIsland: scene loaded '{scene.path}' ({mode})");
+            if (scene.path != StoreScene) return;
             Build(scene, Active);
         }
 
