@@ -52,7 +52,8 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
                 {
                     if (property.propertyType != SerializedPropertyType.ObjectReference) continue;
                     Object value = property.objectReferenceValue;
-                    if (value is AudioClip || value is Texture || value is Material || value is TMP_FontAsset)
+                    // The preview material just given to the renderers stays (it was wiped too, 0.5.2).
+                    if (value is AudioClip || value is Texture || value is Material && value != trainingPreview || value is TMP_FontAsset)
                         property.objectReferenceValue = null;
                 }
                 serialized.ApplyModifiedPropertiesWithoutUndo();
