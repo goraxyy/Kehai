@@ -8,7 +8,7 @@ namespace Kehai.Karen
     // range, cut short by shelves and walls the way her eyes are, brightest where she sees
     // best (close and straight ahead) and fading where she'd barely notice you. Its colour
     // is her mood, and it pulses red while she can see you. Her spotlight shows the same
-    // thing, but a spotlight is hard to read in a lit store. F3 enables this developer aid
+    // thing, but a spotlight is hard to read in a lit store. V on the F1 map enables this developer aid
     // in the editor and development builds; player releases never create its geometry.
     [RequireComponent(typeof(KarenBody))]
     public sealed class KarenFloorCone : MonoBehaviour

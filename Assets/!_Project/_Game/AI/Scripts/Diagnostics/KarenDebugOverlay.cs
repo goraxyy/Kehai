@@ -25,6 +25,7 @@ namespace Kehai.Karen
         public KeyCode technicalKey = KeyCode.T;
         public KeyCode routesKey = KeyCode.R;
         public KeyCode tricksKey = KeyCode.G;      // editor and development builds only
+        public KeyCode coneKey = KeyCode.V;        // her steps and floor cone; editor and development builds only
         public bool showOverlay;
         public bool showScrubber;
         public bool showHeat;
@@ -67,6 +68,7 @@ namespace Kehai.Karen
             if (showOverlay && Input.GetKeyDown(technicalKey)) showTechnical = !showTechnical;
             if (showOverlay && Input.GetKeyDown(routesKey)) showRoutes = !showRoutes;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (showOverlay && Input.GetKeyDown(coneKey)) KarenFx.Toggle();   // was F3 (C11.16)
             if (showOverlay && Input.GetKeyDown(tricksKey))
             {
                 showTricks = !showTricks;

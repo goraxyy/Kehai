@@ -144,7 +144,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(transform, Brain.Body, "Pursuit sandbox");
             Indicators.status = Status;
             Indicators.extra = Extra;
-            Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F1 then V her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
             Ready = true;

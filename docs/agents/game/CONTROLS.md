@@ -132,7 +132,7 @@ The game pauses while the menu is open, and your choices are remembered.
 
 ## Developer only
 
-In the Unity editor and development builds, **F3** toggles Karen's footsteps and floor cone.
+In the Unity editor and development builds, **V on the F1 map** toggles Karen's footsteps and floor cone (F3 until the squashed keys, 0.5.2 C11.16).
 It starts off each Play session. It is absent from release builds and is not a player setting.
 The cone is blue on her rounds, orange while investigating and red while hunting or seeing you.
 Player replays omit her footsteps and floor cone.

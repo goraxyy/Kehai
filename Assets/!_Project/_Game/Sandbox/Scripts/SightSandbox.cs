@@ -78,7 +78,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
-            Indicators.keys = "F5 start or freeze   F6 restart   ROUTE on the panel   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   ROUTE on the panel   F4 hide these (her cone too)   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 

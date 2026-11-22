@@ -121,7 +121,7 @@ public static class Controls
     public static readonly Section[] Developer =
     {
         new Section("Developer builds only",
-            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
+            K("V (on the F1 map)", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
             K("G (on the F1 map)", "The list that forces one of her tricks; frees the mouse for its buttons")),
         // The sandboxes (0.5.2): Kehai → Sandbox in the editor; never in the game.
         new Section("In a sandbox",

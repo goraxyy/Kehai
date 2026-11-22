@@ -25,8 +25,8 @@ and no tricks, no hunt, no catch. She starts frozen on her spot in the north-wes
 | ROUTE | panel only | switches between walking her loop and standing while turning a quarter every 3 s |
 
 There's a panel outside by the door and one inside. Look at a button and press **E**.
-**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F3** toggles her floor cone, **F4**
-hides the other indicators (and shows them again).
+**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F4** hides the indicators and her floor cone
+(and shows them again); in the pursuit sandbox V on the F1 map toggles the cone too.
 
 **What it shows you:**
 

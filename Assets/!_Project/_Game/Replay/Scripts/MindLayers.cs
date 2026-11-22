@@ -234,7 +234,7 @@ namespace Kehai.Replay
         }
 
         // Keep the old layer flag readable in saved shots, but replays never draw the
-        // developer floor cone, even if F3 was enabled before opening the recording.
+        // developer floor cone, even if the developer cone (V on the F1 map) was enabled before opening the recording.
         void ShowCone(float t) => cone.SetActive(false);
 
         void ShowSounds(float t)

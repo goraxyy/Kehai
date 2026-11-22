@@ -9,7 +9,7 @@ namespace Kehai.Sandbox
     // this frame, whether the eye line to you is clear) and each hiding place's coverage. None of
     // it changes what she knows, and it exists only inside a sandbox.
     //
-    //   - her floor cone (KarenFloorCone, the F3 aid), switched on: grey, amber, red with her mood
+    //   - her floor cone (KarenFloorCone, the developer aid: V on the F1 map), switched on: grey, amber, red with her mood
     //   - a meter over her head: her awareness, and whether she sees you this frame
     //   - her eye line to your eyes: green when clear, red when blocked (only the eye line counts, 0.5.1)
     //   - on each hiding place: how much of you is inside, and HIDDEN at 80%
@@ -42,11 +42,12 @@ namespace Kehai.Sandbox
             return view;
         }
 
-        // F4 (C11.4): every indicator off, or all back on. Her floor cone is F3's, as in the store.
+        // F4 (C11.4): every indicator off, or all back on. Her floor cone is V on the F1 map, as in the store.
         public void ToggleAll()
         {
             bool on = !(showReadout || showEyeLine || showMeters);
             showReadout = showEyeLine = showMeters = on;
+            KarenFx.SetEnabled(on);   // her floor cone with them (the sight sandbox has no F1 map)
         }
 
         public bool AnyShown => showReadout || showEyeLine || showMeters;

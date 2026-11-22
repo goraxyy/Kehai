@@ -59,7 +59,8 @@ public class ControlsTests
     {
         Assert.IsFalse(KarenFx.StepsAudible, "her steps are audible without the developer's switch");
         Assert.IsFalse(KarenFx.ConeVisible, "her cone shows without the developer's switch");
-        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 is listed for players");
-        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 isn't listed as the developer's");
+        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "V (on the F1 map)"), "her cone's key is listed for players");
+        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "V (on the F1 map)"), "her cone's key isn't listed as the developer's");
+        Assert.IsFalse(Controls.All.Concat(Controls.Developer).SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 is free since the squashed keys");
     }
 }
