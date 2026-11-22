@@ -340,7 +340,7 @@ namespace Kehai.Karen
         void Update()
         {
             if (Dead) return;
-            eye.Tick(Time.deltaTime);
+            InfrastructureFeed.TickCamera(eye, Time.deltaTime);
             if (eye.SeesNow)
             {
                 SecondsSeen += Time.deltaTime;

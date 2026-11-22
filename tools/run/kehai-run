@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# kehai-run: run a Unity job safely, end to end. See tools/run/README.md.
+here="$(cd "$(dirname "$0")" && pwd)"
+cd "$here/../.." && exec python3 -m tools.run.kehai_run "$@"

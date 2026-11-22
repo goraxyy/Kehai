@@ -555,6 +555,22 @@ to run, and primary metric 2 can't be measured. How far to turn her down, and wi
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
 
+## Karen 0.5.2: what the sandbox checks found (21 November)
+
+- **A bug in her hunt since 0.5.1 (item 13, the 60 s pursuit).** A forced re-decision while
+  she hunted picked the hunt again, and `AbortPlan` ended the hunt on the way. That retired the
+  sighting it started from, so the new hunt began with 0 s left and ended the next frame, over
+  and over. The usual trigger is `OnNoise`: a player sprint step (loudness 0.9) close by. So
+  sprinting away from her ended her pursuit the moment you broke her line of sight.
+  - **Found by:** the pursuit sandbox's first recorded run, which passed 1 of 4 checks.
+  - **Fixed in PR #92:** `KarenBrain.AbortPlanFor` keeps a hunt that is chosen again, with its
+    window; `EndHeldHunt` ends a held hunt that no hunt plan takes up.
+  - **After the fix:** 3 of 4 pass. The fourth fails on its own setup
+    ([SANDBOX.md](../game/SANDBOX.md)).
+- **Every rung with goals (C and up) is affected:** when hunts start and end, the tension they
+  spend, and the recovery after them. Ablation and league numbers from 0.5.1 up to this fix
+  predate it; the post-merge pass reruns them.
+
 ## Karen 0.4.0: what the build measured (11–12 November)
 
 **Nothing is trained yet.** These are the build's own checks, on clones of the owner's project, before

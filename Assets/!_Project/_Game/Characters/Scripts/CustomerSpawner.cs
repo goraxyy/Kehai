@@ -35,7 +35,8 @@ public class CustomerSpawner : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => InStore = 0;
 
-    public int Cap => Kehai.Karen.FlashSaleState.Cap(maxActiveCustomers);
+    public int? TrainingCap { get; set; }
+    public int Cap => Kehai.Karen.FlashSaleState.Cap(maxActiveCustomers, TrainingCap);
 
     void Start()
     {

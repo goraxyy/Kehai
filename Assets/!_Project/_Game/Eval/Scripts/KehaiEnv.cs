@@ -21,6 +21,7 @@ namespace Kehai.Eval
         public bool gameplayCareer;
         public string layout = "";
         public bool heldoutLayout;           // final evaluation only, forbidden to a learner
+        public int? shopperCap;           // set only by a configured training lesson
         public bool trainingLayouts;        // deterministic allowed pool (also in Testing builds)
         public int startShift = 1;           // career position of the first shift
         public float overtimeCap = 240f;     // give up this long after the doors close
@@ -226,6 +227,9 @@ namespace Kehai.Eval
                 Shift.SetShiftNumber(Config.startShift - 1);
             }
 
+            if (Config.shopperCap.HasValue)
+                foreach (CustomerSpawner spawner in FindObjectsByType<CustomerSpawner>(FindObjectsInactive.Include))
+                    spawner.TrainingCap = Config.shopperCap;
             yield return ClockIn();
             Ready = true;
 

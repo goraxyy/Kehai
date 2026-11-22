@@ -7,7 +7,8 @@ using UnityEngine;
 public static class StoreLayouts
 {
     public const float Pitch = 2.5f, ShelfDepth = 1f;
-    public const float BottomBoard = .225f, SharedBoard = .7375f, UpperBoard = 1.408333f;
+    // Leave room for the centre of a 0.5 m display pack and its aiming volume under 1.6 m.
+    public const float BottomBoard = .225f, SharedBoard = .7375f, UpperBoard = 1.30f;
     public sealed class Layout
     {
         public readonly string Id, Name;

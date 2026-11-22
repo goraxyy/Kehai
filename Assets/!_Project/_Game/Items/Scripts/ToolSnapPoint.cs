@@ -120,7 +120,9 @@ public class ToolSnapPoint : HighlightInteractable
         if (tool == null) return string.Empty;
         if (IsToolHome) return string.Empty;
         if (Taken && !PlayerHolds()) return "She moved it. Find it.";
-        string what = tool.TryGetComponent(out ProductBox box) ? box.ProductName + " box" : ProductCatalog.SectionName(tool.type);
-        return $"Put the {what} back";
+        return ReturnPrompt;
     }
+
+    public string ReturnPrompt => tool == null ? string.Empty :
+        $"Put the {(tool.TryGetComponent(out ProductBox box) ? box.ProductName + " box" : ProductCatalog.SectionName(tool.type))} back";
 }

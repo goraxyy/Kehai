@@ -153,11 +153,19 @@ namespace Kehai.Eval
     {
         public string name = "lesson";
         public bool noKaren;
+        public int? shopperCap;
         public readonly List<KarenSpec> karen = new List<KarenSpec>();
 
         public static LessonSpec From(Dictionary<string, object> o)
         {
             var l = new LessonSpec { name = o.GetString("name", "lesson") };
+            if (o.ContainsKey("shopper_cap"))
+            {
+                double cap = o.GetNumber("shopper_cap", -1);
+                if (cap < 0 || cap > SaleRules.Ceiling || cap != System.Math.Truncate(cap))
+                    throw new System.ArgumentException("shopper_cap must be an integer from 0 to " + SaleRules.Ceiling);
+                l.shopperCap = (int)cap;
+            }
             if (o.TryGetValue("karen", out object k))
             {
                 if (k is string none && none == "none") l.noKaren = true;
@@ -328,6 +336,8 @@ namespace Kehai.Eval
                     shiftSeconds = Spec.shiftSeconds, fps = Spec.fps, render = false, freshLedger = true,
                     startShift = Spec.startShift, agent = c.Persona.Name, syntheticBlinks = true,
                     layout = Spec.layout, heldoutLayout = Spec.heldoutLayout,
+                    shopperCap = Spec.split == Split.Training && lesson >= 0 && lesson < Spec.lessons.Count
+                        ? Spec.lessons[lesson].shopperCap : null,
                     trainingLayouts = !Spec.heldoutLayout
                 };
                 yield return env.ResetEpisode(config);

@@ -160,8 +160,40 @@ public sealed class FurnitureDoor : HighlightInteractable
     {
         if (roomDoor != null || GamePause.Paused || panel == null) return;
         EnsureReady();
+        AdvanceSwing(degreesPerSecond * dt);
+    }
+
+#if UNITY_EDITOR
+    // Measure the stock with the leaf in the pose its ordinary swing can reach. The audit
+    // runs in a paused store. Restore even a partly open leaf before measuring the next bay.
+    public void InspectOpenPose(Vector3 opener, System.Action measure)
+    {
+        EnsureReady();
+        var rotation = transform.localRotation;
+        float priorAngle = angle, priorTarget = chosenOpenAngle;
+        bool priorOpen = wantsOpen;
+        try
+        {
+            if (!wantsOpen) UseFrom(opener);
+            if (degreesPerSecond > 0f) AdvanceSwing(Mathf.Abs(chosenOpenAngle - angle));
+            Physics.SyncTransforms();
+            measure();
+        }
+        finally
+        {
+            angle = priorAngle;
+            chosenOpenAngle = priorTarget;
+            wantsOpen = priorOpen;
+            transform.localRotation = rotation;
+            Physics.SyncTransforms();
+        }
+    }
+#endif
+
+    void AdvanceSwing(float degrees)
+    {
         float target = wantsOpen ? chosenOpenAngle : 0f;
-        float remaining = Mathf.Min(Mathf.Abs(target - angle), degreesPerSecond * dt);
+        float remaining = Mathf.Min(Mathf.Abs(target - angle), degrees);
         // Subdivide even after a slow frame so a leaf cannot skip through the player.
         while (remaining > 0.001f)
         {

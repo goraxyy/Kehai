@@ -343,6 +343,10 @@ public sealed class SettingsMenu : MonoBehaviour
 
         Heading("WEBCAM BLINKING");
         DrawWebcam();
+
+        // What this copy of the game is (0.5.2, C10.2): quote it in a bug report.
+        Heading("ABOUT");
+        GUILayout.Label(BuildStamp.Line, dim);
     }
 
     void DrawWebcam()

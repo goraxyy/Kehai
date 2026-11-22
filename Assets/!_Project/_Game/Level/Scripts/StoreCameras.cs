@@ -251,7 +251,7 @@ public sealed class StoreCameras : MonoBehaviour
         foreach (StoreCamera cam in cameras)
         {
             if (cam == null) continue; // A frozen display does not disable the real camera's eye.
-            cam.Eye.Tick(dt);
+            InfrastructureFeed.TickCamera(cam.Eye, dt, !cam.Looped);
             if (cam.Eye.Awareness < cam.Eye.glimpseAt || Time.time < cam.NextReport) continue;
             cam.NextReport = Time.time + ReportEvery;
             Sightings++;
@@ -318,7 +318,11 @@ public sealed class StoreCamera : MonoBehaviour
             }
         }
     }
-    public void Unfreeze() => Looped = false;
+    public void Unfreeze()
+    {
+        Looped = false;
+        Eye.ResetAwareness();
+    }
     public bool IsBroken { get; private set; }
     [System.NonSerialized] public float NextReport;
 
@@ -642,12 +646,7 @@ public sealed class CameraBox : HighlightInteractable, IHoldInteractable
         if (breakers == null) return null;
         BreakerPanel.FaceOf(breakers, out Vector3 face, out Vector3 facing, out Vector3 across, out float halfWidth);
         float along = halfWidth + KarenFixtures.FogBoxGap + FogBox.Size.x + Gap + Size.x * 0.5f;
-        Vector3 at = face + across * along;
-        float floor = Physics.Raycast(new Vector3(face.x, face.y + 1.5f, face.z), Vector3.down, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore) ? hit.point.y : 0f;
-        at.y = floor + KarenFixtures.BoxHeight;
-        Vector3 from = at + facing * 0.6f;
-        Vector3 wall = Physics.Raycast(from, -facing, out RaycastHit w, 1.6f, ~0, QueryTriggerInteraction.Ignore) ? w.point : at;
-        return Build(wall, facing, outline);
+        return Build(KarenFixtures.WallBoxAt(face + across * along, facing), facing, outline);
     }
 
     public static CameraBox Build(Vector3 wall, Vector3 facing, Material outline)

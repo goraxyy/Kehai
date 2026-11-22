@@ -279,14 +279,15 @@ Setup and marketing run alongside all of it.
 
 ## Versions
 
-`MAJOR.MINOR.PATCH`. Below 1.0 the game is in development; `1.0.0` is the launch. A minor step
-marks a milestone; a patch is fixes only. A label says how finished it is.
+`MAJOR.MINOR.PATCH`. Below 1.0 the game is in development; `1.0.0` is the launch. Since 21 November
+(your version design): **a minor step adds features, a patch is fixes only, and a playtest build
+gets a `-beta.N` label** (`0.6.0-beta.1`, `0.6.0-beta.2`). Each Karen has her own number too, and
+every build and shift record carries a stamp: the [versions page](plans/0.5.2/versions.md) has the
+rules, the channels (dev, testing, prod) and how any version is rebuilt.
 
 | version | what it is |
 |---|---|
-| `0.1.x` | prototype (now) |
-| `0.2.x` | vertical slice, quick pass: the first Steam page |
-| `0.3.x`–`0.5.x` | **alpha**: playtest rounds; features still coming |
+| `0.1.x`–`0.5.x` | prototype and **alpha**: features still coming; playtest builds as `-beta.N` |
 | `0.6.x`–`0.9.x` | **beta**: content complete, then the redesign and hardening |
 | `1.0.0-rc.1` | release candidate: the build that ships unless something's wrong |
 | `1.0.0` | launch; then `1.0.1` for fixes, `1.1.0` for updates |

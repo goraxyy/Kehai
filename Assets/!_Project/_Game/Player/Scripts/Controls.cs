@@ -123,5 +123,12 @@ public static class Controls
         new Section("Developer builds only",
             K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
             K("G (on the F1 map)", "The list that forces one of her tricks; frees the mouse for its buttons")),
+        // The sandboxes (0.5.2): Kehai → Sandbox in the editor; never in the game.
+        new Section("In a sandbox",
+            K("F5", "Start her, or freeze her where she is"),
+            K("F6", "Restart: back to her spot, frozen"),
+            K("F4", "Hide the sandbox's indicators, or show them again"),
+            K("[  ]", "Tricks sandbox: choose a trick"),
+            K("Return", "Tricks sandbox: fire the chosen trick")),
     };
 }

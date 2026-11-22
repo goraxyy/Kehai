@@ -43,7 +43,7 @@ namespace Kehai.Replay
             public float From, To;
             public int Moment;
             public MindLayer Layers;
-            public bool Alpha, Dof, DryRun;
+            public bool Alpha, Dof, DryRun, Silent;
             public int Width = 1920, Height = 1080, Fps = 60;
         }
 
@@ -159,6 +159,7 @@ namespace Kehai.Replay
             if (s.Subject != "karen" && s.Subject != "you" && s.Subject != "player") throw new System.ArgumentException("-subject is karen or you");
             s.Layers = MindLayers.Parse(ReplayMode.Arg("-layers"));
             s.Alpha = ReplayMode.Flag("-alpha");
+            s.Silent = ReplayMode.Flag("-silent-video");
             if (s.Alpha && s.Layers == MindLayer.None) s.Layers = MindLayer.All;
             s.Dof = ReplayMode.Flag("-dof");
 
@@ -201,14 +202,14 @@ namespace Kehai.Replay
             if (folder)
             {
                 video = s.Out.TrimEnd('/', '\\');
-                audio = s.Alpha ? null : Path.Combine(video, "audio.wav");
+                audio = s.Alpha || s.Silent ? null : Path.Combine(video, "audio.wav");
                 sidecar = Path.Combine(video, "shot.json");
             }
             else
             {
                 string stem = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(s.Out)) ?? "", Path.GetFileNameWithoutExtension(s.Out));
                 video = Path.GetFullPath(s.Out);
-                audio = s.Alpha ? null : stem + ".wav";
+                audio = s.Alpha || s.Silent ? null : stem + ".wav";
                 sidecar = stem + ".json";
                 ffmpeg = FindFfmpeg();
             }

@@ -436,7 +436,7 @@ public sealed class MainMenu : MonoBehaviour
         list = Box(column, "List", Vector2.zero, new Vector2(820f, 0f));
 
         MakeText(root, "Version", MainMenu.Soft, 20f, DimGrey, new Vector2(ColumnX, 56f), new Vector2(1200f, 30f), new Vector2(0f, 0f))
-            .text = $"v{Application.version}      Arrows or mouse to choose  ·  Enter to select";
+            .text = $"v{BuildStamp.Current.version} ({BuildStamp.Current.code})      Arrows or mouse to choose  ·  Enter to select";
         TextMeshProUGUI phones = MakeText(root, "Headphones", MainMenu.Soft, 20f, DimGrey, new Vector2(-80f, 56f), new Vector2(700f, 30f), new Vector2(1f, 0f));
         phones.alignment = TextAlignmentOptions.BottomRight;
         phones.text = "Best played with headphones";

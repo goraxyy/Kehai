@@ -71,6 +71,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   | **Scene** | `Organize by Area and Name Objects` (`SceneHierarchyOrganizer.cs`) and its undo |
   | **Map** | `Export STORE_MAP.md`, `Log Map Summary` |
   | **Endless** | open the endless maze |
+  | **Sandbox** | `Sight` and `Pursuit`: small test rooms, built in an empty scene; `Tricks`: a stall per trick outside the real store, on a private shift ([SANDBOX.md](game/SANDBOX.md)) |
   | **Eval** | env server (port 5555), quick and full ablations, an eval build, watch one bot shift |
   | **Replay** | open the latest shift, or any shift |
   | **RL** | set up ML-Agents, build training players |
@@ -202,28 +203,14 @@ never become a code the owner sends or the player has to enter.
 
 The short rules are in [`RULES.md`](RULES.md). The longer how-to:
 
-- **Verification without the editor.** Batch mode:
-  ```bash
-  /Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics -projectPath <project> -runTests -testPlatform EditMode -testResults <xml>
-  ```
-  Ablations use `-executeMethod EvalBatch.Play -kehai-ablation …` ([`tools/eval/README.md`](../../tools/eval/README.md)).
-- **Verification while the editor is open.** Run on an **APFS clone**:
-  1. `cp -Rc ~/Developer/Kehai <scratch>/clone`, then delete the clone's `Temp/` and `.claude/worktrees`.
-  2. Lay the branch on with `git archive HEAD | tar -x -C <clone>`.
-  3. Set the clone's `productName` to `Kehai-verify`, so its data stays out of the real save folder.
-  4. Run batch mode on the clone, holding the heavy-work lock.
-  5. Afterwards:
-     - point the editor prefs back at the real project (`defaults write com.unity3d.UnityEditor5.x` `LastUsedProjectPath`, `kProjectBasePath`, `kWorkspacePath` → `~/Developer/Kehai`);
-     - delete the clone, `~/Library/Application Support/TokenLimit/Kehai-verify` and the `unity.TokenLimit.Kehai-verify` prefs.
-
-  Only ask before running Unity at all if the owner's editor is open: this 8 GB Mac can't run two.
+- **On every source change**, run `tools/run/kehai-run offline` in the build worktree. It compiles the working tree against the main project's imported libraries and runs the engine-independent checks. Your editor may stay open.
+- **For the full suite**, get the owner's go for that run. On the Mac, close the editor and use `tools/run/kehai-run tests` on the committed revision. The runner clones the private project folders, overlays the revision and restores the original preferences. Check the XML and its commit before a phase push. The PC lane awaits setup. [Run commands](../../tools/run/README.md)
 - **Comparing a branch with `main`** (as 0.2.0's ablation does):
   1. Check the main folder matches `origin/main`, then clone it the same way, with `productName` `Kehai-verify-main`.
   2. Add only the measuring code. For 0.2.0 that's `HuntMetrics.cs`, with its parts between `// -- 0.2.0 only --` and `// -- end --` taken out, and its hooks in `EpisodeMetrics.cs`.
   3. Run both clones one after the other on the same seeds, rungs and players.
   4. Pair the runs with `tools/eval/compare_builds.py main.jsonl branch.jsonl` ([`tools/eval/README.md`](../../tools/eval/README.md)).
   5. Clean up both clones, their data folders and prefs, and the editor prefs, as above.
-- **Offline compile check.** Copy the `Assembly-CSharp(.Editor).rsp` files from `Library/Bee/artifacts/200b0aE.dag/`, point `-out` at a scratch folder, add the new sources (each on its own line), and run Unity's bundled Roslyn `csc.dll` through its `dotnet`.
 - **Audio.** Batch runs are silent (`SoundSettings.Audible()` returns 0 in batch mode). In the GUI editor, set `EditorUtility.audioMasterMute = true` before entering Play or running tests that do. Never change the Mac's volume.
 - **The Unity bridges.**
   - The editor has an MCP bridge (`Unity_RunCommand`).

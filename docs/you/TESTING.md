@@ -1,6 +1,6 @@
 # Testing and training left
 
-Updated 2026-11-14. Everything that still has to run for 0.4.0's two Karens and 0.5.0's plan, in
+Updated 2026-11-21. Everything that still has to run for 0.4.0's two Karens and 0.5.0's plan, in
 the order it should run, with time on the Mac and on the Windows PC.
 
 **Your rule: build everything first, then test and train once, on the finished game.** Every long
@@ -10,6 +10,19 @@ and the [0.5.0 plan](https://github.com/goraxyy/Kehai/pull/82).
 **14 November: merge 0.5.0 now, continue testing later.** The owner approved the source merge
 using the correctness evidence already recorded. Remaining checks, setup and long runs stay
 open in the [build status](plans/0.5.0/implementation-status.md); heavy work waits for Windows access.
+
+## Recorded pass after the 0.5.2 merge
+
+Use the merged revision for the outstanding played checks from 0.5.0, 0.5.1 and 0.5.2. Each Unity run needs your go. Keep each test shift's replay, shift record and run-register entry together under its run ID. Keep failures with the same evidence as passes.
+
+| Order | Check | Additional evidence |
+|---|---|---|
+| 1 | Sight, lost-sight pursuit, tricks and interactions in their sandboxes | Expected and observed result for each case, replay and silent clip. Include witnessed and unseen hiding, leaving before arrival, torch on/off and hit stun. |
+| 2 | Store fixtures across layouts and the in-store trick checks | Layout and fixture reports, and each trick's start, effect and counter. Record the owner's walkthrough findings. |
+| 3 | The Stage 1 baseline, bots on the layouts, the guided shift, flash sale and normal human shifts | Seed, player, layout, rung, edition and outcome beside the shift files. Keep held-out groups separate. |
+| 4 | Stages 2–6 below | Training checkpoints for training jobs. For evaluations keep the frozen model versions, paired seeds, shifts and result tables. Real-player sessions require consent and the working upload pipeline. |
+
+During implementation, `tools/run/kehai-run offline` checks the working tree. For an authorized native suite, `tools/run/kehai-run tests` checks the committed revision. [Run commands and output locations](../../tools/run/README.md)
 
 ## Testing is not training
 

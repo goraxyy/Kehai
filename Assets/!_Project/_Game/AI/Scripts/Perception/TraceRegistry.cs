@@ -12,7 +12,8 @@ namespace Kehai.Karen
         DroppedItem,        // stock left on the floor
         MopAway,            // the mop is lying somewhere that isn't its rack
         BaggedBin,          // a bin was just emptied
-        DoorOpened          // a door was opened in a hurry
+        DoorOpened,         // a door was opened in a hurry
+        TorchGlow           // light on a surface visible to Karen
     }
 
     public sealed class Trace

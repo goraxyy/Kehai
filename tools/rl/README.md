@@ -216,3 +216,7 @@ loopholes to look for in the unshielded runs and the thought logs:
   16-core Windows machine running eight copies manages about four times that.
 - **Size of a run:** `karen_ppo.yaml` stops at 2 million steps, so expect about ten Mac nights,
   or two or three nights on a bigger machine. `--resume` continues a run.
+
+### Shopper limits for a training lesson
+
+An entry in a training league's `lessons` array may include `"shopper_cap": 1`. The value (0–5) limits simultaneous shoppers during that lesson, including flash sales. Omit it for the usual store rules. Existing leagues keep their usual settings. Evaluation careers use the ordinary store.

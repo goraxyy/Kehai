@@ -154,6 +154,8 @@ public static class KehaiBuild
         string streaming = StreamingAssetsOf(target, appPath);
         Directory.CreateDirectory(streaming);
         File.WriteAllText(Path.Combine(streaming, "edition.txt"), selected.ToString().ToLowerInvariant());
+        // The stamp (0.5.2, C10.2): what this build is, for Settings and every shift record.
+        File.WriteAllText(Path.Combine(streaming, BuildStamp.FileName), UnityEngine.JsonUtility.ToJson(Stamp(selected), true));
         if (selected != KehaiEdition.Testing)
         {
             string stale = Path.Combine(streaming, Kehai.Playtest.PlaytestConfig.FileName);
@@ -275,6 +277,23 @@ public static class KehaiBuild
             values[line.Substring(0, eq).Trim()] = line.Substring(eq + 1).Trim().Trim('"', '\'');
         }
         return values;
+    }
+
+    // What goes into build.json: the version with its edition label, the code and art commits.
+    public static BuildStamp.Data Stamp(KehaiEdition edition)
+    {
+        string root = ProjectRoot;
+        string code = Run("git", $"-C \"{root}\" rev-parse --short HEAD", null)?.Trim() ?? "unknown";
+        string dirty = Run("git", $"-C \"{root}\" status --porcelain --untracked-files=no", null)?.Trim();
+        string assets = Path.Combine(root, ".git-assets");
+        string art = Directory.Exists(assets) ? Run("git", $"--git-dir=\"{assets}\" --work-tree=\"{root}\" rev-parse --short HEAD", null)?.Trim() : null;
+        return new BuildStamp.Data
+        {
+            version = Edition.VersionLabel(PlayerSettings.bundleVersion, edition),
+            edition = edition.ToString().ToLowerInvariant(),
+            code = code + (string.IsNullOrEmpty(dirty) ? "" : "+changes"),
+            art = string.IsNullOrEmpty(art) ? "none" : art,
+        };
     }
 
     // The built game's StreamingAssets folder.

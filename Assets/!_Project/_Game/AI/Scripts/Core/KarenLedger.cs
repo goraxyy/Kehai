@@ -638,6 +638,17 @@ namespace Kehai.Karen
             return r;
         }
 
+        // One observed entry or exit adds the weight of four seconds of ordinary hiding.
+        // Set before evaluation. Both sources share the existing layout and shift decay.
+        public const float WitnessedHideSeconds = 4f;
+        public void ObserveWitnessedHide(StoreMap map, int region)
+        {
+            if (region < 0 || region >= map.Regions.Count) return;
+            RegionStat stat = RegionStatFor(map.Regions[region].Key);
+            stat.concealment += WitnessedHideSeconds;
+            stat.lastConcealShift = shift;
+        }
+
         // Fed by the Director, which is allowed to know where the employee really is.
         public void ObservePlayer(StoreMap map, int region, float dt, bool hiding, MotionState motion, float speed)
         {

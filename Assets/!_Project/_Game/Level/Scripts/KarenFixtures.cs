@@ -39,6 +39,7 @@ public static class KarenFixtures
         if (Object.FindAnyObjectByType<FogBox>() == null) PlaceFogBox(outline);
         if (Object.FindAnyObjectByType<PaBox>() == null) PlacePaBox(outline);
         if (Object.FindAnyObjectByType<ClosingMic>() == null) PlaceClosingMic(outline);
+        PlaceRadio();
         StoreCameras.Install(outline);
         PhaseOneFixtures.Install(outline);
         TwoWayDoors();
@@ -85,8 +86,8 @@ public static class KarenFixtures
         ElectricBox breakers = Object.FindAnyObjectByType<ElectricBox>();
         if (breakers == null) return;
         BreakerPanel.FaceOf(breakers, out Vector3 face, out Vector3 facing, out Vector3 across, out float halfWidth);
-        Vector3 at = face + across * (halfWidth + FogBoxGap + FogBox.Size.x * 0.5f) + Vector3.up * (FloorY(face) + BoxHeight);
-        FogBox.Build(Wall(at, facing), facing, outline);
+        Vector3 at = face + across * (halfWidth + FogBoxGap + FogBox.Size.x * 0.5f);
+        FogBox.Build(WallBoxAt(at, facing), facing, outline);
     }
 
     // ---- the PA box (B2.2) -----------------------------------------------------------------
@@ -100,6 +101,46 @@ public static class KarenFixtures
         Vector3 at = clock.transform.position + across * PaBoxBeside;
         at.y = FloorY(clock.transform.position, facing) + BoxHeight;
         return PaBox.Build(Wall(at, facing), facing, outline);
+    }
+
+    // ---- the radio (0.5.2, C12.2) ------------------------------------------------------------
+
+    public const float RadioHeight = 1.4f;   // the radio's centre above the floor, metres
+    public const float ReachTop = 1.6f;      // the player's eyes: nothing usable sits above them
+
+    // The scene has the staff room's radio with its centre 2.1 m up, above eye level (the
+    // placement audit, C12.1). At load it goes down onto the wall it's by: its centre 1.4 m
+    // over the floor in front of it, its back against the wall, its turn kept. A radio already
+    // within reach stays where it is, so calling this again moves nothing.
+    public static MusicBox PlaceRadio()
+    {
+        MusicBox radio = Object.FindAnyObjectByType<MusicBox>();
+        if (radio == null || !FixturePresentation.BoundsOf(radio.transform, out Bounds b)) return radio;
+        // Its own colliders out of the rays while they look for its wall and floor.
+        Collider[] own = radio.GetComponentsInChildren<Collider>();
+        var wasOn = new bool[own.Length];
+        for (int i = 0; i < own.Length; i++) { wasOn[i] = own[i].enabled; own[i].enabled = false; }
+        Physics.SyncTransforms();
+        try
+        {
+            Vector3 centre = b.center;
+            Vector3 facing = TowardFloor(centre);
+            float floor = FloorY(centre, facing);
+            if (centre.y - floor <= ReachTop) return radio;
+            Vector3 at = centre;
+            at.y = floor + RadioHeight;
+            Vector3 wall = Wall(at, facing);
+            float depth = Mathf.Abs(b.extents.x * facing.x) + Mathf.Abs(b.extents.z * facing.z);
+            Vector3 target = wall == at ? at : wall + facing * (depth + 0.01f);
+            target.y = at.y;
+            radio.transform.position += target - centre;
+            return radio;
+        }
+        finally
+        {
+            for (int i = 0; i < own.Length; i++) own[i].enabled = wasOn[i];
+            Physics.SyncTransforms();
+        }
     }
 
     // ---- the PA microphone (0.4.1; its own table 0.5.1) ------------------------------------
@@ -212,6 +253,14 @@ public static class KarenFixtures
     {
         Vector3 from = p + facing * 0.6f;
         return Physics.Raycast(from, -facing, out RaycastHit hit, 1.6f, ~0, QueryTriggerInteraction.Ignore) ? hit.point : p;
+    }
+
+    // Each box sits at the same height over the ground where the employee stands.
+    public static Vector3 WallBoxAt(Vector3 at, Vector3 facing)
+    {
+        at.y += BoxHeight;
+        at.y = FloorY(at, facing) + BoxHeight;
+        return Wall(at, facing);
     }
 
     // The floor in front of a wall fixture at `p`. Not straight down the wall line: that lands on

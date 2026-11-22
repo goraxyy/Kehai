@@ -34,8 +34,8 @@ namespace Kehai.Karen
         // before, and you've moved little since. The last view can be a little earlier than the
         // concealment: under a rack the board breaks the eye line before 80% of you is under it.
         // A loss behind a wall a metre away isn't an entry.
-        public static bool Witnessed(HidingPlace place, Vector3 lastSeen, float lastSeenAt, Vector3 hiddenAt, float now) =>
-            place != null && now - lastSeenAt <= EntryWindow &&
+        public static bool Witnessed(HidingPlace place, Vector3 lastSeen, float lastSeenAt, Vector3 hiddenAt, float now, float window = EntryWindow) =>
+            place != null && now - lastSeenAt <= window &&
             place.DistanceTo(lastSeen) <= EntryReach &&
             Vector3.Distance(lastSeen, hiddenAt) <= EntryTravel;
 

@@ -124,9 +124,11 @@ namespace Kehai.Karen
             if (Learning.Enabled) Learning.FilePath = string.IsNullOrEmpty(config.learningPath) ? LearningRecorder.DefaultPath(sessionStamp) : config.learningPath;
 
             PlaceWatch.Placed += OnPlaced;
+            Body.Sight.SawHidingBoundary += OnSawHidingBoundary;
             TraceRegistry.Listen();
             NoiseBus.Emitted += OnNoise;
             NoiseBus.Emitted += OnOwnNoise;
+            InfrastructureFeed.CameraSawEntry += OnCameraSawEntry;
             World.Pa.ChimeStarted += OnPaChime;
             World.Pa.SpeechStarted += OnPaSpeech;
             GameEvents.ShelfRestocked += OnRestocked;
@@ -172,8 +174,10 @@ namespace Kehai.Karen
         // subscription is undone here or the old Karen would go on listening.
         void OnDestroy()
         {
+            if (Body != null && Body.Sight != null) Body.Sight.SawHidingBoundary -= OnSawHidingBoundary;
             NoiseBus.Emitted -= OnNoise;
             NoiseBus.Emitted -= OnOwnNoise;
+            InfrastructureFeed.CameraSawEntry -= OnCameraSawEntry;
             GameEvents.ShelfRestocked -= OnRestocked;
             GameEvents.SpillCleaned -= OnSpillRoute;
             GameEvents.BinBagged -= OnBinRoute;
@@ -404,7 +408,8 @@ namespace Kehai.Karen
                 if (ShiftActive) TickDirector(dt);
                 return;
             }
-            using (ShiftTiming.Measure("sight")) Body.Sight.Tick(dt);
+            // Stunned, she neither sees nor hears (0.5.2, C9.10, the owner's item 4).
+            using (ShiftTiming.Measure("sight")) { if (Body.IsStunned) Body.Sight.Blind(dt); else Body.Sight.Tick(dt); }
             if (!ShiftActive)
             {
                 Body.Stop();
@@ -412,8 +417,9 @@ namespace Kehai.Karen
             }
 
             // The gate (0.5.1, item 14): hit by a thrown item, she neither moves, plans, runs a
-            // trick, dashes nor catches until the stun is over. Her senses go on below, so when it
-            // ends she decides again from what she senses then.
+            // trick, dashes nor catches until the stun is over. Since 0.5.2 (C9.10) she neither sees
+            // nor hears either (above, and Believe); when it ends she decides again from what she
+            // senses then.
             bool stunned = StunGate();
             KeepHuntClock();
 
@@ -547,7 +553,8 @@ namespace Kehai.Karen
         void Believe(float dt)
         {
             Energy.Tick(dt);
-            Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
+            if (Body.IsStunned) Sensorium.CollectNothing();   // 0.5.2, C9.10
+            else Sensorium.Collect(Body.Position, Body.Sight, Body.transform);
 
             for (int i = 0; i < Sensorium.Positive.Count; i++)
             {
@@ -862,16 +869,17 @@ namespace Kehai.Karen
             Note("", $"  why    {because}");
 
             if (chasing && goal != ActionId.Hunt) Pursuit.Ending($"{goal.Name()} won the decision ({because})");
-            AbortPlan();
+            AbortPlanFor(goal);
             PlanTree plan = HtnPlanner.Plan(goal, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why);
             if (plan == null)
             {
                 Note("PLAN", $"PLAN     {goal.Name()}: nothing workable ({why}) → roam");
                 plan = HtnPlanner.Plan(ActionId.Roam, Ctx, Interrupt, out tactic, out options, out why);
-                if (plan == null) return;
+                if (plan == null) { EndHeldHunt($"{goal.Name()}: nothing workable"); return; }
             }
 
             Adopt(plan, tactic, options, why);
+            EndHeldHunt($"{plan.Action.Name()} couldn't go ahead");
         }
 
         // A plan she's going ahead with: its cost, the record of it, and on (the planner's and the
@@ -972,12 +980,13 @@ namespace Kehai.Karen
             Actions.Commit(pick.Action, Ctx);
             WriteBelief();
             if (chasing && pick.Action != ActionId.Hunt) Pursuit.Ending($"the brain picked {pick.Action.Name()}");
-            AbortPlan();
+            AbortPlanFor(pick.Action);
             PlanTree plan = HtnPlanner.Plan(pick.Action, Ctx, Interrupt, out Tactic tactic, out List<ThoughtOption> options, out string why,
                                             prefer: pick.Tactic, preferWhy: $"{config.brain} {chance:0%}");
-            if (plan == null) return false;
+            if (plan == null) return false;   // the planner's path decides next, and ends a held hunt it doesn't go on with
             brainPick = (legal.ConvertAll(p => p.Key).ToArray(), tactic == pick.Tactic ? chance : 0f, index == plannerPick);
             Adopt(plan, tactic, options, why);
+            EndHeldHunt($"{pick.Action.Name()} couldn't go ahead");
             return true;
         }
 
@@ -1185,6 +1194,28 @@ namespace Kehai.Karen
 #endif
         }
 
+        // A decision that picks the hunt again while she hunts (a forced re-decision on a fresh
+        // sighting, or a replan with her guesses in hand) goes on with the same hunt: the chase
+        // is held across the abort, as the witnessed-hide pursuit does. Ending it here retired
+        // the sighting that started it, so the "new" hunt began with 0 s left and ended the next
+        // frame, over and over (found by the pursuit sandbox's checks, 0.5.2 C11.7).
+        void AbortPlanFor(ActionId next)
+        {
+            bool hold = chasing && next == ActionId.Hunt;
+            if (hold) chasing = false;
+            AbortPlan();
+            if (hold) chasing = true;
+        }
+
+        // After a decision: a hunt held across the abort that no hunt plan took up (nothing
+        // workable, or over the tension budget at the last moment) ends there, as it did before.
+        void EndHeldHunt(string why)
+        {
+            if (!chasing || CurrentPlan != null && CurrentPlan.Action == ActionId.Hunt) return;
+            Pursuit.Ending(why);
+            SetChasing(false);
+        }
+
         void AbortPlan()
         {
             if (CurrentPlan == null) return;
@@ -1289,6 +1320,22 @@ namespace Kehai.Karen
         Vector3 hidingDestination;
         float hidingPathAt, hidingArrivedAt = -1f;
         const float HidingLookSeconds = 1f;
+
+        void OnSawHidingBoundary(Vector3 observed)
+        {
+            if (ShiftActive && PresentThisShift && !Body.IsStunned)
+                Ledger.ObserveWitnessedHide(Map, Map.RegionAt(observed));
+        }
+
+        void OnCameraSawEntry(HidingPlace place, Vector3 lastSeen)
+        {
+            if (!isActiveAndEnabled || !ShiftActive || !PresentThisShift || Body.IsStunned ||
+                !Sensorium.UseInfrastructure || KilledThisShift) return;
+            // Copy the observed doorway point at the instant it is reported. Her own eye
+            // maintains the usual leave-before-arrival cancellation from this frame on.
+            Body.Sight.HiddenEntry.Remember(place, lastSeen, Time.time);
+            Note("SENSE", "camera witnessed an entry into hiding");
+        }
 
         bool PursueWitnessedHide()
         {
@@ -1517,6 +1564,19 @@ namespace Kehai.Karen
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             if (Body.IsStunned) return;   // stunned, she catches nobody (0.5.1, item 14)
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
+            if (config.sandboxCatchFreezes)
+            {
+                // A sandbox (0.5.2): the catch is shown and the test freezes; no stats, no Ledger,
+                // no death screen. Off in the game.
+                KilledThisShift = true;
+                AbortPlan();
+                Body.Stop();
+                chasing = false;
+                Pursuit.Clear();
+                Log.Write(Record("CAUGHT", $"CAUGHT   sandbox: she reached you at {Map.Describe(Body.Position)} ({doing})", null, null, "the sandbox freezes"));
+                SandboxCaught?.Invoke();
+                return;
+            }
             KilledThisShift = true;
             Stats.Caught();
             Stats.CatchCauses.Add(CauseOfCatch());
@@ -1903,6 +1963,8 @@ namespace Kehai.Karen
         }
 
         public bool IsChasing => chasing;
+        // Raised instead of the catch's consequences when config.sandboxCatchFreezes is on (0.5.2).
+        public event System.Action SandboxCaught;
 
         void NarratePlan(PlanTree plan)
         {

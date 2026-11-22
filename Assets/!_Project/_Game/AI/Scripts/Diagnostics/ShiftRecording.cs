@@ -243,7 +243,8 @@ namespace Kehai.Karen
               .Append("\",\"rung\":\"").Append(MiniJson.EscapeInner(KarenRung))
               .Append("\",\"started\":\"").Append(MiniJson.EscapeInner(StartedAt))
               .Append("\",\"length\":").Append(N(Length))
-              .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false");
+              .Append(",\"clockedOut\":").Append(ClockedOut ? "true" : "false")
+              .Append(",\"build\":\"").Append(MiniJson.EscapeInner(BuildStamp.Line)).Append('"');   // 0.5.2, C10.2
             if (!string.IsNullOrEmpty(Bot)) sb.Append(",\"bot\":\"").Append(MiniJson.EscapeInner(Bot)).Append('"');
             if (Seed != 0) sb.Append(",\"seed\":").Append(Seed);
             sb.Append(",\"escapes\":[");

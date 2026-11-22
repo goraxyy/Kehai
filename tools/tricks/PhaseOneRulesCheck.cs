@@ -17,6 +17,12 @@ static class PhaseOneRulesCheck
             var sale = new SaleRules();
             Check(sale.Start(open, powered) == (open && powered), "sale start requires open doors and PA power");
         }
+        var lessonSale = new SaleRules();
+        Check(lessonSale.Cap(2, 1) == 1, "easy lesson caps normal arrivals");
+        Check(lessonSale.Cap(1, 3) == 1, "a lesson never increases arrivals");
+        lessonSale.Start(true, true);
+        Check(lessonSale.Cap(2, 0) == 0 && lessonSale.Cap(2, 1) == 1, "sale also respects a training cap");
+        Check(lessonSale.Cap(2) == SaleRules.SaleCap, "unset lesson preserves the ordinary sale cap");
         var rules = new SaleRules();
         for (int cap = -12; cap <= 12; cap++)
             Check(rules.Cap(cap) == Math.Clamp(cap, 0, 5), "normal configured cap retains the absolute ceiling");
