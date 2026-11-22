@@ -2,11 +2,30 @@
 """Compile source without importing a Unity project. This is not a Unity test runner."""
 import argparse
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
 
+def script_sources(repo):
+    sources = sorted((repo / 'Assets/!_Project').rglob('*.cs'))
+    guids = {}
+    for source in sources:
+        meta = source.with_suffix('.cs.meta')
+        if not meta.is_file():
+            raise SystemExit(f'{meta.relative_to(repo)} is missing; Unity needs script metadata')
+        match = re.search(r'^guid: ([0-9a-f]{32})$', meta.read_text(encoding='utf-8-sig'), re.MULTILINE)
+        if match is None:
+            raise SystemExit(f'{meta.relative_to(repo)} has an invalid Unity GUID')
+        guid = match.group(1)
+        if guid in guids:
+            raise SystemExit(f'{meta.relative_to(repo)} duplicates the GUID in {guids[guid].relative_to(repo)}')
+        guids[guid] = meta
+    return sources
+
+
 def compile_sources(repo, unity, cached_project, output, ml=False, player_edition=None):
+    all_sources = script_sources(repo)
     contents = unity / 'Contents' if (unity / 'Contents').is_dir() else unity
     scripting = contents / 'Resources/Scripting'
     sdk = scripting / 'DotNetSdk'
@@ -23,7 +42,7 @@ def compile_sources(repo, unity, cached_project, output, ml=False, player_editio
         refs.setdefault(p.name, p)
     if not (cached_project / 'Library/ScriptAssemblies').is_dir():
         raise SystemExit('An imported reference project is required; no cache was found')
-    sources = [p for p in (repo / 'Assets/!_Project').rglob('*.cs')
+    sources = [p for p in all_sources
                if 'Editor' not in p.parts and '_Tests' not in p.parts]
     defines = 'UNITY_6000_0_OR_NEWER;UNITY_2023_1_OR_NEWER;ENABLE_INPUT_SYSTEM;ENABLE_LEGACY_INPUT_MANAGER'
     defines += ';KEHAI_' + player_edition.upper() if player_edition else ';UNITY_EDITOR;UNITY_EDITOR_OSX'
@@ -39,7 +58,7 @@ def compile_sources(repo, unity, cached_project, output, ml=False, player_editio
     subprocess.run([str(sdk / 'dotnet'), str(compiler), '@' + str(rsp)], check=True)
     if player_edition:
         return
-    editor_sources = [p for p in (repo / 'Assets/!_Project').rglob('*.cs') if 'Editor' in p.parts]
+    editor_sources = [p for p in all_sources if 'Editor' in p.parts]
     nunit = contents / 'Resources/PackageManager/BuiltInPackages/com.unity.ext.nunit/net472/unity-custom/nunit.framework.dll'
     lines = [line for line in lines if not line.startswith('-out:') and not (line.startswith('"') and line.endswith('.cs"'))]
     lines += ['-out:"' + str(output / 'Assembly-CSharp-Editor.dll') + '"',
