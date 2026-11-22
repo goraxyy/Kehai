@@ -12,7 +12,7 @@ using UnityEngine.AI;
 //   Unity -batchmode -projectPath . -executeMethod EvalBatch.Play -kehai-ablation \
 //         -ablation-careers 2 -ablation-shifts 4 -eval-timeout-min 90 -logFile eval.log
 //
-// Play opens the store (or -evalScene <path>) and enters play mode; the -kehai-* flags
+// Play opens the store (or -evalScene <path|training>) and enters play mode; the -kehai-* flags
 // are then picked up by EvalCommandLine exactly as they are in a built player.
 [InitializeOnLoad]
 public static class EvalBatch
@@ -55,6 +55,17 @@ public static class EvalBatch
     public static void Play()
     {
         string scene = Arg("-evalScene") ?? EditorBuildSettings.scenes.FirstOrDefault(s => s.enabled)?.path;
+        if (scene == "training") scene = KehaiTrainingScene.ScenePath;
+        if (scene == KehaiTrainingScene.ScenePath)
+        {
+            try { KehaiTrainingScene.RequireCurrent(); }
+            catch (System.InvalidOperationException error) when (Application.isBatchMode)
+            {
+                Debug.LogError(error.Message);
+                EditorApplication.Exit(1);
+                return;
+            }
+        }
         if (!string.IsNullOrEmpty(scene)) EditorSceneManager.OpenScene(scene, OpenSceneMode.Single);
         Debug.Log("EvalBatch: entering play mode in " + EditorSceneManager.GetActiveScene().path);
         EditorApplication.EnterPlaymode();

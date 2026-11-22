@@ -88,6 +88,13 @@ light, if she sees by it, is.
 the layers when the sound designer or the artist actually starts, room by room, moving the
 look-only objects out of the base.
 
+**Training scene commands:** save the Testing store, then use **Kehai → Training Scene →
+Generate**. The copy is in `Assets/KehaiGeneratedTraining/Training.unity`. **Check** reports
+when the source or generated copy has changed. The batch entries are
+`KehaiTrainingScene.GenerateBatch` and `KehaiTrainingScene.CheckBatch`. The generated folder
+stays local. Use `EvalBatch.Play -evalScene training` to run an ablation or a league on a current
+copy. The map, navigation and play checks are still due.
+
 ---
 
 ## 3. Does a light Training scene make training faster?

@@ -17,7 +17,7 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
         if (report == null || !KehaiBuild.BuildingEdition.HasValue) return;
         StripScene(scene, KehaiBuild.BuildingEdition.Value);
     }
-    public static void StripScene(Scene scene, KehaiEdition edition)
+    public static void StripScene(Scene scene, KehaiEdition edition, Material trainingPreview = null)
     {
         bool training = edition == KehaiEdition.Training;
         foreach (var root in scene.GetRootGameObjects())
@@ -39,8 +39,13 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
                 if (component is Canvas || component is CanvasRenderer || component is CanvasGroup)
                 { Object.DestroyImmediate(component); continue; }
                 // Keep collision, navigation and perceptual lights; remove presentation references.
-                if (component is Renderer renderer) renderer.sharedMaterials = Array.Empty<Material>();
-                if (component is Camera camera) camera.enabled = false;
+                if (component is Renderer renderer)
+                {
+                    var materials = trainingPreview != null ? new Material[renderer.sharedMaterials.Length] : Array.Empty<Material>();
+                    Array.Fill(materials, trainingPreview);
+                    renderer.sharedMaterials = materials;
+                }
+                if (trainingPreview == null && component is Camera camera) camera.enabled = false;
                 var serialized = new SerializedObject(component);
                 var property = serialized.GetIterator();
                 while (property.Next(true))
@@ -57,7 +62,7 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
         {
             var gate = new GameObject("Edition scene gate");
             SceneManager.MoveGameObjectToScene(gate, scene);
-            gate.AddComponent<EditionSceneGate>();
+            gate.AddComponent<EditionSceneGate>().trainingPreview = trainingPreview != null;
         }
     }
     public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "TrickCheck" || name == "VisualCheck";

@@ -5,7 +5,32 @@ using UnityEngine.SceneManagement;
 [DefaultExecutionOrder(-32000)]
 public sealed class EditionSceneGate : MonoBehaviour
 {
-    void Awake() => Apply(gameObject.scene);
+    public bool trainingPreview;
+
+#if UNITY_EDITOR
+    KehaiEdition? previousEdition;
+#endif
+
+    void Awake()
+    {
+#if UNITY_EDITOR
+        if (trainingPreview)
+        {
+            previousEdition = Edition.EditorOverride;
+            Edition.EditorOverride = KehaiEdition.Training;
+        }
+#endif
+        Apply(gameObject.scene);
+    }
+
+#if UNITY_EDITOR
+    void OnDestroy()
+    {
+        if (trainingPreview && Edition.EditorOverride == KehaiEdition.Training)
+            Edition.EditorOverride = previousEdition;
+    }
+#endif
+
     public static void Apply(Scene scene)
     {
         if (!Edition.Training) return;

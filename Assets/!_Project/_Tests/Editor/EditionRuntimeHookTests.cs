@@ -1,3 +1,4 @@
+using System.Linq;
 using Kehai.Blink;
 using Kehai.Karen;
 using NUnit.Framework;
@@ -107,5 +108,30 @@ public sealed class EditionRuntimeHookTests
             Assert.IsNotNull(fixture.GetComponent<BlinkTestPanel>());
         }
         finally { EditorSceneManager.ClosePreviewScene(scene); }
+    }
+
+    [Test] public void TrainingPreviewKeepsTheCameraAndReplacesMaterials()
+    {
+        Scene scene = EditorSceneManager.NewPreviewScene();
+        var fixture = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        SceneManager.MoveGameObjectToScene(fixture, scene);
+        var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
+        var renderer = fixture.GetComponent<MeshRenderer>();
+        renderer.sharedMaterials = new[] { material, material };
+        var camera = fixture.AddComponent<Camera>();
+        fixture.AddComponent<AudioSource>();
+        try
+        {
+            EditionBuildProcessor.StripScene(scene, KehaiEdition.Training, material);
+            Assert.IsTrue(camera.enabled);
+            CollectionAssert.AreEqual(new[] { material, material }, renderer.sharedMaterials);
+            Assert.IsNull(fixture.GetComponent<AudioSource>());
+            Assert.IsTrue(scene.GetRootGameObjects().Any(root => root.TryGetComponent(out EditionSceneGate gate) && gate.trainingPreview));
+        }
+        finally
+        {
+            EditorSceneManager.ClosePreviewScene(scene);
+            Object.DestroyImmediate(material);
+        }
     }
 }
