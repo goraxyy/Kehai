@@ -135,7 +135,7 @@ namespace Kehai.Sandbox
                     row.observed = observed ? $"Light on a surface at {spot:F1}" : "No visible light from the torch";
                     break;
                 default:
-                    float weight = TestLedger(boundaries);
+                    float weight = TestLedger(boundaries, Path.Combine(folder, name + "-ledger.json"));
                     observed = weight > .8f;
                     valid = boundaries == (expect ? 1 : 0) &&
                         Mathf.Abs(weight - .8f * (1f + (expect ? KarenLedger.WitnessedHideSeconds : 0f))) < .001f;
@@ -151,11 +151,11 @@ namespace Kehai.Sandbox
             Debug.Log($"InteractionChecks: {(row.pass ? "PASS" : "FAIL")} {name}. {row.observed}");
         }
 
-        static float TestLedger(int boundaries)
+        static float TestLedger(int boundaries, string evidencePath)
         {
             var map = new StoreMap();
             map.Regions.Add(new Region { Key = "fridge fixture" });
-            var ledger = new KarenLedger(new KarenConfig());
+            var ledger = new KarenLedger(new KarenConfig { ledgerPath = evidencePath }) { Persistent = true };
             ledger.BeginShift(1);
             ledger.ObservePlayer(map, 0, 1f, true, MotionState.Still, 0f);
             for (int i = 0; i < boundaries; i++) ledger.ObserveWitnessedHide(map, 0);
