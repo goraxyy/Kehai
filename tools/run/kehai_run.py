@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import signal
 import socket
@@ -36,12 +37,16 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 CLONES = 'clones.noindex'   # where the project copies go, under the run home
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools.run import lock as heavy  # noqa: E402
+
+if TYPE_CHECKING:
+    from tools.run.sight_clips import SightReview
 
 UNITY = '/Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity'
 UNITY_PATTERN = 'Unity.app/Contents/MacOS/Unity'
@@ -321,21 +326,38 @@ def progress_line(log: Path) -> str:
 
 
 def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min: float = 90.0,
-        test_filter: str | None = None, dry_run: bool = False, log=print) -> int:
+        test_filter: str | None = None, dry_run: bool = False, log=print,
+        sight: SightReview | None = None) -> int:
     if '-kehai-no-records' in extra and (job in ('tests', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
     rid = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:6]
-    commit = git(s.repo, 'rev-parse', '--verify', ref + '^{commit}')
+    commit = git(s.repo, 'rev-parse', '--verify', (sight.commit if sight else ref) + '^{commit}')
     product = 'Kehai-run-' + rid
     out = s.runs / rid
     # .noindex: Spotlight skips the folder. It indexed every fresh copy otherwise, loading the
     # Mac enough to fail timing tests (22 November).
     clone = s.home / CLONES / rid
     args = [s.unity] + unity_args(job, clone, out, extra, test_filter)
+    commands = [(out, args)] if sight is None else [
+        (out / case.name, [s.unity] + unity_args('sandbox-clip', clone, out / case.name, case.shot(), None))
+        for case in sight.cases
+    ]
     if dry_run:
-        log(' '.join(args))
+        for _, command in commands:
+            log(shlex.join(command) if sight else ' '.join(command))
         return 0
+    env = None
+    if sight:
+        from tools.reports.common import private_path
+        from tools.run.sight_clips import verify_sight_movie, video_tools
+        try:
+            private_path(out)
+            encoder, probe = video_tools(s.main)
+        except ValueError as err:
+            log(f'kehai-run: {err}')
+            return 3
+        env = {**os.environ, 'KEHAI_FFMPEG': str(encoder)}
     try:
         if unity_open(s):
             log('kehai-run: Unity is open. Close the editor first, or use the PC.')
@@ -369,27 +391,65 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
                 prefs_plist=str(s.prefs_root / f'unity.TokenLimit.{product}.plist'),
                 prefs=read_prefs(s), commit=commit, created=time.time())
     card.save(s)
-    record(s, card, 'running', args=args[1:])
+    if sight:
+        record(s, card, 'running', source=str(sight.source), shots=[cmd[1:] for _, cmd in commands])
+    else:
+        record(s, card, 'running', args=args[1:])
     old = {sig: signal.signal(sig, _stop) for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     code, state, note = 1, 'failed', ''
     began = time.time()
     proc = None
+    results = {}
     try:
+        if sight:
+            sight.write(out, results)
         log(f'kehai-run: {rid}: cloning the project')
         make_clone(s, clone, commit)
         set_product(clone, product)
-        log(f'kehai-run: {rid}: running Unity ({job}), at most {timeout_min:g} min; log {out / "unity.log"}')
-        proc = subprocess.Popen(args, start_new_session=True)
+        log_path = out / ('review.md' if sight else 'unity.log')
+        log(f'kehai-run: {rid}: running Unity ({job}), at most {timeout_min:g} min; {log_path}')
         limit = began + timeout_min * 60
-        while proc.poll() is None:
-            if time.time() > limit:
-                os.killpg(proc.pid, signal.SIGKILL)
-                proc.wait()
-                note = f'timed out after {timeout_min:g} min'
+        code = 0
+        for i, (destination, command) in enumerate(commands):
+            if sight and time.time() >= limit:
+                code, note = 124, f'timed out after {timeout_min:g} min'
                 break
-            (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(out / "unity.log")}\n')
-            time.sleep(1.0)
-        code = proc.returncode if not note else 124
+            destination.mkdir(exist_ok=True)
+            unity_log = destination / 'unity.log'
+            if sight:
+                name = sight.cases[i].name
+                log(f'kehai-run: rendering {name}; log {unity_log}')
+            proc = subprocess.Popen(command, start_new_session=True, env=env)
+            while proc.poll() is None:
+                if time.time() > limit:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait()
+                    note = f'timed out after {timeout_min:g} min'
+                    break
+                (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(unity_log)}\n')
+                time.sleep(1.0)
+            code = proc.returncode if not note else 124
+            if sight:
+                if code == 0:
+                    try:
+                        verify_sight_movie(destination, sight.cases[i], probe)
+                        results[name] = None
+                    except (OSError, ValueError, subprocess.TimeoutExpired) as err:
+                        log(f'kehai-run: {name}: {err}')
+                        (destination / 'verification.txt').write_text(str(err) + '\n')
+                        results[name] = f'[Verification failed]({name}/verification.txt)'
+                else:
+                    results[name] = f'Render exited {code}'
+                sight.write(out, results)
+            if note:
+                break
+        if sight:
+            verified = sum(result is None for result in results.values())
+            failed_checks = sum(not case.passed for case in sight.cases)
+            if not note:
+                code = int(verified != len(sight.cases) or failed_checks > 0)
+                note = f'{verified}/{len(sight.cases)} clips verified, {failed_checks} bot checks failed'
+            log(f'kehai-run: review {out / "review.md"}')
         if code == 0 and job in ('trick-clip', 'sandbox-clip'):
             from tools.run.trick_clip import verify_movie
             verify_movie(out)
@@ -489,6 +549,10 @@ def main(argv=None) -> int:
     room_clip.add_argument('--start', type=float, default=0)
     room_clip.add_argument('--end', type=float, default=12)
     room_clip.add_argument('--dry-run', action='store_true')
+    sight_clips = sub.add_parser('sight-clips', help='film the eight cases in a retained sight report')
+    sight_clips.add_argument('report', type=Path)
+    sight_clips.add_argument('--timeout-min', type=float, default=30, help='total time limit (default 30)')
+    sight_clips.add_argument('--dry-run', action='store_true')
     offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
     offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
     offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
@@ -497,6 +561,15 @@ def main(argv=None) -> int:
     d.add_argument('--clean', action='store_true')
     a = p.parse_args(argv)
     s = Settings.from_env()
+    if a.cmd == 'sight-clips':
+        from tools.run.sight_clips import read_review
+        try:
+            if not 0 < a.timeout_min < float('inf'):
+                raise ValueError('--timeout-min must be positive and finite')
+            sight = read_review(a.report)
+            return run(s, a.cmd, [], sight=sight, timeout_min=a.timeout_min, dry_run=a.dry_run)
+        except (OSError, ValueError, subprocess.CalledProcessError) as err:
+            p.error(str(err))
     if a.cmd in ('trick-clip', 'sandbox-clip'):
         from tools.run.trick_clip import read_shot, sandbox_shot
         try:

@@ -35,6 +35,35 @@ run, or `doctor --clean`, finds the dead run's card, preserves its existing outp
 
 For one landed trick, `trick-clip` reads the retained replay under the source run’s `shift_records` and uses the commit in its `run.jsonl`. Use a recording from a commit that includes the silent renderer. The render gets its own run folder with `clip.mp4`, the camera sidecar and the log. Each render with Unity needs a separate go.
 
+## Sight check review clips
+
+Use the JSON report from a retained `SandboxChecks.Sight` run with all eight `.krec` files,
+its sibling Markdown report and the run's `run.jsonl`. If you need fresh inputs, the bot command
+is `tools/run/kehai-run unity -- -executeMethod SandboxChecks.Sight`. The bot keeps the report
+and replays even if a case fails.
+
+```bash
+tools/run/kehai-run sight-clips /path/to/out/RUN/sandbox_checks/sight_TIME.json --dry-run
+```
+
+The dry run checks the eight report rows and recording headers and durations, then prints the
+render commands. With the owner's go and the editor closed, omit `--dry-run`. The command uses
+the recording's source commit and one safe clone under the heavy-work lock. It renders the
+full length of each recording in sequence with the existing sandbox replay camera and encoder.
+It needs a graphics device and `ffmpeg` and `ffprobe` on PATH or in the main project's Remotion
+install. `KEHAI_FFMPEG` can point to a specific encoder. The default 30-minute limit is shared
+across the batch. Use `--timeout-min` to adjust it.
+
+Open `review.md` in the new private run folder. Each verified row links to a silent 720p MP4,
+the renderer's sidecar and its log. The overhead view shows the reconstructed room and recorded
+movement. Read the bot report for the measured sight and witnessed entry outcomes. Clip
+verification checks the recorded filename and frame count against the sidecar, then decodes the MP4
+to check its frames and confirm it has no audio stream. A failed render leaves its log and any
+partial output for diagnosis. The command exits successfully when all eight clips verify and all
+eight bot checks passed. Keep reports, replays and clips outside git.
+
+## Runner settings
+
 **The lock** is `tools/run/lock.py`: the same directory the marketing tools use
 (`~/TokenLimit/marketing/state/heavy.lock`), with the holder's start time added so a reused process
 id isn't mistaken for a live holder. The shell scripts use it too:

@@ -56,10 +56,11 @@ def sandbox_shot(replay: Path, start: float, end: float) -> tuple[str, list[str]
                                             '-shot', 'chase', '-layers', 'none', '-size', '1280x720', '-fps', '30']
 
 
-def verify_movie(out: Path) -> None:
+def verify_movie(out: Path) -> dict:
     movie = out / 'clip.mp4'
     if not movie.is_file() or not movie.stat().st_size:
         raise ValueError('the renderer produced no clip.mp4')
     sidecar = json.loads((out / 'clip.json').read_text())
-    if 'audio' not in sidecar or sidecar['audio'] is not None:
+    if not isinstance(sidecar, dict) or 'audio' not in sidecar or sidecar['audio'] is not None:
         raise ValueError('the renderer did not confirm a silent clip')
+    return sidecar
