@@ -62,6 +62,9 @@ namespace Kehai.Eval
         public int TurnBacks { get; private set; }
         public int ThrowsSeen { get; private set; }
         public int Dodges { get; private set; }
+        // The completed sidestep's projectile, so a recorded check can distinguish a dodge
+        // from a wall hit or a missed throw while the bot was doing something else.
+        public int LastDodgedProjectile { get; private set; }
 
         // 0.4.0 (build plan §7): who it is, what it remembers across the career, and the trained
         // mind that chooses for it (none: the heuristic below, as it always was).
@@ -400,9 +403,11 @@ namespace Kehai.Eval
         IEnumerator Sidestep()
         {
             string side = dodgeSide;
+            int projectile = watching;
             dodgeSide = null;
             Dodges++;
             yield return env.Act(new EnvAction { verb = "sidestep", target = side, sprint = true, timeout = 1.5f });
+            if (env.LastResult != null && Equals(env.LastResult["ok"], true)) LastDodgedProjectile = projectile;
         }
 
         // An action of its own (backing off, hiding) with only the throw watch alongside.
