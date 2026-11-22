@@ -71,7 +71,10 @@ namespace Kehai.Sandbox
             if (buildPlayer && PlayerPresence.Current == null) Player = SandboxPlayer.Build(root, PlayerStart, 0f);
             else Player = PlayerPresence.Current;
 
-            Karen = SandboxKaren.Build(root, KarenSpot, KarenYaw, Loop);
+            // Her spot and loop are world points: the room may stand anywhere (the island, 0.5.2).
+            var loop = new Vector3[Loop.Length];
+            for (int i = 0; i < Loop.Length; i++) loop[i] = root.TransformPoint(Loop[i]);
+            Karen = SandboxKaren.Build(root, root.TransformPoint(KarenSpot), KarenYaw + root.eulerAngles.y, loop);
             Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
