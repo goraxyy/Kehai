@@ -11,7 +11,7 @@ namespace Kehai.Blink
     // Starts and stops the camera helper that reads your eyes, so blinking works without
     // opening a terminal. On a Mac it's tools/blink/mac/build/BlinkVision (Apple Vision, no
     // downloads — build it once with tools/blink/mac/build.sh); anywhere, the Python helper
-    // in tools/blink/.venv if it has been set up. Its output is kept for the F10 test panel.
+    // in tools/blink/.venv if it has been set up. Its output is kept for the F8 webcam panel.
     public static class BlinkSidecar
     {
         static Process process;
@@ -32,7 +32,7 @@ namespace Kehai.Blink
 
         static string ProjectRoot => Directory.GetParent(Application.dataPath).FullName;
 
-        // Which camera the Mac helper opens; C in the F10 panel steps through them.
+        // Which camera the Mac helper opens; V in the F8 panel steps through them.
         public static int CameraIndex
         {
             get => PlayerPrefs.GetInt("Kehai.BlinkCamera", 0);
@@ -112,7 +112,7 @@ namespace Kehai.Blink
         public static bool VisionReady => MacHelper != null;
 
         // Which helper to use when both are there. MediaPipe's blink scores are the more
-        // accurate, so once someone has set it up it's the default; M in the F10 panel switches.
+        // accurate, so once someone has set it up it's the default; M in the F8 panel switches.
         public static bool PreferMediaPipe
         {
             get => PlayerPrefs.GetInt("Kehai.BlinkMediaPipe", MediaPipeReady && File.Exists(Model) ? 1 : 0) == 1;

@@ -50,12 +50,8 @@ namespace Kehai.Karen
         void Update()
         {
             if (!Edition.AllowDebugTools) return;
-            if (GamePause.Paused) return;   // the Esc menu is open
-            if (Input.GetKeyDown(KeyCode.Escape) && (showOverlay || showScrubber))
-            {
-                showOverlay = false;
-                SetReplay(false);
-            }
+            if (GamePause.Paused) return;
+            if (Input.GetKeyDown(KeyCode.Escape)) ClosePanels();
             if (Input.GetKeyDown(overlayKey))
             {
                 showOverlay = !showOverlay;
@@ -69,6 +65,7 @@ namespace Kehai.Karen
             if (showOverlay && Input.GetKeyDown(routesKey)) showRoutes = !showRoutes;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (showOverlay && Input.GetKeyDown(coneKey)) KarenFx.Toggle();   // was F3 (C11.16)
+            if (showOverlay && Input.GetKeyDown(KeyCode.L)) PowerSystem.Instance?.CutPower();
             if (showOverlay && Input.GetKeyDown(tricksKey))
             {
                 showTricks = !showTricks;
@@ -93,6 +90,14 @@ namespace Kehai.Karen
                 }
                 if (Input.GetKeyDown(KeyCode.O)) ShiftRecorder.Instance?.OpenReport();
             }
+        }
+
+        internal void ClosePanels()
+        {
+            if (!showOverlay && !showScrubber) return;
+            showOverlay = false;
+            SetReplay(false);
+            FullScreenPanel.Set(this, false);
         }
 
         void SetReplay(bool on)
@@ -330,9 +335,9 @@ namespace Kehai.Karen
         }
 
         static string Footer =>
-            "F1 close · F2 replay the shift · R her route guesses · H her guess as a heat map · T technical details · F10 blink test"
+            "F1 close · F2 replay the shift · R her route guesses · H her guess as a heat map · T technical details · F8 webcam"
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            + " · G force a trick (frees the mouse)"
+            + " · G force a trick (frees the mouse) · V footsteps and cone · L cut store power"
 #endif
             ;
 

@@ -97,7 +97,7 @@ shifts for the player's own reports and sends nothing.
 |---|---|
 | The whole session as 3D replays: each shift (`shift_NN_*.krec`) and the stretches between them, from launch to the first clock-in and after each clock-out (`interlude_NN_*.krec`) | `ReplayRecorder` |
 | Each shift's data and clip markers, including Shift+F7 bug marks | `ShiftRecorder`, `ClipMarkerRecorder` |
-| `session.jsonl`, one line per event: the computer (OS, CPU, GPU, RAM, screen, quality); every menu and panel opened and closed (main menu, settings, pause, task list, F1 map, F2 replay, review, playtest screens); the keys that matter (E with what it was aimed at, or "nothing"; Q, C, F1, F2, F7, F8–F10, L, Esc); where the tester stood and looked, twice a second, with the replay file and time it belongs to; frame rate every 5 s; errors; focus lost and regained; shifts; bug notes; answers | `PlaytestSession` |
+| `session.jsonl`, one line per event: the computer (OS, CPU, GPU, RAM, screen, quality); every menu and panel opened and closed (main menu, settings, pause, task list, F1 map, F2 replay, review, playtest screens); the keys that matter (E with what it was aimed at, or "nothing"; Q, C, F1, F2, F7, F8, L, Esc); where the tester stood and looked, twice a second, with the replay file and time it belongs to; frame rate every 5 s; errors; focus lost and regained; shifts; bug notes; answers | `PlaytestSession` |
 | Karen's thought logs and her ledger (what she learned about this tester) | `karen_logs/`, `karen_ledger.json` |
 | The game's own log (and the one before, after a crash) | `Player.log` |
 

@@ -99,10 +99,8 @@ public sealed class SettingsMenu : MonoBehaviour
         }
         if (!Input.GetKeyDown(KeyCode.Escape)) return;
         if (Visible) { Close(); return; }
-        // Esc closes whatever else is open first: the map, the replay, the blink test, the
-        // webcam question, the end-of-shift review.
+        // Esc closes the map, replay, webcam panel or review before opening Settings.
         if (FullScreenPanel.AnyOpen || FullScreenPanel.ClosedOnFrame == Time.frameCount) return;
-        if (BlinkTracker.Instance != null && BlinkTracker.Instance.ConsentBusy) return;
         Open();
     }
 
@@ -361,30 +359,15 @@ public sealed class SettingsMenu : MonoBehaviour
         GUILayout.EndHorizontal();
         if (fromMainMenu)
         {
-            GUILayout.Label("Set it up in the store: Esc.", dim);
+            GUILayout.Label("Press F8 in the store to set it up.", dim);
             return;
         }
-        if (tracker == null) return;
-        GUILayout.BeginHorizontal();
-        GUILayout.Space(labelWidth);
-        if (!BlinkTracker.Consented)
-        {
-            if (LayoutButton("TURN ON", size * 6f)) { Close(); tracker.AskConsent(); }
-        }
-        else
-        {
-            if (LayoutButton("TURN OFF", size * 6f)) tracker.RevokeConsent();
-            GUILayout.Space(size * 0.4f);
-            if (LayoutButton("CALIBRATE", size * 6f)) { Close(); tracker.BeginCalibration(); }
-        }
-        GUILayout.Space(size * 0.4f);
-        if (LayoutButton("TEST", size * 4.5f))
+        var panel = tracker != null ? tracker.GetComponent<BlinkTestPanel>() : null;
+        if (panel != null && LayoutButton("OPEN WEBCAM PANEL", size * 12f))
         {
             Close();
-            var panel = FindAnyObjectByType<BlinkTestPanel>();
-            if (panel != null) panel.Show();
+            panel.Show();
         }
-        GUILayout.EndHorizontal();
     }
 
     void DrawKeys()

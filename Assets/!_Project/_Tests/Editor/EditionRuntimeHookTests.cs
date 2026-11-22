@@ -1,3 +1,4 @@
+using Kehai.Blink;
 using Kehai.Karen;
 using NUnit.Framework;
 using TMPro;
@@ -77,6 +78,7 @@ public sealed class EditionRuntimeHookTests
         Scene scene = EditorSceneManager.NewPreviewScene();
         var fixture = new GameObject("Strip fixture"); SceneManager.MoveGameObjectToScene(fixture, scene);
         fixture.SetActive(false); fixture.AddComponent<BoxCollider>(); fixture.AddComponent<Light>();
+        fixture.AddComponent<BlinkTestPanel>();
         var ui = new GameObject("Text", typeof(RectTransform)); ui.transform.SetParent(fixture.transform);
         ui.AddComponent<Canvas>(); ui.AddComponent<TextMeshProUGUI>();
         try
@@ -84,6 +86,7 @@ public sealed class EditionRuntimeHookTests
             EditionBuildProcessor.StripScene(scene, KehaiEdition.Training);
             Assert.IsEmpty(fixture.GetComponentsInChildren<TMP_Text>(true));
             Assert.IsEmpty(fixture.GetComponentsInChildren<Canvas>(true));
+            Assert.IsNull(fixture.GetComponent<BlinkTestPanel>());
             Assert.IsNotNull(fixture.GetComponent<BoxCollider>());
             Assert.IsTrue(fixture.GetComponent<Light>().enabled);
         }
@@ -94,12 +97,14 @@ public sealed class EditionRuntimeHookTests
         Scene scene = EditorSceneManager.NewPreviewScene();
         var fixture = new GameObject("Debug fixture"); SceneManager.MoveGameObjectToScene(fixture, scene);
         fixture.SetActive(false); fixture.AddComponent<KarenDebugOverlay>();
+        fixture.AddComponent<BlinkTestPanel>();
         try
         {
             EditionBuildProcessor.StripScene(scene, KehaiEdition.Testing);
             Assert.IsNotNull(fixture.GetComponent<KarenDebugOverlay>());
             EditionBuildProcessor.StripScene(scene, KehaiEdition.Gameplay);
             Assert.IsNull(fixture.GetComponent<KarenDebugOverlay>());
+            Assert.IsNotNull(fixture.GetComponent<BlinkTestPanel>());
         }
         finally { EditorSceneManager.ClosePreviewScene(scene); }
     }

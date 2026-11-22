@@ -60,8 +60,9 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
             gate.AddComponent<EditionSceneGate>();
         }
     }
-    public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "BlinkTestPanel" || name == "TrickCheck" || name == "VisualCheck";
+    public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "TrickCheck" || name == "VisualCheck";
     static bool IsPresentation(string name) => name == "TaskListUI" || name == "InventoryUI" || name == "BurnoutUI" ||
         name == "MainMenu" || name == "SettingsMenu" || name == "InteractHud" || name == "FirstShiftGuide" || name == "CareerCompletionScreen" ||
+        name == "BlinkTestPanel" ||
         name == "PlayerScreenFx" || name == "Eyelids" || name == "BlinkLids" || name == "SpeechBubble";
 }

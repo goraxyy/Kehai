@@ -28,10 +28,6 @@ namespace Kehai.Blink
         [Tooltip("Blinks per minute for the synthetic source the simulated players use.")]
         public float syntheticRate = 17f;
 
-        [Header("Keys")]
-        public KeyCode consentKey = KeyCode.F8;
-        public KeyCode calibrateKey = KeyCode.F9;
-
         [Header("Signal")]
         [Range(0f, 1f)] public float closeThreshold = 0.5f;
         [Range(0f, 1f)] public float openThreshold = 0.3f;
@@ -48,7 +44,7 @@ namespace Kehai.Blink
         public float ExpectedBlinkSeconds { get; private set; } = 0.3f;
         public int Blinks { get; private set; }
 
-        // For the F10 test panel.
+        // For the F8 webcam panel.
         public bool WebcamListening => webcam != null;
         public bool WebcamLive => webcam != null && webcam.IsLive;
         public bool UsingWebcam => source != null && source == webcam;
@@ -58,8 +54,6 @@ namespace Kehai.Blink
         public float UsualEyeRatio => webcam != null ? webcam.OpenRatio : 0f;
         public float RawClosed { get; private set; }
         public bool Calibrated { get; private set; }
-        // The consent question is up, or was answered this frame (its Esc isn't the menu's).
-        public bool ConsentBusy => askingConsent || consentAnsweredFrame == Time.frameCount;
         public float OpenLevel => openLevel;
         public float ClosedLevel => closedLevel;
         public float LastBlinkSeconds { get; private set; }
@@ -117,8 +111,6 @@ namespace Kehai.Blink
 
         public const string ConsentKey = "karen.blink.consent";
         public static bool Consented => PlayerPrefs.GetInt(ConsentKey, 0) == 1;
-        bool askingConsent;
-        int consentAnsweredFrame = -1;
 
         void Awake()
         {
@@ -147,6 +139,7 @@ namespace Kehai.Blink
         // Listen for the camera helper, and start it (it only ever sends to this computer).
         public void StartWebcam()
         {
+            if (!Consented || !Edition.ShowUI || Application.isBatchMode) return;
             if (webcam == null)
             {
                 try { webcam = new UdpBlinkSource(udpPort); }
@@ -165,8 +158,6 @@ namespace Kehai.Blink
 
         void Update()
         {
-            if (!GamePause.Paused) HandleKeys();
-
             // Prefer the camera whenever the sidecar is actually sending; fall back to the
             // keyboard the moment it stops. Never a requirement.
             if (webcam != null && webcam.IsLive && !(source is ReplayBlinkSource)) source = webcam;
@@ -275,51 +266,31 @@ namespace Kehai.Blink
 
         // ---- consent and calibration ----------------------------------------------------------
 
-        void HandleKeys()
+        internal void SetWebcamConsent(bool allowed)
         {
-            if (Input.GetKeyDown(consentKey))
+            PlayerPrefs.SetInt(ConsentKey, allowed ? 1 : 0);
+            PlayerPrefs.Save();
+            if (allowed) StartWebcam();
+            else
             {
-                if (Consented) RevokeConsent();
-                else AskConsent();
+                CancelCalibration();
+                StopWebcam();
             }
-
-            if (askingConsent)
-            {
-                if (Input.GetKeyDown(KeyCode.Y))
-                {
-                    askingConsent = false;
-                    consentAnsweredFrame = Time.frameCount;
-                    PlayerPrefs.SetInt(ConsentKey, 1);
-                    StartWebcam();
-                    KarenScreen.Ensure().Subtitle(BlinkSidecar.Running
-                        ? "Webcam blink tracking on. Press F10 to watch it read your eyes, and F9 to calibrate."
-                        : "Webcam blink tracking on, but the camera helper couldn't start — press F10 for what to do.", 6f);
-                }
-                else if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.Escape))
-                {
-                    askingConsent = false;
-                    consentAnsweredFrame = Time.frameCount;
-                }
-            }
-
-            if (Input.GetKeyDown(calibrateKey) && !IsCalibrating) BeginCalibration();
         }
 
-        public void AskConsent() => askingConsent = true;
-
-        public void RevokeConsent()
+        internal void CancelCalibration()
         {
-            PlayerPrefs.SetInt(ConsentKey, 0);
-            StopWebcam();
-            KarenScreen.Ensure().Subtitle("Webcam blink tracking off. The camera helper has been stopped.", 3f);
+            if (!IsCalibrating) return;
+            CalibrationResult = Calibrating == CalibrationStep.Blinks ? "Calibration saved. Blink check stopped." : "Calibration cancelled.";
+            Enter(CalibrationStep.None, 0f, "");
         }
 
         public void BeginCalibration()
         {
+            if (IsCalibrating) return;
             if (!WebcamLive)
             {
-                CalibrationResult = "Calibration needs the webcam. Press F8 to turn it on, and wait for step 3 in the F10 panel to turn green.";
-                KarenScreen.Ensure().Subtitle(CalibrationResult, 5f);
+                CalibrationResult = "Wait for the F8 webcam panel to show a signal before calibrating.";
                 return;
             }
             oldOpen = openLevel;
@@ -337,7 +308,6 @@ namespace Kehai.Blink
             stepStarted = Time.unscaledTime;
             stepEnds = stepStarted + seconds;
             CalibrationText = text;
-            if (step != CalibrationStep.None) KarenScreen.Ensure().Subtitle(text, seconds);
         }
 
         void CalibrationSample(float raw)
@@ -365,10 +335,9 @@ namespace Kehai.Blink
                 case CalibrationStep.Blinks:
                     int seen = Blinks - blinksAtCheck;
                     CalibrationResult = seen >= 3 ? $"Calibrated. It caught all {seen} of your blinks."
-                        : seen > 0 ? $"Calibrated, but it only caught {seen} of your 3 blinks. Blink a bit more fully, or press F9 to try again."
-                        : "Calibrated, but it didn't catch your blinks. Try more light on your face, or press F9 to try again.";
+                        : seen > 0 ? $"Calibrated, but it only caught {seen} of your 3 blinks. Blink a bit more fully and try again."
+                        : "Calibrated, but it didn't catch your blinks. Try more light on your face and calibrate again.";
                     Enter(CalibrationStep.None, 0f, "");
-                    KarenScreen.Ensure().Subtitle(CalibrationResult, 5f);
                     break;
             }
         }
@@ -377,10 +346,10 @@ namespace Kehai.Blink
         bool Fit()
         {
             if (openSamples.Count < 10 || shutSamples.Count < 10)
-                return Fail("Calibration didn't get enough readings from the camera. Check the F10 panel shows a signal, then press F9 again.");
+                return Fail("Calibration didn't get enough readings. Wait for the camera signal, then try again.");
             float open = Median(openSamples), shut = Median(shutSamples);
             if (shut - open < 0.12f)
-                return Fail($"Your eyes read almost the same open ({open:0.00}) as closed ({shut:0.00}). Face the camera with some light on your face, then press F9 again.");
+                return Fail($"Your eyes read almost the same open ({open:0.00}) as closed ({shut:0.00}). Face the camera with some light on your face and try again.");
             openLevel = open;
             closedLevel = shut;
             Calibrated = true;
@@ -395,7 +364,6 @@ namespace Kehai.Blink
             Calibrated = oldCalibrated;
             CalibrationResult = why;
             Enter(CalibrationStep.None, 0f, "");
-            KarenScreen.Ensure().Subtitle(why, 6f);
             return false;
         }
 
@@ -455,27 +423,6 @@ namespace Kehai.Blink
                 tones[hz] = clip;
             }
             beeper.PlayOneShot(clip, 0.7f);
-        }
-
-        void OnGUI()
-        {
-            if (!askingConsent) return;
-            int size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 46f, 15f, 32f));
-            var style = new GUIStyle(GUI.skin.box) { richText = true, wordWrap = true, fontSize = size, alignment = TextAnchor.UpperLeft, padding = new RectOffset(20, 20, 16, 16) };
-            float w = Mathf.Min(size * 42f, Screen.width - 40f);
-            var rect = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.2f, w, size * 19f);
-            GUI.color = new Color(0f, 0f, 0f, 0.92f);
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUI.Label(rect,
-                "<b>Use your webcam to track blinks?</b>\n\n" +
-                GameNames.Antagonist + " can react when your real eyes close. The camera is read by a small helper program on this " +
-                "computer, which the game starts for you. It sends the game only one number — how closed your eyes are.\n\n" +
-                "• <b>Local only.</b> Nothing leaves this machine.\n" +
-                "• <b>Never recorded.</b> No frames are saved or stored.\n" +
-                "• <b>Optional.</b> Everything works without it; you can switch it off with F8.\n" +
-                "• macOS will ask once whether Unity may use the camera.\n\n" +
-                "[Y] enable      [N] not now", style);
         }
     }
 }

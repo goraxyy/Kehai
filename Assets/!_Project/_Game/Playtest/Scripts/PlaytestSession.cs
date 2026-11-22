@@ -51,7 +51,7 @@ namespace Kehai.Playtest
 
         static readonly KeyCode[] Watched =
         {
-            KeyCode.E, KeyCode.Q, KeyCode.C, KeyCode.F1, KeyCode.F2, KeyCode.F7, KeyCode.F8, KeyCode.F9, KeyCode.F10,
+            KeyCode.E, KeyCode.Q, KeyCode.C, KeyCode.F1, KeyCode.F2, KeyCode.F7, KeyCode.F8,
             KeyCode.L, KeyCode.Escape,
         };
 

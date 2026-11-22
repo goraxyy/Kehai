@@ -16,10 +16,6 @@ public class PowerSystem : MonoBehaviour
     [Tooltip("Found automatically if left empty.")]
     public MusicBox musicBox;
 
-    [Header("Input")]
-    [Tooltip("Trips the breakers from anywhere in the building.")]
-    public KeyCode cutPowerKey = KeyCode.L;
-
     [Header("Audio")]
     public AudioClip powerDownSound;
     public AudioClip powerUpSound;
@@ -97,8 +93,6 @@ public class PowerSystem : MonoBehaviour
 
     void Update()
     {
-        if (Edition.AllowDebugTools && Input.GetKeyDown(cutPowerKey) && HasPower && !GamePause.Paused) CutPower();
-
         float target = HasPower ? 1f : 0f;
         if (!Mathf.Approximately(ambientBlend, target))
         {

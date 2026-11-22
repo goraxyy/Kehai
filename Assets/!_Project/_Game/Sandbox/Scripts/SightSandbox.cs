@@ -120,8 +120,7 @@ namespace Kehai.Sandbox
             switch (key)
             {
                 case KeyCode.F4: Indicators.ToggleAll(); return true;
-                // F5 starts her, or freezes her if she's moving (F7 and F8 keep their store jobs:
-                // a clip mark and the webcam). Route is on the panel.
+                // F5 starts her, or freezes her if she's moving. Route is on the panel.
                 case KeyCode.F5:
                     if (Karen.Current == SandboxKaren.State.Moving) Karen.Freeze(); else Karen.StartMoving();
                     return true;

@@ -1226,9 +1226,8 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 | V (on the F1 map) | in the editor and development builds only: her footsteps and floor cone, on or off (0.2.0 on F3; V since 0.5.2's squashed keys; players don't get them) |
 | F1 | live map of the store (you, Karen, her guess, customers, sounds, jobs) and a plain-words story of what Karen is doing; **H** adds her belief heat map, **T** the technical view |
 | F2 | replay of the shift so far on the same map: drag the timeline, Space plays, 1/2/3 speed, ←/→ jump 5 s, O opens the full report |
-| F8 | blink channel consent panel (webcam path stays off until you agree); starts the camera helper |
-| F9 | guided blink calibration (~12 s): eyes open, closed until the beep, then three blinks it counts |
-| F10 | blink test panel: a checklist of consent → helper → signal → calibration, and a live open/closed meter and graph; R restarts the helper, V switches camera, M switches between Apple Vision and MediaPipe |
+| F8 | webcam panel with consent, guided calibration and a live blink meter and graph. R restarts the helper, V switches camera and M switches between Apple Vision and MediaPipe |
+| L (on the F1 map) | cut store power in the editor and development builds |
 | B | keyboard blink — hold to keep your eyes shut |
 | O | after a shift: open the shift report in the browser |
 | Enter / Q | after a shift: continue / hand in your notice (from shift 5) |
