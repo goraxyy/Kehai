@@ -178,6 +178,14 @@ public sealed class PlacementProbe
     {
         if (!HasNavigation) return;
 
+        // The furthest any sampled spot got, so an unreachable row says what stopped it.
+        int furthest = -1;
+        string stopped = null;
+        void Stopped(int stage, string why)
+        {
+            if (stage > furthest) { furthest = stage; stopped = why; }
+        }
+
         foreach (Vector3 side in sides)
         {
             Vector3 forward = Vector3.ProjectOnPlane(side, Vector3.up).normalized;
@@ -187,13 +195,13 @@ public sealed class PlacementProbe
             foreach (float offset in Offsets)
             {
                 Vector3 horizontal = centre + forward * step + lateral * offset;
-                if (!TryFloor(horizontal, out Vector3 feet)) continue;
+                if (!TryFloor(horizontal, out Vector3 feet)) { Stopped(0, "no floor in front"); continue; }
                 result.Height ??= centre.y - feet.y;
-                if (!CanStand(feet)) continue;
+                if (!CanStand(feet)) { Stopped(1, "no room to stand in front"); continue; }
                 Vector3 eye = feet + Vector3.up * eyeHeight;
-                if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) continue;
-                if (!CanAimAt(eye, centre, range, target, colliders)) continue;
-                if (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete) continue;
+                if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) { Stopped(2, "too far from the door"); continue; }
+                if (!CanAimAt(eye, centre, range, target, colliders, out string aim)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
+                if (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete) { Stopped(4, "no route from the spawn"); continue; }
 
                 result.Approach = "reachable";
                 result.Standing = feet;
@@ -202,7 +210,8 @@ public sealed class PlacementProbe
             }
         }
         result.Approach = "unreachable";
-        result.Evidence = Add(result.Evidence, "No sampled front position with floor, standing clearance, aim and a complete NavMesh route from spawn");
+        result.Evidence = Add(result.Evidence, "No sampled front position with floor, standing clearance, aim and a complete NavMesh route from spawn" +
+            (stopped != null ? $" (furthest: {stopped})" : ""));
     }
 
     bool TryFloor(Vector3 horizontal, out Vector3 feet)
@@ -233,13 +242,25 @@ public sealed class PlacementProbe
         return true;
     }
 
-    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders)
+    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders, out string why)
     {
+        why = null;
         Vector3 delta = centre - eye;
         if (delta.sqrMagnitude < .0001f || Vector3.Angle(Vector3.ProjectOnPlane(delta, Vector3.up), delta) > maxLookAngle)
+        {
+            why = "too steep to look at";
             return false;
+        }
         var ray = new Ray(eye, delta.normalized);
-        if (target != null && !ReferenceEquals(player.FindAimedTarget(ray), target)) return false;
+        if (target != null)
+        {
+            IInteractable aimed = player.FindAimedTarget(ray);
+            if (!ReferenceEquals(aimed, target))
+            {
+                why = "the aim lands on " + Describe(aimed);
+                return false;
+            }
+        }
 
         float contact = delta.magnitude;
         if (target is ShelfSlot slot)
@@ -253,14 +274,33 @@ public sealed class PlacementProbe
             foreach (var collider in colliders)
                 if (collider.Raycast(ray, out var hit, range)) contact = Mathf.Min(contact, hit.distance);
         }
-        if (contact > range) return false;
+        if (contact > range)
+        {
+            why = $"out of reach ({contact:0.00} m)";
+            return false;
+        }
 
         int count = Physics.RaycastNonAlloc(ray, occluders, Mathf.Max(0f, contact - .01f),
             Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        if (count == occluders.Length) return false;
+        if (count == occluders.Length)
+        {
+            why = "too many things in the way";
+            return false;
+        }
         for (int i = 0; i < count; i++)
-            if (!occluders[i].collider.transform.IsChildOf(body.transform)) return false;
+            if (!occluders[i].collider.transform.IsChildOf(body.transform))
+            {
+                why = "blocked by " + occluders[i].collider.name;
+                return false;
+            }
         return true;
+    }
+
+    static string Describe(IInteractable aimed)
+    {
+        if (aimed == null) return "nothing";
+        if (aimed is ShelfSlot other) return $"slot {other.Index} ({other.side} face)";
+        return aimed is Component c ? $"{c.GetType().Name} {c.name}" : aimed.GetType().Name;
     }
 
     static string Add(string first, string second) => string.IsNullOrEmpty(first) ? second : first + ". " + second;
