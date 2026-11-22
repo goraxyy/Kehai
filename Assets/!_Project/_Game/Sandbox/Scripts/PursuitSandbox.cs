@@ -145,9 +145,10 @@ namespace Kehai.Sandbox
             while (Brain != null && Brain.Body == null) yield return null;
             if (Brain == null) yield break;
             Brain.BeginShift();
-            Brain.Body.transform.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            FaceStart();
             Freeze();
             Indicators = SandboxIndicators.Build(transform, Brain.Body, "Pursuit sandbox");
+            Indicators.showInArea = ControlsInArea;
             Indicators.status = Status;
             Indicators.extra = Extra;
             Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F1 then V her cone   Ctrl crouch   Esc frees the mouse";
@@ -184,8 +185,15 @@ namespace Kehai.Sandbox
             Caught = false;
             Brain.BeginShift();
             Brain.Body.Warp(World(KarenSpot));
-            Brain.Body.transform.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            FaceStart();
             Freeze();
+        }
+
+        void FaceStart()
+        {
+            Transform body = Brain.Body.transform;
+            body.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            Brain.Body.TurnToward(body.position + body.forward * 5f);
         }
 
         void OnCaught()
@@ -235,7 +243,7 @@ namespace Kehai.Sandbox
 
         void Update()
         {
-            if (!Ready) return;
+            if (!Ready || !ControlsInArea()) return;
             foreach (KeyCode key in Keys) if (Input.GetKeyDown(key)) Press(key);
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -244,6 +252,11 @@ namespace Kehai.Sandbox
                 Cursor.visible = locked;
             }
         }
+
+        bool ControlsInArea() => buildPlayer || Player != null &&
+            Mathf.Abs(Player.Position.x - Centre.x) <= RoomSize.x * .5f + 1f &&
+            Player.Position.z >= Centre.z + PlayerStart.z - 1f &&
+            Player.Position.z <= Centre.z + RoomSize.y * .5f + 1f;
 
         void OnDestroy()
         {

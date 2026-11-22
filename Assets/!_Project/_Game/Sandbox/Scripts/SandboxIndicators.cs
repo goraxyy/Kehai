@@ -20,6 +20,7 @@ namespace Kehai.Sandbox
         // The first line of the readout (her state in this sandbox), any extra lines, and the keys.
         public System.Func<string> status = () => "";
         public System.Func<IEnumerable<string>> extra = () => System.Array.Empty<string>();
+        public System.Func<bool> showInArea = () => true;
         public string keys = "";
         public readonly List<HidingPlace> places = new List<HidingPlace>();
         public readonly List<TextMesh> placeMeters = new List<TextMesh>();
@@ -121,23 +122,24 @@ namespace Kehai.Sandbox
         void LateUpdate()
         {
             if (body == null) return;
+            bool inArea = showInArea();
             SightSensor eye = body.Sight;
             PlayerPresence player = PlayerPresence.Current;
             Camera view = Camera.main;
 
             if (headMeter != null)
             {
-                headMeter.gameObject.SetActive(showMeters);
+                headMeter.gameObject.SetActive(showMeters && inArea);
                 headMeter.text = $"{eye.Awareness:0.00}" + (eye.SeesNow ? "  sees" : "");
                 headMeter.color = eye.Awareness >= eye.confirmAt ? new Color(1f, 0.3f, 0.25f) : eye.Awareness >= eye.glimpseAt ? new Color(1f, 0.75f, 0.25f) : Color.white;
                 if (view != null) headMeter.transform.rotation = Quaternion.LookRotation(headMeter.transform.position - view.transform.position);
             }
-            if (sawLight != null) sawLight.enabled = showMeters && eye.HiddenEntry.Active;
+            if (sawLight != null) sawLight.enabled = showMeters && inArea && eye.HiddenEntry.Active;
             for (int i = 0; i < eyeLines.Length; i++)
             {
                 LineRenderer line = eyeLines[i];
                 if (line == null) continue;
-                bool show = showEyeLine && player != null;
+                bool show = showEyeLine && inArea && player != null;
                 line.enabled = show;
                 if (!show) continue;
                 Vector3 point = i == 0 ? player.Head : i == 1 ? player.Chest : player.Feet;
@@ -149,7 +151,7 @@ namespace Kehai.Sandbox
             for (int i = 0; i < places.Count; i++)
             {
                 TextMesh meter = placeMeters[i];
-                meter.gameObject.SetActive(showMeters);
+                meter.gameObject.SetActive(showMeters && inArea);
                 meter.text = PlaceReport(places[i], player);
                 meter.color = meter.text.StartsWith("HIDDEN") ? new Color(0.3f, 1f, 0.4f) : Color.white;
                 if (view != null) meter.transform.rotation = Quaternion.LookRotation(meter.transform.position - view.transform.position);
@@ -158,7 +160,7 @@ namespace Kehai.Sandbox
 
         void OnGUI()
         {
-            if (!showReadout || body == null) return;
+            if (!showReadout || body == null || !showInArea()) return;
             if (style == null) style = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 15, wordWrap = true };
             SightSensor eye = body.Sight;
             PlayerPresence player = PlayerPresence.Current;
