@@ -23,11 +23,16 @@ namespace Kehai.Karen
         // online after concealment cannot report the occupant or replay an old entry.
         public static void TickCamera(SightSensor eye, float dt, bool liveFeed = true)
         {
+            if (ObserveCameraEntry(eye, dt, liveFeed))
+                CameraSawEntry?.Invoke(eye.HiddenEntry.Place, eye.HiddenEntry.Position);
+        }
+
+        internal static bool ObserveCameraEntry(SightSensor eye, float dt, bool liveFeed)
+        {
             int previous = eye.HiddenEntry.Entry;
             eye.Tick(dt);
-            WitnessedHide entry = eye.HiddenEntry;
-            if (liveFeed && entry.Active && entry.Entry != previous)
-                CameraSawEntry?.Invoke(entry.Place, entry.Position);
+            if (!liveFeed) eye.ForgetVisibleApproach();
+            return liveFeed && eye.HiddenEntry.Active && eye.HiddenEntry.Entry != previous;
         }
 
         public static void Report(in Observation observation) => Reported?.Invoke(observation);
@@ -278,14 +283,22 @@ namespace Kehai.Karen
         {
             foreach (CustomerMemory m in CustomerMemory.All)
             {
-                if (m == null || !m.HasSighting) continue;
-                if ((m.transform.position - bodyPosition).sqrMagnitude > 2.2f * 2.2f && (!m.possessed || m.SawHidingEntry)) continue;
-                if (polled.TryGetValue(m, out float when) && when >= m.LastSeenTime) continue;
-
-                polled[m] = m.LastSeenTime;
-                Positive.Add(m.ToObservation(Senses));
+                if (!TryPollWitness(m, bodyPosition, out Observation testimony)) continue;
+                Positive.Add(testimony);
                 Raw.Add(new SenseRaw { Channel = SenseChannel.Testimony, Age = m.Age, Awareness = m.SightingConfidence });
             }
+        }
+
+        internal bool TryPollWitness(CustomerMemory witness, Vector3 bodyPosition, out Observation testimony)
+        {
+            testimony = default;
+            if (!UseTestimony || witness == null || !witness.HasSighting) return false;
+            if ((witness.transform.position - bodyPosition).sqrMagnitude > 2.2f * 2.2f &&
+                (!witness.possessed || witness.SawHidingEntry)) return false;
+            if (polled.TryGetValue(witness, out float when) && when >= witness.LastSeenTime) return false;
+            polled[witness] = witness.LastSeenTime;
+            testimony = witness.ToObservation(Senses);
+            return true;
         }
 
         // Absence (Karen.md §3.6): cells in view that turned out empty. Round-robin over the

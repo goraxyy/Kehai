@@ -35,6 +35,7 @@ namespace Kehai.Sandbox
         public static readonly Vector3 GroundCentre = new Vector3(-40f, -0.1f, -9.9f);
         public static readonly Vector3 GroundSize = new Vector3(80f, 0.2f, 80f);
         public static readonly Vector3 SightAt = new Vector3(-58f, 0f, -24f);
+        public static readonly Vector3 InteractionsAt = new Vector3(-58f, 0f, 10f);
         // The standalone pursuit room's place moved by whole 15 m steps (her map's 5 m tiles and
         // 1.5 m cells), so her regions there are cut the same way and the pursuit checks meet the
         // same aisles: (55, -148) - (90, 0, -150).
@@ -116,7 +117,15 @@ namespace Kehai.Sandbox
                 chase.buildPlayer = false;
                 if (SessionState.GetBool(PursuitChecksKey, false)) pursuit.AddComponent<PursuitChecks>();
                 pursuit.SetActive(true);
-                // Both areas have baked their NavMesh: her test map is built from them now.
+
+                var interactions = new GameObject("Interactions area");
+                interactions.transform.SetParent(root.transform, false);
+                interactions.transform.position = InteractionsAt;
+                interactions.SetActive(false);
+                interactions.AddComponent<SightSandbox>().buildPlayer = false;
+                interactions.AddComponent<InteractionSandbox>();
+                interactions.SetActive(true);
+                // The rooms have baked their NavMesh: her test map is built from them now.
                 StoreMap.Rebuild();
             }
             Physics.SyncTransforms();

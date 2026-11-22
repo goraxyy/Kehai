@@ -161,6 +161,29 @@ she start it, did it land (its own evidence, not just an EFFECT line), and did t
 and the `.tsv` the clip tools read. **It runs in the recorded test pass after 0.5.2 merges**
 (Q1), not before.
 
+## The interactions sandbox
+
+Open **Kehai → Sandbox → Interactions**, or walk to the room north of the sight area in
+**Kehai → Sandbox → Island**. Its panel switches the camera feed, asks the nearby shopper,
+and clears the readings. Pick up the torch with E. Switch it on and aim out through the open
+fridge door while hidden to see whether the light reaches a surface Karen can see.
+
+**Kehai → Sandbox → Run Interaction Checks** drives nine cases. It writes a result report and
+one replay per case under
+`sandbox_checks/interactions_<time>/`. The cases cover camera on, off and turned away,
+shopper facing toward and away from the approach, torch on and off, and the Ledger's weight
+when Karen sees the entry or faces away. The testimony case
+asks from outside and then inside talking distance. The recordings use the sight room replay
+viewer. The evidence appears in the report and replay annotations.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxChecks.Interactions
+```
+
+The room uses the game's sensors. Its findings stay in the room. The pursuit room keeps the
+island's one full Karen brain. The fridge and rack search actions have separate acceptance in
+[the 0.5.2 plan](../../you/plans/0.5.2-plan.md#phase-9-interactions-c-with-you--opus-55--this-mac-checks-through-kehai-run-on-the-pc).
+
 ## For agents
 
 - Code: `Assets/!_Project/_Game/Sandbox/` (`SandboxKit` the parts, `SandboxKaren` her

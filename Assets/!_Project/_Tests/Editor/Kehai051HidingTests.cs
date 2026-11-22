@@ -192,6 +192,26 @@ public class Kehai051HidingTests
         finally { InfrastructureFeed.CameraSawEntry -= Receive; }
     }
 
+    [Test]
+    public void AFeedComingLiveOnTheEntryCannotUseTheApproachItMissed()
+    {
+        int reports = 0;
+        void Receive(HidingPlace _, Vector3 __) => reports++;
+        InfrastructureFeed.CameraSawEntry += Receive;
+        try
+        {
+            player.transform.position = Vector3.forward * 4.95f;
+            Physics.SyncTransforms();
+            InfrastructureFeed.TickCamera(eye, .02f, liveFeed: false);
+            Assert.IsTrue(eye.SeesNow, "the camera can still score its ordinary view while the feed is looped");
+            player.transform.position = Vector3.forward * 5.31f;
+            Physics.SyncTransforms();
+            InfrastructureFeed.TickCamera(eye, .02f);
+            Assert.AreEqual(0, reports);
+        }
+        finally { InfrastructureFeed.CameraSawEntry -= Receive; }
+    }
+
     [TestCase(true)]
     [TestCase(false)]
     public void CustomerTestimonyRetainsOnlyWhatTheCustomerSaw(bool sawApproach)
