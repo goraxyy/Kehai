@@ -15,14 +15,13 @@ namespace Kehai.Playtest
     // replay file and time it belongs to), the frame rate, errors, shifts, bug notes and the
     // answers to the questions. At the end it's packed with the shifts' recordings and sent.
     //
-    // Batch mode (headless tests): no screens; -playtest-code <code> and
-    // -playtest-consent send|keep stand in for what a tester would type.
+    // Batch mode: -playtest-code <code> pins the fixture ID, and -playtest-consent send|keep answers the consent page.
     public sealed class PlaytestSession : MonoBehaviour
     {
         public static PlaytestSession Instance { get; private set; }
 
         public PlaytestConfig Config { get; private set; }
-        public string Stamp { get; private set; }          // the launch, yyyyMMdd_HHmmss
+        public string Stamp { get; private set; }          // the launch timestamp and unique session ID
         public string Folder { get; private set; }
         public bool Open => log != null;
         public int ShiftsThisSession { get; private set; }
@@ -71,14 +70,17 @@ namespace Kehai.Playtest
             Instance = this;
             Config = PlaytestConfig.Current;
             PackCrashedSession();
-            BeginSession();
 
             if (Application.isBatchMode)
             {
-                string code = TesterCode.Normalize(PlaytestConfig.Arg("-playtest-code") ?? "BOT");
-                if (code != null && code != TesterState.Code) SetCode(code);
-                if (!TesterState.ConsentAsked) SetConsent(PlaytestConfig.Arg("-playtest-consent") == "send");
+                string fixture = TesterCode.Normalize(PlaytestConfig.Arg("-playtest-code"));
+                if (fixture != null) TesterState.Code = fixture;
             }
+            string id = TesterState.EnsureId();
+            if (TesterState.NeedsFreshCareer(id)) pendingFreshCareer = id;
+            BeginSession();
+            if (Application.isBatchMode && !TesterState.ConsentAsked)
+                SetConsent(PlaytestConfig.Arg("-playtest-consent") == "send");
         }
 
         void OnEnable()
@@ -111,9 +113,9 @@ namespace Kehai.Playtest
 
         public void BeginSession(string continuing = null)
         {
-            Stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            Folder = Path.Combine(PlaytestPaths.Sessions, Stamp);
             startedUtc = DateTime.UtcNow;
+            Stamp = PlaytestPackage.NewStamp(startedUtc);
+            Folder = Path.Combine(PlaytestPaths.Sessions, Stamp);
             startedAt = Time.realtimeSinceStartup;
             ShiftsThisSession = 0;
             wrappingUp = false;
@@ -130,6 +132,7 @@ namespace Kehai.Playtest
                 ["build"] = Config.build,
                 ["version"] = Application.version,
                 ["code"] = TesterState.Code,
+                ["session_id"] = Stamp,
                 ["sends"] = TesterState.Sends,
                 ["continues"] = continuing,
                 ["platform"] = Application.platform.ToString(),
@@ -204,20 +207,13 @@ namespace Kehai.Playtest
 
         // ---- the tester -------------------------------------------------------------------
 
-        public void SetCode(string code)
-        {
-            TesterState.Code = code;
-            Note("code", new Dictionary<string, object> { ["code"] = code });
-            if (TesterState.NeedsFreshCareer(code)) pendingFreshCareer = code;
-        }
-
         public void SetConsent(bool send)
         {
             TesterState.SetConsent(send);
             Note("consent", new Dictionary<string, object> { ["sends"] = send });
         }
 
-        // A new tester is a new employee: Karen forgets the last one, and calls this one by their code.
+        // A new tester is a new employee. Karen starts with a fresh Ledger.
         void StartFreshCareer()
         {
             KarenBrain brain = KarenBrain.Instance;
@@ -226,7 +222,7 @@ namespace Kehai.Playtest
             pendingFreshCareer = null;
             CareerRuntime.NewCareer();
             brain.Ledger.Wipe();
-            brain.Ledger.Data.playerName = "Employee " + code;
+            brain.Ledger.Data.playerName = "Employee";
             brain.Ledger.Save();
             shiftManager.SetShiftNumber(0);
             TesterState.CareerOf = code;
@@ -398,7 +394,7 @@ namespace Kehai.Playtest
 
         void WatchKeys()
         {
-            if (PlaytestScreens.Covering) return;   // typing a code or a note isn't playing
+            if (PlaytestScreens.Covering) return;
             foreach (KeyCode key in Watched)
             {
                 if (!Input.GetKeyDown(key)) continue;

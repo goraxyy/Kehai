@@ -12,7 +12,7 @@
 // R2 bucket; secrets UPLOAD_KEY and ADMIN_KEY (wrangler secret put).
 
 export const MAX_BYTES = 50 * 1024 * 1024;
-const SESSION = /^\/sessions\/([A-Za-z0-9-]{1,40})\/([A-Z0-9-]{2,16})\/(\d{8}_\d{6})\.zip$/;
+const SESSION = /^\/sessions\/([A-Za-z0-9-]{1,40})\/([A-Z0-9-]{2,16}|[A-F0-9]{32})\/(\d{8}_\d{6}(?:-[a-f0-9]{32})?)\.zip$/;
 const ADMIN = /^\/admin\/sessions(?:\/(.+))?$/;
 
 export default {

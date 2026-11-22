@@ -12,9 +12,10 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 > **Changing:** the [playtest v2 build plan](../../you/plans/playtest-v2.md), updated 12 November,
 > covers the illustrated instructions and live connection. The owner's target is no typed code,
 > cloud retention, and a later manual dataset download/training run on Windows. No Mac job or
-> training run is required when a session arrives. These changes are not implemented yet:
-> everything below describes v1, including its delete-after-pull behavior. Do not treat its
-> old Form/itch setup as requirements for v2. The v2 plan owns implementation checkboxes.
+> training run is required when a session arrives. The first-launch code box is removed. Each
+> install creates its own tester ID and keeps it across launches. Existing installs keep their
+> IDs. The upload worker accepts old and new session names. The sections below describe v1,
+> including its Form/itch setup and delete-after-pull behavior. The v2 plan tracks the remaining work.
 
 ---
 

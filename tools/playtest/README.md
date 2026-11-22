@@ -7,8 +7,8 @@ Everything outside the game for running playtests. The design and the loop are i
 |---|---|
 | `.env.example` | The settings, copied to `.env` (git ignores it): the round, the upload service's address and keys, the form and download links |
 | `worker/` | The upload service: a Cloudflare Worker in front of a private R2 bucket (`src/index.js`, tests in `test/`, `wrangler.toml`) |
-| `make_codes.py` | Tester codes for a round, and a ready-to-send message for each |
-| `TESTER_MESSAGE.md` | That message's text |
+| `make_codes.py` | Legacy v1 tester-code and invitation generator. New builds create tester IDs on first launch |
+| `TESTER_MESSAGE.md` | The legacy v1 invitation |
 | `ITCH_PAGE.md` | What to put on the itch.io page |
 
 Your Mac's side (pulling sessions, the report, Telegram, Claude's summaries, the issues) lives
