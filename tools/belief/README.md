@@ -21,6 +21,11 @@ tools/belief/train_all.sh                                       # C4.10: fit, ch
 tools/belief/test_run.sh                                        # C4.11: the three tests of §11 (about 3 h, editor closed)
 ```
 
+If recording stops, rerun the same command from the same commit. It keeps finished leagues,
+parity checks and the exported legs. An interrupted league starts again in its own folder.
+Recording and fitting default to the new `belief052` folder. To use the older `belief040` data
+for a fit, pass its path explicitly to `train_all.sh`.
+
 **A trace** starts with a `state` line (her belief, the prior it leaks back to, the exit lines),
 then every operation of the filter with its inputs: `layers`, `obs` (as applied, with the raw
 inputs her sense model turned into a bump), `sweep`, `bias`, `features`, `predict`, `her_noise`,
