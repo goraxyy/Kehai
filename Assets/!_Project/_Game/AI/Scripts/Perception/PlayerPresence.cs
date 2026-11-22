@@ -131,9 +131,17 @@ namespace Kehai.Karen
             if (Current == this) Current = null;
         }
 
-        public Vector3 Feet => transform.position + Vector3.up * 0.1f;
-        public Vector3 Chest => transform.position + Vector3.up * (IsCrouching ? 0.55f : 1.2f);
-        public Vector3 Head => view != null ? view.transform.position : transform.position + Vector3.up * 1.6f;
+        // The bottom of your body (0.5.2, found by the sandbox island): the store's player starts
+        // a shift with its CharacterController centred on its origin, so its origin is 1 m up
+        // until the first crouch (PlayerMotor then centres it at half its height, putting the
+        // origin at the feet). Her eye tested your feet and chest from the origin, so until then
+        // they were 1 m too high: your chest showed over a 2.2 m shelf, even crouched behind a
+        // short one. From the body's real bottom, they're right either way.
+        Vector3 Ground => controller != null ? transform.position + controller.center - Vector3.up * (controller.height * 0.5f) : transform.position;
+
+        public Vector3 Feet => Ground + Vector3.up * 0.1f;
+        public Vector3 Chest => Ground + Vector3.up * (IsCrouching ? 0.55f : 1.2f);
+        public Vector3 Head => view != null ? view.transform.position : Ground + Vector3.up * 1.6f;
         public Vector3 Facing => view != null ? view.transform.forward : transform.forward;
         public Vector3 Position => transform.position;
 
