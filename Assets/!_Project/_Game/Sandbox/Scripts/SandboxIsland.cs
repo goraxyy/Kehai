@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using Kehai.Eval;
 using Kehai.Karen;
+using Kehai.Store;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -34,6 +35,10 @@ namespace Kehai.Sandbox
         public static readonly Vector3 GroundCentre = new Vector3(-40f, -0.1f, -9.9f);
         public static readonly Vector3 GroundSize = new Vector3(80f, 0.2f, 80f);
         public static readonly Vector3 SightAt = new Vector3(-58f, 0f, -24f);
+        public static readonly Vector3 PursuitAt = new Vector3(-40f, 0f, 8f);
+        // Her test map's bounds: the island's ground, floor to a few metres up (C11.13).
+        public static Bounds MapBounds => new Bounds(new Vector3(GroundCentre.x, 2f, GroundCentre.z), new Vector3(GroundSize.x, 6f, GroundSize.z));
+        public const string PursuitChecksKey = SessionKey + ".pursuitChecks";
 
         public static bool Active { get; private set; }   // the quiet-store sandbox, opened from the menu
 
@@ -54,6 +59,8 @@ namespace Kehai.Sandbox
             KarenBootstrap.Override = TricksSandbox.NewConfig();
             KarenBootstrap.Disabled = true;
             KehaiEnv.Ensure();   // keeps the title menu closed
+            StoreMap.UseTestArea(MapBounds);   // her test map: the island only
+            PursuitSandbox.Centre = PursuitAt;
         }
 
         public static void EndSession()
@@ -61,6 +68,8 @@ namespace Kehai.Sandbox
             if (!Active) return;
             KarenBootstrap.Override = previousConfig;
             KarenBootstrap.Disabled = previousDisabled;
+            StoreMap.UseTestArea(null);
+            PursuitSandbox.Centre = PursuitSandbox.StandaloneCentre;
             Active = false;
         }
 
@@ -95,6 +104,17 @@ namespace Kehai.Sandbox
                 var area = sight.AddComponent<SightSandbox>();
                 area.buildPlayer = false;
                 sight.SetActive(true);
+
+                // The pursuit area: her real brain, on her test map of the island.
+                var pursuit = new GameObject("Pursuit area");
+                pursuit.transform.SetParent(root.transform, false);
+                pursuit.SetActive(false);
+                var chase = pursuit.AddComponent<PursuitSandbox>();
+                chase.buildPlayer = false;
+                if (SessionState.GetBool(PursuitChecksKey, false)) pursuit.AddComponent<PursuitChecks>();
+                pursuit.SetActive(true);
+                // Both areas have baked their NavMesh: her test map is built from them now.
+                StoreMap.Rebuild();
             }
             Physics.SyncTransforms();
             return root;

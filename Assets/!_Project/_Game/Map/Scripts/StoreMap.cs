@@ -131,6 +131,20 @@ namespace Kehai.Store
             }
         }
 
+        // Her test map (0.5.2, C11.13, the owner's call of 21 November): while set, her map is
+        // built from the NavMesh inside these bounds only (the sandbox island), and everything
+        // inside reads as sales floor, so her aisle logic (searches, hiding spots, tricks, her
+        // brain's inputs) works there as in the store's aisles. Null: the store's map, as always.
+        public static Bounds? TestArea { get; private set; }
+
+        public static void UseTestArea(Bounds? area)
+        {
+            TestArea = area;
+            current = null;
+        }
+
+        static bool InTestArea(Vector3 p) => TestArea is Bounds t && p.x >= t.min.x && p.x <= t.max.x && p.z >= t.min.z && p.z <= t.max.z;
+
         // Rebuild after the maze has been changed (see Karen's shelf relocation).
         public static StoreMap Rebuild()
         {
@@ -144,6 +158,7 @@ namespace Kehai.Store
         {
             current = null;
             currentScene = default;
+            TestArea = null;
         }
 
         // ======================================================================
@@ -183,6 +198,7 @@ namespace Kehai.Store
 
             var b = new Bounds(tri.vertices[0], Vector3.zero);
             foreach (Vector3 v in tri.vertices) b.Encapsulate(v);
+            if (TestArea is Bounds test) b = test;   // her test map: the island only
             b.Expand(new Vector3(CellSize, 0f, CellSize));
             Bounds = b;
 
@@ -209,6 +225,7 @@ namespace Kehai.Store
                     // patch of floor and a thin wall could be stepped over.
                     if (Mathf.Abs(hit.position.x - centre.x) > CellSize * 0.5f) continue;
                     if (Mathf.Abs(hit.position.z - centre.z) > CellSize * 0.5f) continue;
+                    if (TestArea != null && !InTestArea(hit.position)) continue;
 
                     gridToCell[g] = positions.Count;
                     positions.Add(hit.position);
@@ -614,6 +631,7 @@ namespace Kehai.Store
         // three rooms of 13⅓ m each (INTERIOR_MODELS.md): staff room, office and WC.
         public static string AreaAt(Vector3 p)
         {
+            if (InTestArea(p)) return "Sales floor";   // her test map (C11.13)
             if (p.z > -110f) return p.z <= PavementEdge && p.x >= 10.5f && p.x <= 85.5f ? "Pavement" : "Street";
             if (p.x < 10.5f) return "West alley";
             if (p.x > 85.5f) return "East alley";

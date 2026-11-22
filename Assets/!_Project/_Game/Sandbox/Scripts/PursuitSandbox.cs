@@ -21,7 +21,13 @@ namespace Kehai.Sandbox
     // every cell as hers. It's an empty scene, so nothing of the store is there.
     public sealed class PursuitSandbox : MonoBehaviour
     {
-        public static readonly Vector3 Centre = new Vector3(55f, 0f, -148f);
+        // On its own (Kehai → Sandbox → Pursuit) it stands inside the store's sales-floor rectangle;
+        // on the sandbox island (C11.11) the island sets the centre and her test map covers it.
+        public static readonly Vector3 StandaloneCentre = new Vector3(55f, 0f, -148f);
+        public static Vector3 Centre { get; set; } = StandaloneCentre;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetCentre() => Centre = StandaloneCentre;
         public static readonly Vector2 RoomSize = new Vector2(24f, 16f);
         public const float DoorWidth = 1.4f;
         public const float PanelHeight = 1.3f;   // within reach: below eye level (1.6 m)
