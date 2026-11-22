@@ -50,6 +50,8 @@ The questions (Q numbers) are in the plan's [open questions](../0.5.2-plan.md#11
 **My pick: A** (Q23), with one shared kit (walls, door, fridge, rack, shelves, buttons,
 indicators), so each sandbox is a short list of what goes where.
 
+**Changed on 21 November (your call): one sandbox island in the store scene.** See section 8.
+
 ## 4. The four sandboxes
 
 | Sandbox | What's in it | Karen's mode | What you check |
@@ -113,3 +115,36 @@ read zero. You climb into the fridge in her view: the fridge's meter reads "hidd
 - **Real parts where it matters:** her eye, her body and the hiding places are the game's own code.
   The furniture is simple boxes at the real sizes (a quick pass, like the rest of the art); the
   real models can replace them later.
+
+## 8. The sandbox island in the store scene (your call, 21 November)
+
+You'll work in the store scene all the time, so the sandboxes move there: **one island**, the
+place you test her tricks and the interactions.
+
+| Part | What it is |
+|---|---|
+| **Where** | One island beside the store, built by code when the scene loads (nothing saved in the scene file). The models island moves beside it. Walkable ground joins the store, the sandbox island and the models island, so you can walk between all three. |
+| **Areas on it** | Sight, pursuit, tricks and interactions, side by side, each with its panel. The tricks area takes over the plates now outside the entrance. |
+| **The store meanwhile** | Quiet: no shift runs and the store's own Karen is off. The island's test Karen is the only Karen. You can still walk into the store. |
+| **Her map there** | A separate test map that covers the island only, the same kind as the store's (rooms, cells, landmarks), so she can plan, hunt and search there. The store's map is untouched. |
+| **Keys** | F5 starts or freezes her, F6 restarts, F4 hides the indicators; Route is on the panel. F7 (clip mark) and F8 (webcam) keep their store jobs. Done 21 November. |
+
+**Example:** you open Kehai → Sandbox, the store loads quiet, you walk out of the front door
+to the island, stand at the pursuit area, press F5, let her see you and run behind a shelf.
+
+### The keys, sorted and squashed (a proposal for you to say yes to)
+
+Today the game uses ten F keys. Squashed, it needs seven, and F3, F9 and F10 come free:
+
+| Key | Today | Proposed |
+|---|---|---|
+| F1 | her map (H, R, T on it; G forces a trick in developer builds) | the same, plus her floor cone on it (was F3) |
+| F2 | replay the shift so far | the same |
+| F3 | her footsteps and cone (developer builds) | free: into F1's map |
+| F4, F5, F6 | the sandbox: indicators, start or freeze, restart | the same, only in the sandbox |
+| F7 | mark a clip (Shift: mark a bug) | the same |
+| F8 | webcam blinking on or off | one webcam panel: on or off, calibrate, test |
+| F9 | calibrate the webcam | free: into F8's panel |
+| F10 | the blink test panel | free: into F8's panel |
+| L | cut the power (testing) | developer builds only, on F1's map |
+
