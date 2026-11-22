@@ -35,7 +35,10 @@ namespace Kehai.Sandbox
         public static readonly Vector3 GroundCentre = new Vector3(-40f, -0.1f, -9.9f);
         public static readonly Vector3 GroundSize = new Vector3(80f, 0.2f, 80f);
         public static readonly Vector3 SightAt = new Vector3(-58f, 0f, -24f);
-        public static readonly Vector3 PursuitAt = new Vector3(-40f, 0f, 8f);
+        // The standalone pursuit room's place moved by whole 15 m steps (her map's 5 m tiles and
+        // 1.5 m cells), so her regions there are cut the same way and the pursuit checks meet the
+        // same aisles: (55, -148) - (90, 0, -150).
+        public static readonly Vector3 PursuitAt = PursuitSandbox.StandaloneCentre + new Vector3(-90f, 0f, 150f);
         // Her test map's bounds: the island's ground, floor to a few metres up (C11.13).
         public static Bounds MapBounds => new Bounds(new Vector3(GroundCentre.x, 2f, GroundCentre.z), new Vector3(GroundSize.x, 6f, GroundSize.z));
         public const string PursuitChecksKey = SessionKey + ".pursuitChecks";
