@@ -143,7 +143,7 @@ The silent video clips are code only: none has been rendered yet.
 
 **Kehai → Sandbox → Tricks** (C11.8) opens the real store in Play, muted, on a private shift
 four: its own career numbers and a fresh temporary Ledger each time, so your save is never read
-or written. A row of stalls stands outside the entrance, between the two crossings: one plate per
+or written. A row of stalls stands on the sandbox island (out of the front door, north across the parking lot to the road, then west), near its south edge: one plate per
 live trick (the same list the trick check uses, `TrickCheck.Tricks`).
 
 - **E at a plate** makes her start that trick now (`KarenBrain.Force`: past the Director's

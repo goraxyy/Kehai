@@ -20,7 +20,9 @@ namespace Kehai.Sandbox
         // The recorded bot also starts on shift four. Force bypasses career unlocks, but
         // each tactic still checks its own prerequisites (e.g. overtime's last two minutes).
         public const int ShiftNumber = 4;
-        public static readonly Vector3 StallsAt = new Vector3(55f, 0.04f, -101.5f);
+        // On the sandbox island (SandboxIsland, built in every editor Play of the store), near its south
+        // edge where you walk on from the road, east of the sight area; facing the road.
+        public static readonly Vector3 StallsAt = new Vector3(-25f, 0f, -40f);
         const float ColumnSpacing = 1.25f;
         const int Rows = 3;
         static int Columns => (Catalogue.Count + Rows - 1) / Rows;
@@ -121,9 +123,8 @@ namespace Kehai.Sandbox
         {
             if (brain == null) return;
             Freeze();
-            feedback = "F5 starts shift four. The trick stalls stand between the two entrance crossings.";
-            // Between the two 4 m wide marked crossings (centres x=42.5 and 67.5).
-            // Facing south keeps the walk-up side clear of their customer and player spawns.
+            feedback = "F5 starts shift four. The trick stalls stand on the sandbox island: out of the front door, north to the road, then west.";
+            // Facing south: the plates face you as you come onto the island from the road.
             Transform stalls = SandboxKit.Group(transform, "Trick stalls", StallsAt, 180f);
             BuildStalls(stalls, id => TryFire(id));
             var controls = SandboxButton.Panel(stalls, "Shift controls",
