@@ -21,8 +21,8 @@ and no tricks, no hunt, no catch. She starts frozen on her spot in the north-wes
 |---|---|---|
 | START | F5 | she walks her loop round the room (or turns on her spot, see ROUTE) |
 | RESTART | F6 | back to her spot, frozen, her awareness and memory cleared |
-| FREEZE | F7 | she stops where she is; her eye keeps working |
-| ROUTE | F8 | switches between walking her loop and standing while turning a quarter every 3 s |
+| FREEZE | F5 again | she stops where she is; her eye keeps working |
+| ROUTE | panel only | switches between walking her loop and standing while turning a quarter every 3 s |
 
 There's a panel outside by the door and one inside. Look at a button and press **E**.
 **Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F3** toggles her floor cone, **F4**
@@ -89,7 +89,7 @@ say where you are. **F1** opens her map with her belief, as in the store.
 |---|---|---|
 | START | F5 | her brain runs: she roams, and hunts you once she's sure |
 | RESTART | F6 | a new shift for her: back on her spot, frozen, her belief and hunt cleared |
-| FREEZE | F7 | her brain stops where it is |
+| FREEZE | F5 again | her brain stops where it is |
 
 **Things to try:** let her see you, then break her line of sight round a shelf end: the corner
 box says "lost you 2.3 s ago, running on" and then "searching, 41 s of the hunt left, 2 spots
@@ -149,7 +149,7 @@ live trick (the same list the trick check uses, `TrickCheck.Tricks`).
 - **E at a plate** makes her start that trick now (`KarenBrain.Force`: past the Director's
   pacing, not past the trick's own needs; overtime, for one, still waits for the last two
   minutes). Frozen, she runs just that trick and freezes again.
-- **Keys:** F5 starts the shift and lets her move, F6 restarts (a new shift four), F7 freezes,
+- **Keys:** F5 starts the shift and lets her move, or freezes her; F6 restarts (a new shift four);
   `[` and `]` choose a trick from anywhere, Return fires it. The box at the top right says
   what she's doing and where the trick's chore is.
 - Her own tricks stay off (`sandboxNoTricks`): only the plates start one. A catch freezes the

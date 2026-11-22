@@ -75,7 +75,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
-            Indicators.keys = "F5 start   F6 restart   F7 freeze   F8 route   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   ROUTE on the panel   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 
@@ -117,15 +117,17 @@ namespace Kehai.Sandbox
             switch (key)
             {
                 case KeyCode.F4: Indicators.ToggleAll(); return true;
-                case KeyCode.F5: Karen.StartMoving(); return true;
+                // F5 starts her, or freezes her if she's moving (F7 and F8 keep their store jobs:
+                // a clip mark and the webcam). Route is on the panel.
+                case KeyCode.F5:
+                    if (Karen.Current == SandboxKaren.State.Moving) Karen.Freeze(); else Karen.StartMoving();
+                    return true;
                 case KeyCode.F6: Karen.Restart(); return true;
-                case KeyCode.F7: Karen.Freeze(); return true;
-                case KeyCode.F8: Karen.ToggleRoute(); return true;
             }
             return false;
         }
 
-        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7, KeyCode.F8 };
+        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6 };
 
         void Update()
         {

@@ -73,8 +73,8 @@ read zero. You climb into the fridge in her view: the fridge's meter reads "hidd
 |---|---|---|
 | **Start** | F5 | she starts moving (her loop, or her mode's behaviour) |
 | **Restart** | F6 | she goes back to her spot and freezes; her awareness and memory are cleared |
-| **Freeze** | F7 | she stops where she is, still seeing, so you can read the meters |
-| **Route** | F8 | switches between her walking loop and standing still while turning |
+| **Freeze** | F5 again | she stops where she is, still seeing, so you can read the meters |
+| **Route** | panel only | switches between her walking loop and standing still while turning |
 
 **Indicators,** each one switchable:
 

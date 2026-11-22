@@ -144,7 +144,7 @@ namespace Kehai.Sandbox
             Indicators = SandboxIndicators.Build(transform, Brain.Body, "Pursuit sandbox");
             Indicators.status = Status;
             Indicators.extra = Extra;
-            Indicators.keys = "F5 start   F6 restart   F7 freeze   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
             Ready = true;
@@ -218,14 +218,14 @@ namespace Kehai.Sandbox
             switch (key)
             {
                 case KeyCode.F4: Indicators.ToggleAll(); return true;
-                case KeyCode.F5: StartRunning(); return true;
+                // F5 starts her, or freezes her if she's running (F7 keeps its store job, the clip mark).
+                case KeyCode.F5: if (Running) Freeze(); else StartRunning(); return true;
                 case KeyCode.F6: Restart(); return true;
-                case KeyCode.F7: Freeze(); return true;
             }
             return false;
         }
 
-        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6, KeyCode.F7 };
+        static readonly KeyCode[] Keys = { KeyCode.F4, KeyCode.F5, KeyCode.F6 };
 
         void Update()
         {

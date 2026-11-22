@@ -92,8 +92,8 @@ public class SightSandboxPlayTests
         yield return Wait(2f);
         Assert.Greater(Vector3.Distance(spot, karen.Body.transform.position), 0.5f, "Start sets her walking");
 
-        // Freeze (F7): she stays put.
-        Assert.IsTrue(sandbox.Press(KeyCode.F7));
+        // Freeze (F5 again, while she moves): she stays put.
+        Assert.IsTrue(sandbox.Press(KeyCode.F5));
         yield return Wait(0.3f);
         Vector3 held = karen.Body.transform.position;
         yield return Wait(0.7f);

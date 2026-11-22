@@ -225,8 +225,8 @@ namespace Kehai.Sandbox
             if (GamePause.Paused || brain == null || brain.Ctx == null) return;
             if (Input.GetKeyDown(KeyCode.F6)) { Restart(); return; }
             if (runOne && !brain.ForcedPlanRunning) { runOne = false; Freeze(); }
-            if (Input.GetKeyDown(KeyCode.F5)) StartRunning();
-            if (Input.GetKeyDown(KeyCode.F7)) Freeze();
+            // F5 starts or freezes her; F7 stays the store's clip mark.
+            if (Input.GetKeyDown(KeyCode.F5)) { if (brain.enabled && !runOne) Freeze(); else StartRunning(); }
             int count = Catalogue.Count;
             if (count == 0) return;
             if (Input.GetKeyDown(KeyCode.LeftBracket)) selected = (selected + count - 1) % count;
@@ -241,7 +241,7 @@ namespace Kehai.Sandbox
             GUILayout.BeginArea(new Rect(Screen.width - width - 8f, 8f, width, Screen.height - 16f));
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Tricks sandbox  ·  " + (brain != null && brain.enabled ? "moving" : "frozen"));
-            GUILayout.Label("F5 start / resume    F6 restart    F7 freeze");
+            GUILayout.Label("F5 start or freeze    F6 restart");
             GUILayout.Label("E at a stall    [  ] select anywhere    Return to fire");
             GUILayout.Label(feedback);
             if (Catalogue.Count > 0 && brain != null && brain.Ctx != null)
