@@ -171,6 +171,8 @@ total and a time to finish. `kehai-run status` reads both computers; the status 
 collector (`tools/status`) already reads the run register and the lock. Training curves come
 from TensorBoard on the PC, opened from the Mac over the private network.
 
+The Mac-to-PC setup and the first connection check are in [Windows setup](windows-setup.md).
+
 **Example:** you type `kehai-run --on pc train employee_r1`, close the laptop, and the next
 morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12 min, about
 13 h left`.
@@ -184,7 +186,7 @@ morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12
 | Ablation | starts again from nothing: a new file each run, and the list of finished shifts is only in memory | `AblationRunner.cs` |
 | Training | continues, by hand (`--resume`); a checkpoint every 50,000 steps, the last 10 (Employee) or 20 (Oni, `karen_vital.yaml`) kept | `tools/rl/*.yaml` |
 | Belief fits | resume by stage (since 13 November) | `tools/belief/` |
-| Belief recording | starts again: `record.sh` runs two whole leagues, then its checks | `tools/belief/record.sh` |
+| Belief recording | resumes from the first unfinished league, parity check or legs export | `tools/belief/record.sh` |
 | EditMode suite | starts again | — |
 
 | Option (the ablation) | How | Pros | Cons |
@@ -209,6 +211,22 @@ morning `kehai-run status` says `employee_r1: 410,000 of 1,000,000 steps, 9 h 12
   the checks) skip what's already done.
 
 **Model:** Opus 5.5 for the ablation's resume and the jitter (pairing and repeatability), Sonnet 5.5 for the wrappers.
+
+### Several stores in one Unity process
+
+One process currently runs one store. More copies of the Training player are the way to use more
+PC cores in 0.5.2. A future build could keep several stores running in one copy of Unity to share
+the engine's fixed memory cost.
+
+| Code today | Work needed before stores can share Unity |
+|---|---|
+| `KehaiEnv.Instance` starts one environment. Reset reloads its scene in Single mode, replacing the old store. | Give each environment its own store and reset it without unloading the others. Step each store through the trainer independently. |
+| `StoreMap.Current`, `KarenBrain.Instance` and `PowerSystem.Instance` resolve one map, Karen and set of lights. | Pass each store's map, Karen and power explicitly. Give every store its own nav, light and sound queries so a blackout or footstep stays in its own store. |
+| Logs, trainer port and seeds belong to the process or current environment. | Give each store its own random state, outputs and trainer ID. Test that resetting one store leaves the others' progress and evidence intact. |
+
+**Cost:** several weeks of engineering and comparison runs, as an estimate. First compare two
+stores in one process against two separate processes on the same paired seeds. Measure memory per
+store and decisions per second and check that a store's results stay within the ordinary run-to-run spread.
 
 ---
 
