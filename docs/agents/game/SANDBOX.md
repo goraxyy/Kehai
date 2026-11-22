@@ -139,6 +139,28 @@ kept) and `EndHeldHunt` (a held hunt that no hunt plan takes up still ends), wit
 
 The silent video clips are code only: none has been rendered yet.
 
+## The tricks sandbox
+
+**Kehai → Sandbox → Tricks** (C11.8) opens the real store in Play, muted, on a private shift
+four: its own career numbers and a fresh temporary Ledger each time, so your save is never read
+or written. A row of stalls stands outside the entrance, between the two crossings: one plate per
+live trick (the same list the trick check uses, `TrickCheck.Tricks`).
+
+- **E at a plate** makes her start that trick now (`KarenBrain.Force`: past the Director's
+  pacing, not past the trick's own needs; overtime, for one, still waits for the last two
+  minutes). Frozen, she runs just that trick and freezes again.
+- **Keys:** F5 starts the shift and lets her move, F6 restarts (a new shift four), F7 freezes,
+  `[` and `]` choose a trick from anywhere, Return fires it. The box at the top right says
+  what she's doing and where the trick's chore is.
+- Her own tricks stay off (`sandboxNoTricks`): only the plates start one. A catch freezes the
+  sandbox instead of ending the shift.
+
+**Its recorded checks** are the trick check's (`-kehai-trick-check`): for each live trick, did
+she start it, did it land (its own evidence, not just an EFFECT line), and did the bot answer it
+(a repair, a dodge, a turn back), each in a replay. It writes `trick_check_<time>.md`, `.json`
+and the `.tsv` the clip tools read. **It runs in the recorded test pass after 0.5.2 merges**
+(Q1), not before.
+
 ## For agents
 
 - Code: `Assets/!_Project/_Game/Sandbox/` (`SandboxKit` the parts, `SandboxKaren` her
