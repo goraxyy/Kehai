@@ -557,6 +557,14 @@ reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's
 
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 
+- **Her eye tested your feet and chest 1 m too high in the store (22 November).** `PlayerPresence`
+  measured them from the player's origin; the store's player starts a shift with its body centred
+  on its origin, 1 m up, until the first crouch. So your chest point sat about 2.3 m up, over a
+  2.2 m shelf, and about 1.6 m crouched, over a short shelf. Found when the pursuit checks first
+  drove the store's own player on the sandbox island. Fixed: from the body's real bottom. It
+  changes what she sees in every shift until your first crouch; numbers measured before 16fa6cc
+  predate it.
+
 - **A bug in her hunt since 0.5.1 (item 13, the 60 s pursuit).** A forced re-decision while
   she hunted picked the hunt again, and `AbortPlan` ended the hunt on the way. That retired the
   sighting it started from, so the new hunt began with 0 s left and ended the next frame, over
