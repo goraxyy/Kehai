@@ -78,7 +78,8 @@ namespace Kehai.Sandbox
 
         static void OnLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (mode != LoadSceneMode.Single || scene.path != StoreScene) return;
+            // Not only Single: Play's first load of the scene reports another mode (the island found it).
+            if (scene.path != StoreScene) return;
             var root = new GameObject("Tricks sandbox");
             SceneManager.MoveGameObjectToScene(root, scene);
             root.AddComponent<TricksSandbox>();
