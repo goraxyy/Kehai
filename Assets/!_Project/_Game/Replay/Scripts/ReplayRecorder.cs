@@ -293,6 +293,7 @@ namespace Kehai.Replay
                 Scene = SceneManager.GetActiveScene().path,
                 Seed = brain != null && brain.Rng != null ? brain.Rng.Seed : 0,
                 Rung = brain != null ? brain.config.rung.ToString() : "",
+                Build = BuildStamp.Line,
                 Layout = StoreLayoutRuntime.CurrentId
             };
 

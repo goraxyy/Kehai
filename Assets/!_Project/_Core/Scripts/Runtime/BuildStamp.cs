@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Kehai.Karen;
 using UnityEngine;
 
 // Where this copy of the game came from (0.5.2, C10.2; the versions page, section 6): the game's
@@ -16,6 +17,7 @@ public static class BuildStamp
     {
         public string version = "";   // e.g. 0.5.2-testing
         public string edition = "";
+        public string satori, oni;    // bundled card versions; absent in older build.json files
         public string code = "";      // the public repo's commit, short; "+changes" when built from a dirty tree
         public string art = "";       // the private project's commit (kehai-project), or "none" before it exists
     }
@@ -35,26 +37,31 @@ public static class BuildStamp
         }
     }
 
-    // Her numbers today: a model pack's version, or the build's own (C10.3 gives each Karen her own
-    // MAJOR.MINOR.PATCH and her name: Satori for Basic, Oni for Vital).
-    public static string Karen
+    static string CardVersion(BrainCard card)
     {
-        get
-        {
-            var pack = Kehai.Karen.ModelPack.Current;
-            return pack != null ? $"model pack {pack.PackVersion}" : "built-in numbers";
-        }
+        if (card == null || !card.Trained) return "untrained";
+        return string.IsNullOrEmpty(card.Version) ? "unknown version" : card.Version;
     }
 
-    // One line, for Settings, reports and records.
-    public static string Line
+    public static void IncludeBundledCards(Data stamp)
     {
-        get
-        {
-            Data d = Current;
-            return $"Kehai {d.version} · code {d.code} · art {d.art} · Karen: {Karen}";
-        }
+        if (string.IsNullOrEmpty(stamp.satori))
+            stamp.satori = CardVersion(BrainNets.FindBuiltIn("KarenBrainBasic", out _)?.Card);
+        if (string.IsNullOrEmpty(stamp.oni))
+            stamp.oni = CardVersion(BrainNets.FindBuiltIn("KarenBrainVital", out _)?.Card);
     }
+
+    public static string Describe(Data stamp, ModelPack pack = null)
+    {
+        var basic = pack?.Brain("KarenBrainBasic")?.Card;
+        var vital = pack?.Brain("KarenBrainVital")?.Card;
+        string satori = basic != null ? CardVersion(basic) : stamp.satori;
+        string oni = vital != null ? CardVersion(vital) : stamp.oni;
+        string source = pack == null ? "" : $" (model pack {pack.PackVersion})";
+        return $"Kehai {stamp.version} · code {stamp.code} · art {stamp.art} · Karen: Satori {satori}, Oni {oni}{source}";
+    }
+
+    public static string Line => Describe(Current, ModelPack.Current);
 
     static Data Read()
     {
@@ -63,7 +70,9 @@ public static class BuildStamp
             string path = Path.Combine(Application.streamingAssetsPath, FileName);
             if (!File.Exists(path)) return null;
             Data d = JsonUtility.FromJson<Data>(File.ReadAllText(path));
-            return string.IsNullOrEmpty(d?.version) ? null : d;
+            if (string.IsNullOrEmpty(d?.version)) return null;
+            IncludeBundledCards(d);
+            return d;
         }
         catch (Exception) { return null; }
     }
@@ -85,6 +94,7 @@ public static class BuildStamp
         string assets = Path.Combine(root, ".git-assets");
         if (Directory.Exists(assets)) d.art = Git(root, $"--git-dir=\"{assets}\" --work-tree=\"{root}\" rev-parse --short HEAD") ?? "none";
 #endif
+        IncludeBundledCards(d);
         return d;
     }
 

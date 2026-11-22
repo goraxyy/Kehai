@@ -11,6 +11,7 @@ namespace Kehai.Replay
     {
         public string Game = GameNames.Game, Stem = "", Started = "", Scene = "", Rung = "";
         public string Layout = "today";
+        public string Build = "";
         public int Shift, Seed;
 
         // Karen's belief map is recorded on this grid (x across, z down the rows).
@@ -72,6 +73,7 @@ namespace Kehai.Replay
             w.Write(h.Seed);
             w.Write(h.Rung ?? "");
             w.Write(h.Layout ?? "today");
+            w.Write(h.Build ?? "");
             w.Write(Krec.TickRate);
             w.Write(Krec.CameraRate);
             w.Write(Krec.BeliefRate);

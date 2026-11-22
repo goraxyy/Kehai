@@ -191,7 +191,13 @@ namespace Kehai.Karen
         {
             why = null;
             BrainNet fromPack = ModelPack.Current?.Brain(name);
-            if (fromPack != null) return fromPack;
+            return fromPack ?? FindBuiltIn(name, out why);
+        }
+
+        // A build records the cards it actually ships, even if the editor has a downloaded pack.
+        public static BrainNet FindBuiltIn(string name, out string why)
+        {
+            why = null;
             if (cache.TryGetValue(name, out BrainNet net)) return net;
 
             System.Type type = typeof(BrainNets).Assembly.GetType("Kehai.Karen.Generated." + name);

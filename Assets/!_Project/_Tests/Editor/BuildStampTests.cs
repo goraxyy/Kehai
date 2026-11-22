@@ -1,4 +1,7 @@
+using System.IO;
+using Kehai;
 using Kehai.Karen;
+using UnityEditor;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -19,17 +22,30 @@ public class BuildStampTests
     [Test]
     public void TheStampFile_ReadsBackAsWritten()
     {
-        var d = new BuildStamp.Data { version = "0.6.0-beta.2-testing", edition = "testing", code = "a1b2c3d", art = "9f8e7d6" };
+        var d = new BuildStamp.Data { version = "0.6.0-beta.2-testing", edition = "testing", code = "a1b2c3d", art = "9f8e7d6", satori = "1.3.0", oni = "1.1.0" };
         BuildStamp.Data back = JsonUtility.FromJson<BuildStamp.Data>(JsonUtility.ToJson(d));
         Assert.AreEqual(d.version, back.version);
         Assert.AreEqual(d.code, back.code);
         Assert.AreEqual(d.art, back.art);
+        Assert.AreEqual(d.satori, back.satori);
+        Assert.AreEqual(d.oni, back.oni);
+
+        string folder = Path.Combine(Path.GetTempPath(), "kehai-stamp-" + System.Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            KehaiBuild.WriteBuildInfo(Path.Combine(folder, "Kehai.app"), BuildTarget.StandaloneOSX,
+                false, KehaiEdition.Testing, back);
+            string text = File.ReadAllText(Path.Combine(folder, "build.txt"));
+            StringAssert.Contains("Kehai 0.6.0-beta.2-testing · code a1b2c3d · art 9f8e7d6 · Karen: Satori 1.3.0, Oni 1.1.0", text);
+        }
+        finally { Directory.Delete(folder, recursive: true); }
     }
 
     [Test]
     public void EveryShiftRecord_CarriesTheStamp()
     {
         string json = new ShiftRecording().ToJson(null, null);
-        StringAssert.Contains("\"build\":\"Kehai ", json);
+        Assert.AreEqual(BuildStamp.Line, MiniJson.ParseObject(json).GetString("build", ""));
     }
 }

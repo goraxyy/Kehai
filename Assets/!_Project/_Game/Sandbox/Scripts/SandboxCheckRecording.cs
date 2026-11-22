@@ -50,6 +50,7 @@ namespace Kehai.Sandbox
             header.Stem = Path.GetFileNameWithoutExtension(path);
             header.Started = DateTime.UtcNow.ToString("O");
             writer = new KrecWriter(path + ".part");
+            header.Build = BuildStamp.Line;
             writer.Header(header);
             writer.Tick(0f);
             Transform actor = this.player.transform;

@@ -155,7 +155,8 @@ public static class KehaiBuild
         Directory.CreateDirectory(streaming);
         File.WriteAllText(Path.Combine(streaming, "edition.txt"), selected.ToString().ToLowerInvariant());
         // The stamp (0.5.2, C10.2): what this build is, for Settings and every shift record.
-        File.WriteAllText(Path.Combine(streaming, BuildStamp.FileName), UnityEngine.JsonUtility.ToJson(Stamp(selected), true));
+        var stamp = Stamp(selected);
+        File.WriteAllText(Path.Combine(streaming, BuildStamp.FileName), UnityEngine.JsonUtility.ToJson(stamp, true));
         if (selected != KehaiEdition.Testing)
         {
             string stale = Path.Combine(streaming, Kehai.Playtest.PlaytestConfig.FileName);
@@ -170,7 +171,7 @@ public static class KehaiBuild
             }
             Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
         }
-        WriteBuildInfo(appPath, target, development, selected, config);
+        WriteBuildInfo(appPath, target, development, selected, stamp, config);
         if (config != null) ZipForTesters(appPath);
         return report;
     }
@@ -287,13 +288,15 @@ public static class KehaiBuild
         string dirty = Run("git", $"-C \"{root}\" status --porcelain --untracked-files=no", null)?.Trim();
         string assets = Path.Combine(root, ".git-assets");
         string art = Directory.Exists(assets) ? Run("git", $"--git-dir=\"{assets}\" --work-tree=\"{root}\" rev-parse --short HEAD", null)?.Trim() : null;
-        return new BuildStamp.Data
+        var stamp = new BuildStamp.Data
         {
             version = Edition.VersionLabel(PlayerSettings.bundleVersion, edition),
             edition = edition.ToString().ToLowerInvariant(),
             code = code + (string.IsNullOrEmpty(dirty) ? "" : "+changes"),
             art = string.IsNullOrEmpty(art) ? "none" : art,
         };
+        BuildStamp.IncludeBundledCards(stamp);
+        return stamp;
     }
 
     // The built game's StreamingAssets folder.
@@ -325,7 +328,7 @@ public static class KehaiBuild
         if (File.Exists(zip)) Debug.Log($"Kehai build: {zip} ({new FileInfo(zip).Length / 1048576f:0} MB) is the one to send");
     }
 
-    static void WriteBuildInfo(string appPath, BuildTarget target, bool development, KehaiEdition edition, Kehai.Playtest.PlaytestConfig playtest = null)
+    internal static void WriteBuildInfo(string appPath, BuildTarget target, bool development, KehaiEdition edition, BuildStamp.Data stamp, Kehai.Playtest.PlaytestConfig playtest = null)
     {
         string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
         string branch = Run("git", $"-C \"{ProjectRoot}\" rev-parse --abbrev-ref HEAD", null)?.Trim();
@@ -342,6 +345,7 @@ public static class KehaiBuild
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build.txt"),
             $"{PlayerSettings.productName} {Edition.VersionLabel(PlayerSettings.bundleVersion, edition)} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
             $"Edition: {edition.ToString().ToLowerInvariant()}.\nBuilt {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n" +
+            BuildStamp.Describe(stamp) + "\n" +
             (playtest == null ? "" : $"Playtest {playtest.round}: " + (playtest.Uploads ? "sends sessions after the tester agrees." : "keeps sessions on the tester's computer.") + "\n"));
     }
 
