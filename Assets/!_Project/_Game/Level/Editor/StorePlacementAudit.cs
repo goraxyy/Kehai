@@ -112,10 +112,15 @@ public static class StorePlacementAudit
             Missing("Store", "No player, capsule, or walkable NavMesh at the player spawn");
 
         var behaviours = Object.FindObjectsByType<MonoBehaviour>();
-        foreach (var behaviour in behaviours.Where(b => b.isActiveAndEnabled && b is IInteractable)
+        var targets = behaviours.Where(b => b.isActiveAndEnabled && b is IInteractable)
                      .OrderBy(b => PathOf(b.transform), StringComparer.Ordinal)
-                     .ThenBy(b => b.GetType().Name, StringComparer.Ordinal))
-            Write(PathOf(behaviour.transform), behaviour.GetType().Name, probe.Check(behaviour));
+                     .ThenBy(b => b.GetType().Name, StringComparer.Ordinal);
+        foreach (var group in targets.GroupBy(StorageCabinet))
+        {
+            FurnitureDoor door = group.Key != null ? group.Key.GetComponentInChildren<FurnitureDoor>() : null;
+            if (TryOpen(door, probe, evidence => WriteTargets(group, probe, evidence))) continue;
+            WriteTargets(group, probe, group.Key == null ? null : "Measured as found; no reachable cabinet door was established.");
+        }
 
         foreach (var door in behaviours.OfType<AutoDoubleDoor>().Where(d => d.isActiveAndEnabled))
             foreach (var handle in door.Handles)
@@ -129,14 +134,7 @@ public static class StorePlacementAudit
         {
             var cold = bay.Key != null ? bay.Key.GetComponent<ColdFixture>() : null;
             var door = cold != null && cold.retail ? cold.GetComponentInChildren<FurnitureDoor>() : null;
-            if (door != null && door.isActiveAndEnabled && door.panel != null && door.roomDoor == null &&
-                probe.Check(door).Standing is Vector3 opener)
-            {
-                door.InspectOpenPose(opener, () => WriteSlots(bay, probe, door.IsFullyOpen
-                    ? "Measured after opening the reachable chiller door."
-                    : "Measured with the reachable chiller door at its swing limit."));
-            }
-            else
+            if (!TryOpen(door, probe, evidence => WriteSlots(bay, probe, evidence)))
                 WriteSlots(bay, probe, cold != null && cold.retail
                     ? "Measured as found; no reachable chiller door was established." : null);
         }
@@ -154,6 +152,34 @@ public static class StorePlacementAudit
             Missing(nameof(AutoDoorHandle), "A sliding door produced no hand controls");
 
         Debug.Log($"Placement audit {layout}: {rows} rows and {findings} findings so far.");
+    }
+
+    static ColdFixture StorageCabinet(MonoBehaviour target) => target switch
+    {
+        PickupInteractable pickup => pickup.GetComponent<ProductBox>()?.cabinet,
+        ToolSnapPoint snap when snap.tool != null => snap.tool.GetComponent<ProductBox>()?.cabinet,
+        _ => null
+    };
+
+    static bool TryOpen(FurnitureDoor door, PlacementProbe probe, Action<string> inspect)
+    {
+        if (door == null || !door.isActiveAndEnabled || door.panel == null || door.roomDoor != null ||
+            probe.Check(door).Standing is not Vector3 opener) return false;
+        door.InspectOpenPose(opener, () => inspect(door.IsFullyOpen
+            ? "Measured after opening the reachable cabinet door."
+            : "Measured with the reachable cabinet door at its swing limit."));
+        return true;
+    }
+
+    static void WriteTargets(IEnumerable<MonoBehaviour> targets, PlacementProbe probe, string evidence)
+    {
+        foreach (var target in targets)
+        {
+            var result = probe.Check(target);
+            if (evidence != null)
+                result.Evidence = string.IsNullOrEmpty(result.Evidence) ? evidence : evidence + " " + result.Evidence;
+            Write(PathOf(target.transform), target.GetType().Name, result);
+        }
     }
 
     static void WriteSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence)

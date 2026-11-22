@@ -8,6 +8,18 @@ using UnityEngine;
 public class StorageBoxesTests
 {
     [Test]
+    public void ABoxCanShrinkToKeepItsCentreInReachWithoutSinkingIntoTheBoard()
+    {
+        const float board = 1.475f;
+        Vector3 fitted = StorageBoxes.FitWorkingBox(StorageBoxes.RackBox, board, out bool reachable);
+        Assert.IsTrue(reachable);
+        Assert.Less(fitted.y, StorageBoxes.RackBox.y);
+        Assert.That(board + fitted.y * .5f + .005f, Is.EqualTo(StorageBoxes.WorkingCentreHeight).Within(.001f));
+        Assert.AreEqual(StorageBoxes.RackBox, StorageBoxes.FitWorkingBox(StorageBoxes.RackBox, 2.829f, out reachable));
+        Assert.IsFalse(reachable, "a box on the high board is scenery");
+    }
+
+    [Test]
     public void DairyAndFrozen_AreKeptCold_WithTheFewThatWouldSpoil()
     {
         foreach (ProductDef p in ProductCatalog.All)

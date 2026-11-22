@@ -15,8 +15,8 @@ using UnityEngine.SceneManagement;
 //     the cold (ProductDef.Storage), in white insulated boxes labelled on both sides. Frozen
 //     food sits on the chest freezers, chilled food on the upright fridges.
 //
-// Every box has its spot, marked like the stock crate's: it glows when looked at, a yellow
-// ghost shows the spot while the box is away, and E on the spot sends it back. Built when the
+// Each reachable box has its own return spot. The high boxes dress the room without adding
+// pickups or recall prompts above eye level. Built when the
 // store loads, from the rooms the scene has; nothing is baked into it. While the scene is being
 // edited the same boxes stand there without their workings (StorageBoxesPreview), so the rooms
 // look stocked in the editor too.
@@ -32,7 +32,10 @@ public static class StorageBoxes
     public static readonly Vector3 ColdBox = new Vector3(1.4f, 0.5f, 0.7f);    // the largest a cold-room unit takes
     const float MinRackLength = 3.8f;   // room for two boxes
     const float LowestBoard = 0.3f;     // lower than this is the floor row, kept clear
-    const float ReachTop = 3.4f;        // boards above this are out of the player's reach
+    public const float WorkingCentreHeight = 1.59f;
+    const float BoxLift = 0.005f;
+    const float MinimumWorkingHeight = 0.12f;
+    const float WorkingRackWidth = 0.8f; // four boxes fit on the lowest usable board
     const float FrontInset = 0.15f;     // how far a box stands back from the rack's front edge
     const float BoxGap = 0.2f;
 
@@ -127,8 +130,13 @@ public static class StorageBoxes
                 for(int i=0;i<cabinet.boxCentres.Length;i++)
                 {
                     var product=ProductCatalog.Get(cabinet.products[i%cabinet.products.Length]);
-                    var spot=new Spot(cabinet.transform.TransformPoint(cabinet.boxCentres[i]),cabinet.transform.rotation*Quaternion.Euler(0,180,0),cabinet.boxSize,true,i,false);
-                    Make(product,spot,true,root.transform,parts,working);
+                    Vector3 centre = cabinet.transform.TransformPoint(cabinet.boxCentres[i]);
+                    Vector3 full = Vector3.Scale(cabinet.boxSize, Abs(cabinet.transform.lossyScale));
+                    Vector3 size = FitWorkingBox(full, centre.y - cabinet.transform.position.y - full.y * 0.5f, out bool reachable);
+                    centre.y -= (full.y - size.y) * 0.5f;
+                    var spot = new Spot(centre, cabinet.transform.rotation * Quaternion.Euler(0, 180, 0),
+                        size, reachable, i, false);
+                    Make(product, spot, true, root.transform, parts, working, cabinet);
                 }
             }
         }
@@ -283,8 +291,7 @@ public static class StorageBoxes
             Vector3 middle = frame.TransformPoint(local.center);
             float floor = middle.y - size.y * 0.5f, top = middle.y + size.y * 0.5f;
 
-            int count = Mathf.Max(1, Mathf.FloorToInt((length + BoxGap) / (RackBox.x + BoxGap)));
-            float spacing = length / count;
+            int workingColumns = Mathf.Max(1, Mathf.FloorToInt((length + BoxGap) / (WorkingRackWidth + BoxGap)));
             Quaternion facing = Quaternion.LookRotation(front, Vector3.up);
             Vector3 probe = middle + front * (depth * 0.25f);
 
@@ -295,13 +302,17 @@ public static class StorageBoxes
                 if (board - floor < LowestBoard || room < 0.5f) continue;
                 lowest = Mathf.Min(lowest, board);
                 var box = new Vector3(RackBox.x, Mathf.Min(RackBox.y, room - 0.15f), RackBox.z);
-                bool reach = board - floor <= ReachTop;
+                box = FitWorkingBox(box, board - floor, out bool reach);
+                if (reach) box.x = WorkingRackWidth;
+                int count = Mathf.Max(1, Mathf.FloorToInt((length + BoxGap) / (box.x + BoxGap)));
+                float spacing = length / count;
                 for (int i = 0; i < count; i++)
                 {
                     Vector3 at = middle + along * (-length * 0.5f + spacing * (i + 0.5f))
                                + front * (depth * 0.5f - FrontInset - box.z * 0.5f);
-                    at.y = board + box.y * 0.5f + 0.005f;
-                    rack.Spots.Add(new Spot(at, facing, box, reach, i, false));
+                    at.y = board + box.y * 0.5f + BoxLift;
+                    int column = Mathf.Min(workingColumns - 1, Mathf.FloorToInt((i + 0.5f) * workingColumns / count));
+                    rack.Spots.Add(new Spot(at, facing, box, reach, column, false));
                 }
             }
             if (rack.Spots.Count == 0) continue;
@@ -314,6 +325,14 @@ public static class StorageBoxes
             result.Add(rack);
         }
         return result;
+    }
+
+    public static Vector3 FitWorkingBox(Vector3 size, float boardHeight, out bool reachable)
+    {
+        float height = 2f * (WorkingCentreHeight - boardHeight - BoxLift);
+        reachable = height >= MinimumWorkingHeight;
+        if (reachable) size.y = Mathf.Min(size.y, height);
+        return size;
     }
 
     // The tops of a rack's boards under a point, lowest first, and how much room each has
@@ -365,9 +384,10 @@ public static class StorageBoxes
             bool alongX = b.size.x >= b.size.z;
             float length = alongX ? b.size.x : b.size.z, width = alongX ? b.size.z : b.size.x;
             var box = new Vector3(Mathf.Min(1.4f, length * 0.8f), 0.5f, Mathf.Min(0.7f, width * 0.72f));
-            var at = new Vector3(b.center.x, b.max.y + box.y * 0.5f + 0.005f, b.center.z);
+            box = FitWorkingBox(box, b.size.y, out bool reachable);
+            var at = new Vector3(b.center.x, b.max.y + box.y * 0.5f + BoxLift, b.center.z);
             Quaternion facing = Quaternion.LookRotation(alongX ? Vector3.forward : Vector3.right, Vector3.up);
-            spots.Add(new Spot(at, facing, box, at.y - b.min.y <= ReachTop, spots.Count, true));
+            spots.Add(new Spot(at, facing, box, reachable, spots.Count, true));
         }
         return spots;
     }
@@ -465,12 +485,18 @@ public static class StorageBoxes
 
     // A box in the back rooms: the look, and when `working` everything that makes it a box you
     // carry, restock from and put back.
-    static GameObject Make(ProductDef product, Spot spot, bool cold, Transform parent, Parts parts, bool working)
+    static GameObject Make(ProductDef product, Spot spot, bool cold, Transform parent, Parts parts, bool working,
+        ColdFixture cabinet = null)
     {
         if (product == null) return null;
         GameObject go = Look(product, spot.Size, cold, spot.TwoFaced, parent, parts);
         go.transform.SetPositionAndRotation(spot.Position, spot.Rotation);
         if (!working) return go;
+        if (!spot.Reachable)
+        {
+            go.AddComponent<BoxCollider>().size = spot.Size;
+            return go;
+        }
 
         go.SetActive(false);
         foreach (Transform t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = parts.Layer;
@@ -496,6 +522,7 @@ public static class StorageBoxes
         var box = go.AddComponent<ProductBox>();
         box.productId = product.Id;
         box.cold = cold;
+        box.cabinet = cabinet;
         box.home = spot.Position;
         home.snapPoint = SnapPoint(item, spot, parent, parts).transform;
         go.SetActive(true);

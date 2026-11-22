@@ -83,7 +83,10 @@ public sealed class ShelfSlot : IInteractable
     public Quaternion Rotation => frame.rotation * Quaternion.Euler(0f, ShelfGrid.Yaw(side), 0f);
 
     // Toward the aisle it faces.
-    public Vector3 Outward => Rotation * Vector3.back;
+    public Vector3 Outward => frame.TransformVector(ShelfGrid.Outward(side)).normalized;
+
+    public bool InFrontOf(ShelfSlot other) => frame == other.frame && side == other.side &&
+        Mathf.Abs(local.y - other.local.y) < .01f && Vector3.Dot(Position - other.Position, other.Outward) > .01f;
 
     // The SKU stocked here, or null on a facing that has only been given a section.
     public ProductDef Product => ProductCatalog.Get(productId);
@@ -300,7 +303,7 @@ public sealed class ShelfSlot : IInteractable
     {
         distance = 0f;
         Vector3 o = frame.InverseTransformPoint(ray.origin) - local - new Vector3(0f, height * 0.5f, 0f);
-        Vector3 d = frame.InverseTransformDirection(ray.direction);
+        Vector3 d = frame.InverseTransformVector(ray.direction);
         var half = new Vector3(cell.x * 0.5f - 0.005f, height * 0.5f, cell.y * 0.5f - 0.005f);
 
         float near = float.NegativeInfinity, far = float.PositiveInfinity;

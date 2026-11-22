@@ -205,11 +205,12 @@ public class PlayerInteract : MonoBehaviour
     }
 
     // The placement check queries the same targeting rules without changing hover or using E.
-    public IInteractable FindAimedTarget(Ray ray)
+    public IInteractable FindAimedTarget(Ray ray, bool includeEmptySlots = false, ShelfSlot frontClearedFor = null)
     {
         // Normal reach first: things with colliders (an item on the floor, a shopper, a tool)
         // and shelf slots, which are data and aimed at by ShelfAim. Whichever is nearer.
-        ShelfSlot slot = ShelfAim.Find(ray, interactRange, out float slotDistance);
+        bool pickingUp = !includeEmptySlots && carrySlot != null && !carrySlot.IsCarrying;
+        ShelfSlot slot = ShelfAim.Find(ShelfStock.Current, ray, interactRange, out float slotDistance, pickingUp, frontClearedFor);
         if (Physics.Raycast(ray, out RaycastHit hit, interactRange, interactLayer) &&
             (slot == null || hit.distance <= slotDistance))
         {

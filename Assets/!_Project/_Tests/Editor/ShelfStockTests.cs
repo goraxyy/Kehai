@@ -109,6 +109,34 @@ public class ShelfStockTests
     }
 
     [Test]
+    public void ShelfRayDistanceRemainsInWorldMetresOnAScaledBay()
+    {
+        var stock = new ShelfStock();
+        Transform bay = Frame(Away);
+        bay.localScale = new Vector3(1f, 1f, 2f);
+        ShelfSlot slot = Slot(stock, bay, Vector3.up);
+        var ray = new Ray(slot.Position + Vector3.up * .1f + Vector3.back * 2f, Vector3.forward);
+        Assert.IsTrue(slot.RayHit(ray, out float distance));
+        Assert.That(distance, Is.EqualTo(2f - (slot.cell.y - .01f)).Within(.001f));
+    }
+
+    [Test]
+    public void EmptyFrontSlotDoesNotBlockPickingUpTheItemBehindIt()
+    {
+        var stock = new ShelfStock();
+        Transform bay = Frame(Away);
+        ShelfSlot front = Slot(stock, bay, new Vector3(0f, 1f, -.3f));
+        ShelfSlot back = Slot(stock, bay, Vector3.up);
+        front.Show(false, null);
+        stock.Finish();
+        var ray = new Ray(back.Position + Vector3.up * .1f + Vector3.back * 2f, Vector3.forward);
+        Assert.AreSame(front, ShelfAim.Find(stock, ray, 2.5f, out _));
+        Assert.IsTrue(back.isFilled);
+        Assert.AreSame(back, ShelfAim.Find(stock, ray, 2.5f, out _, skipEmpty: true));
+        Assert.AreSame(back, ShelfAim.Find(stock, ray, 2.5f, out _, frontClearedFor: back));
+    }
+
+    [Test]
     public void AnItem_LeavesTheShelf_AsAGameObject_AndGoesBackAsData()
     {
         var stock = new ShelfStock();

@@ -200,12 +200,13 @@ public sealed class PlacementProbe
                 if (!CanStand(feet)) { Stopped(1, "no room to stand in front"); continue; }
                 Vector3 eye = feet + Vector3.up * eyeHeight;
                 if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) { Stopped(2, "too far from the door"); continue; }
-                if (!CanAimAt(eye, centre, range, target, colliders, out string aim)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
+                if (!CanAimAt(eye, centre, range, target, colliders, out string aim, out bool frontCleared)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
                 if (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete) { Stopped(4, "no route from the spawn"); continue; }
 
                 result.Approach = "reachable";
                 result.Standing = feet;
                 result.Height = centre.y - feet.y;
+                if (frontCleared) result.Evidence = Add(result.Evidence, "Reachable after taking the stock in front on the same shelf and face");
                 return;
             }
         }
@@ -242,9 +243,11 @@ public sealed class PlacementProbe
         return true;
     }
 
-    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders, out string why)
+    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders,
+        out string why, out bool frontCleared)
     {
         why = null;
+        frontCleared = false;
         Vector3 delta = centre - eye;
         if (delta.sqrMagnitude < .0001f || Vector3.Angle(Vector3.ProjectOnPlane(delta, Vector3.up), delta) > maxLookAngle)
         {
@@ -254,8 +257,10 @@ public sealed class PlacementProbe
         var ray = new Ray(eye, delta.normalized);
         if (target != null)
         {
-            IInteractable aimed = player.FindAimedTarget(ray);
-            if (!ReferenceEquals(aimed, target))
+            IInteractable aimed = player.FindAimedTarget(ray, includeEmptySlots: true);
+            if (aimed is ShelfSlot nearer && target is ShelfSlot behind && nearer.InFrontOf(behind))
+                frontCleared = ReferenceEquals(player.FindAimedTarget(ray, includeEmptySlots: true, frontClearedFor: behind), target);
+            if (!frontCleared && !ReferenceEquals(aimed, target))
             {
                 why = "the aim lands on " + Describe(aimed);
                 return false;

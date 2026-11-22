@@ -23,7 +23,8 @@ public static class ShelfAim
     public static ShelfSlot Find(Ray ray, float range, out float distance) =>
         Find(ShelfStock.Current, ray, range, out distance);
 
-    public static ShelfSlot Find(ShelfStock stock, Ray ray, float range, out float distance)
+    public static ShelfSlot Find(ShelfStock stock, Ray ray, float range, out float distance,
+        bool skipEmpty = false, ShelfSlot frontClearedFor = null)
     {
         distance = float.PositiveInfinity;
         if (stock == null || stock.Count == 0) return null;
@@ -38,6 +39,8 @@ public static class ShelfAim
         ShelfSlot best = null;
         foreach (ShelfSlot slot in near)
         {
+            if (frontClearedFor != null && slot.InFrontOf(frontClearedFor) ||
+                skipEmpty && !slot.isFilled && !slot.IsBlocked) continue;
             if (!slot.RayHit(ray, out float d) || d > limit || d >= distance) continue;
             best = slot;
             distance = d;
