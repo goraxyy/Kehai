@@ -37,6 +37,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+CLONES = 'clones.noindex'   # where the project copies go, under the run home
+
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools.run import lock as heavy  # noqa: E402
@@ -327,7 +329,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     commit = git(s.repo, 'rev-parse', '--verify', ref + '^{commit}')
     product = 'Kehai-run-' + rid
     out = s.runs / rid
-    clone = s.home / 'clones' / rid
+    # .noindex: Spotlight skips the folder. It indexed every fresh copy otherwise, loading the
+    # Mac enough to fail timing tests (22 November).
+    clone = s.home / CLONES / rid
     args = [s.unity] + unity_args(job, clone, out, extra, test_filter)
     if dry_run:
         log(' '.join(args))

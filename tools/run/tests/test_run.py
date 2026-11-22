@@ -70,7 +70,7 @@ class Fixture(unittest.TestCase):
         return [json.loads(l) for l in self.s.register.read_text().splitlines() if l.strip()]
 
     def assert_clean(self):
-        clones = self.s.home / 'clones'
+        clones = self.s.home / 'clones.noindex'
         self.assertFalse(clones.exists() and any(clones.iterdir()), 'no clone left behind')
         self.assertFalse(self.data_root.exists() and any(self.data_root.iterdir()), 'no data folder left behind')
         self.assertFalse(self.s.lock.exists(), 'the lock is free')
