@@ -60,8 +60,10 @@ public static class SandboxIslandCheck
         GameObject models = GameObject.Find(SandboxIsland.ModelsIslandName);
         Expect(models != null && models.transform.position.z < -37.32f - 40f, "the models island moved onto the road's edge");
         int brains = 0;
-        foreach (KarenBrain b in UnityEngine.Object.FindObjectsByType<KarenBrain>(FindObjectsSortMode.None)) brains++;
-        Expect(brains == 0, $"the store is quiet: no store Karen ({brains} brains)");
+        GameObject island = GameObject.Find(SandboxIsland.RootName);
+        foreach (KarenBrain b in UnityEngine.Object.FindObjectsByType<KarenBrain>(FindObjectsSortMode.None))
+            if (island == null || !b.transform.IsChildOf(island.transform)) brains++;   // the island's own Karens don't count
+        Expect(brains == 0, $"the store is quiet: no store Karen ({brains} off the island)");
         ShiftManager shift = UnityEngine.Object.FindAnyObjectByType<ShiftManager>();
         Expect(shift != null && !shift.IsShiftActive, "the store is quiet: no shift running");
         Expect(sight != null && sight.Karen != null, "the sight area stands on the island with its Karen");
