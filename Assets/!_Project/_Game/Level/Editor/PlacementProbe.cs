@@ -224,14 +224,20 @@ public sealed class PlacementProbe
         feet = default;
         // The first floor-like surface could be a table. Check its height against the NavMesh
         // at this XZ so a tabletop won't masquerade as floor or get snapped to a nearby aisle.
+        // Looks past a tabletop, a lid or a box lip to the floor under it; whether there's room to
+        // stand there is CanStand's question, asked next.
         Vector3 from = horizontal + Vector3.up * .2f;
-        if (!Physics.Raycast(from, Vector3.down, out var floor, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ||
-            floor.normal.y < .5f ||
-            !NavMesh.SamplePosition(floor.point, out var nav, .2f, filter)) return false;
-        Vector3 delta = nav.position - floor.point;
-        if (Mathf.Abs(delta.y) > EdgeTolerance || new Vector2(delta.x, delta.z).magnitude > EdgeTolerance) return false;
-        feet = new Vector3(nav.position.x, floor.point.y, nav.position.z);
-        return true;
+        var hits = Physics.RaycastAll(from, Vector3.down, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (var floor in hits)
+        {
+            if (floor.normal.y < .5f || !NavMesh.SamplePosition(floor.point, out var nav, .2f, filter)) continue;
+            Vector3 delta = nav.position - floor.point;
+            if (Mathf.Abs(delta.y) > EdgeTolerance || new Vector2(delta.x, delta.z).magnitude > EdgeTolerance) continue;
+            feet = new Vector3(nav.position.x, floor.point.y, nav.position.z);
+            return true;
+        }
+        return false;
     }
 
     bool CanStand(Vector3 feet)

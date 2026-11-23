@@ -143,10 +143,13 @@ public static class StorePlacementAudit
         foreach (var bay in ShelfSlot.All.GroupBy(slot => slot.owner))
         {
             var cold = bay.Key != null ? bay.Key.GetComponent<ColdFixture>() : null;
-            var door = cold != null && cold.retail ? cold.GetComponentInChildren<FurnitureDoor>() : null;
-            if (!TryOpen(door, probe, evidence => WriteSlots(bay, probe, evidence)))
-                WriteSlots(bay, probe, cold != null && cold.retail
-                    ? "Measured as found; no reachable chiller door was established." : null);
+            var doors = cold != null && cold.retail ? cold.GetComponentsInChildren<FurnitureDoor>() : Array.Empty<FurnitureDoor>();
+            // A chiller has a glass door per section: each slot is measured with its own door open,
+            // as you'd open it (opening the first one only had it swing across its neighbours').
+            foreach (var behind in bay.GroupBy(slot => DoorFor(slot, doors)))
+                if (!TryOpen(behind.Key, probe, evidence => WriteSlots(behind, probe, evidence)))
+                    WriteSlots(behind, probe, cold != null && cold.retail
+                        ? "Measured as found; no reachable chiller door was established." : null);
         }
 
         foreach (Type type in new[] { typeof(ElectricBox), typeof(BreakerSwitch), typeof(FogBox), typeof(CameraBox),
@@ -170,6 +173,21 @@ public static class StorePlacementAudit
         ToolSnapPoint snap when snap.tool != null => snap.tool.GetComponent<ProductBox>()?.cabinet,
         _ => null
     };
+
+    static FurnitureDoor DoorFor(ShelfSlot slot, FurnitureDoor[] doors)
+    {
+        FurnitureDoor best = null;
+        float bestDistance = float.MaxValue;
+        Vector3 at = slot.Position;
+        foreach (var door in doors)
+        {
+            if (door == null || door.panel == null) continue;
+            Vector3 d = door.panel.bounds.center - at;
+            d.y = 0f;
+            if (d.sqrMagnitude < bestDistance) { bestDistance = d.sqrMagnitude; best = door; }
+        }
+        return best;
+    }
 
     static bool TryOpen(FurnitureDoor door, PlacementProbe probe, Action<string> inspect)
     {
