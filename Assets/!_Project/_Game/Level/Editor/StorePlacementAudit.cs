@@ -146,10 +146,12 @@ public static class StorePlacementAudit
             var doors = cold != null && cold.retail ? cold.GetComponentsInChildren<FurnitureDoor>() : Array.Empty<FurnitureDoor>();
             // A chiller has a glass door per section: each slot is measured with its own door open,
             // as you'd open it (opening the first one only had it swing across its neighbours').
+            var measured = new List<(ShelfSlot slot, PlacementProbe.Result result)>();
             foreach (var behind in bay.GroupBy(slot => DoorFor(slot, doors)))
-                if (!TryOpen(behind.Key, probe, evidence => WriteSlots(behind, probe, evidence)))
-                    WriteSlots(behind, probe, cold != null && cold.retail
-                        ? "Measured as found; no reachable chiller door was established." : null);
+                if (!TryOpen(behind.Key, probe, evidence => MeasureSlots(behind, probe, evidence, measured)))
+                    MeasureSlots(behind, probe, cold != null && cold.retail
+                        ? "Measured as found; no reachable chiller door was established." : null, measured);
+            WriteBay(measured);
         }
 
         foreach (Type type in new[] { typeof(ElectricBox), typeof(BreakerSwitch), typeof(FogBox), typeof(CameraBox),
@@ -219,7 +221,38 @@ public static class StorePlacementAudit
         }
     }
 
-    static void WriteSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence)
+    // A product's box restocks every empty slot of it on the bay, and the stock crate the whole
+    // bay (ProductBox.Restock, StockCrate.StockShelf). So a slot you can't aim at is still
+    // restocked from one you can: of the same product with a box, or anywhere on the bay with
+    // the crate. Such a slot is reported, not flagged (C12.2).
+    static void WriteBay(List<(ShelfSlot slot, PlacementProbe.Result result)> measured)
+    {
+        var reachableProducts = new HashSet<string>();
+        ShelfSlot anyReachable = null;
+        foreach (var (slot, result) in measured)
+            if (result.Approach == "reachable")
+            {
+                if (slot.productId != null) reachableProducts.Add(slot.productId);
+                anyReachable ??= slot;
+            }
+        foreach (var (slot, result) in measured)
+        {
+            if (result.Approach == "unreachable" && slot.owner != null && anyReachable != null)
+            {
+                bool sameProduct = slot.productId != null && reachableProducts.Contains(slot.productId);
+                result.Approach = "via its bay";
+                result.Height ??= slot.Position.y - slot.frame.position.y;
+                result.Evidence = (sameProduct
+                    ? "Restocked with its product's box from a reachable slot of the same product on this bay."
+                    : $"Restocked with the stock crate from a reachable slot on this bay (slot {anyReachable.Index}).")
+                    + " " + result.Evidence;
+            }
+            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
+        }
+    }
+
+    static void MeasureSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence,
+        List<(ShelfSlot, PlacementProbe.Result)> into)
     {
         foreach (var slot in slots)
         {
@@ -229,7 +262,7 @@ public static class StorePlacementAudit
                     $"Slot at {slot.Position.ToString("F2")} facing {slot.Outward.ToString("F2")} ({slot.side}).";
             if (doorEvidence != null)
                 result.Evidence = string.IsNullOrEmpty(result.Evidence) ? doorEvidence : doorEvidence + " " + result.Evidence;
-            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
+            into.Add((slot, result));
         }
     }
 
