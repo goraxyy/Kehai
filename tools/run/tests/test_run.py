@@ -121,6 +121,7 @@ class RunTests(Fixture):
         self.assertTrue(seen['new_file'], "the branch's new file is in the clone")
         self.assertFalse(seen['deleted_file'], 'a file the branch removed is not in the clone')
         self.assertTrue(seen['art'], 'the private art comes from the main folder')
+        self.assertEqual(self.events()[0]['commit'], seen['source_commit'], 'Unity can stamp the exact archived commit')
         self.assertTrue(seen['product'].startswith('Kehai-run-'), 'its own product name, so its data stays apart')
         self.assertTrue((out / 'shift_records' / 'shift_001.json').exists(), 'the run\'s records are kept (Q1)')
         self.assertEqual(b'fixture replay', (out / 'shift_records/shift_001.krec').read_bytes())

@@ -20,6 +20,7 @@ seen = {
     'new_file': (project / 'Assets' / 'new.cs').exists(),
     'deleted_file': (project / 'Assets' / 'old.cs').exists(),
     'art': (project / 'Assets' / 'art.png').exists(),
+    'source_commit': os.environ.get('KEHAI_RUN_CODE_COMMIT'),
     'product': next((l.split(': ', 1)[1].strip() for l in (project / 'ProjectSettings' / 'ProjectSettings.asset').read_text().splitlines() if l.startswith('  productName: ')), ''),
 }
 log.write_text('Running tests for ExecutionSettings\n' + json.dumps(seen) + '\n')

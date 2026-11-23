@@ -352,7 +352,8 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         for _, command in commands:
             log(shlex.join(command) if sight else ' '.join(command))
         return 0
-    env = None
+    # The archive in the clone has no .git directory. Let Unity stamp the ref we actually exported.
+    env = {**os.environ, 'KEHAI_RUN_CODE_COMMIT': commit}
     if sight:
         from tools.reports.common import private_path
         from tools.run.sight_clips import verify_sight_movie, video_tools
@@ -362,7 +363,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         except ValueError as err:
             log(f'kehai-run: {err}')
             return 3
-        env = {**os.environ, 'KEHAI_FFMPEG': str(encoder)}
+        env['KEHAI_FFMPEG'] = str(encoder)
     try:
         if unity_open(s):
             log('kehai-run: Unity is open. Close the editor first, or use the PC.')
