@@ -100,6 +100,7 @@ public static class SandboxIslandCheck
         Expect(interactions != null && interactions.Ready, "the interactions area stands on the island with its camera and shopper");
         if (WithPursuitChecks)
         {
+            PursuitSandboxChecks.LogMapGrid("SandboxIslandCheck");
             Expect(PursuitChecks.ExitCode == 0, $"the pursuit checks pass on the island (report {PursuitChecks.ReportPath})");
             SessionState.EraseBool(SandboxIsland.PursuitChecksKey);
         }
