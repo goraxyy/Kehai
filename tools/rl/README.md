@@ -103,6 +103,19 @@ is also zipped as `Builds/KehaiTrain/Windows.zip`.
 
 ## Record demonstrations
 
+The editor recorder runs Employee, Vital, or Basic on a single `kehai-run` clone under the
+shared heavy-work lock. It defaults to 20,000 decisions and lets the recorder stop Unity.
+
+```bash
+tools/rl/record_demos_editor.sh --dry-run employee 20000
+tools/rl/record_demos_editor.sh vital 20000
+```
+
+Each mode writes its `.demo` files and live `record.log` under `tools/rl/demos/<mode>/` in the
+calling checkout. The `demos` job collects ML-Agents demonstrations with shift records and
+replays disabled. It preserves Unity's failure code and exits 1 if Unity succeeds with no
+`.demo` files in the folder. `KEHAI_CLONE` selects the parent directory for the per-run clone.
+
 Before PPO starts, the policy learns to copy rung E's bandit (`behavioral_cloning` in
 `karen_ppo.yaml`), so it starts at E's level instead of picking at random. Record about five
 minutes of the bandit's choices:

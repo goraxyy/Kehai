@@ -281,7 +281,7 @@ def janitor(s: Settings, log=print) -> list[str]:
 
 
 def copy_out(card: Card) -> str:
-    """What the run produced in its data folder: shift records, replays, eval output (Q1)."""
+    """Retain the run's output and report any error delivering the caller's export."""
     data = Path(card.data)
     out = Path(card.out)
     for name in ('shift_records', 'kehai_eval', 'karen_logs', 'replays', 'sandbox_checks'):
@@ -290,21 +290,39 @@ def copy_out(card: Card) -> str:
     if card.export_dir:
         export = Path(card.export_dir)
         try:
-            if (export / 'unity.log').is_file():
-                shutil.copy2(export / 'unity.log', out / 'unity.log')
-            for name in ('shift_records', 'kehai_eval'):
-                if (out / name).is_dir():
-                    shutil.copytree(out / name, export / name, dirs_exist_ok=True)
+            live_log = unity_log_file(card.job, export)
+            if live_log.is_file():
+                shutil.copy2(live_log, out / 'unity.log')
+            if card.job != 'demos':
+                for name in ('shift_records', 'kehai_eval'):
+                    if (out / name).is_dir():
+                        shutil.copytree(out / name, export / name, dirs_exist_ok=True)
         except OSError as err:
             return f'output export to {export} failed ({err}). Retained results: {out}'
     return ''
+
+
+def unity_log_file(job: str, folder: Path) -> Path:
+    return folder / ('record.log' if job == 'demos' else 'unity.log')
+
+
+def demo_args(mode: str, steps: str, export_dir: Path) -> list[str]:
+    if mode == 'employee':
+        return ['-ablation-rungs', 'E', '-ablation-profiles', 'efficient,skittish,reckless',
+                '-bot-mind', 'trainer', '-bot-record-demos', str(export_dir), '-bot-demo-steps', steps]
+    return ['-ablation-rungs', 'E', '-karen-brain', mode,
+            '-karen-record-demos', str(export_dir), '-karen-demo-steps', steps]
 
 
 def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: str | None,
                *, league: Path | None = None, eval_timeout: str | None = None,
                export_dir: Path | None = None) -> list[str]:
     base = ['-batchmode', '-nographics', '-projectPath', str(clone)]
-    logging = ['-logFile', str((export_dir or out) / 'unity.log')]
+    logging = ['-logFile', str(unity_log_file(job, export_dir or out))]
+    if job == 'demos':
+        return base + ['-executeMethod', 'EvalBatch.Play', '-kehai-ablation', '-ablation-interleave',
+                       '-ablation-careers', '1000', '-ablation-shifts', '6', '-ablation-start', '1',
+                       '-ablation-seconds', '150', '-kehai-no-records'] + logging + extra
     if job in ('league', 'ablation'):
         mode = ['-league', str(clone / league)] if league is not None else ['-kehai-ablation']
         eval_args = ['-executeMethod', 'EvalBatch.Play', *mode]
@@ -359,6 +377,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         clone_root: Path | None = None) -> int:
     if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
+        return 2
+    if job == 'demos' and export_dir is None:
+        log('kehai-run: demos require an export directory.')
         return 2
     rid = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:6]
     commit = git(s.repo, 'rev-parse', '--verify', (sight.commit if sight else ref) + '^{commit}')
@@ -451,11 +472,12 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         set_product(clone, product)
         if export_dir is not None:
             export_dir.mkdir(parents=True, exist_ok=True)
-            (export_dir / 'unity.log').write_text('')
+            unity_log_file(job, export_dir).write_text('')
             card.export_dir = str(export_dir.absolute())
             card.save(s)
-        log_path = (export_dir or out) / ('review.md' if sight else 'unity.log')
-        log(f'kehai-run: {rid}: running Unity ({job}), at most {timeout_min:g} min; {log_path}')
+        log_path = out / 'review.md' if sight else unity_log_file(job, export_dir or out)
+        time_limit = f', at most {timeout_min:g} min' if timeout_min < float('inf') else ''
+        log(f'kehai-run: {rid}: running Unity ({job}){time_limit}; {log_path}')
         limit = (time.time() if eval_timeout is not None else began) + timeout_min * 60
         code = 0
         for i, (destination, command) in enumerate(commands):
@@ -463,7 +485,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
                 code, note = 124, f'timed out after {timeout_min:g} min'
                 break
             destination.mkdir(exist_ok=True)
-            unity_log = (export_dir or destination) / 'unity.log'
+            unity_log = unity_log_file(job, export_dir or destination)
             if sight:
                 name = sight.cases[i].name
                 log(f'kehai-run: rendering {name}; log {unity_log}')
@@ -503,6 +525,12 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         if code == 0 and job in ('trick-clip', 'sandbox-clip'):
             from tools.run.trick_clip import verify_movie
             verify_movie(out)
+        if code == 0 and job == 'demos':
+            demos = sorted(p for p in export_dir.glob('*.demo') if p.is_file() and not p.name.startswith('.'))
+            if not demos:
+                code, note = 1, f'no .demo files in {export_dir}'
+            for demo in demos:
+                log(str(demo))
         state = 'completed' if code == 0 else 'failed'
     except Stopped as why:
         note = f'stopped ({why})'
@@ -586,7 +614,7 @@ def doctor(s: Settings, clean: bool = False, log=print) -> int:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog='kehai-run', description=__doc__.split('\n\n')[0])
     sub = p.add_subparsers(dest='cmd', required=True)
-    for name in ('tests', 'ablation', 'league', 'unity'):
+    for name in ('tests', 'ablation', 'league', 'demos', 'unity'):
         r = sub.add_parser(name)
         r.add_argument('--ref', default='HEAD', help='the commit to test (default HEAD)')
         r.add_argument('--timeout-min', type=float)
@@ -598,8 +626,14 @@ def main(argv=None) -> int:
         if name in ('league', 'ablation'):
             r.add_argument('--eval-timeout-min', help='EvalBatch timeout, with a five-minute runner grace period')
             r.add_argument('--export-dir', type=Path, help='write the live log and export eval and shift output here')
+        if name == 'demos':
+            r.add_argument('--mode', choices=('employee', 'vital', 'basic'), required=True)
+            r.add_argument('--steps', default='20000', help='number of decisions to record')
+            r.add_argument('--export-dir', type=Path, required=True, help='write demonstrations and record.log here')
+        else:
+            r.add_argument('rest', nargs=argparse.REMAINDER, help='after --: passed to Unity')
+        if name in ('league', 'ablation', 'demos'):
             r.add_argument('--clone-root', type=Path, help='parent directory for the runner-managed clone')
-        r.add_argument('rest', nargs=argparse.REMAINDER, help='after --: passed to Unity')
     clip = sub.add_parser('trick-clip', help='film one trick from a retained run')
     clip.add_argument('report', type=Path, help='the trick check TSV in the run output')
     clip.add_argument('trick', help='the tactic ID in the report')
@@ -648,11 +682,16 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == 'doctor':
         return doctor(s, a.clean)
-    rest = a.rest[1:] if a.rest[:1] == ['--'] else a.rest
+    export_dir = getattr(a, 'export_dir', None)
+    if a.cmd == 'demos':
+        export_dir = export_dir.absolute()
+        rest = demo_args(a.mode, a.steps, export_dir)
+    else:
+        rest = a.rest[1:] if a.rest[:1] == ['--'] else a.rest
     eval_timeout = getattr(a, 'eval_timeout_min', None)
     timeout = a.timeout_min
     if timeout is None:
-        timeout = 90.0
+        timeout = float('inf') if a.cmd == 'demos' else 90.0
         if eval_timeout is not None:
             try:
                 minutes = float(eval_timeout)
@@ -663,7 +702,7 @@ def main(argv=None) -> int:
     return run(s, a.cmd, rest, ref=a.ref, timeout_min=timeout,
                test_filter=getattr(a, 'filter', None), dry_run=a.dry_run,
                league=getattr(a, 'league', None), eval_timeout=eval_timeout,
-               export_dir=getattr(a, 'export_dir', None),
+               export_dir=export_dir,
                clone_root=clone_root.absolute() if clone_root is not None else None)
 
 

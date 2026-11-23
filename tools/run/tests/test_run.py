@@ -6,6 +6,7 @@ Mac's. Nothing here touches the real project, the real lock or the editor's real
 import json
 import os
 import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -188,6 +189,87 @@ class BeliefWrapperTests(Fixture):
         self.assert_clean()
 
 
+class DemoWrapperTests(Fixture):
+    def setUp(self):
+        super().setUp()
+        relative = Path('tools/rl/record_demos_editor.sh')
+        self.script = self.s.repo / relative
+        self.script.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / relative, self.script)
+        runner = self.s.repo / 'tools/run/kehai_run.py'
+        runner.parent.mkdir()
+        runner.symlink_to(ROOT / 'tools/run/kehai_run.py')
+        self.demos = self.script.parent / 'demos'
+        self.clone_root = self.t / 'demo clones'
+
+    def wrapper(self, *args, **env):
+        return subprocess.run([self.script, *args], cwd=self.t, text=True,
+                              env=self.cli_env(KEHAI_CLONE=str(self.clone_root), **env),
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
+
+    def test_dry_run_preserves_demo_arguments_for_each_mode(self):
+        for mode in ('employee', 'vital', 'basic'):
+            with self.subTest(mode=mode):
+                count = [] if mode == 'employee' else ['37']
+                result = self.wrapper('--dry-run', mode, *count)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                args = shlex.split(result.stdout)
+                clone = Path(args[4])
+                out = Path(args[args.index('-logFile') + 1]).parent
+                self.assertEqual(out.resolve(), (self.demos / mode).resolve())
+                self.assertEqual(clone.parent, self.clone_root)
+                if mode == 'employee':
+                    recorder = ['-ablation-profiles', 'efficient,skittish,reckless', '-bot-mind', 'trainer',
+                                '-bot-record-demos', str(out), '-bot-demo-steps', '20000']
+                else:
+                    recorder = ['-karen-brain', mode, '-karen-record-demos', str(out), '-karen-demo-steps', '37']
+                self.assertEqual(args, [str(STANDIN), '-batchmode', '-nographics', '-projectPath', str(clone),
+                                        '-executeMethod', 'EvalBatch.Play', '-kehai-ablation', '-ablation-interleave',
+                                        '-ablation-careers', '1000', '-ablation-shifts', '6', '-ablation-start', '1',
+                                        '-ablation-seconds', '150', '-kehai-no-records', '-logFile',
+                                        str(out / 'record.log'), '-ablation-rungs', 'E', *recorder])
+        self.assertFalse(self.demos.exists())
+        self.assertFalse(self.clone_root.exists())
+        self.assertFalse(self.s.home.exists())
+
+    def test_demos_job_does_not_accept_arbitrary_unity_arguments(self):
+        with self.run_cli('demos', '--mode', 'employee', '--export-dir', str(self.demos), '--dry-run',
+                          '--', '-executeMethod', 'EvalBatch.Play', '-league', 'test.json') as run:
+            output, _ = run.communicate(timeout=10)
+            self.assertEqual(run.returncode, 2, output)
+            self.assertIn('unrecognized arguments', output)
+        self.assertFalse(self.demos.exists())
+
+    def test_collects_demo_files_and_live_logs_for_each_mode(self):
+        for mode, behavior in (('employee', 'Employee'), ('vital', 'KarenVital'), ('basic', 'KarenBasic')):
+            with self.subTest(mode=mode):
+                result = self.wrapper(mode, '37')
+                self.assertEqual(result.returncode, 0, result.stdout)
+                out = self.demos / mode
+                demo = out / f'{behavior}.demo'
+                self.assertEqual(demo.read_bytes(), b'demo fixture')
+                self.assertIn(demo.name, result.stdout)
+                event = self.events()[-1]
+                self.assertEqual((event['kind'], event['state']), ('demos', 'completed'))
+                retained = self.s.runs / event['id']
+                self.assertEqual((out / 'record.log').read_bytes(), (retained / 'unity.log').read_bytes())
+                self.assertFalse((retained / 'shift_records').exists())
+                self.assertTrue((retained / 'kehai_eval').exists())
+                self.assertFalse((out / 'kehai_eval').exists())
+                self.assert_clean()
+                self.assertFalse(any(self.clone_root.iterdir()))
+
+    def test_preserves_unity_failure_exit_and_fails_when_no_demo_exists(self):
+        for mode, unity_code, expected in (('vital', 7, 7), ('basic', 0, 1)):
+            with self.subTest(mode=mode):
+                result = self.wrapper(mode, STANDIN_EXIT=str(unity_code), STANDIN_SKIP_DEMO='1')
+                self.assertEqual(result.returncode, expected, result.stdout)
+                event = self.events()[-1]
+                self.assertEqual((event['state'], event['exit']), ('failed', expected))
+                self.assertTrue((self.demos / mode / 'record.log').exists())
+                self.assert_clean()
+
+
 class RunTests(Fixture):
     def test_success_cleans_up_records_and_tests_the_branch_not_the_main_folder(self):
         code = kr.run(self.s, 'tests', [], log=lambda *_: None)
@@ -253,7 +335,8 @@ class RunTests(Fixture):
         self.assertFalse(self.s.home.exists())
 
     def test_recording_cannot_be_disabled_for_a_test_shift(self):
-        for job, args in [('ablation', []), ('tests', []), ('unity', ['-executeMethod', 'EvalBatch.Play'])]:
+        for job, args in [('ablation', []), ('league', []), ('tests', []),
+                          ('unity', ['-executeMethod', 'EvalBatch.Play'])]:
             self.assertEqual(2, kr.run(self.s, job, args + ['-kehai-no-records'], log=lambda *_: None))
         self.assertFalse(self.s.home.exists())
 

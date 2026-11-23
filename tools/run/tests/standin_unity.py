@@ -32,15 +32,21 @@ if prefs:
     Path(prefs).write_text(json.dumps({'LastUsedProjectPath': str(project), 'kProjectBasePath': str(project)}))
 data_root = os.environ.get('STANDIN_DATA_ROOT')
 if data_root:
-    d = Path(data_root) / seen['product'] / 'shift_records'
-    d.mkdir(parents=True, exist_ok=True)
-    (d / 'shift_001.json').write_text('{}')
-    (d / 'shift_001.krec').write_bytes(b'fixture replay')
+    data = Path(data_root) / seen['product']
+    if '-kehai-no-records' not in args:
+        shifts = data / 'shift_records'
+        shifts.mkdir(parents=True, exist_ok=True)
+        (shifts / 'shift_001.json').write_text('{}')
+        (shifts / 'shift_001.krec').write_bytes(b'fixture replay')
     if league or '-kehai-ablation' in args:
-        evaluation = d.parent / 'kehai_eval'
-        evaluation.mkdir()
+        evaluation = data / 'kehai_eval'
+        evaluation.mkdir(parents=True, exist_ok=True)
         name = 'league_fixture.jsonl' if league else 'ablation_fixture.jsonl'
         (evaluation / name).write_text('{}\n')
+demo_dir = arg('-bot-record-demos') or arg('-karen-record-demos')
+if demo_dir and not os.environ.get('STANDIN_SKIP_DEMO'):
+    behavior = {'vital': 'KarenVital', 'basic': 'KarenBasic'}.get(arg('-karen-brain'), 'Employee')
+    (Path(demo_dir) / f'{behavior}.demo').write_bytes(b'demo fixture')
 trace = arg('-belief-trace')
 if trace:
     Path(trace).mkdir(parents=True, exist_ok=True)
