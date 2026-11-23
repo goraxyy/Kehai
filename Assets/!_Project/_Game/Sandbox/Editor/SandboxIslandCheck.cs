@@ -15,6 +15,7 @@ using UnityEngine;
 // SandboxIslandCheck.Pursuit does the same and then plays the pursuit checks on the island's
 // pursuit area, on her test map (C11.11, C11.13).
 // SandboxIslandCheck.Walk drives the real store player from the lobby through the island rooms.
+// SandboxIslandCheck.Interactions plays the interaction checks in the island's interactions room.
 [InitializeOnLoad]
 public static class SandboxIslandCheck
 {
@@ -30,7 +31,8 @@ public static class SandboxIslandCheck
     {
         string[] args = Environment.GetCommandLineArgs();
         withWalk = Array.IndexOf(args, "SandboxIslandCheck.Walk") >= 0;
-        if (!Application.isBatchMode || !withWalk && Array.IndexOf(args, "SandboxIslandCheck.Run") < 0 && Array.IndexOf(args, "SandboxIslandCheck.Pursuit") < 0) return;
+        if (!Application.isBatchMode || !withWalk && Array.IndexOf(args, "SandboxIslandCheck.Run") < 0 &&
+            Array.IndexOf(args, "SandboxIslandCheck.Pursuit") < 0 && Array.IndexOf(args, "SandboxIslandCheck.Interactions") < 0) return;
         EditorApplication.update += Tick;
     }
 
@@ -43,7 +45,15 @@ public static class SandboxIslandCheck
         SandboxIslandMenu.Open();
     }
 
+    // The interaction checks played in the island's interactions room (C11.9 on the island).
+    public static void Interactions()
+    {
+        SessionState.SetBool(SandboxIsland.InteractionChecksKey, true);
+        SandboxIslandMenu.Open();
+    }
+
     static bool WithPursuitChecks => SessionState.GetBool(SandboxIsland.PursuitChecksKey, false);
+    static bool WithInteractionChecks => SessionState.GetBool(SandboxIsland.InteractionChecksKey, false);
 
     static void Tick()
     {
@@ -69,6 +79,7 @@ public static class SandboxIslandCheck
         }
         if (t < 14) return;
         if (WithPursuitChecks && !PursuitChecks.Done) return;
+        if (WithInteractionChecks && !InteractionChecks.Done) return;
 
         var fails = new List<string>();
         void Expect(bool ok, string what) { Debug.Log($"SandboxIslandCheck: {(ok ? "PASS" : "FAIL")} {what}"); if (!ok) fails.Add(what); }
@@ -103,6 +114,11 @@ public static class SandboxIslandCheck
             PursuitSandboxChecks.LogMapGrid("SandboxIslandCheck");
             Expect(PursuitChecks.ExitCode == 0, $"the pursuit checks pass on the island (report {PursuitChecks.ReportPath})");
             SessionState.EraseBool(SandboxIsland.PursuitChecksKey);
+        }
+        if (WithInteractionChecks)
+        {
+            Expect(InteractionChecks.ExitCode == 0, $"the interaction checks pass on the island (report {InteractionChecks.ReportPath})");
+            SessionState.EraseBool(SandboxIsland.InteractionChecksKey);
         }
         if (withWalk && fails.Count == 0)
         {

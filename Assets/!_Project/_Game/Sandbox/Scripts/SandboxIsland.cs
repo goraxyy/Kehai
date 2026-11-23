@@ -43,6 +43,7 @@ namespace Kehai.Sandbox
         // Her test map's bounds: the island's ground, floor to a few metres up (C11.13).
         public static Bounds MapBounds => new Bounds(new Vector3(GroundCentre.x, 2f, GroundCentre.z), new Vector3(GroundSize.x, 6f, GroundSize.z));
         public const string PursuitChecksKey = SessionKey + ".pursuitChecks";
+        public const string InteractionChecksKey = SessionKey + ".interactionChecks";
 
         public static bool Active { get; private set; }   // the quiet-store sandbox, opened from the menu
 
@@ -124,6 +125,7 @@ namespace Kehai.Sandbox
                 interactions.SetActive(false);
                 interactions.AddComponent<SightSandbox>().buildPlayer = false;
                 interactions.AddComponent<InteractionSandbox>();
+                if (SessionState.GetBool(InteractionChecksKey, false)) interactions.AddComponent<InteractionChecks>();
                 interactions.SetActive(true);
                 // The rooms have baked their NavMesh: her test map is built from them now.
                 StoreMap.Rebuild();
