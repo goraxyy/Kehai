@@ -17,6 +17,7 @@ namespace Kehai.Karen
     {
         public string Name = "";              // KarenBrainBasic, KarenBrainVital, EmployeeBrain
         public string Version = "";           // e.g. "basic-r2-a@1.2M"
+        public string ModelVersion = "";      // semantic release version of a Karen, when declared
         public int InputsVersion;             // the observation's version it was trained on
         public bool Trained;                  // false: a hand-made stand-in (tests, or "not trained")
         public string TrainedAgainst = "";
@@ -25,8 +26,10 @@ namespace Kehai.Karen
         public string Command = "";           // the command that made it
         public string[][] OutputNames;        // per head: the name of each output
 
+        public string DisplayVersion => string.IsNullOrEmpty(ModelVersion) ? Version : ModelVersion;
+
         public override string ToString() =>
-            $"{Name} {Version} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
+            $"{Name} {DisplayVersion} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
     }
 
     public sealed class BrainNet

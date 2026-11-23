@@ -75,11 +75,13 @@ Each trained Karen gets her own number, apart from the game's: **Satori** (the g
 | `MINOR` | trained again, on the same inputs | Satori 1.3.0 after a refresh round |
 | `PATCH` | exported again, nothing new learned | Satori 1.2.1 |
 
-- **It maps onto what exists:** MAJOR is the pack's inputs version plus its list of tricks;
-  MINOR is today's publish number.
+- **The model MAJOR is the compatibility version.** It starts at 1. The signed pack still
+  checks its inputs and known tricks. Its existing publish number still orders files and is
+  the default MINOR for a new pack. [Export and pack commands](../../../../tools/learn/README.md).
 - **A game version accepts any Karen with the same MAJOR.** A newer MINOR reaches players
   without a new build of the game, and **the publish gate still runs** on every one (with no
   per-model yes from you, your call of 12 November).
+- Older signed packs without a model version still use the inputs and trick checks.
 - **Example:** game 0.6.0 accepts Satori 1.x and Oni 1.x. Satori 1.3.0, trained in January,
   passes the gate and reaches testers without a new build. Satori 2.0.0, with a new input, needs
   game 0.7.0.

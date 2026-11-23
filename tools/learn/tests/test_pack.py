@@ -19,6 +19,36 @@ def test_sign_and_verify_round_trip():
     ok, why, body = pack.check(text, KEY)
     assert ok, why
     assert body["pack_version"] == 3
+    assert body["model_version"] == "1.3.0"
+
+
+def test_model_major_is_checked_for_new_packs_and_the_basic_card():
+    brain = {"kind": "brain", "name": "KarenBrainBasic", "card": {"version": "fixture"}}
+    text = pack.build([brain], 4, KEY, model_version="1.2.1")
+    ok, why, body = pack.check(text, KEY)
+    assert ok, why
+    assert body["parts"][0]["card"]["model_version"] == "1.2.1"
+    assert "model_version" not in brain["card"]
+    assert "model MAJOR 2" in pack.check(pack.build([brain], 4, KEY, model_version="2.0.0"), KEY)[1]
+
+    # A trusted sender can sign an inconsistent card. The game and Python still refuse it.
+    body["parts"][0]["card"]["model_version"] = "2.4.0"
+    encoded = json.dumps(body)
+    signed = encoded + "\n" + rsa_sign.sign(encoded.encode("utf-8"), KEY)
+    assert "model MAJOR 2" in pack.check(signed, KEY)[1]
+
+
+def test_legacy_signed_pack_with_compatible_inputs_still_reads():
+    body = json.loads(pack.body([start_part()], 3))
+    del body["model_version"]
+    encoded = json.dumps(body)
+    assert pack.check(encoded + "\n" + rsa_sign.sign(encoded.encode("utf-8"), KEY), KEY)[0]
+
+
+@pytest.mark.parametrize("version", ["1.2", "1.02.3", "1.2.3-rc.1", "1.9999999999.0", 1])
+def test_malformed_model_version_is_refused(version):
+    with pytest.raises(ValueError, match="model version"):
+        pack.body([start_part()], 3, model_version=version)
 
 
 def test_tampered_old_inputs_and_unknown_trick_are_refused():

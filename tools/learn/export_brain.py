@@ -28,6 +28,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import unity_meta  # noqa: E402
+from pack import model_major  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -215,6 +216,7 @@ def generated_cs(name: str, net: dict, card: dict, namespace: str = "Kehai.Karen
         "        public static Kehai.Karen.BrainCard Card => new Kehai.Karen.BrainCard",
         "        {",
         f"            Name = {cs_string(name)}, Version = {cs_string(card.get('version', ''))}, InputsVersion = {int(card.get('inputs_version', 0))},",
+        f"            ModelVersion = {cs_string(card.get('model_version', ''))},",
         f"            Trained = {str(bool(card.get('trained', True))).lower()}, TrainedAgainst = {cs_string(card.get('trained_against', ''))}, Steps = {int(card.get('steps', 0))}L,",
         f"            Validation = {cs_string(card.get('validation', ''))}, Command = {cs_string(card.get('command', ''))},",
         f"            OutputNames = {names}",
@@ -255,7 +257,7 @@ def card_md(name: str, card: dict, max_diff: float) -> str:
     return "\n".join([
         f"# Model card: {name}", "",
         "| | |", "|---|---|",
-        f"| Version | {card.get('version', '')} |",
+        f"| Version | {card.get('model_version') or card.get('version', '')} |",
         f"| Trained | {'yes' if card.get('trained', True) else 'no (a stand-in)'} |",
         f"| Trained against | {card.get('trained_against', '')} |",
         f"| Decisions | {card.get('steps', 0):,} |",
@@ -269,6 +271,8 @@ def card_md(name: str, card: dict, max_diff: float) -> str:
 
 
 def export(state, name: str, card: dict, out_dir: str, namespace: str = "Kehai.Karen.Generated", tolerance: float = 1e-4) -> dict:
+    if "model_version" in card:
+        model_major(card["model_version"])
     s = to_numpy(state)
     net = layers_from_state(s)
     if card.get("outputs") and [len(h) for h in card["outputs"]] != [w.shape[0] for w, _ in net["heads"]]:
@@ -300,8 +304,16 @@ def main(argv=None):
     ap.add_argument("--trained-against", default="")
     ap.add_argument("--validation", default="")
     ap.add_argument("--version", default="")
+    ap.add_argument("--model-version", help="Karen's MAJOR.MINOR.PATCH release version")
     ap.add_argument("--out", default=GENERATED)
     a = ap.parse_args(argv)
+    if a.model_version is not None:
+        if a.name not in ("KarenBrainBasic", "KarenBrainVital"):
+            ap.error("--model-version applies to KarenBrainBasic or KarenBrainVital")
+        try:
+            model_major(a.model_version)
+        except ValueError as error:
+            ap.error(str(error))
 
     import torch
     path = find_checkpoint(a.run, a.behavior)
@@ -311,6 +323,8 @@ def main(argv=None):
             "trained_against": a.trained_against, "validation": a.validation,
             "command": "python3 tools/learn/export_brain.py " + " ".join(shlex.quote(x) for x in (argv or sys.argv[1:])),
             "exported": datetime.date.today().isoformat()}
+    if a.model_version is not None:
+        card["model_version"] = a.model_version
     if a.outputs:
         spec = json.load(open(a.outputs))
         card["outputs"] = spec["outputs"]

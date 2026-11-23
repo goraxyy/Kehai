@@ -121,6 +121,8 @@ namespace Kehai.Karen
         {
             why = null;
             if (net == null) { why = "no brain"; return false; }
+            if (!string.IsNullOrEmpty(net.Card.ModelVersion) && !ModelPack.AcceptsModelVersion(net.Card.ModelVersion, out why))
+                return false;
             if (net.Card.InputsVersion != BrainObservation.Version)
             {
                 why = $"{net.Card.Name} was trained on inputs version {net.Card.InputsVersion}; this build writes version {BrainObservation.Version}. Retrain or re-export it.";

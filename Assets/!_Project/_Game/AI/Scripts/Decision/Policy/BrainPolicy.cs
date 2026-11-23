@@ -59,7 +59,7 @@ namespace Kehai.Karen
         }
 
         public string Name => net.Card.Name;
-        public string Version => net.Card.Version;
+        public string Version => net.Card.DisplayVersion;
 
         public bool Choose(float[] inputs, IReadOnlyList<BrainSeam.Pair> legal, int plannerPick, out int index, out float chance)
         {

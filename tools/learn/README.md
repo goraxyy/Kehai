@@ -21,3 +21,11 @@ the run order is in [TESTING.md](../../docs/you/TESTING.md). Nothing here starts
 | `make_brain_fixture.py`, `make_pack_fixture.py` | the fixtures for the C# parity and pack tests |
 
 **Tests:** `python3 -m pytest tools/learn/tests` (or `tools/rl/.venv/bin/python -m pytest tools/learn/tests`).
+
+When exporting Satori (`KarenBrainBasic`) or Oni (`KarenBrainVital`), add `--model-version
+1.3.0` to put her release version in the card, C# and pack part. `--version` still accepts the
+run label. `pack.py build --version 3` keeps serial 3 for choosing between files and defaults
+the signed model version to `1.3.0`. Use `--model-version` to set a different release version.
+The pack and its Satori card must share a major version. Oni stays in the built-in models.
+
+See the [version rules](../../docs/you/plans/0.5.2/versions.md#4-each-karens-version).

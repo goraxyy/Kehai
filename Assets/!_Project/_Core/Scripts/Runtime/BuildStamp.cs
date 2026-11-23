@@ -41,7 +41,7 @@ public static class BuildStamp
     static string CardVersion(BrainCard card)
     {
         if (card == null || !card.Trained) return "untrained";
-        return string.IsNullOrEmpty(card.Version) ? "unknown version" : card.Version;
+        return string.IsNullOrEmpty(card.DisplayVersion) ? "unknown version" : card.DisplayVersion;
     }
 
     public static void IncludeBundledCards(Data stamp)

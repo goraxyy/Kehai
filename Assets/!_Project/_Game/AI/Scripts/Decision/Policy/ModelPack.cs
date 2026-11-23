@@ -30,6 +30,7 @@ namespace Kehai.Karen
     {
         public const string Format = "kehai-model-pack";
         public const int MaxBytes = 16 * 1024 * 1024;
+        public const int SupportedMajor = 1;
 
         public static ModelPack Current { get; private set; }
         public static string LastRefusal { get; private set; }
@@ -38,6 +39,7 @@ namespace Kehai.Karen
 
         public int PackVersion { get; private set; }
         public int InputsVersion { get; private set; }
+        public string ModelVersion { get; private set; } = "";
         public string Created { get; private set; } = "";
         public string Source { get; private set; } = "";
         readonly Dictionary<string, BrainNet> brains = new Dictionary<string, BrainNet>();
@@ -142,6 +144,11 @@ namespace Kehai.Karen
                 Source = source
             };
             if (p.InputsVersion != BrainObservation.Version) { why = LastRefusal = $"made for inputs version {p.InputsVersion}, this build reads {BrainObservation.Version}"; return false; }
+            if (body.TryGetValue("model_version", out object version))
+            {
+                p.ModelVersion = version as string;
+                if (!AcceptsModelVersion(p.ModelVersion, out why)) { LastRefusal = why; return false; }
+            }
 
             var parts = body.TryGetValue("parts", out object po) ? po as List<object> : null;
             if (parts == null) { why = LastRefusal = "no parts"; return false; }
@@ -174,6 +181,23 @@ namespace Kehai.Karen
             }
             pack = p;
             return true;
+        }
+
+        internal static bool AcceptsModelVersion(string version, out string why)
+        {
+            why = null;
+            string[] parts = version?.Split('.');
+            if (parts == null || parts.Length != 3 || parts.Any(part => part.Length == 0 ||
+                (part.Length > 1 && part[0] == '0') || part.Any(c => c < '0' || c > '9') ||
+                !int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out _)))
+            {
+                why = "model version must be MAJOR.MINOR.PATCH with components in range";
+                return false;
+            }
+            int major = int.Parse(parts[0], CultureInfo.InvariantCulture);
+            if (major == SupportedMajor) return true;
+            why = $"made for model MAJOR {major}, this build reads {SupportedMajor}";
+            return false;
         }
 
         // ---- the signature -------------------------------------------------------------------------
@@ -227,6 +251,11 @@ namespace Kehai.Karen
             if (c.TryGetValue("outputs", out object outs) && outs is List<object> heads)
                 card.OutputNames = heads.Select(h => ((List<object>)h).Select(x => x as string).ToArray()).ToArray();
             bool employee = card.Name.StartsWith("EmployeeBrain", System.StringComparison.Ordinal);
+            if (!employee && c.TryGetValue("model_version", out object version))
+            {
+                card.ModelVersion = version as string;
+                if (!AcceptsModelVersion(card.ModelVersion, out why)) return null;
+            }
             int inputsVersion = employee ? Kehai.Eval.EmployeeObservation.Version : BrainObservation.Version;
             if (card.InputsVersion != inputsVersion) { why = $"{card.Name} reads inputs version {card.InputsVersion}, this build writes {inputsVersion}"; return null; }
             if (!employee && card.OutputNames != null)
