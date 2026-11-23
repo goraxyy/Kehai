@@ -139,6 +139,21 @@ public class StorePlacementAuditTests
         Assert.AreEqual("unmeasured", result.PromptStatus);
     }
 
+    // 23 November: a shelf slot counts its board's height, not the middle of the pack on it.
+    [TestCase(1.50f, "within limit")]
+    [TestCase(1.65f, "above eye level")]
+    public void ShelfSlotsAreMeasuredAtTheirBoard(float board, string status)
+    {
+        Box("Floor", new Vector3(0f, FloorY - .25f, 1f), new Vector3(10f, .5f, 10f));
+        Bake();
+        var frame = new GameObject("Bay").transform;
+        frame.position = new Vector3(0f, FloorY, 0f);
+        var slot = new ShelfSlot(null, frame, new Vector3(0f, board, 0f), false, new Vector2(.25f, .25f), .34f);
+        var result = new PlacementProbe(player, surface).CheckSlot(slot);
+        Assert.That(result.Height, Is.EqualTo(board).Within(.02f), "the board, not the pack's middle (" + (board + .17f) + " m)");
+        Assert.AreEqual(status, result.HeightStatus);
+    }
+
     [Test]
     public void UpperBoardLeavesRoomForTallestDisplayPack()
     {

@@ -121,6 +121,10 @@ public sealed class PlacementProbe
         if (slot.frame == null) return result;
         Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * .5f);
         CheckApproach(result, centre, new[] { slot.Outward }, player != null ? player.interactRange : 0f, slot);
+        // A shelf is measured at its board, where you put the stock, not at the middle of what
+        // stands on it (the owner's call, 23 November): a tall pack on a 1.5 m board is in reach.
+        // The aim above still goes for the pack's middle.
+        if (result.Height.HasValue) result.Height -= centre.y - slot.Position.y;
         return result;
     }
 

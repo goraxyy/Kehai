@@ -72,6 +72,9 @@ public static class StorePlacementAudit
                 if (shift == null || shift.IsShiftActive || StoreLayoutRuntime.CurrentId != "today")
                     throw new InvalidOperationException("Expected the authored store before clock-in.");
                 layouts = new[] { "today" }.Concat(StoreLayouts.All.Select(item => item.Id)).ToArray();
+                // -placement-layouts today,rings: only those (for iterating on one layout).
+                string[] only = LayoutsArg();
+                if (only != null) layouts = layouts.Where(only.Contains).ToArray();
             }
 
             if (layout == null)
@@ -92,6 +95,13 @@ public static class StorePlacementAudit
             layout = null;
         }
         catch (Exception error) { Finish(error); }
+    }
+
+    static string[] LayoutsArg()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        int i = Array.IndexOf(args, "-placement-layouts");
+        return i >= 0 && i + 1 < args.Length ? args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries) : null;
     }
 
     static void OpenReport()
@@ -187,6 +197,9 @@ public static class StorePlacementAudit
         foreach (var slot in slots)
         {
             var result = probe.CheckSlot(slot);
+            if (result.Approach != "reachable" && slot.frame != null)
+                result.Evidence = (string.IsNullOrEmpty(result.Evidence) ? "" : result.Evidence + " ") +
+                    $"Slot at {slot.Position.ToString("F2")} facing {slot.Outward.ToString("F2")} ({slot.side}).";
             if (doorEvidence != null)
                 result.Evidence = string.IsNullOrEmpty(result.Evidence) ? doorEvidence : doorEvidence + " " + result.Evidence;
             Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
