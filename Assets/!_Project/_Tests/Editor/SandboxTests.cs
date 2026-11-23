@@ -183,4 +183,23 @@ public class SandboxTests
         Assert.That(SandboxIsland.GridNudge(0.4f, 0f), Is.EqualTo(-0.4f).Within(0.001f));
         Assert.That(SandboxIsland.GridNudge(1.3f, 0f), Is.EqualTo(0.2f).Within(0.001f));
     }
+
+    // 0.5.2: her light sense reads every "CeilingLights" group, not only the store's, so a
+    // sandbox room's lamps light you on the island as they do in a room on its own.
+    [Test]
+    public void HerLightSense_CountsASandboxRoomsLamps_BesideTheStoresOwn()
+    {
+        var store = new GameObject("CeilingLights");
+        store.transform.SetParent(root, false);
+        var storeLamp = new GameObject("Store lamp").AddComponent<Light>();
+        storeLamp.transform.SetParent(store.transform, false);
+        storeLamp.transform.position = new Vector3(0f, 3f, 0f);
+        Transform room = new GameObject("Island room").transform;
+        room.SetParent(root, false);
+        room.position = new Vector3(100f, 0f, 100f);
+        SandboxKit.Lamp(SandboxKit.CeilingLights(room), new Vector3(0f, 3f, 0f));
+        Assert.Greater(LightProbe.LevelAt(new Vector3(100f, 0f, 100f)), 0.8f, "under the island room's lamp");
+        Assert.Greater(LightProbe.LevelAt(Vector3.zero), 0.8f, "under the store's lamp, as before");
+        Assert.Less(LightProbe.LevelAt(new Vector3(50f, 0f, 50f)), 0.2f, "between them, dark");
+    }
 }
