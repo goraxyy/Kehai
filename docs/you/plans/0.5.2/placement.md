@@ -49,7 +49,8 @@ code moves it to 1.4 m on the same wall, and the next run reports nothing.
 ## 4. Where it stands (23 November)
 
 The audit's flags across the store and the six layouts went from **29,244 to 320** (run
-`20261123-021143-f0bc5a`; the store alone: 38).
+`20261123-021143-f0bc5a`), and in the store alone to **10** once freezer 4 was made display only
+(run `20261123-023127-ad497f`; the six layouts each drop its 30 slots too).
 
 | What changed | Why | Your call |
 |---|---|---|
@@ -61,8 +62,10 @@ The audit's flags across the store and the six layouts went from **29,244 to 320
 | The power box labelled | EAST, WEST, BACK, and the prompt names the lights | Q25, yes |
 
 **Still flagged, for your walk (Y12.1):**
-- **Freezer 4** (30 slots): its door stops against the scenery beside it. Now display only by
-  name (`StoreLayout.DisplayBays`), after the last audit, so the next one reports it as display.
+- **Freezer 4** (30 slots) is display only by name (`StoreLayout.DisplayBays`): its door stops
+  against the scenery beside it. Freezer 5 is display only as its face is blocked; its door is
+  still flagged (1).
+- **One slot on the till counter** facing the shoppers' side (1): no floor in the audit's sampling.
 - **The six bins in the parking lot:** the audit measures on her NavMesh, which doesn't reach the
   parking lot. Shoppers never use them and no chore asks for them; check you can walk to them.
 - **The staff room's mop and its rack:** a partition stands in front. Say if it's awkward to grab.
