@@ -5,6 +5,7 @@ Mac's. Nothing here touches the real project, the real lock or the editor's real
 """
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -77,13 +78,15 @@ class Fixture(unittest.TestCase):
         self.assertEqual(ORIGINAL_PREFS, json.loads(self.prefs.read_text()), 'the prefs are as they were, not reset to a fixed path')
         self.assertFalse(any(self.s.cards.glob('*.json')) if self.s.cards.exists() else False, 'no run card left')
 
+    def cli_env(self, **env):
+        return {**self.env, 'KEHAI_RUN_REPO': str(self.s.repo), 'KEHAI_RUN_MAIN': str(self.s.main),
+                'KEHAI_RUN_HOME': str(self.s.home), 'KEHAI_RUN_UNITY': str(STANDIN), 'KEHAI_RUN_LOCK': str(self.s.lock),
+                'KEHAI_RUN_PREFS_FILE': str(self.prefs), 'KEHAI_RUN_UNITY_PATTERN': 'no-such-process-kehai-run-test',
+                'KEHAI_RUN_DATA_ROOT': str(self.data_root), 'KEHAI_RUN_PREFS_ROOT': str(self.t / 'prefsroot'),
+                'KEHAI_RUN_MIN_FREE_GB': '0', 'KEHAI_RUN_NOTIFY': '0', **env}
+
     def run_cli(self, *args, **env):
-        e = {**self.env, 'KEHAI_RUN_REPO': str(self.s.repo), 'KEHAI_RUN_MAIN': str(self.s.main),
-             'KEHAI_RUN_HOME': str(self.s.home), 'KEHAI_RUN_UNITY': str(STANDIN), 'KEHAI_RUN_LOCK': str(self.s.lock),
-             'KEHAI_RUN_PREFS_FILE': str(self.prefs), 'KEHAI_RUN_UNITY_PATTERN': 'no-such-process-kehai-run-test',
-             'KEHAI_RUN_DATA_ROOT': str(self.data_root), 'KEHAI_RUN_PREFS_ROOT': str(self.t / 'prefsroot'),
-             'KEHAI_RUN_MIN_FREE_GB': '0', 'KEHAI_RUN_NOTIFY': '0', **env}
-        return subprocess.Popen([sys.executable, '-m', 'tools.run.kehai_run', *args], cwd=ROOT, env=e,
+        return subprocess.Popen([sys.executable, '-m', 'tools.run.kehai_run', *args], cwd=ROOT, env=self.cli_env(**env),
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     def wait_for(self, predicate, seconds=20):
@@ -108,6 +111,81 @@ class ProgressTests(unittest.TestCase):
 
             log.write_text('Import started\n  Import finished  \n\n  \n')
             self.assertEqual(kr.progress_line(log), 'Import finished')
+
+
+class BeliefWrapperTests(Fixture):
+    def setUp(self):
+        super().setUp()
+        self.league = Path('tools/rl/leagues/test league.json')
+        league = self.s.repo / self.league
+        league.parent.mkdir(parents=True)
+        league.write_text('{"source": "committed"}')
+        sh('git', 'add', str(self.league), cwd=self.s.repo)
+        sh('git', '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'league', cwd=self.s.repo)
+        league.write_text('{"source": "dirty checkout"}')
+        self.clone_root = self.t / 'custom clones'
+
+    def wrapper(self, *args, **env):
+        return subprocess.run([ROOT / 'tools/belief/run_unity.sh', *args], cwd=self.t, text=True,
+                              env=self.cli_env(KEHAI_CLONE=str(self.clone_root), **env),
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=20)
+
+    def test_dry_run_preserves_league_and_ablation_arguments(self):
+        for mode, limit in ((str(self.league), ''), ('--ablation', '240')):
+            with self.subTest(mode=mode):
+                output = 'output folder'
+                extra = ['-evalScene', 'Assets/A B.unity', '-league-careers', '2', '--']
+                result = self.wrapper('--dry-run', mode, output, *extra, KEHAI_TIMEOUT_MIN=limit)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                args = shlex.split(result.stdout)
+                clone = Path(args[4])
+                self.assertEqual(clone.parent, self.clone_root)
+                mode_args = ['-kehai-ablation'] if mode == '--ablation' else ['-league', str(clone / self.league)]
+                self.assertEqual(args, [str(STANDIN), '-batchmode', '-nographics', '-projectPath', str(clone),
+                                        '-executeMethod', 'EvalBatch.Play', *mode_args,
+                                        '-eval-timeout-min', limit or '600',
+                                        '-logFile', str(Path(output) / 'unity.log'), *extra])
+                self.assertFalse((self.t / output).exists())
+        self.assertFalse(self.s.home.exists())
+        self.assertFalse(self.clone_root.exists())
+        self.assert_clean()
+
+    def test_wrapper_runs_pinned_league_and_exports_even_on_eval_failure(self):
+        for mode, code, name in ((self.s.repo / self.league, 0, 'league'), ('--ablation', 7, 'ablation')):
+            with self.subTest(mode=mode):
+                output = Path(f'{name} output')
+                out = self.t / output
+                (out / 'kehai_eval').mkdir(parents=True)
+                (out / 'kehai_eval' / 'existing.jsonl').touch()
+                result = self.wrapper(str(mode), str(output), '-belief-trace', str(output / 'traces'),
+                                      KEHAI_TIMEOUT_MIN='240', STANDIN_EXIT=str(code))
+                self.assertEqual(result.returncode, code, result.stdout)
+                event = self.events()[-1]
+                self.assertEqual(event['exit'], code)
+                self.assertEqual(event['kind'], name)
+                retained = self.s.runs / event['id']
+                for path in ('unity.log', 'shift_records/shift_001.json', f'kehai_eval/{name}_fixture.jsonl'):
+                    self.assertEqual((out / path).read_bytes(), (retained / path).read_bytes())
+                self.assertTrue((out / 'kehai_eval' / 'existing.jsonl').is_file())
+                self.assertTrue((out / 'traces' / 'map.json').is_file())
+                seen = json.loads((out / 'unity.log').read_text().splitlines()[1])
+                self.assertEqual(seen['source_commit'], event['commit'])
+                if name == 'league':
+                    self.assertEqual(json.loads(seen['league']), {'source': 'committed'})
+                self.assert_clean()
+                self.assertFalse(any(self.clone_root.iterdir()))
+
+    def test_export_failure_preserves_run_results_and_releases_lock(self):
+        out = self.t / 'blocked export'
+        out.mkdir()
+        (out / 'kehai_eval').touch()
+        result = self.wrapper('--ablation', str(out))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn('output export', result.stdout)
+        event = self.events()[-1]
+        self.assertEqual(event['state'], 'failed')
+        self.assertTrue((self.s.runs / event['id'] / 'kehai_eval/ablation_fixture.jsonl').is_file())
+        self.assert_clean()
 
 
 class RunTests(Fixture):
