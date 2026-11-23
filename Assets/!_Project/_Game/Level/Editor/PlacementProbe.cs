@@ -60,8 +60,13 @@ public sealed class PlacementProbe
         HasNavigation = true;
     }
 
+    // The cupboard or cabinet door the last check's aim landed on, if any: the audit opens it,
+    // as you would, and measures again.
+    public FurnitureDoor DoorInTheWay { get; private set; }
+
     public Result Check(MonoBehaviour component)
     {
+        DoorInTheWay = null;
         var target = (IInteractable)component;
         var result = new Result();
         var rack = component as ToolSnapPoint;
@@ -116,6 +121,7 @@ public sealed class PlacementProbe
 
     public Result CheckSlot(ShelfSlot slot)
     {
+        DoorInTheWay = null;
         var result = new Result();
         ReadPrompt(result, slot.GetPrompt, slot.IsBlocked, mayBeSilent: slot.IsBlocked);
         if (slot.frame == null) return result;
@@ -272,6 +278,7 @@ public sealed class PlacementProbe
                 frontCleared = ReferenceEquals(player.FindAimedTarget(ray, includeEmptySlots: true, frontClearedFor: behind), target);
             if (!frontCleared && !ReferenceEquals(aimed, target))
             {
+                if (aimed is FurnitureDoor door && door.roomDoor == null) DoorInTheWay ??= door;
                 why = "the aim lands on " + Describe(aimed);
                 return false;
             }

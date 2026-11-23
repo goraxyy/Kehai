@@ -204,6 +204,15 @@ public static class StorePlacementAudit
         foreach (var target in targets)
         {
             var result = probe.Check(target);
+            // Behind a cupboard door (the WC's mop): open it, as you would, and measure again.
+            FurnitureDoor inTheWay = result.Approach == "unreachable" && evidence == null ? probe.DoorInTheWay : null;
+            if (inTheWay != null)
+                TryOpen(inTheWay, probe, opened =>
+                {
+                    var again = probe.Check(target);
+                    again.Evidence = string.IsNullOrEmpty(again.Evidence) ? opened : opened + " " + again.Evidence;
+                    result = again;
+                });
             if (evidence != null)
                 result.Evidence = string.IsNullOrEmpty(result.Evidence) ? evidence : evidence + " " + result.Evidence;
             Write(PathOf(target.transform), target.GetType().Name, result);

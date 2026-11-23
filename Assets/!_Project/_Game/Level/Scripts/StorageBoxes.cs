@@ -296,6 +296,7 @@ public static class StorageBoxes
             Vector3 probe = middle + front * (depth * 0.25f);
 
             var rack = new Rack();
+            Collider[] own = t.GetComponentsInChildren<Collider>();
             float lowest = float.MaxValue;
             foreach ((float board, float room) in Boards(collider, probe, floor, top))
             {
@@ -312,7 +313,10 @@ public static class StorageBoxes
                                + front * (depth * 0.5f - FrontInset - box.z * 0.5f);
                     at.y = board + box.y * 0.5f + BoxLift;
                     int column = Mathf.Min(workingColumns - 1, Mathf.FloorToInt((i + 0.5f) * workingColumns / count));
-                    rack.Spots.Add(new Spot(at, facing, box, reach, column, false));
+                    // A box behind a wall panel or a prop can't be picked up: it stays to look at
+                    // and its product goes to a clear spot (the placement audit, C12.2).
+                    bool clear = reach && FrontClear(at, front, box, floor, own);
+                    rack.Spots.Add(new Spot(at, facing, box, clear, column, false));
                 }
             }
             if (rack.Spots.Count == 0) continue;
@@ -326,6 +330,22 @@ public static class StorageBoxes
         }
         return result;
     }
+
+    // Whether you, standing a step in front of a box at eye height, look straight at its face
+    // with nothing but its own rack in between.
+    public static bool FrontClear(Vector3 at, Vector3 front, Vector3 box, float floor, Collider[] own)
+    {
+        Vector3 face = at + front * (box.z * 0.5f);
+        Vector3 eye = face + front * 0.9f;
+        eye.y = floor + PlacementEye;
+        Vector3 d = face - eye;
+        foreach (RaycastHit hit in Physics.RaycastAll(eye, d.normalized, d.magnitude - 0.02f,
+                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (System.Array.IndexOf(own, hit.collider) < 0) return false;
+        return true;
+    }
+
+    const float PlacementEye = 1.6f;    // the player's eyes (PlayerMotor.standCameraY)
 
     public static Vector3 FitWorkingBox(Vector3 size, float boardHeight, out bool reachable)
     {
