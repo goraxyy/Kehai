@@ -27,9 +27,15 @@ namespace Kehai.Karen
         public string[][] OutputNames;        // per head: the name of each output
 
         public string DisplayVersion => string.IsNullOrEmpty(ModelVersion) ? Version : ModelVersion;
+        public string DisplayName => Name switch
+        {
+            "KarenBrainBasic" => GameNames.Satori,
+            "KarenBrainVital" => GameNames.Oni,
+            _ => Name,
+        };
 
         public override string ToString() =>
-            $"{Name} {DisplayVersion} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
+            $"{DisplayName} {DisplayVersion} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
     }
 
     public sealed class BrainNet

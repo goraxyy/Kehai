@@ -942,8 +942,9 @@ namespace Kehai.Karen
             BrainPolicy = BrainPolicies.Create(config, out string why);
             BrainPay = config.brain != KarenBrainKind.Planner ? new BrainPay(config.brain) { Dial = config.catchDial } : null;
             if (config.brain == KarenBrainKind.Planner) return;
+            var generated = BrainPolicy as GeneratedBrain;
             Note("SYSTEM", BrainPolicy != null
-                ? $"brain: {config.brain} — {BrainPolicy.Name} {BrainPolicy.Version}{(BrainPolicy is GeneratedBrain g && g.Warning != null ? " (" + g.Warning + ")" : "")}"
+                ? $"brain: {config.brain} — {generated?.DisplayName ?? BrainPolicy.Name} {BrainPolicy.Version}{(generated?.Warning != null ? " (" + generated.Warning + ")" : "")}"
                 : $"brain: {config.brain}, but {why} — the planner decides{(config.PacingOff ? ", with pacing off (the hunter)" : "")}");
         }
 

@@ -76,7 +76,7 @@ input[type=range]{flex:1;min-width:160px}
 .moment .sc{color:var(--guess);font-weight:600;margin-right:10px;font-variant-numeric:tabular-nums}
 .moment .ids{color:var(--dim);font-size:13px}
 </style></head><body>
-<header><h1 id='title'></h1><div class='sub' id='subtitle'></div><div class='cards' id='cards'></div></header>
+<header><h1 id='title'></h1><div class='sub' id='subtitle'></div><div class='sub' id='build'></div><div class='cards' id='cards'></div></header>
 <main>
  <section class='box'>
   <canvas id='map' width='1200' height='900'></canvas>
@@ -126,6 +126,7 @@ const $ = id => document.getElementById(id);
 // Header
 $('title').textContent = 'Shift ' + D.shift + (D.player ? ' — ' + D.player : '');
 $('subtitle').textContent = (D.started||'') + ' · ' + fmt(D.length) + (D.clockedOut ? ' · clocked out' : ' · did not clock out') + (D.rung ? ' · __ANTAGONIST__ ' + D.rung : '');
+if (D.build) $('build').textContent = D.build;
 const N = (D.analysis && D.analysis.numbers) || {};
 [['Times __ANTAGONIST__ spotted you','spotted'],['Closest she got (m)','closest (m)'],['Catches','caught'],['Customers served','served'],['Walked (m)','walked (m)'],['Trick sounds','trick sounds']].forEach(([k,label])=>{
   if (!(k in N)) return; const v = N[k]; const c = document.createElement('div'); c.className='card';

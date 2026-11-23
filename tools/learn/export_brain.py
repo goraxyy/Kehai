@@ -33,6 +33,7 @@ from pack import model_major  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 GENERATED = os.path.join(ROOT, "Assets", "!_Project", "_Game", "AI", "Scripts", "Decision", "Policy", "Generated")
+KAREN_MODELS = {"KarenBrainBasic": "Karen Satori", "KarenBrainVital": "Karen Oni"}
 
 
 # ---- reading a checkpoint ---------------------------------------------------------------------------
@@ -255,7 +256,7 @@ def part_json(name: str, net: dict, card: dict) -> dict:
 
 def card_md(name: str, card: dict, max_diff: float) -> str:
     return "\n".join([
-        f"# Model card: {name}", "",
+        f"# Model card: {KAREN_MODELS.get(name, name)}", "",
         "| | |", "|---|---|",
         f"| Version | {card.get('model_version') or card.get('version', '')} |",
         f"| Trained | {'yes' if card.get('trained', True) else 'no (a stand-in)'} |",
@@ -308,7 +309,7 @@ def main(argv=None):
     ap.add_argument("--out", default=GENERATED)
     a = ap.parse_args(argv)
     if a.model_version is not None:
-        if a.name not in ("KarenBrainBasic", "KarenBrainVital"):
+        if a.name not in KAREN_MODELS:
             ap.error("--model-version applies to KarenBrainBasic or KarenBrainVital")
         try:
             model_major(a.model_version)

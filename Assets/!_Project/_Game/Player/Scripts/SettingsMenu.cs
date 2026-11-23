@@ -220,6 +220,7 @@ public sealed class SettingsMenu : MonoBehaviour
         GUILayout.Space(size * 0.4f);
         TrickGuide.Entry e = all[trick];
         GUILayout.Label(e.Title, title);
+        GUILayout.Label(BuildStamp.DescribeKarens(BuildStamp.Current, ModelPack.Current), dim);
         GUILayout.Space(size * 0.3f);
 
         // The video, 16 by 9, in a rounded frame; or a note where it would be.

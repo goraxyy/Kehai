@@ -16,7 +16,8 @@ public class BuildStampTests
         StringAssert.StartsWith("Kehai " + BuildStamp.Current.version, line);
         StringAssert.Contains(" · code ", line);
         StringAssert.Contains(" · art ", line);
-        StringAssert.Contains("Karen: ", line);
+        StringAssert.Contains("Karen Satori ", line);
+        StringAssert.Contains("Karen Oni ", line);
         StringAssert.Contains(Edition.VersionLabel(Application.version, Edition.Current), BuildStamp.Current.version);
     }
 
@@ -40,7 +41,7 @@ public class BuildStampTests
                 false, KehaiEdition.Testing, back);
             string text = File.ReadAllText(Path.Combine(folder, "build.txt"));
             StringAssert.StartsWith($"{PlayerSettings.productName} 0.6.0-beta.2 for macOS", text);
-            StringAssert.Contains("Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Karen: Satori 1.3.0, Oni 1.1.0", text);
+            StringAssert.Contains("Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Karen Satori 1.3.0 · Karen Oni 1.1.0", text);
         }
         finally { Directory.Delete(folder, recursive: true); }
     }

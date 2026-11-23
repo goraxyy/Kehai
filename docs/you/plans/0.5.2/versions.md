@@ -138,6 +138,6 @@ Every build carries four things: **the game's version** (with its label), **the 
 | Every shift record and replay | nothing | all four |
 | A playtest upload | the version | all four |
 
-**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Satori 1.3.0 · Oni 1.1.0`.
+**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Karen Satori 1.3.0 · Karen Oni 1.1.0`.
 A bug report, a tester's session or a training record then says exactly which game and which
 Karen made it, which is what the recorded test pass after the merge (Q1) needs.

@@ -9,6 +9,8 @@ namespace Kehai
         public const string GameJapanese = "気配";
         public const string Antagonist = "Karen";
         public const string AntagonistJapanese = "カレン";
+        public const string Satori = Antagonist + " Satori";
+        public const string Oni = Antagonist + " Oni";
         public const string Studio = "TokenLimit";
     }
 }

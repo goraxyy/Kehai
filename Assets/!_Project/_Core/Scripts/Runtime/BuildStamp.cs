@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Kehai;
 using Kehai.Karen;
 using UnityEngine;
 
@@ -52,15 +53,18 @@ public static class BuildStamp
             stamp.oni = CardVersion(BrainNets.FindBuiltIn("KarenBrainVital", out _)?.Card);
     }
 
-    public static string Describe(Data stamp, ModelPack pack = null)
+    public static string DescribeKarens(Data stamp, ModelPack pack = null)
     {
         var basic = pack?.Brain("KarenBrainBasic")?.Card;
         var vital = pack?.Brain("KarenBrainVital")?.Card;
         string satori = basic != null ? CardVersion(basic) : stamp.satori;
         string oni = vital != null ? CardVersion(vital) : stamp.oni;
         string source = pack == null ? "" : $" (model pack {pack.PackVersion})";
-        return $"Kehai {stamp.version} · code {stamp.code} · art {stamp.art} · Karen: Satori {satori}, Oni {oni}{source}";
+        return $"{GameNames.Satori} {satori} · {GameNames.Oni} {oni}{source}";
     }
+
+    public static string Describe(Data stamp, ModelPack pack = null) =>
+        $"{GameNames.Game} {stamp.version} · code {stamp.code} · art {stamp.art} · {DescribeKarens(stamp, pack)}";
 
     public static string Line => Describe(Current, ModelPack.Current);
 
