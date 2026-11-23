@@ -330,6 +330,10 @@ namespace Kehai.Karen
             foreach (Bay b in c.Map.Bays)
             {
                 if (b.Unit == null || !b.Unit.IsFull) continue;
+                // Enough stock off its display faces to knock down (C12.2: a display slot is never emptied).
+                int usable = 0;
+                foreach (ShelfSlot slot in b.Unit.Slots) if (!slot.Display) usable++;
+                if (usable < MinItems) continue;
                 Vector3 stand = TacticHelpers.StandIn(b.Unit);
                 if (StoreMap.AreaAt(stand) != "Sales floor") continue;
                 float walk = TacticHelpers.WalkFromBelief(c, stand);

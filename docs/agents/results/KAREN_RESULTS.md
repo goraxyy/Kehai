@@ -561,7 +561,12 @@ reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's
   the first group named `CeilingLights` in the scene. On the sandbox island that's the store's, so
   the island rooms' lamps didn't light you for her: she first saw the pursuit bot at 1.8 s there
   against 1.0 s in the same room on its own. Found by comparing the two runs' logs. Fixed: every
-  `CeilingLights` group counts. The store has one such group, so a shift there is unchanged.
+  `CeilingLights` group counts. In the store scene its group was renamed (`Ceiling_Light_Sources`,
+  found by its old name) and no other object has that name, so a shift there is unchanged.
+- **Display-only shelf faces change shoppers and two tricks (23 November).** A slot you can't stand
+  in front of now stays stocked: shoppers skip it, her knock-off skips it and bays without five
+  other slots, her bolt-on camera skips it, and so does rung B's old sabotage. Numbers measured
+  before `23fb079` predate it.
 - **Her island map was cut on a different grid (23 November).** Her 1.5 m cells started 0.2 and
   0.4 m off the standalone room's, so her search spots moved, and the island pursuit checks passed
   2 of 4 against 4 of 4 alone. Aligned (`SandboxIsland.MapBounds`): 3 of 4 on the island before the

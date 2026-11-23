@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-23 | A shelf face you can't stand in front of is display only: it stays stocked, and shoppers and Karen's tricks never empty it, so no task asks for it (freezer 4 too, by name) | [placement](plans/0.5.2/placement.md#4-where-it-stands-23-november), C12.2 |
 | 2026-11-23 | Shelves are measured at the board you put stock on (at most 1.6 m), not at the middle of the pack standing on it; everything else keeps the centre rule | [placement](plans/0.5.2/placement.md#1-the-rule), C12.2 |
 | 2026-11-23 | The power box's three switches are labelled EAST, WEST and BACK, and each prompt names the lights it runs (Q25: label them) | [placement](plans/0.5.2/placement.md), C12.3 |
 | 2026-11-21 | The squashed key map: seven F keys (F1 map with her cone, F2 replay, F4–F6 sandbox, F7 clip, F8 one webcam panel); F3, F9, F10 freed | [sandboxes, section 8](plans/0.5.2/sandboxes.md#8-the-sandbox-island-in-the-store-scene-your-call-21-november) |

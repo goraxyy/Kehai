@@ -20,15 +20,20 @@ tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Pursuit 
 tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Interactions  # the interaction checks in the island's interactions room
 ```
 
-**The island is the same for her as a room on its own** (23 November). Two things made it
-differ, both fixed:
+**The island against a room on its own** (23 November). Two things made her play differ there,
+both fixed; the pursuit checks still pass 3 of 4 on the island against 4 of 4 alone (below):
 - **Her light sense** (`LightProbe`) read only the first group named `CeilingLights`, the store's,
   so the island rooms' lamps didn't light you for her: you looked darker there and she saw you
   0.8 s later. It now reads every `CeilingLights` group, and `SandboxKit` refreshes it as a room's
-  lamps are built.
+  lamps are built. (After the fix she first saw the bot at 0.8 s on the island, 1.0 s alone.)
 - **Her test map's 1.5 m grid** started 0.2 and 0.4 m off the standalone room's, so her search spots
   fell elsewhere. `SandboxIsland.MapBounds` is nudged onto the standalone room's grid
   (`PursuitGrid`, as `PursuitSandboxChecks` logs it), and `SandboxIslandCheck.Pursuit` checks it.
+
+**Still different: corner-search fails on the island.** There her map covers the whole room, and
+her first search spot is the shelf the bot hides behind, so she sees it. Alone, her first sighting
+logs as "off the map" and she searches where she last saw you, which is likely what that check's
+escape relies on (one run's log; not yet confirmed).
 
 ## The sight sandbox
 

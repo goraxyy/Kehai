@@ -22,7 +22,7 @@ public static class StorePlacementAudit
     static string reportPath;
     static string[] layouts;
     static string layout;
-    static int nextLayout, readyFrame, rows, findings;
+    static int nextLayout, readyFrame, rows, findings, displayReached;
     static bool missingEvidence;
 
     static StorePlacementAudit()
@@ -166,6 +166,13 @@ public static class StorePlacementAudit
         if (behaviours.OfType<AutoDoubleDoor>().Any(d => d.isActiveAndEnabled && d.Handles.Count == 0))
             Missing(nameof(AutoDoorHandle), "A sliding door produced no hand controls");
 
+        // Over-marking: display slots the audit can reach, and products left with no slot but display ones.
+        var displayOnlyProducts = ShelfSlot.All.Where(slot => slot.productId != null).GroupBy(slot => slot.productId)
+            .Where(group => group.All(slot => slot.Display)).Select(group => group.Key).ToList();
+        int display = ShelfSlot.All.Count(slot => slot.Display);
+        Debug.Log($"Placement audit {layout}: {display} display slots, {displayReached} of them reachable by the audit; " +
+                  $"{displayOnlyProducts.Count} products with only display slots ({string.Join(", ", displayOnlyProducts)}).");
+        displayReached = 0;
         Debug.Log($"Placement audit {layout}: {rows} rows and {findings} findings so far.");
     }
 
@@ -237,6 +244,11 @@ public static class StorePlacementAudit
             }
         foreach (var (slot, result) in measured)
         {
+            if (slot.Display && result.Approach == "reachable")
+            {
+                displayReached++;   // marked display, yet the audit can stand and aim there
+                result.Evidence = string.IsNullOrEmpty(result.Evidence) ? "Display face the audit reaches." : "Display face the audit reaches. " + result.Evidence;
+            }
             if (result.Approach == "unreachable" && slot.owner != null && anyReachable != null)
             {
                 bool sameProduct = slot.productId != null && reachableProducts.Contains(slot.productId);
