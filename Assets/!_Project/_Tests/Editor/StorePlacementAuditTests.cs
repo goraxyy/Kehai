@@ -181,6 +181,14 @@ public class StorePlacementAuditTests
     }
 
     [Test]
+    public void FreezerFour_IsDisplayOnly_AndOtherBaysAreNot()
+    {
+        Assert.IsTrue(StoreLayout.DisplayOnly(new GameObject("Retail_Freezer_04").transform));
+        Assert.IsFalse(StoreLayout.DisplayOnly(new GameObject("Retail_Freezer_05").transform));
+        Assert.IsFalse(StoreLayout.DisplayOnly(null));
+    }
+
+    [Test]
     public void UpperBoardLeavesRoomForTallestDisplayPack()
     {
         const float halfBoard = .01f, aimPadding = .04f;
