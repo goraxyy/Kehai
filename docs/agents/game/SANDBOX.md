@@ -1,8 +1,22 @@
 # The sandboxes
 
-Small test scenes for checking one thing at a time (0.5.2 plan, Phase 11). Each is built by code
-when Play starts, from an empty scene: no scene file, no art, nothing in git but code. Built so far:
-the **sight sandbox** and the **pursuit sandbox**; tricks and interactions follow, from the same kit.
+The **Kehai → Sandbox** menu opens the [sight](#the-sight-sandbox), [pursuit](#the-pursuit-sandbox),
+[tricks](#the-tricks-sandbox), and [interactions](#the-interactions-sandbox) sandboxes. The rooms
+are built by code when Play starts. Leave Play to return to editing.
+
+## The sandbox island
+
+Open **Kehai → Sandbox → Island** for the quiet store and its sight, pursuit and interactions rooms.
+Leave the front door, follow the protected walkway north to the road, and turn west. The models
+island is beside the sandbox island. The trick stalls are along the south edge in **Tricks** mode.
+
+This batch check drives the store player from the lobby to the road, the trick stalls' approach,
+through the three room doors, and across to the models island. It logs each route and the position
+of any stop. It opens the sandbox doors before the walk.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Walk
+```
 
 ## The sight sandbox
 
@@ -160,6 +174,10 @@ she start it, did it land (its own evidence, not just an EFFECT line), and did t
 (a repair, a dodge, a turn back), each in a replay. It writes `trick_check_<time>.md`, `.json`
 and the `.tsv` the clip tools read. **It runs in the recorded test pass after 0.5.2 merges**
 (Q1), not before.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod EvalBatch.Play -kehai-trick-check
+```
 
 ## The interactions sandbox
 
