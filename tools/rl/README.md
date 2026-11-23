@@ -219,4 +219,4 @@ loopholes to look for in the unshielded runs and the thought logs:
 
 ### Shopper limits for a training lesson
 
-An entry in a training league's `lessons` array may include `"shopper_cap": 1`. The value (0–5) limits simultaneous shoppers during that lesson, including flash sales. Omit it for the usual store rules. Existing leagues keep their usual settings. Evaluation careers use the ordinary store.
+An entry in a learning league's `lessons` array may include `"shopper_cap": 1`. The value is a whole JSON number from 0 through 5. It limits simultaneous shoppers during that lesson on the training split, including flash sales. Omit it for the usual store rules. Evaluation careers use the ordinary store limits.

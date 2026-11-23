@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Kehai.Eval;
+using Kehai.Karen;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -248,6 +249,50 @@ public class Karen040PlayersTests
     }
 
     // ---- the league files (C5.6, C1.5): nothing held out is ever drawn where it mustn't be ----------
+
+    [TestCase("employee", 0)]
+    [TestCase("basic", 1)]
+    [TestCase("vital", SaleRules.Ceiling)]
+    public void ShopperCap_AppliesOnlyToTheConfiguredTrainingLesson(string learner, int cap)
+    {
+        LeagueSpec spec = LeagueSpec.Parse($"{{\"learner\":\"{learner}\",\"players\":[{{}}],\"lessons\":[{{}},{{\"shopper_cap\":{cap}}}]}}");
+        Assert.IsNull(spec.ShopperCapForLesson(-1));
+        Assert.IsNull(spec.ShopperCapForLesson(0));
+        Assert.AreEqual(cap, spec.ShopperCapForLesson(1));
+        Assert.IsNull(spec.ShopperCapForLesson(2));
+    }
+
+    [TestCase("training", "employee", "{}")]
+    [TestCase("training", "none", "{\"shopper_cap\":0}")]
+    [TestCase("validation", "vital", "{\"shopper_cap\":0}")]
+    [TestCase("test", "none", "{}")]
+    [TestCase("test", "none", "{\"shopper_cap\":0}")]
+    public void ShopperCap_PreservesOrdinaryArrivalsOutsideACappedTrainingLesson(string split, string learner, string lesson)
+    {
+        LeagueSpec spec = LeagueSpec.Parse($"{{\"split\":\"{split}\",\"learner\":\"{learner}\",\"players\":[{{}}],\"lessons\":[{lesson}]}}");
+        int? cap = spec.ShopperCapForLesson(0);
+        Assert.IsNull(cap);
+        var sale = new SaleRules();
+        Assert.AreEqual(SaleRules.NormalCap, sale.Cap(SaleRules.NormalCap, cap));
+        Assert.IsTrue(sale.Start(true, true));
+        Assert.AreEqual(SaleRules.SaleCap, sale.Cap(SaleRules.NormalCap, cap));
+    }
+
+    [TestCase("-1")]
+    [TestCase("6")]
+    [TestCase("1.5")]
+    [TestCase("true")]
+    [TestCase("false")]
+    [TestCase("\"1\"")]
+    [TestCase("null")]
+    [TestCase("[]")]
+    [TestCase("{}")]
+    public void ShopperCap_RejectsInvalidValues(string value)
+    {
+        var error = Assert.Throws<System.ArgumentException>(() =>
+            LeagueSpec.Parse($"{{\"players\":[{{}}],\"lessons\":[{{\"shopper_cap\":{value}}}]}}"));
+        StringAssert.Contains("shopper_cap", error.Message);
+    }
 
     [Test]
     public void EveryLeagueFile_DrawsNothingHeldOut()
