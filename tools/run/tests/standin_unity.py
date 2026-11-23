@@ -43,6 +43,14 @@ if data_root:
         evaluation.mkdir(parents=True, exist_ok=True)
         name = 'league_fixture.jsonl' if league else 'ablation_fixture.jsonl'
         (evaluation / name).write_text('{}\n')
+    if '-kehai-trick-check' in args:
+        evaluation = data / 'kehai_eval'
+        evaluation.mkdir(parents=True, exist_ok=True)
+        replay = data / 'shift_records' / 'shift_001.krec'
+        (evaluation / 'trick_check_fixture.tsv').write_text(
+            f'id\tstarted\tlanded\tkrec\nblackout\t5.00\t9.00\t{replay}\n'
+            'shelf_sweep\t7.50\t-1\tC:\\deleted clone\\shift_001.krec\n')
+        (evaluation / 'trick_check_fixture.md').write_text('# Stand-in trick check\n')
 demo_dir = arg('-bot-record-demos') or arg('-karen-record-demos')
 if demo_dir and not os.environ.get('STANDIN_SKIP_DEMO'):
     behavior = {'vital': 'KarenVital', 'basic': 'KarenBasic'}.get(arg('-karen-brain'), 'Employee')

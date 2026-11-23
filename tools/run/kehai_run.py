@@ -374,7 +374,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         test_filter: str | None = None, dry_run: bool = False, log=print,
         sight: SightReview | None = None, *, league: Path | None = None,
         eval_timeout: str | None = None, export_dir: Path | None = None,
-        clone_root: Path | None = None) -> int:
+        clone_root: Path | None = None, result_dir_file: Path | None = None) -> int:
     if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
@@ -447,6 +447,8 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     try:
         janitor(s, log)
         out.mkdir(parents=True)
+        if result_dir_file is not None:
+            result_dir_file.write_text(str(out.resolve()) + '\n', encoding='utf-8')
     except Exception:
         heavy.release(s.lock)
         raise
@@ -621,6 +623,8 @@ def main(argv=None) -> int:
         r.add_argument('--dry-run', action='store_true', help='print the Unity command and stop')
         if name == 'tests':
             r.add_argument('--filter', help='a -testFilter for Unity')
+        if name == 'unity':
+            r.add_argument('--result-dir-file', type=Path, help='write this run’s absolute output path to a file')
         if name == 'league':
             r.add_argument('--league', type=Path, required=True, help='a league file in the selected commit')
         if name in ('league', 'ablation'):
@@ -703,7 +707,8 @@ def main(argv=None) -> int:
                test_filter=getattr(a, 'filter', None), dry_run=a.dry_run,
                league=getattr(a, 'league', None), eval_timeout=eval_timeout,
                export_dir=export_dir,
-               clone_root=clone_root.absolute() if clone_root is not None else None)
+               clone_root=clone_root.absolute() if clone_root is not None else None,
+               result_dir_file=getattr(a, 'result_dir_file', None))
 
 
 if __name__ == '__main__':
