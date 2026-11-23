@@ -394,7 +394,9 @@ public static class StoreLayout
     // placement audit, 23 November). They stay stocked to look at (ShelfSlot.Display).
     static readonly HashSet<string> DisplayBays = new HashSet<string> { "Retail_Freezer_04" };
 
-    public static bool DisplayOnly(Transform bay) => bay != null && DisplayBays.Contains(SceneObjectNames.Original(bay));
+    // By its name in the hierarchy today, or the one it had before the scene's names were tidied.
+    public static bool DisplayOnly(Transform bay) => bay != null &&
+        (DisplayBays.Contains(bay.name) || DisplayBays.Contains(SceneObjectNames.Original(bay)));
 
     // What stands on a slot in the store is lit by that room's lights only, like the shelf.
     static uint RoomMask(Vector3 p) => RoomLighting.LayersDefined ? (uint)RoomLighting.BitAt(p) : RoomLighting.Moving;
