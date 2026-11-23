@@ -151,7 +151,8 @@ her 60 s pursuit. Fixed by `KarenBrain.AbortPlanFor` (a hunt chosen again goes o
 kept) and `EndHeldHunt` (a held hunt that no hunt plan takes up still ends), with a test in
 `Kehai051PursuitTests`.
 
-The silent video clips are code only: none has been rendered yet.
+The sight suite's [eight silent clips](../../../tools/run/README.md#sight-check-review-clips) have
+been rendered and verified. The pursuit suite has replays and still needs its clip render.
 
 ## The tricks sandbox
 
