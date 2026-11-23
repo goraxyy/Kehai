@@ -112,6 +112,10 @@ public static class SandboxIslandCheck
         if (WithPursuitChecks)
         {
             PursuitSandboxChecks.LogMapGrid("SandboxIslandCheck");
+            Vector3 grid = map.Bounds.min - PursuitSandbox.Centre;
+            Expect(Mathf.Abs(SandboxIsland.GridNudge(grid.x, SandboxIsland.PursuitGrid.x)) < 0.01f &&
+                   Mathf.Abs(SandboxIsland.GridNudge(grid.z, SandboxIsland.PursuitGrid.y)) < 0.01f,
+                $"her island map is cut on the standalone pursuit room's grid ({grid.x:0.00}, {grid.z:0.00})");
             Expect(PursuitChecks.ExitCode == 0, $"the pursuit checks pass on the island (report {PursuitChecks.ReportPath})");
             SessionState.EraseBool(SandboxIsland.PursuitChecksKey);
         }

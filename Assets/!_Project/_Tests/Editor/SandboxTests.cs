@@ -167,4 +167,20 @@ public class SandboxTests
         buttons[0].Press();
         Assert.AreEqual(1, started);
     }
+
+    // C11.13: her island map is cut on the standalone pursuit room's 1.5 m grid, so the pursuit
+    // checks meet the same cells there.
+    [Test]
+    public void TheIslandMap_IsCutOnThePursuitRoomsGrid()
+    {
+        Bounds b = SandboxIsland.MapBounds;
+        float half = Kehai.Store.StoreMap.CellSize * 0.5f;
+        Vector3 from = b.min - new Vector3(half, 0f, half) - SandboxIsland.PursuitAt;
+        Assert.That(SandboxIsland.GridNudge(from.x, SandboxIsland.PursuitGrid.x), Is.EqualTo(0f).Within(0.001f));
+        Assert.That(SandboxIsland.GridNudge(from.z, SandboxIsland.PursuitGrid.y), Is.EqualTo(0f).Within(0.001f));
+        Assert.Less(Vector3.Distance(b.center, new Vector3(SandboxIsland.GroundCentre.x, 2f, SandboxIsland.GroundCentre.z)), 0.8f,
+            "a nudge of under a cell");
+        Assert.That(SandboxIsland.GridNudge(0.4f, 0f), Is.EqualTo(-0.4f).Within(0.001f));
+        Assert.That(SandboxIsland.GridNudge(1.3f, 0f), Is.EqualTo(0.2f).Within(0.001f));
+    }
 }

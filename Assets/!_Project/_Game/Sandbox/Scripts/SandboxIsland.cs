@@ -40,8 +40,33 @@ namespace Kehai.Sandbox
         // 1.5 m cells), so her regions there are cut the same way and the pursuit checks meet the
         // same aisles: (55, -148) - (90, 0, -150).
         public static readonly Vector3 PursuitAt = PursuitSandbox.StandaloneCentre + new Vector3(-90f, 0f, 150f);
-        // Her test map's bounds: the island's ground, floor to a few metres up (C11.13).
-        public static Bounds MapBounds => new Bounds(new Vector3(GroundCentre.x, 2f, GroundCentre.z), new Vector3(GroundSize.x, 6f, GroundSize.z));
+        // Her test map's bounds: the island's ground, floor to a few metres up (C11.13), nudged so
+        // her 1.5 m cells fall on the pursuit room exactly as they do in the standalone room. Her
+        // map's grid starts at the bounds' corner, so a grid cut 0.2 and 0.4 m off moved her search
+        // spots onto your hiding place (the island pursuit checks failed 2 of 4 so, 23 November).
+        public static Bounds MapBounds
+        {
+            get
+            {
+                Vector3 min = new Vector3(GroundCentre.x - GroundSize.x * 0.5f, 0f, GroundCentre.z - GroundSize.z * 0.5f);
+                float half = StoreMap.CellSize * 0.5f;   // StoreMap widens the bounds by half a cell each side
+                min.x += GridNudge(min.x - half - PursuitAt.x, PursuitGrid.x);
+                min.z += GridNudge(min.z - half - PursuitAt.z, PursuitGrid.y);
+                return new Bounds(new Vector3(min.x + GroundSize.x * 0.5f, 2f, min.z + GroundSize.z * 0.5f), new Vector3(GroundSize.x, 6f, GroundSize.z));
+            }
+        }
+
+        // Where her map's grid starts from the standalone pursuit room's centre, as measured there
+        // (PursuitSandboxChecks logs it; run 20261123-015528): the room's NavMesh sets it.
+        public static readonly Vector2 PursuitGrid = new Vector2(-14.08f, -14.08f);
+
+        // The smallest move that puts a grid starting `from` the room's centre in step with `want`.
+        public static float GridNudge(float from, float want)
+        {
+            float cell = StoreMap.CellSize;
+            float off = Mathf.Repeat(from - want, cell);
+            return off > cell * 0.5f ? cell - off : -off;
+        }
         public const string PursuitChecksKey = SessionKey + ".pursuitChecks";
         public const string InteractionChecksKey = SessionKey + ".interactionChecks";
 
