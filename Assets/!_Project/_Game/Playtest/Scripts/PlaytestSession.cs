@@ -125,12 +125,13 @@ namespace Kehai.Playtest
             TesterState.Running = Stamp;
 
             Resolution screen = Screen.currentResolution;
+            BuildStamp.Data buildStamp = BuildStamp.Current;
             Note("start", new Dictionary<string, object>
             {
                 ["utc"] = startedUtc.ToString("o"),
                 ["round"] = Config.round,
                 ["build"] = Config.build,
-                ["version"] = Application.version,
+                ["version"] = buildStamp.channel == null ? Application.version : buildStamp.version,
                 ["code"] = TesterState.Code,
                 ["session_id"] = Stamp,
                 ["sends"] = TesterState.Sends,

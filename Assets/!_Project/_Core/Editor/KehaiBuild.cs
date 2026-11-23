@@ -101,7 +101,8 @@ public static class KehaiBuild
         {
             if (string.IsNullOrEmpty(output) || !Path.IsPathFullyQualified(output))
                 throw new ArgumentException("A build on a temporary clone needs an absolute -kehai-build-out outside the clone.");
-            if (!Path.GetRelativePath(ProjectRoot, Path.GetFullPath(output)).StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            string relative = Path.GetRelativePath(ProjectRoot, output);
+            if (!Path.IsPathFullyQualified(relative) && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
                 throw new ArgumentException("A build on a temporary clone must write outside the clone.");
         }
         BuildReport report;
