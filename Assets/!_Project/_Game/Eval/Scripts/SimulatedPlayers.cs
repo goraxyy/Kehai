@@ -497,12 +497,16 @@ namespace Kehai.Eval
             var path = new NavMeshPath();
             if (!NavMesh.CalculatePath(from.position, end.position, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete)
                 return false;
-            Vector3[] c = path.corners;
-            for (int i = 1; i < c.Length; i++)
+            return WayKeepsClear(path.corners, threat, clearance);
+        }
+
+        static bool WayKeepsClear(Vector3[] corners, Vector3 threat, float clearance)
+        {
+            for (int i = 1; i < corners.Length; i++)
             {
-                int steps = Mathf.Max(1, Mathf.CeilToInt(Flat(c[i] - c[i - 1]).magnitude));
+                int steps = Mathf.Max(1, Mathf.CeilToInt(Flat(corners[i] - corners[i - 1]).magnitude));
                 for (int k = 1; k <= steps; k++)
-                    if (Flat(Vector3.Lerp(c[i - 1], c[i], k / (float)steps) - threat).magnitude < clearance) return false;
+                    if (Flat(Vector3.Lerp(corners[i - 1], corners[i], k / (float)steps) - threat).magnitude < clearance) return false;
             }
             return true;
         }
@@ -532,7 +536,10 @@ namespace Kehai.Eval
 
         // ---- hiding --------------------------------------------------------------------------
 
-        // Run to the far end of the store from where the threat was, then crouch and wait it out.
+        const float HideClearance = 2.5f;
+
+        // Scripted and learned Hide both try a covered entrance first. The static control and
+        // a bot without a recent threat position use the ordinary run to a sales-floor region.
         IEnumerator Flee()
         {
             Vector3 me = env.Driver.transform.position;
@@ -541,28 +548,175 @@ namespace Kehai.Eval
             bool placed = reactive && lastThreatAt.HasValue && Time.time - lastThreatTime < 15f;
             Vector3 from = placed ? lastThreatAt.Value : threat != null ? threat.Centroid : me;
 
+            if (placed && env.Driver.TryGetComponent(out PlayerPresence presence) &&
+                FindOpenHide(from, out HidingPlace place, out Vector3 feet))
+            {
+                TurnOffHeldTorch();
+                string region = map.NameAt(feet);
+                yield return Act(new EnvAction { verb = "move_to", target = region, movePoint = feet, crouch = true, timeout = 25f });
+                if (env.CheckDone())
+                {
+                    env.Driver.Crouch = false;
+                    yield break;
+                }
+                if (place != null && place.Usable && presence != null && place.Conceals(presence, place.Coverage(presence)))
+                {
+                    RecordHide(region, feet, EmployeeHow.Sneak);
+                    yield return WaitInHiding();
+                    yield break;
+                }
+                env.Driver.Crouch = false;
+                me = env.Driver.transform.position;
+            }
+
             var options = map.Regions
                 .Where(r => !r.IsDoor && r.Area == "Sales floor" && r.Cells.Count >= 4 && !Shunned(r.Name))
                 .OrderByDescending(r => Vector3.Distance(r.Centroid, from) - Vector3.Distance(r.Centroid, me) * 0.3f + (float)random.NextDouble() * 6f)
                 .ToList();
             // The reacting players don't run past her to get there.
-            Region hide = placed ? options.Take(8).FirstOrDefault(r => WayKeepsClear(r.Centroid, from, 2.5f)) ?? options.FirstOrDefault() : options.FirstOrDefault();
+            Region hide = placed ? options.Take(8).FirstOrDefault(r => WayKeepsClear(r.Centroid, from, HideClearance)) ?? options.FirstOrDefault() : options.FirstOrDefault();
             if (hide == null) yield break;
 
-            // Both scripted and learned Hide choices use this route. The counter only
-            // inspects the employee's own active hand.
+            TurnOffHeldTorch();
+            RecordHide(hide.Name, hide.Centroid, EmployeeHow.Hurry);
+            yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
+            yield return WaitInHiding();
+        }
+
+        void TurnOffHeldTorch()
+        {
             CarrySlot hand = env.Driver.GetComponent<CarrySlot>();
             Flashlight torch = hand != null && hand.IsCarrying ? hand.currentItem.GetComponent<Flashlight>() : null;
             if (torch != null && torch.IsOn) torch.SetOn(false);
+        }
+
+        void RecordHide(string region, Vector3 at, EmployeeHow how)
+        {
             Hides++;
-            Memory.Hid(hide.Name);
-            if (!MindActive) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = EmployeeHow.Hurry, By = "reflex", Verb = "move_to", Target = hide.Name, Chance = 1f }, hide.Centroid);
-            yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
+            Memory.Hid(region);
+            if (!MindActive) Log(new EmployeeChoice { What = EmployeeWhat.Hide, How = how, By = "reflex", Verb = "move_to", Target = region, Chance = 1f }, at);
+        }
+
+        IEnumerator WaitInHiding()
+        {
             env.Driver.Crouch = true;
             float wait = profile == PlayerProfile.Cautious ? 10f : 6f;
             yield return env.Act(new EnvAction { verb = "wait", seconds = wait + (float)random.NextDouble() * 6f });
             env.Driver.Crouch = false;
             calmUntil = Time.time + 8f;
+        }
+
+        bool FindOpenHide(Vector3 threat, out HidingPlace place, out Vector3 target)
+        {
+            place = null;
+            target = default;
+            AgentDriver driver = env.Driver;
+            PlayerMotor motor = driver.Motor;
+            if (motor == null || !driver.TryGetComponent(out CharacterController body)) return false;
+            Transform frame = driver.transform;
+            Vector3 feet = frame.TransformPoint(body.center - Vector3.up * (body.height * 0.5f));
+            Vector3 scale = frame.lossyScale;
+            float radius = body.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+            float height = Mathf.Max(motor.crouchControllerHeight, 2f * body.radius) * Mathf.Abs(scale.y);
+            threat.y = feet.y;
+            return TryChooseOpenHide(feet, threat, radius, height, motor.crouchCameraY * Mathf.Abs(scale.y), out place, out target);
+        }
+
+        // The bot needs an open route to the interior's floor centre. Furniture interaction
+        // and crouch entries that go off the NavMesh require their own movement steps.
+        public static bool TryChooseOpenHide(Vector3 feet, Vector3 threat, float radius, float height, float eyeHeight,
+                                             out HidingPlace place, out Vector3 target)
+        {
+            place = null;
+            target = default;
+            if (!NavMesh.SamplePosition(feet, out NavMeshHit from, 1f, NavMesh.AllAreas)) return false;
+
+            // Risk is estimated from the remembered floor position, using a standing eye height.
+            Vector3 threatEye = threat + Vector3.up * 1.85f;
+            var candidates = Object.FindObjectsByType<HidingPlace>().Where(p => p.Usable)
+                .Select(p =>
+                {
+                    Vector3 centre = p.interior.center;
+                    centre.y = p.interior.min.y;
+                    return (place: p, feet: p.transform.TransformPoint(centre));
+                })
+                .OrderBy(p => (p.feet - feet).sqrMagnitude)
+                .ThenBy(p => p.feet.x).ThenBy(p => p.feet.y).ThenBy(p => p.feet.z)
+                .ThenBy(p => p.place.name, System.StringComparer.Ordinal);
+
+            var path = new NavMeshPath();
+            foreach (var candidate in candidates)
+            {
+                if (!NavMesh.SamplePosition(candidate.feet, out NavMeshHit end, 0.4f, NavMesh.AllAreas) ||
+                    !FitsHide(candidate.place, end.position, radius, height) ||
+                    Flat(end.position - threat).sqrMagnitude < HideClearance * HideClearance ||
+                    !NavMesh.CalculatePath(from.position, end.position, NavMesh.AllAreas, path) ||
+                    path.status != NavMeshPathStatus.PathComplete)
+                    continue;
+                Vector3[] corners = path.corners;
+                if (corners.Length == 0 || !WayKeepsClear(corners, threat, HideClearance) ||
+                    !OpenCoveredEntrance(candidate.place, corners, threatEye, radius, height, eyeHeight))
+                    continue;
+                place = candidate.place;
+                target = end.position;
+                return true;
+            }
+            return false;
+        }
+
+        static bool FitsHide(HidingPlace place, Vector3 feet, float radius, float height)
+        {
+            Bounds body = PlayerPresence.EnvelopeIn(place.transform, feet + Vector3.up * (height * 0.5f), radius, height);
+            return HidingPlace.Conceals(HidingPlace.OverlapFraction(body, place.interior));
+        }
+
+        // Walk the route backwards to find where concealment begins. Require cover on the
+        // last 1.5 m outside it and a physically open approach, even if the NavMesh permits it.
+        static bool OpenCoveredEntrance(HidingPlace place, Vector3[] corners, Vector3 threatEye, float radius, float height, float eyeHeight)
+        {
+            float probeRadius = Mathf.Max(0.01f, radius - 0.02f);
+            Vector3 bottom = Vector3.up * (radius + 0.03f);
+            Vector3 top = Vector3.up * Mathf.Max(radius + 0.03f, height - radius);
+            Vector3 next = corners[corners.Length - 1];
+            if (Physics.OverlapCapsule(next + bottom, next + top, probeRadius, ~0, QueryTriggerInteraction.Ignore).Any(IsStoreGeometry))
+                return false;
+            float outside = 0f;
+            for (int i = corners.Length - 1; i > 0; i--)
+            {
+                Vector3 start = corners[i], end = corners[i - 1];
+                float length = Vector3.Distance(start, end);
+                if (length < 0.001f) continue;
+                int steps = Mathf.CeilToInt(length / 0.35f);
+                for (int k = 1; k <= steps; k++)
+                {
+                    Vector3 at = Vector3.Lerp(start, end, k / (float)steps);
+                    Vector3 step = at - next;
+                    if (Physics.CapsuleCastAll(next + bottom, next + top, probeRadius, step, step.magnitude,
+                                               ~0, QueryTriggerInteraction.Ignore).Any(hit => IsStoreGeometry(hit.collider)))
+                        return false;
+                    next = at;
+                    if (outside == 0f && FitsHide(place, at, radius, height)) continue;
+                    Vector3 toEyes = at + Vector3.up * eyeHeight - threatEye;
+                    if (!Physics.RaycastAll(threatEye, toEyes, toEyes.magnitude, ~0, QueryTriggerInteraction.Ignore)
+                                .Any(hit => IsStoreGeometry(hit.collider)))
+                        return false;
+                    outside += length / steps;
+                    if (outside >= 1.5f) return true;
+                }
+            }
+            return true;
+        }
+
+        // A kinematic fixture, such as a door leaf, can still block sight and movement.
+        // People and carryable items can't supply cover or change the route choice.
+        static bool IsStoreGeometry(Collider collider)
+        {
+            Rigidbody body = collider.attachedRigidbody;
+            if (body != null && !body.isKinematic) return false;
+            return collider.GetComponentInParent<CharacterController>() == null &&
+                   collider.GetComponentInParent<NavMeshAgent>() == null &&
+                   collider.GetComponentInParent<CustomerNPC>() == null &&
+                   collider.GetComponentInParent<Item>() == null;
         }
 
         // ---- choosing what to do -------------------------------------------------------------

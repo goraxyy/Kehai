@@ -571,8 +571,10 @@ namespace Kehai.Eval
 
         IEnumerator MoveTo(EnvAction a, ActionResult r)
         {
-            if (!World.TryPosition(a.target, out Vector3 p)) { r.Fail($"unknown target '{a.target}'"); yield break; }
-            yield return Approach(p, 1.5f, a, r);
+            Vector3 point;
+            if (a.movePoint.HasValue) point = a.movePoint.Value;
+            else if (!World.TryPosition(a.target, out point)) { r.Fail($"unknown target '{a.target}'"); yield break; }
+            yield return Approach(point, a.movePoint.HasValue ? 0.15f : 1.5f, a, r);
             if (!r.Finished) r.Pass("at " + World.Map.NameAt(Driver.transform.position));
         }
 
@@ -1065,6 +1067,7 @@ namespace Kehai.Eval
     {
         public string verb;
         public string target;
+        internal Vector3? movePoint;   // precise destination for the built-in bot's hiding action
         public bool sprint;
         public bool crouch;
         public bool accept = true;
