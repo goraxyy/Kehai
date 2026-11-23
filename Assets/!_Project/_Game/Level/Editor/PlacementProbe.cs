@@ -131,6 +131,15 @@ public sealed class PlacementProbe
         // stands on it (the owner's call, 23 November): a tall pack on a 1.5 m board is in reach.
         // The aim above still goes for the pack's middle.
         if (result.Height.HasValue) result.Height -= centre.y - slot.Position.y;
+        // A display face (your call, 23 November): it stays stocked and nothing ever empties it,
+        // so nobody needs to reach it. Reported, not flagged.
+        if (slot.Display && result.Approach != "reachable")
+        {
+            result.Approach = "display";
+            result.Height ??= slot.Position.y - slot.frame.position.y;
+            result.Evidence = string.IsNullOrEmpty(result.Evidence) ? "Display face: stays stocked, never emptied."
+                : "Display face: stays stocked, never emptied. " + result.Evidence;
+        }
         return result;
     }
 

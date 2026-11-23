@@ -1579,7 +1579,7 @@ namespace Kehai.Karen
             if (config.rung == KarenRung.B_ScriptedPatrol && Rng.Value < 0.002f)
             {
                 // The old random sabotage.
-                ShelfSlot slot = ShelfStock.Current.Nearest(Body.Position, 3f, s => s.isFilled);
+                ShelfSlot slot = ShelfStock.Current.Nearest(Body.Position, 3f, s => s.isFilled && !s.Display);
                 if (slot != null) slot.Eject();
             }
 

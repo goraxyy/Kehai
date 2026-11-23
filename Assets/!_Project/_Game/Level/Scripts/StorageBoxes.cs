@@ -331,18 +331,29 @@ public static class StorageBoxes
         return result;
     }
 
-    // Whether you, standing a step in front of a box at eye height, look straight at its face
-    // with nothing but its own rack in between.
+    // Whether you can stand a step in front of a box, with room for your body, and look straight
+    // at its face with nothing but its own rack in between.
     public static bool FrontClear(Vector3 at, Vector3 front, Vector3 box, float floor, Collider[] own)
     {
         Vector3 face = at + front * (box.z * 0.5f);
-        Vector3 eye = face + front * 0.9f;
-        eye.y = floor + PlacementEye;
-        Vector3 d = face - eye;
-        foreach (RaycastHit hit in Physics.RaycastAll(eye, d.normalized, d.magnitude - 0.02f,
-                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            if (System.Array.IndexOf(own, hit.collider) < 0) return false;
-        return true;
+        foreach (float step in new[] { 0.6f, 0.9f, 1.2f })
+        {
+            Vector3 feet = face + front * step;
+            feet.y = floor;
+            bool room = true;
+            foreach (Collider c in Physics.OverlapCapsule(feet + Vector3.up * 0.52f, feet + Vector3.up * 1.53f, 0.22f,
+                         Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (System.Array.IndexOf(own, c) < 0 && !(c is CharacterController)) { room = false; break; }
+            if (!room) continue;
+            Vector3 eye = feet + Vector3.up * PlacementEye;
+            Vector3 d = face - eye;
+            bool seen = true;
+            foreach (RaycastHit hit in Physics.RaycastAll(eye, d.normalized, d.magnitude - 0.02f,
+                         Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (System.Array.IndexOf(own, hit.collider) < 0) { seen = false; break; }
+            if (seen) return true;
+        }
+        return false;
     }
 
     const float PlacementEye = 1.6f;    // the player's eyes (PlayerMotor.standCameraY)

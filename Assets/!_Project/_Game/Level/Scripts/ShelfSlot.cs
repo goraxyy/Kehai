@@ -70,6 +70,55 @@ public sealed class ShelfSlot : IInteractable
     public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, bool facesBack, Vector2 cell, float height)
         : this(owner, frame, local, facesBack ? ShelfGrid.Side.Back : ShelfGrid.Side.Front, cell, height) { }
 
+    // A slot on a face you can't stand in front of (pressed to a wall, a chiller or another bay):
+    // it stays stocked to look at, and nothing ever empties it, so no task asks you to reach it
+    // (the owner's call, 23 November; the placement audit, C12.2). Shoppers and Karen's
+    // knock-offs leave it alone.
+    public bool Display { get; set; }
+
+    // Whether this slot's face has somewhere to stand: a step out from it there's room for a
+    // body and a clear look at it. Its own bay, cupboard doors and triggers don't count.
+    public static bool FaceReachable(ShelfSlot slot, Collider[] own)
+    {
+        if (slot.frame == null) return true;
+        Vector3 outward = slot.Outward;
+        outward.y = 0f;
+        if (outward.sqrMagnitude < 1e-4f) return true;
+        outward.Normalize();
+        Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * 0.5f);
+        float floor = slot.frame.position.y;
+        foreach (float step in ReachSteps)
+        {
+            Vector3 feet = centre + outward * step;
+            feet.y = floor;
+            int n = Physics.OverlapCapsuleNonAlloc(feet + Vector3.up * (BodyRadius + 0.3f), feet + Vector3.up * (1.75f - BodyRadius),
+                BodyRadius, overlaps, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            if (AnyOther(overlaps, n, own)) continue;
+            Vector3 eye = feet + Vector3.up * 1.6f;
+            Vector3 d = centre - eye;
+            n = Physics.RaycastNonAlloc(eye, d.normalized, hits, Mathf.Max(0f, d.magnitude - 0.05f),
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            bool seen = true;
+            for (int i = 0; i < n && seen; i++) seen = Ignored(hits[i].collider, own);
+            if (seen) return true;
+        }
+        return false;
+    }
+
+    static readonly float[] ReachSteps = { 0.6f, 0.9f, 1.2f };
+    const float BodyRadius = 0.22f;
+    static readonly Collider[] overlaps = new Collider[16];
+    static readonly RaycastHit[] hits = new RaycastHit[16];
+
+    static bool AnyOther(Collider[] found, int n, Collider[] own)
+    {
+        for (int i = 0; i < n; i++) if (!Ignored(found[i], own)) return true;
+        return false;
+    }
+
+    static bool Ignored(Collider c, Collider[] own) => c == null || c is CharacterController || System.Array.IndexOf(own, c) >= 0 ||
+        c.GetComponentInParent<FurnitureDoor>() != null || c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic;
+
     internal void Attach(ShelfStock to, int index)
     {
         stock = to;

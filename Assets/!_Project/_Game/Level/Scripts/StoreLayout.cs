@@ -432,6 +432,9 @@ public static class StoreLayout
         var made = stock != null ? new List<ShelfSlot>() : null;
 
         int slots = 0;
+        // In play, a face pressed against something is display only (ShelfSlot.Display).
+        Collider[] own = stock != null && Application.isPlaying ? bay.GetComponentsInChildren<Collider>() : null;
+        if (own != null) Physics.SyncTransforms();
         for (int f = 0; f < plan.Facings.Count; f++)
         {
             ShelfGrid.Facing facing = plan.Facings[f];
@@ -449,6 +452,7 @@ public static class StoreLayout
                 if (stock == null) continue;
                 var slot = new ShelfSlot(unit, bay, cell.Centre, cell.Side, cell.Size, height);
                 slot.lightMask = lightMask ?? RoomMask(slot.Position);
+                if (own != null) slot.Display = !ShelfSlot.FaceReachable(slot, own);
                 stock.Add(slot);
                 slot.Stock(section, id, filled: true);
                 made.Add(slot);

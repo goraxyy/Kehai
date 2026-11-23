@@ -366,7 +366,8 @@ namespace Kehai.Karen
             {
                 count = k.Rng.Range(MinItems, MaxItems + 1);
                 slots.Clear();
-                foreach (ShelfSlot slot in target.Slots) if (slot.isFilled) slots.Add(slot);
+                // Not off a display face: you couldn't put it back there (C12.2).
+                foreach (ShelfSlot slot in target.Slots) if (slot.isFilled && !slot.Display) slots.Add(slot);
                 // A seeded shuffle, so the same shift drops the same products.
                 for (int i = slots.Count - 1; i > 0; i--)
                 {
