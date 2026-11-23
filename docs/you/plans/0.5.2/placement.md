@@ -48,14 +48,15 @@ code moves it to 1.4 m on the same wall, and the next run reports nothing.
 
 ## 4. Where it stands (23 November)
 
-The audit's flags across the store and the six layouts went from **29,244 to 320** (run
-`20261123-021143-f0bc5a`), and in the store alone to **10** once freezer 4 was made display only
-(run `20261123-023127-ad497f`; the six layouts each drop its 30 slots too).
+The audit's flags across the store and the six layouts went from **29,244 to 110**, the store
+alone **10** (run `20261123-024134-9aa72c`). Every product keeps a slot that isn't display, in
+every layout. The display check is cautious: of the store's 826 display slots, the audit can
+reach 260 (they just stay stocked).
 
 | What changed | Why | Your call |
 |---|---|---|
 | Shelves measured at the board | a tall pack on a 1.5 m board is in reach; ~2,400 store slots were flagged for the pack's middle | yes, 23 November |
-| Blocked faces are **display only** | ~950 store slots face a wall, a chiller or another bay: they stay stocked, and shoppers, her knock-offs and old sabotage never empty them, so no task asks for them (536 in the store) | yes, 23 November |
+| Blocked faces are **display only** | ~950 store slots face a wall, a chiller or another bay: they stay stocked, and shoppers, her knock-offs, her bolt-on camera and old sabotage never empty them, so no task asks for them (826 in the store) | yes, 23 November |
 | A slot restocked through its bay counts | a product's box fills every empty slot of it on the bay, the crate the whole bay, so a slot behind a reachable one is restocked from it (383 in the store) | how the game already works |
 | The audit opens each chiller slot's own door, and a cupboard in the way | it opened the first door only, which swung across its neighbours; the WC mop sits in a cupboard | — |
 | Stock boxes behind scenery aren't used | three working boxes stood behind a wall panel or a prop; their products moved to clear spots | — |
