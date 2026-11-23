@@ -2059,6 +2059,12 @@ code entry points in [the implementation notes](../integration/0.5.1-plan.md).
   player" would need your live position, which the fairness contract forbids (§9 rule 1).
 - `WitnessedHide` and `HidingApproach` are under the "she never reads the player" scan.
 
+**0.5.2 follow-up:** if she reaches the remembered entry and the one-second look finds nobody,
+she can look toward two other authored hiding places within 5 m. Distance from the entry sets
+the order, with coordinates breaking ties. Each stop gives her up to 2.5 s to walk and 0.75 s to
+look. She uses her usual sight from the reachable spot. A new sighting, a new witnessed entry,
+a stun, or the end of the hunt or shift clears this search.
+
 ### 21.3 The hunt after she loses you (item 13)
 
 One clock for the whole hunt, `PostSightPursuit`, with `huntMemorySeconds` = 60 (was 6).
