@@ -91,9 +91,10 @@ public sealed class ShelfSlot : IInteractable
         {
             Vector3 feet = centre + outward * step;
             feet.y = floor;
-            int n = Physics.OverlapCapsuleNonAlloc(feet + Vector3.up * (BodyRadius + 0.3f), feet + Vector3.up * (1.75f - BodyRadius),
+            // The player's body, as the placement audit stands it: 2 m tall, from just over the floor.
+            int n = Physics.OverlapCapsuleNonAlloc(feet + Vector3.up * (BodyRadius + 0.06f), feet + Vector3.up * (2f - BodyRadius),
                 BodyRadius, overlaps, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            if (AnyOther(overlaps, n, own)) continue;
+            if (AnyOther(overlaps, n, own, feet.y)) continue;
             Vector3 eye = feet + Vector3.up * 1.6f;
             Vector3 d = centre - eye;
             n = Physics.RaycastNonAlloc(eye, d.normalized, hits, Mathf.Max(0f, d.magnitude - 0.05f),
@@ -105,14 +106,16 @@ public sealed class ShelfSlot : IInteractable
         return false;
     }
 
-    static readonly float[] ReachSteps = { 0.6f, 0.9f, 1.2f };
-    const float BodyRadius = 0.22f;
+    static readonly float[] ReachSteps = { 0.6f, 0.9f, 1.2f, 1.5f };
+    const float BodyRadius = 0.3f;
     static readonly Collider[] overlaps = new Collider[16];
     static readonly RaycastHit[] hits = new RaycastHit[16];
 
-    static bool AnyOther(Collider[] found, int n, Collider[] own)
+    // The floor, a mat or a step under the feet isn't in the way: only what rises past the ankles.
+    static bool AnyOther(Collider[] found, int n, Collider[] own, float floor)
     {
-        for (int i = 0; i < n; i++) if (!Ignored(found[i], own)) return true;
+        for (int i = 0; i < n; i++)
+            if (!Ignored(found[i], own) && found[i].bounds.max.y > floor + 0.2f) return true;
         return false;
     }
 
