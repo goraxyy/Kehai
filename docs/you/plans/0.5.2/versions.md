@@ -75,11 +75,13 @@ Each trained Karen gets her own number, apart from the game's: **Satori** (the g
 | `MINOR` | trained again, on the same inputs | Satori 1.3.0 after a refresh round |
 | `PATCH` | exported again, nothing new learned | Satori 1.2.1 |
 
-- **It maps onto what exists:** MAJOR is the pack's inputs version plus its list of tricks;
-  MINOR is today's publish number.
+- **The model MAJOR is the compatibility version.** It starts at 1. The signed pack still
+  checks its inputs and known tricks. Its existing publish number still orders files and is
+  the default MINOR for a new pack. [Export and pack commands](../../../../tools/learn/README.md).
 - **A game version accepts any Karen with the same MAJOR.** A newer MINOR reaches players
   without a new build of the game, and **the publish gate still runs** on every one (with no
   per-model yes from you, your call of 12 November).
+- Older signed packs without a model version still use the inputs and trick checks.
 - **Example:** game 0.6.0 accepts Satori 1.x and Oni 1.x. Satori 1.3.0, trained in January,
   passes the gate and reaches testers without a new build. Satori 2.0.0, with a new input, needs
   game 0.7.0.
@@ -98,6 +100,27 @@ Each trained Karen gets her own number, apart from the game's: **Satori** (the g
 | **Which Karen** | the one being trained or benchmarked | the newest that passed the gate | the newest that passed the gate for release |
 | **Who gets it** | you, the sound designer, the artist, the agents, the PC | playtesters | players |
 
+Run from the 0.5.2 checkout with the editor closed. Each command is a separate Unity job. The
+output goes outside the temporary clone, so it survives cleanup. Use `-playtest <round>` on
+Testing when its feedback configuration is ready.
+
+```sh
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -buildTarget Win64 -executeMethod KehaiBuild.Build \
+  -platform windows -channel dev -release-version 0.5.2 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/dev-windows/Kehai.exe"
+
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -executeMethod KehaiBuild.Build \
+  -platform macos -channel testing -release-version 0.5.2 -beta 1 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/testing-macos/Kehai.app"
+
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -executeMethod KehaiBuild.Build \
+  -platform macos -channel prod -release-version 0.5.2 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/prod-macos/Kehai.app"
+```
+
+For Windows Testing or Prod use `-buildTarget Win64 -platform windows` and an `.exe` output in
+its own folder. The build's `build.txt` and Settings screen both use the channel version.
+
 **Later, on Steam:** Steam doesn't read version numbers; it has branches. The default branch
 would carry prod, and a password-protected beta branch would carry testing.
 
@@ -115,6 +138,6 @@ Every build carries four things: **the game's version** (with its label), **the 
 | Every shift record and replay | nothing | all four |
 | A playtest upload | the version | all four |
 
-**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Satori 1.3.0 · Oni 1.1.0`.
+**Example line:** `Kehai 0.6.0-beta.2 · code a1b2c3d · art 9f8e7d6 · Karen Satori 1.3.0 · Karen Oni 1.1.0`.
 A bug report, a tester's session or a training record then says exactly which game and which
 Karen made it, which is what the recorded test pass after the merge (Q1) needs.

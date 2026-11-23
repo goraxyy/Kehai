@@ -15,8 +15,12 @@ namespace Kehai.Karen
         static readonly Dictionary<long, List<Light>> grid = new Dictionary<long, List<Light>>();
         static readonly List<Light> all = new List<Light>();
         static UnityEngine.SceneManagement.Scene builtFor;
+        static bool stale;
 
         public static IReadOnlyList<Light> CeilingLights { get { Ensure(); return all; } }
+
+        // A new group of ceiling lamps was built (a sandbox room, 0.5.2): look again next time.
+        public static void Refresh() => stale = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
@@ -24,6 +28,7 @@ namespace Kehai.Karen
             grid.Clear();
             all.Clear();
             builtFor = default;
+            stale = false;
         }
 
         static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
@@ -31,16 +36,24 @@ namespace Kehai.Karen
         static void Ensure()
         {
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-            if (all.Count > 0 && builtFor == scene && all[0] != null) return;
+            if (!stale && all.Count > 0 && builtFor == scene && all[0] != null) return;
 
             grid.Clear();
             all.Clear();
             builtFor = scene;
+            stale = false;
 
             GameObject root = SceneObjectNames.Find("CeilingLights");
-            if (root == null) return;
-
-            root.GetComponentsInChildren(true, all);
+            if (root != null) root.GetComponentsInChildren(true, all);
+            // Every other "CeilingLights" group too: the sandbox island's rooms sit in the store
+            // scene beside the store's own, and their lamps light you for her as theirs do in a
+            // room on its own (0.5.2; she saw you 0.8 s later on the island without them).
+            foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsInactive.Include))
+            {
+                if (light.gameObject.scene != scene || all.Contains(light)) continue;
+                for (Transform t = light.transform.parent; t != null; t = t.parent)
+                    if (t.name == "CeilingLights") { all.Add(light); break; }
+            }
             foreach (Light light in all)
             {
                 Vector3 p = light.transform.position;
@@ -131,9 +144,17 @@ namespace Kehai.Karen
             if (Current == this) Current = null;
         }
 
-        public Vector3 Feet => transform.position + Vector3.up * 0.1f;
-        public Vector3 Chest => transform.position + Vector3.up * (IsCrouching ? 0.55f : 1.2f);
-        public Vector3 Head => view != null ? view.transform.position : transform.position + Vector3.up * 1.6f;
+        // The bottom of your body (0.5.2, found by the sandbox island): the store's player starts
+        // a shift with its CharacterController centred on its origin, so its origin is 1 m up
+        // until the first crouch (PlayerMotor then centres it at half its height, putting the
+        // origin at the feet). Her eye tested your feet and chest from the origin, so until then
+        // they were 1 m too high: your chest showed over a 2.2 m shelf, even crouched behind a
+        // short one. From the body's real bottom, they're right either way.
+        Vector3 Ground => controller != null ? transform.position + controller.center - Vector3.up * (controller.height * 0.5f) : transform.position;
+
+        public Vector3 Feet => Ground + Vector3.up * 0.1f;
+        public Vector3 Chest => Ground + Vector3.up * (IsCrouching ? 0.55f : 1.2f);
+        public Vector3 Head => view != null ? view.transform.position : Ground + Vector3.up * 1.6f;
         public Vector3 Facing => view != null ? view.transform.forward : transform.forward;
         public Vector3 Position => transform.position;
 

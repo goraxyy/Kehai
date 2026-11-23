@@ -11,6 +11,7 @@ public class ProductBox : MonoBehaviour
     public bool cold;
 
     [System.NonSerialized] public Vector3 home;
+    [System.NonSerialized] public ColdFixture cabinet;
     Item item;
 
     public ProductDef Product => ProductCatalog.Get(productId);

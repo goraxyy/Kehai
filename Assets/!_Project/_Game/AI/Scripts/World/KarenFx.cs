@@ -9,14 +9,16 @@ namespace Kehai.Karen
         public static bool StepsAudible => Enabled;
         public static bool ConeVisible => Enabled;
 
-        // The sandboxes (0.5.2) turn the aids on for you; F3 still toggles them. Does nothing in a
-        // player release.
+        // The sandboxes (0.5.2) turn the aids on for you; V on the F1 map toggles them (the
+        // squashed keys, C11.16: F3 is free). Does nothing in a player release.
         public static void SetEnabled(bool on)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             show = on;
 #endif
         }
+
+        public static void Toggle() => SetEnabled(!Enabled);
 
         public static bool Enabled
         {
@@ -50,10 +52,6 @@ namespace Kehai.Karen
             instance = go.AddComponent<KarenFx>();
         }
 
-        void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.F3)) show = !show;
-        }
 #endif
     }
 }

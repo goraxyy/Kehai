@@ -35,7 +35,14 @@ hashes, snapshot hash, seeds, exit status and optional result-card provenance. A
 card is unavailable, not an invented success. Import is idempotent; conflicting outcomes and
 malformed JSONL fail. A last recorded `running` event does not prove a process is alive.
 Interrupted/spawn-failed runs record exit codes 130/127. A killed wrapper may leave only a start
-event. The short directory lock is never automatically stolen if stale.
+event. Current and older writers share the short-lived `runs.jsonl.lock` directory. Current
+writers also use the persistent `runs.jsonl.lock.guard` file to coordinate recovery. The OS
+releases its guard when a writer exits or is killed. Keep the guard file in place.
+
+A current writer can clear a lock directory from either version after verifying that its
+holder was on this host and its PID has exited. Foreign, missing, or unverifiable holder
+records leave the directory in place. Clear an orphaned directory of uncertain ownership only
+after stopping all writers. Existing JSONL registers and imports use the same format.
 
 `record`, `fit`, `train` and `tune` require `--manifest`; the gate rejects missing records,
 unknown split metadata and held-out seeds/players/layouts before starting the command.

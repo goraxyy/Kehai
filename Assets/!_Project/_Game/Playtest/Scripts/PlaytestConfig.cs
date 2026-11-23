@@ -100,10 +100,11 @@ namespace Kehai.Playtest
 #endif
     }
 
-    // A tester code, as the developer hands them out: T07, LAF-3. Letters, digits and dashes,
-    // 2 to 16 of them; typed any case, kept upper case.
+    // The legacy test-fixture format. Existing installs keep their original IDs.
     public static class TesterCode
     {
+        public static string NewId() => Guid.NewGuid().ToString("N").ToUpperInvariant();
+
         public static string Normalize(string raw)
         {
             if (raw == null) return null;
@@ -129,6 +130,15 @@ namespace Kehai.Playtest
         {
             get => PlayerPrefs.GetString(CodeKey, "");
             set { PlayerPrefs.SetString(CodeKey, value ?? ""); PlayerPrefs.Save(); }
+        }
+
+        public static string EnsureId()
+        {
+            string id = Code;
+            if (!string.IsNullOrEmpty(id)) return id;
+            id = TesterCode.NewId();
+            Code = id;
+            return id;
         }
 
         public static bool ConsentAsked => PlayerPrefs.GetInt(ConsentKey, 0) != 0;

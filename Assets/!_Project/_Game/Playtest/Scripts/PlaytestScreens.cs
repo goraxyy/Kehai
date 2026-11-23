@@ -9,7 +9,7 @@ using UnityEngine.UI;
 namespace Kehai.Playtest
 {
     // The playtest's screens, over everything else (PLAYTEST.md):
-    //   first launch      the tester code, then whether to send sessions
+    //   first launch      whether to send sessions
     //   after shift 3     a suggestion to stop here (once per tester)
     //   finishing         four one-tap questions and one optional line (once per tester),
     //                     sending, thanks, and the link to the longer questions
@@ -46,7 +46,6 @@ namespace Kehai.Playtest
         TextMeshProUGUI overline, title, body;
         readonly List<MenuButton> buttons = new List<MenuButton>();
         TMP_InputField input;
-        TextMeshProUGUI inputError;
         EventSystem ownEvents;
         bool pausedByUs, quitAfter;
         float top;   // where this page's controls start: under its text
@@ -73,8 +72,7 @@ namespace Kehai.Playtest
             if (!Showing)
             {
                 if (!Ready) return;
-                if (TesterState.Code.Length == 0) ShowCode();
-                else if (!TesterState.ConsentAsked) ShowConsent();
+                if (!TesterState.ConsentAsked) ShowConsent();
                 else if (ShouldSuggest()) ShowSuggest();
                 else if (Input.GetKeyDown(KeyCode.F7) && Input.GetKey(KeyCode.LeftShift) && !MainMenu.Visible) ShowBugNote();
                 return;
@@ -100,30 +98,6 @@ namespace Kehai.Playtest
         }
 
         // ---- the pages --------------------------------------------------------------------
-
-        void ShowCode()
-        {
-            Open("tester code", $"PLAYTEST · {session.Config.round.ToUpperInvariant()}", "Welcome.",
-                "Type the tester code you were given, like T07. It keeps your sessions together; your name never goes into the game.");
-            input = MakeInput(top, "T07", 16);
-            input.onSubmit.AddListener(_ => SubmitCode());
-            inputError = MainMenu.MakeText(column, "Error", GameFonts.Body, 24f, Crimson, new Vector2(0f, top - 84f), new Vector2(Width, 34f));
-            AddButton("Continue", top - 140f, SubmitCode);
-            Select(input.gameObject);
-        }
-
-        void SubmitCode()
-        {
-            string code = TesterCode.Normalize(input != null ? input.text : null);
-            if (code == null)
-            {
-                inputError.text = "Letters, digits and dashes, 2 to 16 of them.";
-                Select(input.gameObject);
-                return;
-            }
-            session.SetCode(code);
-            ShowConsent();
-        }
 
         void ShowConsent()
         {
@@ -219,7 +193,7 @@ namespace Kehai.Playtest
                 : sent ? "Your session is on its way."
                 : "It couldn't be sent just now; the game will send it the next time you open it.";
             string form = session.Config.FormFor(code);
-            Open("thanks", "PLAYTEST", $"Thank you, {code}.",
+            Open("thanks", "PLAYTEST", "Thank you.",
                 where + (form != null ? "\n\nThe longer questions take about five minutes." : ""));
             float y = top;
             if (form != null) { AddButton("Open the longer questions", y, () => Application.OpenURL(form)); y -= Row; }
@@ -297,7 +271,6 @@ namespace Kehai.Playtest
         {
             buttons.Clear();
             input = null;
-            inputError = null;
             for (int i = column.childCount - 1; i >= 0; i--)
             {
                 Transform child = column.GetChild(i);

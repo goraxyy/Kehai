@@ -17,7 +17,7 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
         if (report == null || !KehaiBuild.BuildingEdition.HasValue) return;
         StripScene(scene, KehaiBuild.BuildingEdition.Value);
     }
-    public static void StripScene(Scene scene, KehaiEdition edition)
+    public static void StripScene(Scene scene, KehaiEdition edition, Material trainingPreview = null)
     {
         bool training = edition == KehaiEdition.Training;
         foreach (var root in scene.GetRootGameObjects())
@@ -39,15 +39,21 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
                 if (component is Canvas || component is CanvasRenderer || component is CanvasGroup)
                 { Object.DestroyImmediate(component); continue; }
                 // Keep collision, navigation and perceptual lights; remove presentation references.
-                if (component is Renderer renderer) renderer.sharedMaterials = Array.Empty<Material>();
-                if (component is Camera camera) camera.enabled = false;
+                if (component is Renderer renderer)
+                {
+                    var materials = trainingPreview != null ? new Material[renderer.sharedMaterials.Length] : Array.Empty<Material>();
+                    Array.Fill(materials, trainingPreview);
+                    renderer.sharedMaterials = materials;
+                }
+                if (trainingPreview == null && component is Camera camera) camera.enabled = false;
                 var serialized = new SerializedObject(component);
                 var property = serialized.GetIterator();
                 while (property.Next(true))
                 {
                     if (property.propertyType != SerializedPropertyType.ObjectReference) continue;
                     Object value = property.objectReferenceValue;
-                    if (value is AudioClip || value is Texture || value is Material || value is TMP_FontAsset)
+                    // The preview material just given to the renderers stays (it was wiped too, 0.5.2).
+                    if (value is AudioClip || value is Texture || value is Material && value != trainingPreview || value is TMP_FontAsset)
                         property.objectReferenceValue = null;
                 }
                 serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -57,11 +63,12 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
         {
             var gate = new GameObject("Edition scene gate");
             SceneManager.MoveGameObjectToScene(gate, scene);
-            gate.AddComponent<EditionSceneGate>();
+            gate.AddComponent<EditionSceneGate>().trainingPreview = trainingPreview != null;
         }
     }
-    public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "BlinkTestPanel" || name == "TrickCheck" || name == "VisualCheck";
+    public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "TrickCheck" || name == "VisualCheck";
     static bool IsPresentation(string name) => name == "TaskListUI" || name == "InventoryUI" || name == "BurnoutUI" ||
         name == "MainMenu" || name == "SettingsMenu" || name == "InteractHud" || name == "FirstShiftGuide" || name == "CareerCompletionScreen" ||
+        name == "BlinkTestPanel" ||
         name == "PlayerScreenFx" || name == "Eyelids" || name == "BlinkLids" || name == "SpeechBubble";
 }

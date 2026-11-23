@@ -15,6 +15,17 @@ PRIVATE=/private/tmp/kehai-benchmark-demo
 The fixture command exercises the runner/register/scorer, labels every score synthetic, and
 plays no game. All generated files, including schedules, must be outside every git checkout.
 
+To see Karen's progress across versions, run the training report against the benchmark home:
+
+```sh
+python3 -m tools.reports.report --register "$PRIVATE/runs.jsonl" --benchmark-history \
+  --out "$PRIVATE/training-report.html"
+```
+
+The report shows the first completed score for each model label in completion order. It computes
+paired changes and standard errors from the retained run files for matching benchmark definitions,
+arms and halves. Synthetic scores are grouped separately. Missing or changed inputs are reported.
+
 ## Play a real suite later
 
 With an explicitly started local evaluation build already listening:

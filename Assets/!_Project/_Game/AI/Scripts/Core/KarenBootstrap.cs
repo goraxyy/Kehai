@@ -95,7 +95,7 @@ namespace Kehai.Karen
             if (Edition.AllowDebugTools) root.AddComponent<KarenDebugOverlay>();
             if (Edition.ShowUI) root.AddComponent<ReviewScreen>();
             root.AddComponent<Kehai.Blink.BlinkTracker>();
-            if (Edition.AllowDebugTools) root.AddComponent<Kehai.Blink.BlinkTestPanel>();
+            if (Edition.ShowUI && !Application.isBatchMode) root.AddComponent<Kehai.Blink.BlinkTestPanel>();
         }
 
         static string rungArg, seedArg, shieldArg, policyArg, comboArg, careerArg;

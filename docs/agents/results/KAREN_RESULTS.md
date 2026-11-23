@@ -557,6 +557,29 @@ reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's
 
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 
+- **Her light sense ignored a second set of ceiling lamps (23 November).** `LightProbe` read only
+  the first group named `CeilingLights` in the scene. On the sandbox island that's the store's, so
+  the island rooms' lamps didn't light you for her: she first saw the pursuit bot at 1.8 s there
+  against 1.0 s in the same room on its own. Found by comparing the two runs' logs. Fixed: every
+  `CeilingLights` group counts. In the store scene its group was renamed (`Ceiling_Light_Sources`,
+  found by its old name) and no other object has that name, so a shift there is unchanged.
+- **Display-only shelf faces change shoppers and two tricks (23 November).** A slot you can't stand
+  in front of now stays stocked: shoppers skip it, her knock-off skips it and bays without five
+  other slots, her bolt-on camera skips it, and so does rung B's old sabotage. Numbers measured
+  before `23fb079` predate it.
+- **Her island map was cut on a different grid (23 November).** Her 1.5 m cells started 0.2 and
+  0.4 m off the standalone room's, so her search spots moved, and the island pursuit checks passed
+  2 of 4 against 4 of 4 alone. Aligned (`SandboxIsland.MapBounds`): 3 of 4 on the island before the
+  light fix. Sandbox-only; the store's map is untouched.
+
+- **Her eye tested your feet and chest 1 m too high in the store (22 November).** `PlayerPresence`
+  measured them from the player's origin; the store's player starts a shift with its body centred
+  on its origin, 1 m up, until the first crouch. So your chest point sat about 2.3 m up, over a
+  2.2 m shelf, and about 1.6 m crouched, over a short shelf. Found when the pursuit checks first
+  drove the store's own player on the sandbox island. Fixed: from the body's real bottom. It
+  changes what she sees in every shift until your first crouch; numbers measured before 16fa6cc
+  predate it.
+
 - **A bug in her hunt since 0.5.1 (item 13, the 60 s pursuit).** A forced re-decision while
   she hunted picked the hunt again, and `AbortPlan` ended the hunt on the way. That retired the
   sighting it started from, so the new hunt began with 0 s left and ended the next frame, over

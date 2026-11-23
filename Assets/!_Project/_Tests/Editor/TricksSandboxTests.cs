@@ -31,6 +31,21 @@ public sealed class TricksSandboxTests
         finally { Object.DestroyImmediate(root); }
     }
 
+    // 0.5.2 (C11.11): the stalls stand on the sandbox island's ground, clear of the sight area.
+    [Test]
+    public void TheStallsStandOnTheSandboxIsland_ClearOfTheSightArea()
+    {
+        Vector3 c = SandboxIsland.GroundCentre, half = SandboxIsland.GroundSize * 0.5f;
+        float width = (TrickCheck.Tricks.Length + 2) / 3 * 1.25f + 2f;   // the stalls and their panel
+        Vector3 at = TricksSandbox.StallsAt;
+        Assert.That(at.x - width / 2f, Is.GreaterThan(c.x - half.x));
+        Assert.That(at.x + width / 2f, Is.LessThan(c.x + half.x));
+        Assert.That(at.z, Is.InRange(c.z - half.z + 1f, c.z + half.z - 1f));
+        // The sight room's outer walls: 20 x 20 m round SightAt, shifted 2 m south (SightSandbox.BuildRoom).
+        Vector3 room = SandboxIsland.SightAt + new Vector3(0f, 0f, -2f);
+        Assert.That(Mathf.Abs(at.x - room.x), Is.GreaterThan(10f + width / 2f), "clear of the sight area");
+    }
+
     [Test]
     public void UnarmedRoomCannotFireATrickInAnOrdinaryScene()
     {

@@ -53,7 +53,7 @@ backs off.
 - A small helper reads your eyes: Apple Vision on macOS, or MediaPipe
   ([`tools/blink`](../../tools/blink/README.md)). It sends the game one number per frame over
   your own computer (localhost).
-- The game calibrates to your eyes (**F9**, 12 s) and allows for the helper's delay. A dash is
+- The game calibrates to your eyes (**Calibrate** in the F8 webcam panel) and allows for the helper's delay. A dash is
   instant, so it lands inside the ~300 ms a blink lasts. The simulated players blink too (a
   synthetic, human-shaped trace), so the dash runs in the eval harness.
 - **B** blinks from the keyboard, with or without a camera.

@@ -68,7 +68,7 @@ namespace Kehai.Sandbox
             SandboxKit.Bake(gameObject);
             Door.Set(false, instantly: true);
 
-            if (buildPlayer && PlayerPresence.Current == null) Player = SandboxPlayer.Build(root, PlayerStart, 0f);
+            if (buildPlayer && PlayerPresence.Current == null) Player = SandboxPlayer.Build(root, root.TransformPoint(PlayerStart), root.eulerAngles.y);
             else Player = PlayerPresence.Current;
 
             // Her spot and loop are world points: the room may stand anywhere (the island, 0.5.2).
@@ -76,9 +76,10 @@ namespace Kehai.Sandbox
             for (int i = 0; i < Loop.Length; i++) loop[i] = root.TransformPoint(Loop[i]);
             Karen = SandboxKaren.Build(root, root.TransformPoint(KarenSpot), KarenYaw + root.eulerAngles.y, loop);
             Indicators = SandboxIndicators.Build(root, Karen.Body, "Sight sandbox");
+            Indicators.showInArea = ControlsInArea;
             Indicators.status = () => (Karen.Current == SandboxKaren.State.Moving ? "moving" : "frozen") + ", " +
                 (Karen.CurrentRoute == SandboxKaren.Route.Loop ? "walking her loop" : "standing and turning");
-            Indicators.keys = "F5 start or freeze   F6 restart   ROUTE on the panel   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   ROUTE on the panel   F4 hide these (her cone too)   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
 
@@ -120,8 +121,7 @@ namespace Kehai.Sandbox
             switch (key)
             {
                 case KeyCode.F4: Indicators.ToggleAll(); return true;
-                // F5 starts her, or freezes her if she's moving (F7 and F8 keep their store jobs:
-                // a clip mark and the webcam). Route is on the panel.
+                // F5 starts her, or freezes her if she's moving. Route is on the panel.
                 case KeyCode.F5:
                     if (Karen.Current == SandboxKaren.State.Moving) Karen.Freeze(); else Karen.StartMoving();
                     return true;
@@ -135,6 +135,7 @@ namespace Kehai.Sandbox
         void Update()
         {
             if (Karen == null) return;
+            if (!ControlsInArea()) return;
             foreach (KeyCode key in Keys) if (Input.GetKeyDown(key)) Press(key);
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -142,6 +143,15 @@ namespace Kehai.Sandbox
                 Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
                 Cursor.visible = locked;
             }
+        }
+
+        internal bool ControlsInArea()
+        {
+            if (buildPlayer) return true;
+            if (Player == null) return false;
+            Vector3 local = transform.InverseTransformPoint(Player.Position);
+            return Mathf.Abs(local.x) <= RoomSize.x * .5f + 1f &&
+                local.z >= PlayerStart.z - 1f && local.z <= RoomSize.y * .5f + 1f;
         }
     }
 }

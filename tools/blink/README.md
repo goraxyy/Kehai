@@ -32,12 +32,13 @@ needs nothing beyond the Xcode command line tools.
    and the bar should fill up. Press Ctrl-C to stop it.
 
 3. **In the game** (press Play in Unity):
-   - Press **F10** to open the blink test panel. It is a checklist that ticks itself off.
-   - Press **F8**, then **Y**, to allow the webcam. The game starts the helper for you.
+   - Press **F8** to open the webcam panel and pause the shift.
+   - Choose **Turn webcam on** to read the consent question. Choose **Allow webcam** or press
+     **Y** to start the helper.
    - The first time, macOS asks whether **Unity** may use the camera; click **Allow**. If you
      clicked *Don't Allow* earlier, turn Unity on in **System Settings → Privacy & Security →
      Camera**, restart Unity, and press **R** in the panel to restart the helper.
-   - When step 3 of the checklist turns green, press **F9** to calibrate. It takes about 12
+   - When step 3 of the checklist turns green, choose **Calibrate**. It takes about 12
      seconds and tells you what to do, in big letters on the right of the panel:
      1. *Keep your eyes open and look at the screen* (3 seconds).
      2. *Close your eyes and keep them closed until you hear the beep* (about 3 seconds).
@@ -46,8 +47,8 @@ needs nothing beyond the Xcode command line tools.
    - Now blink. The big label flips to **EYES CLOSED**, the graph shows a red spike above the
      yellow line, and the blink counter goes up. The calibration is remembered.
 
-4. Close the panel with **F10** (or **Esc**) and play. **F8** turns the webcam off again, and
-   **Esc → Settings** has the same switches. Holding **B** closes your eyes with the keyboard at
+4. Close the panel with **F8** (or **Esc**) and play. Open it again and choose **Turn webcam off**
+   to stop tracking. **Esc → Settings** also opens the panel. Holding **B** closes your eyes with the keyboard at
    any time, with or without the webcam.
 
 **Frame rate.** A MacBook's built-in camera tops out at 30 frames a second (1280×720); run
@@ -68,7 +69,7 @@ noticeably more accurate. Set it up once (about 100 MB of downloads):
 tools/blink/setup_mediapipe.sh
 ```
 
-After that the game uses MediaPipe by itself; **M** in the F10 panel switches between the
+After that the game uses MediaPipe by itself. **M** in the F8 panel switches between the
 two helpers, and each keeps its own calibration.
 
 ## The Python helper (any OS)
@@ -82,9 +83,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python3 blink_server.py --method ear --preview   # MediaPipe face mesh + eye aspect ratio
 ```
 
-In game: **F8** to consent (the webcam path stays off until you do), **F9** to calibrate
-(10 s, eyes open then a few blinks), **F10** to see what the game reads, and **B** is the
-keyboard fallback at any time.
+In game, **F8** opens the panel for webcam consent, calibration and the live blink meter.
+Hold **B** to close your eyes with the keyboard.
 
 | method | needs | notes |
 |---|---|---|
@@ -120,7 +120,7 @@ a word about the conditions.
 
 A session goes like this:
 
-1. **The game's calibration** (12.5 s, the same steps as F9): eyes open for 3 s; eyes shut
+1. **The game's calibration** (12.5 s, the same steps as the F8 panel): eyes open for 3 s; eyes shut
    until the beep (3.5 s); then three ordinary blinks. The scorer calibrates each helper on
    this part exactly as the game would, and never scores it.
 2. **Free part**: look at the screen (read something, watch something) and blink as usual.

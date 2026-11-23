@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Kehai;
 using Kehai.Karen;
 using NUnit.Framework;
 using UnityEngine;
@@ -153,11 +154,39 @@ public class Karen040EveryoneTests
 
     static RSAParameters testKey;
 
-    static string Pack(int version, int inputsVersion, string parts)
+    static string Pack(int version, int inputsVersion, string parts, string modelVersion = null)
     {
         string body = "{\"format\":\"kehai-model-pack\",\"pack_version\":" + version + ",\"inputs_version\":" + inputsVersion +
+                      (modelVersion == null ? "" : ",\"model_version\":" + MiniJson.Escape(modelVersion)) +
                       ",\"created\":\"2026-11-11\",\"parts\":[" + parts + "]}";
         return body + "\n" + ModelPack.Sign(body, testKey) + "\n";
+    }
+
+    [Test]
+    public void Pack_ModelVersionKeepsLegacyPacksAndRejectsAnotherMajor()
+    {
+        string start = LedgerStart.Hand().ToPartJson();
+        Assert.IsTrue(ModelPack.TryParse(Pack(2, BrainObservation.Version, start), "test", out ModelPack legacy, out string why), why);
+        Assert.AreEqual("", legacy.ModelVersion);
+        string release = ModelPack.SupportedMajor + ".7.2";
+        Assert.IsTrue(ModelPack.TryParse(Pack(3, BrainObservation.Version, start, release), "test", out ModelPack pack, out why), why);
+        Assert.AreEqual(release, pack.ModelVersion);
+        string other = (ModelPack.SupportedMajor + 1) + ".0.0";
+        Assert.IsFalse(ModelPack.TryParse(Pack(4, BrainObservation.Version, start, other), "test", out _, out why));
+        StringAssert.Contains("model MAJOR " + (ModelPack.SupportedMajor + 1), why);
+        Assert.IsFalse(ModelPack.TryParse(Pack(4, BrainObservation.Version, start, "1.02.0"), "test", out _, out why));
+        StringAssert.Contains("MAJOR.MINOR.PATCH", why);
+    }
+
+    [Test]
+    public void Pack_RefusesAnotherMajorInTheSignedBrainCard()
+    {
+        string release = ModelPack.SupportedMajor + ".7.0";
+        string other = (ModelPack.SupportedMajor + 1) + ".1.0";
+        string brain = "{\"kind\":\"brain\",\"name\":\"KarenBrainBasic\",\"card\":{\"inputs_version\":" + BrainObservation.Version +
+                       ",\"model_version\":" + MiniJson.Escape(other) + "}}";
+        Assert.IsFalse(ModelPack.TryParse(Pack(4, BrainObservation.Version, brain, release), "test", out _, out string why));
+        StringAssert.Contains("model MAJOR " + (ModelPack.SupportedMajor + 1), why);
     }
 
     [SetUp]

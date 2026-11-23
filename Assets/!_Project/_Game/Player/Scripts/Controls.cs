@@ -58,10 +58,8 @@ public static class Controls
             K("Left / Right (in the replay)", "Jump back or forward 5 seconds"),
             K("O (in the replay)", "Open the full shift report in your browser")),
         new Section("Blinking (webcam)",
-            K("F8", "Turn webcam blink tracking on (asks first) or off"),
+            K("F8", "Open or close the webcam panel. Turn tracking on or off, calibrate, and test your blinks"),
             K("Y / N", "Answer the webcam question"),
-            K("F9", "Calibrate: eyes open, then closed until the beep, then 3 blinks"),
-            K("F10", "Blink test panel: is the game reading your eyes?"),
             K("R (in the blink test)", "Restart the camera helper"),
             K("V (in the blink test)", "Switch to the next camera"),
             K("M (in the blink test)", "Switch between the Apple Vision and MediaPipe helpers"),
@@ -96,8 +94,6 @@ public static class Controls
         new Section("Clips",
             K("F7", "Mark this moment for a clip; a tick shows for a second"),
             K("Left Shift + F7", "Mark a bug at this moment (in a playtest build, then say what went wrong)")),
-        new Section("For testing",
-            K("L", "Cut the power to the whole store")),
     };
 
     public static IEnumerable<Section> ForEdition(KehaiEdition edition)
@@ -105,24 +101,22 @@ public static class Controls
         foreach (Section section in All)
         {
             if (edition != KehaiEdition.Gameplay) { yield return section; continue; }
-            if (section.Title == ReplaySection || section.Title == "Clips" || section.Title == "For testing") continue;
+            if (section.Title == ReplaySection || section.Title == "Clips") continue;
             if (section.Title == "Menus and maps")
                 yield return new Section(section.Title, section.Entries[0]);
-            else if (section.Title == "Blinking (webcam)")
-                yield return new Section(section.Title, section.Entries[0], section.Entries[1], section.Entries[2], section.Entries[7]);
             else if (section.Title == "After a shift")
                 yield return new Section(section.Title, section.Entries[0], K("Enter (after a career ends)", "Back to the main menu"));
             else yield return section;
         }
     }
 
-    // Keys only the editor and development builds read (KarenFx). Not in the game's Keys tab or
-    // CONTROLS.md: a player never has them. The test that every key is listed counts these too.
+    // Keys only the editor and development builds read. The audit counts these too.
     public static readonly Section[] Developer =
     {
         new Section("Developer builds only",
-            K("F3", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
-            K("G (on the F1 map)", "The list that forces one of her tricks; frees the mouse for its buttons")),
+            K("V (on the F1 map)", GameNames.Antagonist + "'s footsteps and floor cone, on or off"),
+            K("G (on the F1 map)", "The list that forces one of her tricks; frees the mouse for its buttons"),
+            K("L (on the F1 map)", "Cut the power to the whole store")),
         // The sandboxes (0.5.2): Kehai → Sandbox in the editor; never in the game.
         new Section("In a sandbox",
             K("F5", "Start her, or freeze her where she is"),

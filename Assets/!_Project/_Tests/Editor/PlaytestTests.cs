@@ -60,6 +60,36 @@ public class PlaytestTests
     }
 
     [Test]
+    public void TesterId_ReusesLegacyIdOrPersistsANewOne()
+    {
+        string previous = TesterState.Code;
+        try
+        {
+            TesterState.Code = "T07";
+            Assert.AreEqual("T07", TesterState.EnsureId());
+            TesterState.Code = "";
+            string id = TesterState.EnsureId();
+            StringAssert.IsMatch("^[0-9A-F]{32}$", id);
+            Assert.AreEqual(id, TesterState.Code);
+            Assert.AreEqual(id, TesterState.EnsureId());
+        }
+        finally { TesterState.Code = previous; }
+    }
+
+    [Test]
+    public void SessionNamesAreUniqueEvenWhenTwoStartInTheSameSecond()
+    {
+        var utc = new DateTime(2026, 10, 4, 10, 15, 0, DateTimeKind.Utc);
+        string first = PlaytestPackage.NewStamp(utc);
+        string second = PlaytestPackage.NewStamp(utc);
+        string id = TesterCode.NewId();
+        Assert.AreNotEqual(first, second);
+        StringAssert.IsMatch("^20261004_101500-[0-9a-f]{32}$", first);
+        Assert.AreEqual($"https://up.example.dev/sessions/round1/{id}/{first}.zip",
+            PlaytestUploader.UrlFor("https://up.example.dev/", PlaytestPackage.ZipName("round1", id, first)));
+    }
+
+    [Test]
     public void SessionLog_WritesOneParsableLinePerNote()
     {
         string path = Path.Combine(temp, "s", PlaytestPaths.LogName);

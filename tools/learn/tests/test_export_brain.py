@@ -31,6 +31,18 @@ def test_a_wrong_outputs_file_is_refused(tmp_path):
     assert not os.path.exists(tmp_path / "Probe.g.cs"), "nothing written when it's refused"
 
 
+def test_karen_model_version_is_shared_by_all_three_export_files(tmp_path):
+    actor = fx.tiny_actor(seed=5)
+    name = "KarenBrainBasic"
+    eb.export(actor.state_dict(), name, {"version": "practice-run", "model_version": "1.3.2"}, str(tmp_path))
+    assert 'ModelVersion = "1.3.2"' in (tmp_path / (name + ".g.cs")).read_text()
+    model_card = (tmp_path / (name + ".card.md")).read_text()
+    assert "# Model card: Karen Satori" in model_card
+    assert "| Version | 1.3.2 |" in model_card
+    card = json.loads((tmp_path / (name + ".part.json")).read_text())["card"]
+    assert card["version"] == "practice-run" and card["model_version"] == "1.3.2"
+
+
 def test_a_checkpoint_on_disk_round_trips(tmp_path):
     actor = fx.tiny_actor(seed=8)
     run = tmp_path / "run" / "Employee"
@@ -129,7 +141,7 @@ class Probe {
     import sys
     sys.path.insert(0, str(root / "tools/rl"))
     import offline_csharp
-    output = offline_csharp.run([stub, tmp_path / "RecurrentProbe.g.cs",
+    output = offline_csharp.run([stub, tmp_path / "RecurrentProbe.g.cs", root / "Assets/!_Project/_Core/Scripts/Runtime/GameNames.cs",
         root / "Assets/!_Project/_Game/AI/Scripts/Decision/Policy/BrainNet.cs"], tmp_path)
     actual = [[float(x) for x in line.split(",")] for line in output.splitlines()]
     np.testing.assert_allclose(actual, expected, atol=1e-6)

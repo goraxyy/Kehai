@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using Kehai.Karen;
 using UnityEngine;
 
 namespace Kehai.Blink
 {
-    // F10: see whether the game is actually reading your eyes.
+    // F8: set up webcam blinking and see whether the game is reading your eyes.
     //
     // A checklist of the whole chain — consent, the camera helper, the signal arriving,
     // calibration — each ticked or with what to do next, then a big live meter of how
@@ -11,46 +12,73 @@ namespace Kehai.Blink
     // with the two thresholds drawn on it. Blink and you should see a spike cross the line.
     public sealed class BlinkTestPanel : MonoBehaviour
     {
-        public KeyCode key = KeyCode.F10;
-        public bool visible;
-
+        bool visible;
+        bool askingConsent;
         BlinkTracker tracker;
         GUIStyle body, heading, small;
         readonly List<(float t, float closed, bool shut)> history = new List<(float, float, bool)>();
         int blinksAtOpen;
+        Vector2 scroll;
 
         void Awake() => tracker = GetComponent<BlinkTracker>();
 
         public void Show()
         {
+            if (visible || !Edition.ShowUI || Application.isBatchMode || GamePause.Paused || tracker == null) return;
+            var map = GetComponent<KarenDebugOverlay>();
+            if (FullScreenPanel.AnyOpen && (map == null || !FullScreenPanel.IsOpen(map))) return;
+            if (map != null) map.ClosePanels();
             visible = true;
-            if (tracker != null) blinksAtOpen = tracker.Blinks;
+            blinksAtOpen = tracker.Blinks;
+            history.Clear();
+            scroll = Vector2.zero;
+            FullScreenPanel.Set(this, true);
+            GamePause.Set(true);
         }
 
-        void OnDisable() => FullScreenPanel.Set(this, false);
+        void Close()
+        {
+            if (!visible) return;
+            visible = askingConsent = false;
+            if (tracker != null) tracker.CancelCalibration();
+            FullScreenPanel.Set(this, false);
+            GamePause.Set(false);
+        }
+
+        void OnDisable() => Close();
 
         void Update()
         {
-            if (!Edition.AllowDebugTools) return;
-            if (Input.GetKeyDown(key) && !GamePause.Paused)
+            if (Input.GetKeyDown(KeyCode.F8))
             {
-                visible = !visible;
-                if (visible && tracker != null) blinksAtOpen = tracker.Blinks;
+                if (visible) Close();
+                else Show();
+                return;
             }
-            FullScreenPanel.Set(this, visible);
             if (!visible || tracker == null) return;
+            if (askingConsent)
+            {
+                if (Input.GetKeyDown(KeyCode.Y)) AnswerConsent(true);
+                else if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.Escape)) AnswerConsent(false);
+                return;
+            }
+            if (Input.GetKeyDown(KeyCode.Escape)) { Close(); return; }
             history.Add((Time.unscaledTime, tracker.Closed01, tracker.EyesClosed));
             while (history.Count > 0 && Time.unscaledTime - history[0].t > 10f) history.RemoveAt(0);
-            if (Input.GetKeyDown(KeyCode.Escape)) { visible = false; FullScreenPanel.Set(this, false); return; }
+            if (!BlinkTracker.Consented || tracker.IsCalibrating) return;
             if (Input.GetKeyDown(KeyCode.R)) { BlinkSidecar.Stop(); tracker.StartWebcam(); }
-            if (!BlinkTracker.Consented) return;
             if (Input.GetKeyDown(KeyCode.V)) BlinkSidecar.NextCamera(tracker.udpPort);
             if (Input.GetKeyDown(KeyCode.M) && BlinkSidecar.VisionReady && BlinkSidecar.MediaPipeReady) BlinkSidecar.SwitchHelper(tracker.udpPort);
         }
 
+        void AnswerConsent(bool allowed)
+        {
+            askingConsent = false;
+            if (allowed) tracker.SetWebcamConsent(true);
+        }
+
         void OnGUI()
         {
-            if (!Edition.AllowDebugTools) return;
             if (!visible || tracker == null) return;
             int size = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 44f, 15f, 36f));
             if (body == null)
@@ -66,16 +94,23 @@ namespace Kehai.Blink
             small.normal.textColor = new Color(0.7f, 0.72f, 0.76f);
 
             UiTheme.Fill(new Rect(0, 0, Screen.width, Screen.height), UiTheme.Ink);
+            if (askingConsent) { DrawConsent(); return; }
 
             float m = size;
             var left = new Rect(m, m, Screen.width * 0.46f - m, Screen.height - m * 2f);
             GUILayout.BeginArea(left);
-            GUILayout.Label("Blink test", heading);
-            GUILayout.Label("Does the game see your eyes? Work down the list.", small);
+            GUILayout.Label("Webcam blinking", heading);
+            scroll = GUILayout.BeginScrollView(scroll);
             GUILayout.Space(size * 0.5f);
 
             bool consent = BlinkTracker.Consented;
-            Step(consent, "1. Allow the webcam", consent ? "Allowed. (F8 turns it off again.)" : "Press <b>F8</b>, then <b>Y</b>.");
+            Step(consent, "1. Allow the webcam", consent ? "Webcam tracking is on." : "Webcam tracking is off.");
+            if (GUILayout.Button(consent ? "Turn webcam off" : "Turn webcam on"))
+            {
+                if (consent) tracker.SetWebcamConsent(false);
+                else askingConsent = true;
+            }
+            GUILayout.Space(size * 0.5f);
 
             bool helper = BlinkSidecar.Running;
             string helperText = helper ? $"Running: {BlinkSidecar.Which}."
@@ -91,10 +126,14 @@ namespace Kehai.Blink
 
             bool calibrated = tracker.Calibrated;
             string calText = tracker.IsCalibrating ? "Follow the instructions on the right."
-                : !string.IsNullOrEmpty(tracker.CalibrationResult) ? tracker.CalibrationResult + (calibrated ? "  <b>F9</b> redoes it." : "")
-                : calibrated ? $"Done (open {tracker.OpenLevel:0.00}, closed {tracker.ClosedLevel:0.00}). Press <b>F9</b> to redo it."
-                : signal ? "Press <b>F9</b>. It takes 12 seconds: eyes open for 3, closed until a beep, then 3 blinks." : "—";
+                : !string.IsNullOrEmpty(tracker.CalibrationResult) ? tracker.CalibrationResult
+                : calibrated ? $"Done (open {tracker.OpenLevel:0.00}, closed {tracker.ClosedLevel:0.00})."
+                : signal ? "About 12 seconds. Eyes open for 3, closed until a beep, then 3 blinks." : "Waiting for a webcam signal.";
             Step(calibrated, "4. Calibrate", calText);
+            bool guiEnabled = GUI.enabled;
+            GUI.enabled = guiEnabled && consent && signal && !tracker.IsCalibrating;
+            if (GUILayout.Button(calibrated ? "Calibrate again" : "Calibrate")) tracker.BeginCalibration();
+            GUI.enabled = guiEnabled;
 
             GUILayout.Space(size * 0.8f);
             GUILayout.Label("No webcam? Hold <b>B</b> to close your eyes with the keyboard — " + GameNames.Antagonist + " reacts the same way.", small);
@@ -110,8 +149,8 @@ namespace Kehai.Blink
             GUILayout.Label("<b>Camera helper output</b>", small);
             IReadOnlyList<string> output = BlinkSidecar.Output;
             for (int i = Mathf.Max(0, output.Count - 8); i < output.Count; i++) GUILayout.Label(output[i], small);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label("F10 / Esc close · F8 webcam on/off · F9 calibrate · R restart the helper · V next camera · M switch helper · B keyboard blink", small);
+            GUILayout.EndScrollView();
+            GUILayout.Label("F8 / Esc close · R restart the helper · V next camera · M switch helper · B keyboard blink", small);
             GUILayout.EndArea();
 
             // The live reading. While calibrating, the instruction comes first and big.
@@ -160,6 +199,23 @@ namespace Kehai.Blink
                 Fill(new Rect(x, graph.yMax - h, 2f, h), isShut ? new Color(1f, 0.33f, 0.33f) : new Color(0.3f, 0.82f, 1f, 0.8f));
             }
             GUI.Label(new Rect(graph.x, graph.yMax + 4f, graph.width, size * 1.4f), "the last 10 seconds — each blink should be a red spike above the yellow line", small);
+        }
+
+        void DrawConsent()
+        {
+            float width = Mathf.Min(body.fontSize * 42f, Screen.width - 40f);
+            GUILayout.BeginArea(new Rect((Screen.width - width) * 0.5f, body.fontSize, width, Screen.height - body.fontSize * 2));
+            GUILayout.Label("Use your webcam to track blinks?", heading);
+            GUILayout.Label(GameNames.Antagonist + " can react when your real eyes close. " +
+                "A helper program on this computer reads the camera and sends the game a blink signal.\n\n" +
+                "No camera frames are saved. Nothing leaves this computer. Webcam tracking is optional. " +
+                "You can turn it off here at any time. Your system may also ask for camera permission.", body);
+            GUILayout.Space(body.fontSize);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Allow webcam (Y)")) AnswerConsent(true);
+            if (GUILayout.Button("Not now (N / Esc)")) AnswerConsent(false);
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
         }
 
         void Step(bool done, string title, string detail)

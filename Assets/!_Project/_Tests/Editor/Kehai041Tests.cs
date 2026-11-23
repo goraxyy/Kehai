@@ -168,6 +168,32 @@ public class Kehai041Tests
         finally { typeof(BreakerPanel).GetProperty("Instance").SetValue(null, null); }
     }
 
+    // 0.5.2, C12.3 (Q25: label them): each switch is marked with its circuit, and its prompt says
+    // which lights it runs, so you can tell what a switch does by looking at it.
+    [Test]
+    public void TheBreakerSwitches_AreLabelled_AndTheirPromptsNameTheLights()
+    {
+        var panel = root.AddComponent<BreakerPanel>();
+        Assert.AreEqual("EAST", BreakerPanel.Label((int)LightCircuit.East));
+        Assert.AreEqual("WEST", BreakerPanel.Label((int)LightCircuit.West));
+        Assert.AreEqual("BACK", BreakerPanel.Label((int)LightCircuit.Back));
+        Assert.AreEqual("WEST: the sales floor's west side. Throw its lights off", panel.Prompt((int)LightCircuit.West));
+        panel.Trip(LightCircuit.Back);
+        Assert.AreEqual("BACK: the back rooms. Tripped: hold the breaker box", panel.Prompt((int)LightCircuit.Back));
+
+        var sw = BreakerSwitch.Create(panel, (int)LightCircuit.East, new Vector3(0f, 1.35f, 0f), Vector3.forward, Color.yellow);
+        try
+        {
+            Assert.AreEqual("EAST", sw.LabelText);
+            var label = panel.transform.Find("Breaker_East label");
+            Assert.IsNotNull(label, "the label hangs on the panel");
+            Assert.Greater(label.position.y, sw.transform.position.y, "above its switch");
+            Assert.Less(label.position.y, 1.6f, "at eye level at most");
+            Assert.Greater(Vector3.Dot(label.forward, Vector3.back), 0.99f, "it faces whoever stands at the box");
+        }
+        finally { Object.DestroyImmediate(sw.gameObject); }
+    }
+
     [Test]
     public void TheHoldBar_CountsDown()
     {

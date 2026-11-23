@@ -1,10 +1,13 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Kehai.Eval;
 using Kehai.Karen;
 using NUnit.Framework;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 
 // The reacting simulated players (SimulatedPlayer, BotFear): who frightens easily and how
 // fear behaves — and that they know only what the observation tells them.
@@ -141,6 +144,79 @@ public class BotFearTests
         Assert.AreEqual("right", EnvWorld.StepAside(Vector3.zero, facing, new Vector3(-0.5f, 1.6f, 10f), v), "its line passes to your left");
         // Facing the other way, the same throw: sides swap.
         Assert.AreEqual("right", EnvWorld.StepAside(Vector3.zero, Vector3.back, new Vector3(0.5f, 1.6f, 10f), v));
+    }
+
+    [Test]
+    public void HideChoosesAnOpenEntranceCoveredFromTheRememberedThreat()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        var floor = new NavMeshBuildSource
+        {
+            shape = NavMeshBuildSourceShape.Box, area = 0,
+            transform = Matrix4x4.Translate(Vector3.down * 0.1f), size = new Vector3(30f, 0.2f, 30f)
+        };
+        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByIndex(0), new List<NavMeshBuildSource> { floor },
+            new Bounds(Vector3.zero, new Vector3(30f, 5f, 30f)), Vector3.zero, Quaternion.identity);
+        Assert.IsNotNull(data);
+        var mesh = NavMesh.AddNavMeshData(data);
+        var root = new GameObject("hiding test");
+        try
+        {
+            GameObject At(string name, Vector3 point)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(root.transform);
+                go.transform.position = point;
+                return go;
+            }
+            BoxCollider Box(string name, Vector3 centre, Vector3 size)
+            {
+                var box = At(name, centre).AddComponent<BoxCollider>();
+                box.size = size;
+                return box;
+            }
+
+            var interior = new Bounds(Vector3.up, new Vector3(2f, 2f, 2f));
+            HidingPlace.Author(At("near, exposed", new Vector3(0f, 0f, 3f)), interior);
+            var covered = HidingPlace.Author(At("covered", new Vector3(6f, 0f, 6f)), interior);
+            Box("wall", new Vector3(4f, 1.5f, -2f), new Vector3(5f, 3f, 0.2f));
+            var body = Box("moving body", new Vector3(0f, 1.5f, -2f), new Vector3(2f, 3f, 0.3f));
+            body.gameObject.AddComponent<NavMeshAgent>().enabled = false;
+            body.gameObject.AddComponent<Rigidbody>().isKinematic = true;
+
+            bool Choose(out HidingPlace place, out Vector3 feet) => SimulatedPlayer.TryChooseOpenHide(
+                Vector3.zero, Vector3.back * 8f, 0.45f, 1f, 0.35f, out place, out feet);
+            Physics.SyncTransforms();
+            Assert.IsTrue(Choose(out HidingPlace chosen, out Vector3 target));
+            Assert.AreSame(covered, chosen, "moving bodies don't turn the nearer exposed entrance into cover");
+            Assert.Less(Vector3.Distance(covered.transform.position, target), 0.4f);
+
+            body.transform.position += Vector3.left * 10f;
+            var stock = Box("loose stock", new Vector3(0f, 1.5f, -2f), new Vector3(2f, 3f, 0.3f));
+            var stockBody = stock.gameObject.AddComponent<Rigidbody>();
+            stockBody.useGravity = false;
+            Physics.SyncTransforms();
+            Assert.IsTrue(Choose(out chosen, out _));
+            Assert.AreSame(covered, chosen, "loose stock doesn't supply cover");
+
+            stock.gameObject.AddComponent<Item>();
+            stockBody.isKinematic = true;
+            Physics.SyncTransforms();
+            Assert.IsTrue(Choose(out chosen, out _));
+            Assert.AreSame(covered, chosen, "carryable items don't supply cover even if kinematic");
+
+            // This panel is absent from the NavMesh. The entrance must still be open in physics.
+            var panel = Box("closed panel", new Vector3(5.25f, 1.25f, 5.1f), new Vector3(2.5f, 2.5f, 0.15f));
+            panel.gameObject.AddComponent<Rigidbody>().isKinematic = true;
+            Physics.SyncTransforms();
+            Assert.IsFalse(Choose(out _, out _), "a kinematic door panel blocks the entrance and leaves the flee fallback");
+        }
+        finally
+        {
+            mesh.Remove();
+            Object.DestroyImmediate(data);
+            Object.DestroyImmediate(root);
+        }
     }
 
     // The players know her only through the observation, the way an outside agent would.

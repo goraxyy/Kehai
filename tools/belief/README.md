@@ -21,6 +21,27 @@ tools/belief/train_all.sh                                       # C4.10: fit, ch
 tools/belief/test_run.sh                                        # C4.11: the three tests of §11 (about 3 h, editor closed)
 ```
 
+If recording stops, rerun the same command from the same commit. It keeps finished leagues,
+parity checks and the exported legs. An interrupted league starts again in its own folder.
+Recording and fitting default to the new `belief052` folder. To use the older `belief040` data
+for a fit, pass its path explicitly to `train_all.sh`.
+
+The league and ablation launcher uses the shared `kehai-run` lock, clone, and run register.
+It reads the league file from the checkout's `HEAD`. Use a repo-relative league path or its
+absolute path in the checkout. Add `--dry-run` as the first argument to print the Unity command.
+
+```bash
+tools/belief/run_unity.sh --dry-run tools/rl/leagues/test_prediction.json /path/to/output
+tools/belief/run_unity.sh --dry-run --ablation /path/to/output -ablation-rungs CE
+```
+
+The output folder gets the live `unity.log` and any `shift_records/` and `kehai_eval/` produced
+by the run, including when Unity exits with an error. Additional game flags are passed through,
+and relative paths in them are relative to the caller's directory. `KEHAI_TIMEOUT_MIN` still
+sets the EvalBatch timeout (default 600 minutes). The runner allows five more minutes before
+stopping an unresponsive Unity process. Set `KEHAI_CLONE` to choose the parent directory for
+the per-run clone.
+
 **A trace** starts with a `state` line (her belief, the prior it leaks back to, the exit lines),
 then every operation of the filter with its inputs: `layers`, `obs` (as applied, with the raw
 inputs her sense model turned into a bump), `sweep`, `bias`, `features`, `predict`, `her_noise`,

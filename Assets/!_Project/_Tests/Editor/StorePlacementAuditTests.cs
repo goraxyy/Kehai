@@ -4,6 +4,7 @@ using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
+using Object = UnityEngine.Object;
 
 public class StorePlacementAuditTests
 {
@@ -137,6 +138,54 @@ public class StorePlacementAuditTests
         Assert.AreEqual("missing", result.PromptStatus, "a condition can still require a prompt");
         PlacementProbe.ReadPrompt(result, () => throw new InvalidOperationException(), conditional: false);
         Assert.AreEqual("unmeasured", result.PromptStatus);
+    }
+
+    // 23 November: a shelf slot counts its board's height, not the middle of the pack on it.
+    [TestCase(1.50f, "within limit")]
+    [TestCase(1.65f, "above eye level")]
+    public void ShelfSlotsAreMeasuredAtTheirBoard(float board, string status)
+    {
+        Box("Floor", new Vector3(0f, FloorY - .25f, 1f), new Vector3(10f, .5f, 10f));
+        Bake();
+        var frame = new GameObject("Bay").transform;
+        frame.position = new Vector3(0f, FloorY, 0f);
+        var slot = new ShelfSlot(null, frame, new Vector3(0f, board, 0f), false, new Vector2(.25f, .25f), .34f);
+        var result = new PlacementProbe(player, surface).CheckSlot(slot);
+        Assert.That(result.Height, Is.EqualTo(board).Within(.02f), "the board, not the pack's middle (" + (board + .17f) + " m)");
+        Assert.AreEqual(status, result.HeightStatus);
+    }
+
+    // 23 November (display only): a face pressed to a wall has nowhere to stand; the same face in
+    // the open does. The audit reports a display face without flagging it.
+    [Test]
+    public void AFacePressedToAWallIsDisplayOnly_AndTheAuditSaysSo()
+    {
+        Box("Floor", new Vector3(0f, FloorY - .25f, 1f), new Vector3(10f, .5f, 10f));
+        Bake();
+        var frame = new GameObject("Bay").transform;
+        frame.position = new Vector3(0f, FloorY, 0f);
+        var slot = new ShelfSlot(null, frame, new Vector3(0f, 1.0f, 0f), false, new Vector2(.25f, .25f), .2f);
+        Physics.SyncTransforms();
+        Assert.IsTrue(ShelfSlot.FaceReachable(slot, new Collider[0]), "open floor in front");
+
+        var wall = Box("Wall", new Vector3(0f, FloorY + 1.5f, -.45f), new Vector3(4f, 3f, .2f));
+        Physics.SyncTransforms();
+        Assert.IsFalse(ShelfSlot.FaceReachable(slot, new Collider[0]), "a wall right in front");
+
+        slot.Display = true;
+        var result = new PlacementProbe(player, surface).CheckSlot(slot);
+        Assert.AreEqual("display", result.Approach);
+        Assert.IsFalse(result.HasFinding, "a display face isn't a finding");
+        Assert.That(result.Height, Is.EqualTo(1.0f).Within(.02f));
+        Object.DestroyImmediate(wall);
+    }
+
+    [Test]
+    public void FreezerFour_IsDisplayOnly_AndOtherBaysAreNot()
+    {
+        Assert.IsTrue(StoreLayout.DisplayOnly(new GameObject("Retail_Freezer_04").transform));
+        Assert.IsFalse(StoreLayout.DisplayOnly(new GameObject("Retail_Freezer_05").transform));
+        Assert.IsFalse(StoreLayout.DisplayOnly(null));
     }
 
     [Test]

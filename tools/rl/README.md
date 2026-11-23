@@ -103,6 +103,19 @@ is also zipped as `Builds/KehaiTrain/Windows.zip`.
 
 ## Record demonstrations
 
+The editor recorder runs Employee, Vital, or Basic on a single `kehai-run` clone under the
+shared heavy-work lock. It defaults to 20,000 decisions and lets the recorder stop Unity.
+
+```bash
+tools/rl/record_demos_editor.sh --dry-run employee 20000
+tools/rl/record_demos_editor.sh vital 20000
+```
+
+Each mode writes its `.demo` files and live `record.log` under `tools/rl/demos/<mode>/` in the
+calling checkout. The `demos` job collects ML-Agents demonstrations with shift records and
+replays disabled. It preserves Unity's failure code and exits 1 if Unity succeeds with no
+`.demo` files in the folder. `KEHAI_CLONE` selects the parent directory for the per-run clone.
+
 Before PPO starts, the policy learns to copy rung E's bandit (`behavioral_cloning` in
 `karen_ppo.yaml`), so it starts at E's level instead of picking at random. Record about five
 minutes of the bandit's choices:
@@ -219,4 +232,4 @@ loopholes to look for in the unshielded runs and the thought logs:
 
 ### Shopper limits for a training lesson
 
-An entry in a training league's `lessons` array may include `"shopper_cap": 1`. The value (0–5) limits simultaneous shoppers during that lesson, including flash sales. Omit it for the usual store rules. Existing leagues keep their usual settings. Evaluation careers use the ordinary store.
+An entry in a learning league's `lessons` array may include `"shopper_cap": 1`. The value is a whole JSON number from 0 through 5. It limits simultaneous shoppers during that lesson on the training split, including flash sales. Omit it for the usual store rules. Evaluation careers use the ordinary store limits.

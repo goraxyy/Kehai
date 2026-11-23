@@ -9,7 +9,8 @@ box having 3 buttons that idk what each does." The tasks are the plan's
 ## 1. The rule
 
 - **Within reach:** every usable thing is at **eye level or lower**. Your eyes are at 1.6 m
-  (`PlayerMotor.standCameraY`), so a thing's centre sits between about 0.6 m and 1.6 m.
+  (`PlayerMotor.standCameraY`), so a thing's centre sits between about 0.6 m and 1.6 m. **A shelf
+  is measured at its board** (your call, 23 November): a tall pack on a 1.5 m board is in reach.
 - **Reachable:** you can stand right in front of it; no shelf or table is in the way.
 - **Where it makes sense:** a thing sits where a real store would put it (the time clock by the staff
   room door, the breaker box in the back).
@@ -19,7 +20,7 @@ box having 3 buttons that idk what each does." The tasks are the plan's
 
 | Thing | Where | Height | What it does | To check or fix |
 |---|---|---|---|---|
-| **Power box** (`ElectricBox`, `BreakerPanel`) | the backstreet | measured by C12.1 | **three switches, one per light circuit: East, West and Back.** Hold E for 20 s and every circuit and the mains come back; the switches light up one by one to show how far the hold has got. A tap on a lit switch turns that circuit off | **nothing says which switch is which,** and the tap-off is hidden: Q25 |
+| **Power box** (`ElectricBox`, `BreakerPanel`) | the backstreet | measured by C12.1 | **three switches, one per light circuit: East, West and Back.** Hold E for 20 s and every circuit and the mains come back; the switches light up one by one to show how far the hold has got. A tap on a lit switch turns that circuit off | **Labelled (Q25, 23 November):** EAST, WEST and BACK printed above the switches, and the prompt names the lights, e.g. "WEST: the sales floor's west side. Throw its lights off" |
 | Fog boxes (`FogBox`) | wall boxes beside the fog rooms | 1.45 m (`KarenFixtures.BoxHeight`) | hold E to clear the fog | — |
 | Camera box (`CameraBox`) | a wall box | 1.45 m | hold E to repair the cameras after her Camera break trick | — |
 | The six store cameras (`StoreCameras`) | 3 m up on walls | 3 m | they watch; you never touch them | fine: not something you use |
@@ -44,3 +45,30 @@ box having 3 buttons that idk what each does." The tasks are the plan's
 
 **Example:** the check reports "Radio: centre 2.1 m, above eye level". The radio's placement in
 code moves it to 1.4 m on the same wall, and the next run reports nothing.
+
+## 4. Where it stands (23 November)
+
+The audit's flags across the store and the six layouts went from **29,244 to 110**, the store
+alone **10** (run `20261123-024134-9aa72c`). Every product keeps a slot that isn't display, in
+every layout. The display check is cautious: of the store's 826 display slots, the audit can
+reach 260 (they just stay stocked).
+
+| What changed | Why | Your call |
+|---|---|---|
+| Shelves measured at the board | a tall pack on a 1.5 m board is in reach; ~2,400 store slots were flagged for the pack's middle | yes, 23 November |
+| Blocked faces are **display only** | ~950 store slots face a wall, a chiller or another bay: they stay stocked, and shoppers, her knock-offs, her bolt-on camera and old sabotage never empty them, so no task asks for them (826 in the store) | yes, 23 November |
+| A slot restocked through its bay counts | a product's box fills every empty slot of it on the bay, the crate the whole bay, so a slot behind a reachable one is restocked from it (383 in the store) | how the game already works |
+| The audit opens each chiller slot's own door, and a cupboard in the way | it opened the first door only, which swung across its neighbours; the WC mop sits in a cupboard | — |
+| Stock boxes behind scenery aren't used | three working boxes stood behind a wall panel or a prop; their products moved to clear spots | — |
+| The power box labelled | EAST, WEST, BACK, and the prompt names the lights | Q25, yes |
+
+**Still flagged, for your walk (Y12.1):**
+- **Freezer 4** (30 slots) is display only by name (`StoreLayout.DisplayBays`): its door stops
+  against the scenery beside it. Freezer 5 is display only as its face is blocked; its door is
+  still flagged (1).
+- **One slot on the till counter** facing the shoppers' side (1): no floor in the audit's sampling.
+- **The six bins in the parking lot:** the audit measures on her NavMesh, which doesn't reach the
+  parking lot. Shoppers never use them and no chore asks for them; check you can walk to them.
+- **The staff room's mop and its rack:** a partition stands in front. Say if it's awkward to grab.
+- **Small end caps in the generated layouts** (`Shelf_Pillar_B_Low`, 4 to 12 slots a layout): no
+  floor in front in the audit's sampling.

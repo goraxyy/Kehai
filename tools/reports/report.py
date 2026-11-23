@@ -12,7 +12,55 @@ from .html import chart, details, e, page, scoreboard
 from .register import audit, latest
 
 
-def build(run=None, manifest=None, card=None, curves=None, scores=None, comparison=None):
+def retained_input(reference):
+    if not isinstance(reference, dict) or not reference.get('path') or not reference.get('sha256'):
+        raise ValueError('retained benchmark file has no provenance')
+    path = Path(reference['path'])
+    if source(path).get('sha256') != reference['sha256']:
+        raise ValueError(f'missing or changed benchmark file: {path.name}')
+    return path
+
+
+def benchmark_history(events):
+    """One completed score per release and suite, paired in recorded completion order."""
+    from tools.benchmark.analyze import compare
+
+    groups, warnings = {}, []
+    completed = [row for row in events if row.get('kind') == 'benchmark' and row.get('state') == 'completed'
+                 and row.get('result_card')]
+    for row in sorted(completed, key=lambda row: (row.get('end') or '', row['id'])):
+        try:
+            card = read_json(retained_input(row['result_card']))
+            if any(card[key] != row[key] for key in ('model', 'arm', 'half')):
+                raise ValueError('score and run register identify different evaluations')
+            key = (card['benchmark'], card['definition_sha256'], card['arm'], card['half'], bool(card.get('synthetic')))
+            groups.setdefault(key, {}).setdefault(card['model'], card)
+        except (KeyError, TypeError, ValueError, OSError) as error:
+            warnings.append(f"{row['id']}: {error}")
+
+    def inputs(card):
+        provenance = card['provenance']
+        request = read_json(retained_input(provenance['request']))
+        if any(request[key] != card[key] for key in ('benchmark', 'definition_sha256', 'model', 'arm', 'half')):
+            raise ValueError('score and retained request identify different evaluations')
+        return request, read_lines(retained_input(provenance['rows']))
+
+    cards, pairs = [], []
+    for group in groups.values():
+        versions = list(group.values())
+        cards.extend(versions)
+        for first, second in zip(versions, versions[1:]):
+            label = f"{first['model']} → {second['model']} · {first['arm']} · {first['half']}"
+            if first.get('synthetic'):
+                label += ' · synthetic fixture'
+            try:
+                pairs.append((label, compare(*inputs(first), *inputs(second))))
+            except (KeyError, TypeError, ValueError, OSError) as error:
+                warnings.append(f'{label}: {error}')
+    return cards, pairs, warnings
+
+
+def build(run=None, manifest=None, card=None, curves=None, scores=None, comparison=None, history=None):
     warnings = audit(manifest or {}, (run or {}).get('kind', 'test'))
     if not card:
         warnings.append('result/model card unavailable')
@@ -51,6 +99,17 @@ def build(run=None, manifest=None, card=None, curves=None, scores=None, comparis
     body += '<section><h2>Change against current model</h2>'
     body += details('Paired comparison (second minus first)', comparison) if comparison else '<p>Unavailable — no paired current-model results supplied.</p>'
     body += '</section><h2>Held-out results and scoreboard</h2>' + scoreboard(scores or [])
+    if history is not None:
+        cards, pairs, unavailable = history
+        body += '<h2>Karen benchmark over versions</h2><p>First completed score per release and suite, in completion order.</p>'
+        if cards:
+            body += scoreboard(cards)
+        else:
+            body += '<p>No benchmark scores could be retrieved from the register.</p>'
+        if pairs:
+            body += '<h3>Paired changes and standard errors (later minus earlier)</h3>'
+            body += ''.join(details(label, result) for label, result in pairs)
+        body += ''.join(f'<p class="bad">{e(issue)}</p>' for issue in unavailable)
     body += '<section><h2>Replay and network</h2><p>Use the replay command with recorded shift JSON. Neural inputs and saliency require an exact matching decision trace and supported model; they cannot be recovered from positions.</p></section>'
     return page('Training run report', body)
 
@@ -64,10 +123,12 @@ def main(argv=None):
     ap.add_argument('--curves', help='JSONL: step and metric values')
     ap.add_argument('--score', action='append', default=[])
     ap.add_argument('--comparison')
+    ap.add_argument('--benchmark-history', action='store_true', help='show registered scores and paired changes across Karen versions')
     ap.add_argument('--out', required=True)
     a = ap.parse_args(argv)
     try:
-        run = next((r for r in latest(a.register) if r['id'] == a.run), None) if a.run else None
+        events = latest(a.register) if a.run or a.benchmark_history else []
+        run = next((r for r in events if r['id'] == a.run), None) if a.run else None
         if a.run and run is None:
             raise ValueError('run id not found')
         card = None
@@ -75,7 +136,8 @@ def main(argv=None):
             card = {'provenance': source(a.card), 'recorded': read_json(a.card) if a.card.endswith('.json') else Path(a.card).read_text()}
         atomic_write(a.out, build(run, read_json(a.manifest) if a.manifest else None, card,
                                  read_lines(a.curves) if a.curves else None,
-                                 [read_json(p) for p in a.score], read_json(a.comparison) if a.comparison else None))
+                                 [read_json(p) for p in a.score], read_json(a.comparison) if a.comparison else None,
+                                 benchmark_history(events) if a.benchmark_history else None))
         print(a.out)
         return 0
     except (ValueError, OSError, KeyError) as ex:

@@ -17,6 +17,7 @@ namespace Kehai.Karen
     {
         public string Name = "";              // KarenBrainBasic, KarenBrainVital, EmployeeBrain
         public string Version = "";           // e.g. "basic-r2-a@1.2M"
+        public string ModelVersion = "";      // semantic release version of a Karen, when declared
         public int InputsVersion;             // the observation's version it was trained on
         public bool Trained;                  // false: a hand-made stand-in (tests, or "not trained")
         public string TrainedAgainst = "";
@@ -25,8 +26,16 @@ namespace Kehai.Karen
         public string Command = "";           // the command that made it
         public string[][] OutputNames;        // per head: the name of each output
 
+        public string DisplayVersion => string.IsNullOrEmpty(ModelVersion) ? Version : ModelVersion;
+        public string DisplayName => Name switch
+        {
+            "KarenBrainBasic" => GameNames.Satori,
+            "KarenBrainVital" => GameNames.Oni,
+            _ => Name,
+        };
+
         public override string ToString() =>
-            $"{Name} {Version} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
+            $"{DisplayName} {DisplayVersion} (inputs v{InputsVersion}, {(Trained ? $"{Steps} steps against {TrainedAgainst}" : "not trained")})";
     }
 
     public sealed class BrainNet
@@ -191,7 +200,13 @@ namespace Kehai.Karen
         {
             why = null;
             BrainNet fromPack = ModelPack.Current?.Brain(name);
-            if (fromPack != null) return fromPack;
+            return fromPack ?? FindBuiltIn(name, out why);
+        }
+
+        // A build records the cards it actually ships, even if the editor has a downloaded pack.
+        public static BrainNet FindBuiltIn(string name, out string why)
+        {
+            why = null;
             if (cache.TryGetValue(name, out BrainNet net)) return net;
 
             System.Type type = typeof(BrainNets).Assembly.GetType("Kehai.Karen.Generated." + name);

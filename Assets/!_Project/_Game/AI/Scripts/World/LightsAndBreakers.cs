@@ -304,11 +304,19 @@ namespace Kehai.Karen
             RefreshVisuals();
         }
 
-        public string Prompt(int index)
+        // Each switch is marked with its circuit, and its prompt says which lights it runs (Q25, 0.5.2).
+        public static string Label(int index) => ((LightCircuit)index).ToString().ToUpperInvariant();
+
+        public static string Area(int index) => (LightCircuit)index switch
         {
-            string name = ((LightCircuit)index).ToString().ToLowerInvariant();
-            return on[index] ? $"Throw the {name} lights off" : $"The {name} lights are tripped: hold the breaker box";
-        }
+            LightCircuit.East => "the sales floor's east side",
+            LightCircuit.West => "the sales floor's west side",
+            _ => "the back rooms",
+        };
+
+        public string Prompt(int index) => on[index]
+            ? $"{Label(index)}: {Area(index)}. Throw its lights off"
+            : $"{Label(index)}: {Area(index)}. Tripped: hold the breaker box";
     }
 
     // One switch on the panel. Looking at it plays its hum; that's the whole puzzle.
@@ -335,8 +343,30 @@ namespace Kehai.Karen
             s.colour = colour;
             s.lamp = go.GetComponent<Renderer>();
             s.lamp.sharedMaterial = KarenProps.Lit(colour);
+            s.label = MakeLabel(panel, index, position, facing);
             return s;
         }
+
+        // The circuit's name printed just above the switch, read from where you stand (Q25).
+        static TMPro.TextMeshPro MakeLabel(BreakerPanel panel, int index, Vector3 position, Vector3 facing)
+        {
+            var go = new GameObject($"Breaker_{(LightCircuit)index} label");
+            go.transform.SetParent(panel.transform, false);
+            go.transform.position = position + Vector3.up * 0.2f + facing * 0.045f;
+            go.transform.rotation = Quaternion.LookRotation(-facing);   // its text reads from the front
+            var text = go.AddComponent<TMPro.TextMeshPro>();
+            if (UiTheme.TmpFont != null) text.font = UiTheme.TmpFont;
+            text.fontSize = 0.7f;
+            text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.rectTransform.sizeDelta = new Vector2(0.26f, 0.08f);
+            text.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            text.color = Color.white;
+            text.text = BreakerPanel.Label(index);
+            return text;
+        }
+
+        TMPro.TextMeshPro label;
+        public string LabelText => label != null ? label.text : "";
 
         public void Refresh()
         {

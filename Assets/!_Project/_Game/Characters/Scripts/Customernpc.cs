@@ -501,7 +501,7 @@ public class CustomerNPC : MonoBehaviour, IInteractable, IHoverable, IHoldIntera
 
         foreach (ShelfSlot slot in nearby)
         {
-            if (!slot.isFilled) continue;
+            if (!slot.isFilled || slot.Display) continue;
             if (wanted != null && !wanted(slot)) continue;
 
             float sqr = (position - slot.Position).sqrMagnitude;

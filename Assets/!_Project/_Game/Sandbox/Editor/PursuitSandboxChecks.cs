@@ -23,6 +23,7 @@ public static class PursuitSandboxChecks
         if (EditorApplication.isPlaying && PursuitChecks.Done)
         {
             Debug.Log("PursuitSandboxChecks: finished, report " + PursuitChecks.ReportPath);
+            LogMapGrid("PursuitSandboxChecks");
             EditorApplication.Exit(PursuitChecks.ExitCode);
         }
         else if (EditorApplication.timeSinceStartup > TimeLimitSeconds)
@@ -30,6 +31,17 @@ public static class PursuitSandboxChecks
             Debug.LogError("PursuitSandboxChecks: timed out before the report finished");
             EditorApplication.Exit(2);
         }
+    }
+
+    // Where her map's cell grid starts, from the pursuit room's centre (C11.13: the island's
+    // and the standalone room's maps should be cut the same way).
+    public static void LogMapGrid(string who)
+    {
+        var map = Kehai.Store.StoreMap.Current;
+        if (map == null) return;
+        Vector3 from = map.Bounds.min - PursuitSandbox.Centre;
+        Debug.Log($"{who}: map grid starts at ({from.x:0.00}, {from.z:0.00}) from the pursuit room's centre, " +
+                  $"{map.CellCount} cells, {map.Regions.Count} regions");
     }
 
     [MenuItem("Kehai/Sandbox/Run Pursuit Checks")]

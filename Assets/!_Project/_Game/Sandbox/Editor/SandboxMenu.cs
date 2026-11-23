@@ -15,6 +15,9 @@ public static class SandboxMenu
     [MenuItem("Kehai/Sandbox/Pursuit")]
     public static void OpenPursuit() => Open<PursuitSandbox>("Pursuit sandbox");
 
+    [MenuItem("Kehai/Sandbox/Interactions")]
+    public static void OpenInteractions() => Open<InteractionSandbox>("Interactions sandbox");
+
     static void Open<T>(string name) where T : Component
     {
         if (EditorApplication.isPlaying) EditorApplication.isPlaying = false;

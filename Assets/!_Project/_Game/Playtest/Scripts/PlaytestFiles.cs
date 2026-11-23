@@ -72,6 +72,9 @@ namespace Kehai.Playtest
     // Karen's thought logs and ledger, and the game's own log (the one before it too, after a crash).
     public static class PlaytestPackage
     {
+        public static string NewStamp(DateTime utc) =>
+            utc.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N");
+
         public static string ZipName(string round, string code, string stamp) => $"{Safe(round)}_{Safe(code)}_{stamp}.zip";
 
         static string Safe(string s) => string.IsNullOrEmpty(s) ? "none" : new string(s.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
@@ -163,7 +166,7 @@ namespace Kehai.Playtest
                 ? Directory.GetFiles(PlaytestPaths.Outbox, "*.zip").OrderBy(File.GetLastWriteTimeUtc).ToArray()
                 : new string[0];
 
-        // round_code_yyyyMMdd_HHmmss.zip → its address on the upload service.
+        // The last two underscore-delimited fields are the date and time, with an ID on new launches.
         public static string UrlFor(string baseUrl, string zipPath)
         {
             string name = Path.GetFileNameWithoutExtension(zipPath);

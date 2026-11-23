@@ -14,18 +14,23 @@ are recorded from the game by this folder's script.
 
 ## Recording them
 
-With the editor closed:
+After 0.5.2 merges, with the editor closed:
 
 ```bash
 tools/tricks/record_tricks.sh
 ```
 
-- It runs the **trick check** (one silent shift where each trick is forced in turn), then films
-  fourteen seconds round each trick with the **replay renderer**. About ten minutes for the
-  check and a minute or two a video.
-- `--only fog,blackout` records just those. `--skip-check` reuses the last check's replay.
-- To leave the real project alone, point `KEHAI_PROJECT` at an APFS clone
-  ([HANDOVER §6](../../docs/agents/HANDOVER.md#6-how-to-work-on-it)) and copy the videos over.
+- The **trick check** runs in a `kehai-run` clone pinned to the script checkout's commit.
+  Its log, reports and replays stay together under `~/TokenLimit/runs/out/<run id>/`. The
+  replay renderer uses those retained files to film fourteen seconds per trick.
+- `--only fog,blackout` selects tricks. `--seed 4242` sets the check seed. `--skip-check` uses
+  the newest available check from the retained runs or the project's legacy data folder.
+  Set `KEHAI_DATA` to select one specific data folder with `--skip-check`.
+- `--dry-run` prints the check command. With `--skip-check` it looks up the replays and prints
+  the render commands. Both forms run without Unity or video output.
+- `KEHAI_PROJECT` selects the source project, the renderer's project, and the video's
+  destination. Point it at an APFS clone to keep the videos separate, then copy them over.
+  [HANDOVER §6](../../docs/agents/HANDOVER.md#6-how-to-work-on-it)
 
 Tricks the check doesn't force (the hunt, Cut, Throw, Ask the customers) have no video from this
 script: they need her to see the player first. Record those from a played shift's replay with

@@ -22,7 +22,7 @@ public static class StorePlacementAudit
     static string reportPath;
     static string[] layouts;
     static string layout;
-    static int nextLayout, readyFrame, rows, findings;
+    static int nextLayout, readyFrame, rows, findings, displayReached;
     static bool missingEvidence;
 
     static StorePlacementAudit()
@@ -72,6 +72,9 @@ public static class StorePlacementAudit
                 if (shift == null || shift.IsShiftActive || StoreLayoutRuntime.CurrentId != "today")
                     throw new InvalidOperationException("Expected the authored store before clock-in.");
                 layouts = new[] { "today" }.Concat(StoreLayouts.All.Select(item => item.Id)).ToArray();
+                // -placement-layouts today,rings: only those (for iterating on one layout).
+                string[] only = LayoutsArg();
+                if (only != null) layouts = layouts.Where(only.Contains).ToArray();
             }
 
             if (layout == null)
@@ -94,6 +97,13 @@ public static class StorePlacementAudit
         catch (Exception error) { Finish(error); }
     }
 
+    static string[] LayoutsArg()
+    {
+        string[] args = Environment.GetCommandLineArgs();
+        int i = Array.IndexOf(args, "-placement-layouts");
+        return i >= 0 && i + 1 < args.Length ? args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries) : null;
+    }
+
     static void OpenReport()
     {
         string folder = Path.Combine(Application.persistentDataPath, "kehai_eval");
@@ -112,10 +122,15 @@ public static class StorePlacementAudit
             Missing("Store", "No player, capsule, or walkable NavMesh at the player spawn");
 
         var behaviours = Object.FindObjectsByType<MonoBehaviour>();
-        foreach (var behaviour in behaviours.Where(b => b.isActiveAndEnabled && b is IInteractable)
+        var targets = behaviours.Where(b => b.isActiveAndEnabled && b is IInteractable)
                      .OrderBy(b => PathOf(b.transform), StringComparer.Ordinal)
-                     .ThenBy(b => b.GetType().Name, StringComparer.Ordinal))
-            Write(PathOf(behaviour.transform), behaviour.GetType().Name, probe.Check(behaviour));
+                     .ThenBy(b => b.GetType().Name, StringComparer.Ordinal);
+        foreach (var group in targets.GroupBy(StorageCabinet))
+        {
+            FurnitureDoor door = group.Key != null ? group.Key.GetComponentInChildren<FurnitureDoor>() : null;
+            if (TryOpen(door, probe, evidence => WriteTargets(group, probe, evidence))) continue;
+            WriteTargets(group, probe, group.Key == null ? null : "Measured as found; no reachable cabinet door was established.");
+        }
 
         foreach (var door in behaviours.OfType<AutoDoubleDoor>().Where(d => d.isActiveAndEnabled))
             foreach (var handle in door.Handles)
@@ -128,17 +143,15 @@ public static class StorePlacementAudit
         foreach (var bay in ShelfSlot.All.GroupBy(slot => slot.owner))
         {
             var cold = bay.Key != null ? bay.Key.GetComponent<ColdFixture>() : null;
-            var door = cold != null && cold.retail ? cold.GetComponentInChildren<FurnitureDoor>() : null;
-            if (door != null && door.isActiveAndEnabled && door.panel != null && door.roomDoor == null &&
-                probe.Check(door).Standing is Vector3 opener)
-            {
-                door.InspectOpenPose(opener, () => WriteSlots(bay, probe, door.IsFullyOpen
-                    ? "Measured after opening the reachable chiller door."
-                    : "Measured with the reachable chiller door at its swing limit."));
-            }
-            else
-                WriteSlots(bay, probe, cold != null && cold.retail
-                    ? "Measured as found; no reachable chiller door was established." : null);
+            var doors = cold != null && cold.retail ? cold.GetComponentsInChildren<FurnitureDoor>() : Array.Empty<FurnitureDoor>();
+            // A chiller has a glass door per section: each slot is measured with its own door open,
+            // as you'd open it (opening the first one only had it swing across its neighbours').
+            var measured = new List<(ShelfSlot slot, PlacementProbe.Result result)>();
+            foreach (var behind in bay.GroupBy(slot => DoorFor(slot, doors)))
+                if (!TryOpen(behind.Key, probe, evidence => MeasureSlots(behind, probe, evidence, measured)))
+                    MeasureSlots(behind, probe, cold != null && cold.retail
+                        ? "Measured as found; no reachable chiller door was established." : null, measured);
+            WriteBay(measured);
         }
 
         foreach (Type type in new[] { typeof(ElectricBox), typeof(BreakerSwitch), typeof(FogBox), typeof(CameraBox),
@@ -153,17 +166,115 @@ public static class StorePlacementAudit
         if (behaviours.OfType<AutoDoubleDoor>().Any(d => d.isActiveAndEnabled && d.Handles.Count == 0))
             Missing(nameof(AutoDoorHandle), "A sliding door produced no hand controls");
 
+        // Over-marking: display slots the audit can reach, and products left with no slot but display ones.
+        var displayOnlyProducts = ShelfSlot.All.Where(slot => slot.productId != null).GroupBy(slot => slot.productId)
+            .Where(group => group.All(slot => slot.Display)).Select(group => group.Key).ToList();
+        int display = ShelfSlot.All.Count(slot => slot.Display);
+        Debug.Log($"Placement audit {layout}: {display} display slots, {displayReached} of them reachable by the audit; " +
+                  $"{displayOnlyProducts.Count} products with only display slots ({string.Join(", ", displayOnlyProducts)}).");
+        displayReached = 0;
         Debug.Log($"Placement audit {layout}: {rows} rows and {findings} findings so far.");
     }
 
-    static void WriteSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence)
+    static ColdFixture StorageCabinet(MonoBehaviour target) => target switch
+    {
+        PickupInteractable pickup => pickup.GetComponent<ProductBox>()?.cabinet,
+        ToolSnapPoint snap when snap.tool != null => snap.tool.GetComponent<ProductBox>()?.cabinet,
+        _ => null
+    };
+
+    static FurnitureDoor DoorFor(ShelfSlot slot, FurnitureDoor[] doors)
+    {
+        FurnitureDoor best = null;
+        float bestDistance = float.MaxValue;
+        Vector3 at = slot.Position;
+        foreach (var door in doors)
+        {
+            if (door == null || door.panel == null) continue;
+            Vector3 d = door.panel.bounds.center - at;
+            d.y = 0f;
+            if (d.sqrMagnitude < bestDistance) { bestDistance = d.sqrMagnitude; best = door; }
+        }
+        return best;
+    }
+
+    static bool TryOpen(FurnitureDoor door, PlacementProbe probe, Action<string> inspect)
+    {
+        if (door == null || !door.isActiveAndEnabled || door.panel == null || door.roomDoor != null ||
+            probe.Check(door).Standing is not Vector3 opener) return false;
+        door.InspectOpenPose(opener, () => inspect(door.IsFullyOpen
+            ? "Measured after opening the reachable cabinet door."
+            : "Measured with the reachable cabinet door at its swing limit."));
+        return true;
+    }
+
+    static void WriteTargets(IEnumerable<MonoBehaviour> targets, PlacementProbe probe, string evidence)
+    {
+        foreach (var target in targets)
+        {
+            var result = probe.Check(target);
+            // Behind a cupboard door (the WC's mop): open it, as you would, and measure again.
+            FurnitureDoor inTheWay = result.Approach == "unreachable" && evidence == null ? probe.DoorInTheWay : null;
+            if (inTheWay != null)
+                TryOpen(inTheWay, probe, opened =>
+                {
+                    var again = probe.Check(target);
+                    again.Evidence = string.IsNullOrEmpty(again.Evidence) ? opened : opened + " " + again.Evidence;
+                    result = again;
+                });
+            if (evidence != null)
+                result.Evidence = string.IsNullOrEmpty(result.Evidence) ? evidence : evidence + " " + result.Evidence;
+            Write(PathOf(target.transform), target.GetType().Name, result);
+        }
+    }
+
+    // A product's box restocks every empty slot of it on the bay, and the stock crate the whole
+    // bay (ProductBox.Restock, StockCrate.StockShelf). So a slot you can't aim at is still
+    // restocked from one you can: of the same product with a box, or anywhere on the bay with
+    // the crate. Such a slot is reported, not flagged (C12.2).
+    static void WriteBay(List<(ShelfSlot slot, PlacementProbe.Result result)> measured)
+    {
+        var reachableProducts = new HashSet<string>();
+        ShelfSlot anyReachable = null;
+        foreach (var (slot, result) in measured)
+            if (result.Approach == "reachable")
+            {
+                if (slot.productId != null) reachableProducts.Add(slot.productId);
+                anyReachable ??= slot;
+            }
+        foreach (var (slot, result) in measured)
+        {
+            if (slot.Display && result.Approach == "reachable")
+            {
+                displayReached++;   // marked display, yet the audit can stand and aim there
+                result.Evidence = string.IsNullOrEmpty(result.Evidence) ? "Display face the audit reaches." : "Display face the audit reaches. " + result.Evidence;
+            }
+            if (result.Approach == "unreachable" && slot.owner != null && anyReachable != null)
+            {
+                bool sameProduct = slot.productId != null && reachableProducts.Contains(slot.productId);
+                result.Approach = "via its bay";
+                result.Height ??= slot.Position.y - slot.frame.position.y;
+                result.Evidence = (sameProduct
+                    ? "Restocked with its product's box from a reachable slot of the same product on this bay."
+                    : $"Restocked with the stock crate from a reachable slot on this bay (slot {anyReachable.Index}).")
+                    + " " + result.Evidence;
+            }
+            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
+        }
+    }
+
+    static void MeasureSlots(IEnumerable<ShelfSlot> slots, PlacementProbe probe, string doorEvidence,
+        List<(ShelfSlot, PlacementProbe.Result)> into)
     {
         foreach (var slot in slots)
         {
             var result = probe.CheckSlot(slot);
+            if (result.Approach != "reachable" && slot.frame != null)
+                result.Evidence = (string.IsNullOrEmpty(result.Evidence) ? "" : result.Evidence + " ") +
+                    $"Slot at {slot.Position.ToString("F2")} facing {slot.Outward.ToString("F2")} ({slot.side}).";
             if (doorEvidence != null)
                 result.Evidence = string.IsNullOrEmpty(result.Evidence) ? doorEvidence : doorEvidence + " " + result.Evidence;
-            Write($"{PathOf(slot.frame)}/slot {slot.Index}", nameof(ShelfSlot), result);
+            into.Add((slot, result));
         }
     }
 

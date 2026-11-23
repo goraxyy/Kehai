@@ -7,7 +7,7 @@
 //   2. Train the eye model with tools/blink/train_eye_cnn.py and drop eye_cnn.onnx into
 //      Assets (it imports as a ModelAsset). The model is yours; it isn't in the repository.
 //   3. Player Settings → Scripting Define Symbols → add KAREN_SENTIS.
-//   4. Assign the ModelAsset on a SentisBlinkDriver in the scene, press F9 to calibrate.
+//   4. Assign the ModelAsset on a SentisBlinkDriver in the scene. The F8 panel calibrates the sidecar.
 //
 // Until you have a face detector in-engine too, this runs the eye model on a fixed crop:
 // calibration asks you to hold still, and the eye box is found once from the frame's

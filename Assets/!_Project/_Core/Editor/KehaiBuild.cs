@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Kehai;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
@@ -37,6 +38,7 @@ public static class KehaiBuild
     public static string[] EditionDefines(KehaiEdition edition) => new[] { Edition.Define(edition) };
 
     // Unity -executeMethod KehaiBuild.Build -edition training|testing|gameplay -platform windows|macos
+    // Use -channel dev|testing|prod -release-version 0.5.2 [-beta 1] to stamp a release label.
     public static void Build()
     {
         string platform = (Arg("-platform") ?? "macos").ToLowerInvariant();
@@ -80,8 +82,41 @@ public static class KehaiBuild
         string editionArg = Arg("-edition");
         if (editionArg != null && !Edition.TryParse(editionArg, out edition))
             throw new ArgumentException("-edition must be training, testing or gameplay");
-        string output = Arg("-kehai-build-out") ?? (edition == KehaiEdition.Training ? KehaiRl.TrainingPath(target) : DefaultPath(target, playtest));
-        BuildReport report = Build(target, output, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"), playtest, edition);
+        string channel = Arg("-channel"), releaseVersion = Arg("-release-version"), beta = Arg("-beta");
+        if (channel != null)
+        {
+            KehaiEdition expectedEdition = ChannelEdition(channel);
+            if (editionArg != null && edition != expectedEdition)
+                throw new ArgumentException($"{channel} uses the {expectedEdition} edition.");
+            edition = expectedEdition;
+        }
+        else if (releaseVersion != null || beta != null)
+            throw new ArgumentException("-release-version and -beta require -channel.");
+        BuildStamp.Data stamp = channel == null ? null : Stamp(edition, channel, releaseVersion, beta);
+        string output = Arg("-kehai-build-out");
+        string previousProduct = PlayerSettings.productName;
+        bool disposableClone = previousProduct.StartsWith("Kehai-run-", StringComparison.Ordinal) &&
+            Environment.GetEnvironmentVariable("KEHAI_RUN_CODE_COMMIT") != null;
+        if (disposableClone)
+        {
+            if (string.IsNullOrEmpty(output) || !Path.IsPathFullyQualified(output))
+                throw new ArgumentException("A build on a temporary clone needs an absolute -kehai-build-out outside the clone.");
+            string relative = Path.GetRelativePath(ProjectRoot, output);
+            if (!Path.IsPathFullyQualified(relative) && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new ArgumentException("A build on a temporary clone must write outside the clone.");
+        }
+        BuildReport report;
+        try
+        {
+            if (disposableClone) PlayerSettings.productName = GameNames.Game;
+            output ??= edition == KehaiEdition.Training ? KehaiRl.TrainingPath(target) : DefaultPath(target, playtest);
+            report = Build(target, output, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"),
+                playtest, edition, stamp, releaseVersion);
+        }
+        finally
+        {
+            if (disposableClone) PlayerSettings.productName = previousProduct;
+        }
         EditorApplication.Exit(report != null && report.summary.result == BuildResult.Succeeded ? 0 : 1);
     }
 
@@ -100,7 +135,11 @@ public static class KehaiBuild
     // The scenes in File → Build Profiles, in order; the first is the one the game opens.
     public static string[] Scenes => EditorBuildSettings.scenes.Where(s => s.enabled && File.Exists(s.path)).Select(s => s.path).ToArray();
 
-    public static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest = null, KehaiEdition? edition = null)
+    public static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest = null,
+        KehaiEdition? edition = null) => Build(target, appPath, development, playtest, edition, null, null);
+
+    static BuildReport Build(BuildTarget target, string appPath, bool development, string playtest, KehaiEdition? edition,
+        BuildStamp.Data stamp, string releaseVersion)
     {
         KehaiEdition selected = edition ?? (string.IsNullOrEmpty(playtest) ? KehaiEdition.Gameplay : KehaiEdition.Testing);
         if (!string.IsNullOrEmpty(playtest) && selected != KehaiEdition.Testing)
@@ -130,9 +169,11 @@ public static class KehaiBuild
         Directory.CreateDirectory(Path.GetDirectoryName(appPath));
         var watch = Stopwatch.StartNew();
         BuildReport report;
+        string previousVersion = PlayerSettings.bundleVersion;
         BuildingEdition = selected;
         try
         {
+            if (releaseVersion != null) PlayerSettings.bundleVersion = releaseVersion;
             report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = scenes,
@@ -143,19 +184,24 @@ public static class KehaiBuild
                 extraScriptingDefines = EditionDefines(selected),
             });
         }
-        finally { BuildingEdition = null; }
+        finally
+        {
+            if (releaseVersion != null) PlayerSettings.bundleVersion = previousVersion;
+            BuildingEdition = null;
+        }
         BuildSummary s = report.summary;
         Debug.Log($"Kehai build: {s.result} in {watch.Elapsed:mm\\:ss}: {appPath}, {s.totalSize / 1048576f:0} MB, " +
                   $"{s.totalErrors} errors, {s.totalWarnings} warnings");
         if (s.result != BuildResult.Succeeded) return report;
 
-        Kehai.Playtest.PlaytestConfig config = string.IsNullOrEmpty(playtest) ? null : WritePlaytestConfig(target, appPath, playtest);
+        stamp ??= Stamp(selected);
+        Kehai.Playtest.PlaytestConfig config = string.IsNullOrEmpty(playtest) ? null : WritePlaytestConfig(target, appPath, playtest, stamp);
         // An output folder can be reused; never inherit another edition's upload settings.
         string streaming = StreamingAssetsOf(target, appPath);
         Directory.CreateDirectory(streaming);
         File.WriteAllText(Path.Combine(streaming, "edition.txt"), selected.ToString().ToLowerInvariant());
         // The stamp (0.5.2, C10.2): what this build is, for Settings and every shift record.
-        File.WriteAllText(Path.Combine(streaming, BuildStamp.FileName), UnityEngine.JsonUtility.ToJson(Stamp(selected), true));
+        File.WriteAllText(Path.Combine(streaming, BuildStamp.FileName), UnityEngine.JsonUtility.ToJson(stamp, true));
         if (selected != KehaiEdition.Testing)
         {
             string stale = Path.Combine(streaming, Kehai.Playtest.PlaytestConfig.FileName);
@@ -170,7 +216,7 @@ public static class KehaiBuild
             }
             Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
         }
-        WriteBuildInfo(appPath, target, development, selected, config);
+        WriteBuildInfo(appPath, target, development, selected, stamp, config);
         if (config != null) ZipForTesters(appPath);
         return report;
     }
@@ -279,21 +325,55 @@ public static class KehaiBuild
         return values;
     }
 
-    // What goes into build.json: the version with its edition label, the code and art commits.
-    public static BuildStamp.Data Stamp(KehaiEdition edition)
+    internal static KehaiEdition ChannelEdition(string channel) => channel switch
+    {
+        "dev" => KehaiEdition.Training,
+        "testing" => KehaiEdition.Testing,
+        "prod" => KehaiEdition.Gameplay,
+        _ => throw new ArgumentException("-channel must be dev, testing or prod"),
+    };
+
+    internal static string ChannelLabel(string channel, string version, string beta, string code)
+    {
+        ChannelEdition(channel);
+        if (!Regex.IsMatch(version ?? "", @"\A(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){2}\z"))
+            throw new ArgumentException("-release-version must be MAJOR.MINOR.PATCH, for example 0.5.2");
+        if (channel == "testing")
+        {
+            if (!Regex.IsMatch(beta ?? "", @"\A[1-9][0-9]*\z"))
+                throw new ArgumentException("The testing channel requires -beta followed by a positive number.");
+            return $"{version}-beta.{beta}";
+        }
+        if (beta != null) throw new ArgumentException("Only the testing channel takes -beta.");
+        if (channel == "prod") return version;
+        if (!Regex.IsMatch(code ?? "", @"\A[0-9a-f]{7,40}(?:\+changes)?\z"))
+            throw new ArgumentException("The dev channel needs a known source commit.");
+        return $"{version}-dev+{code.Replace("+changes", ".changes")}";
+    }
+
+    static string FullCodeCommit => Run("git", $"-C \"{ProjectRoot}\" rev-parse HEAD", null)?.Trim()
+        ?? Environment.GetEnvironmentVariable("KEHAI_RUN_CODE_COMMIT");
+
+    // What goes into build.json: the version, edition, code and art commits.
+    public static BuildStamp.Data Stamp(KehaiEdition edition, string channel = null, string releaseVersion = null, string beta = null)
     {
         string root = ProjectRoot;
-        string code = Run("git", $"-C \"{root}\" rev-parse --short HEAD", null)?.Trim() ?? "unknown";
+        string fullCode = FullCodeCommit;
+        string code = Regex.IsMatch(fullCode ?? "", @"\A[0-9a-f]{40}\z") ? fullCode.Substring(0, 7) : "unknown";
         string dirty = Run("git", $"-C \"{root}\" status --porcelain --untracked-files=no", null)?.Trim();
         string assets = Path.Combine(root, ".git-assets");
         string art = Directory.Exists(assets) ? Run("git", $"--git-dir=\"{assets}\" --work-tree=\"{root}\" rev-parse --short HEAD", null)?.Trim() : null;
-        return new BuildStamp.Data
+        if (!string.IsNullOrEmpty(dirty)) code += "+changes";
+        var stamp = new BuildStamp.Data
         {
-            version = Edition.VersionLabel(PlayerSettings.bundleVersion, edition),
+            version = channel == null ? Edition.VersionLabel(PlayerSettings.bundleVersion, edition) : ChannelLabel(channel, releaseVersion, beta, code),
             edition = edition.ToString().ToLowerInvariant(),
-            code = code + (string.IsNullOrEmpty(dirty) ? "" : "+changes"),
+            channel = channel,
+            code = code,
             art = string.IsNullOrEmpty(art) ? "none" : art,
         };
+        BuildStamp.IncludeBundledCards(stamp);
+        return stamp;
     }
 
     // The built game's StreamingAssets folder.
@@ -301,11 +381,10 @@ public static class KehaiBuild
         ? Path.Combine(appPath, "Contents", "Resources", "Data", "StreamingAssets")
         : Path.Combine(Path.GetDirectoryName(appPath), Path.GetFileNameWithoutExtension(appPath) + "_Data", "StreamingAssets");
 
-    static Kehai.Playtest.PlaytestConfig WritePlaytestConfig(BuildTarget target, string appPath, string round)
+    static Kehai.Playtest.PlaytestConfig WritePlaytestConfig(BuildTarget target, string appPath, string round, BuildStamp.Data stamp)
     {
         Kehai.Playtest.PlaytestConfig config = PlaytestSettings(round);
-        string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
-        config.build = $"{PlayerSettings.bundleVersion} {commit}".Trim();
+        config.build = $"{(stamp.channel == null ? PlayerSettings.bundleVersion : stamp.version)} {stamp.code}";
         string folder = StreamingAssetsOf(target, appPath);
         Directory.CreateDirectory(folder);
         File.WriteAllText(Path.Combine(folder, Kehai.Playtest.PlaytestConfig.FileName), UnityEngine.JsonUtility.ToJson(config, true));
@@ -325,23 +404,26 @@ public static class KehaiBuild
         if (File.Exists(zip)) Debug.Log($"Kehai build: {zip} ({new FileInfo(zip).Length / 1048576f:0} MB) is the one to send");
     }
 
-    static void WriteBuildInfo(string appPath, BuildTarget target, bool development, KehaiEdition edition, Kehai.Playtest.PlaytestConfig playtest = null)
+    internal static void WriteBuildInfo(string appPath, BuildTarget target, bool development, KehaiEdition edition, BuildStamp.Data stamp, Kehai.Playtest.PlaytestConfig playtest = null)
     {
-        string commit = Run("git", $"-C \"{ProjectRoot}\" rev-parse --short HEAD", null)?.Trim();
+        string commit = stamp.code?.Split('+')[0];
         string branch = Run("git", $"-C \"{ProjectRoot}\" rev-parse --abbrev-ref HEAD", null)?.Trim();
         string changes = Run("git", $"-C \"{ProjectRoot}\" status --porcelain --untracked-files=no", null);
-        string from = string.IsNullOrEmpty(commit) ? "an unknown commit"
+        string from = string.IsNullOrEmpty(commit) || commit == "unknown" ? "an unknown commit"
             : $"commit {commit}" + (string.IsNullOrEmpty(branch) || branch == "HEAD" ? "" : $" ({branch})") +
               (string.IsNullOrWhiteSpace(changes) ? "" : " with local changes");
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build-provenance.json"), MiniJson.Serialize(new System.Collections.Generic.Dictionary<string,object>
         {
-            ["commit"] = Run("git", $"-C \"{ProjectRoot}\" rev-parse HEAD", null)?.Trim(),
+            ["commit"] = FullCodeCommit,
             ["dirty"] = !string.IsNullOrWhiteSpace(changes),
             ["edition"] = edition.ToString().ToLowerInvariant(),
+            ["channel"] = stamp.channel,
+            ["version"] = stamp.version,
         }));
         File.WriteAllText(Path.Combine(Path.GetDirectoryName(appPath), "build.txt"),
-            $"{PlayerSettings.productName} {Edition.VersionLabel(PlayerSettings.bundleVersion, edition)} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
+            $"{PlayerSettings.productName} {stamp.version} for {PlatformName(target)}{(development ? ", development build" : "")}\n" +
             $"Edition: {edition.ToString().ToLowerInvariant()}.\nBuilt {DateTime.Now:yyyy-MM-dd HH:mm} from {from}.\n" +
+            BuildStamp.Describe(stamp) + "\n" +
             (playtest == null ? "" : $"Playtest {playtest.round}: " + (playtest.Uploads ? "sends sessions after the tester agrees." : "keeps sessions on the tester's computer.") + "\n"));
     }
 
@@ -373,6 +455,9 @@ public static class KehaiBuild
     {
         string[] args = Environment.GetCommandLineArgs();
         int i = Array.IndexOf(args, key);
-        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+        if (i < 0) return null;
+        if (i + 1 == args.Length || args[i + 1].StartsWith("-", StringComparison.Ordinal))
+            throw new ArgumentException($"{key} needs a value.");
+        return args[i + 1];
     }
 }

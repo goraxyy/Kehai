@@ -51,15 +51,23 @@ public class ControlsTests
         Assert.IsEmpty(missing, "keys the game reads but Controls.cs doesn't list: " + string.Join(", ", missing));
     }
 
-    // F3 is the developer's (KarenFx): off in tests and batch runs and at the start of every
-    // session, and never shown to players, so nobody but the developer hears her steps or sees
-    // her cone.
     [Test]
     public void TheDeveloperSwitch_IsOffByDefault_AndHiddenFromPlayers()
     {
         Assert.IsFalse(KarenFx.StepsAudible, "her steps are audible without the developer's switch");
         Assert.IsFalse(KarenFx.ConeVisible, "her cone shows without the developer's switch");
-        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 is listed for players");
-        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "F3"), "F3 isn't listed as the developer's");
+        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "V (on the F1 map)"), "her cone's key is listed for players");
+        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "V (on the F1 map)"), "her cone's key isn't listed as the developer's");
+        Assert.IsFalse(Controls.All.SelectMany(s => s.Entries).Any(e => e.Keys == "L (on the F1 map)"));
+        Assert.IsTrue(Controls.Developer.SelectMany(s => s.Entries).Any(e => e.Keys == "L (on the F1 map)"));
+    }
+
+    [Test]
+    public void WebcamPanel_IsListedForPlayers_AndRetiredKeysAreFree()
+    {
+        Assert.IsTrue(Controls.ForEdition(KehaiEdition.Gameplay).SelectMany(s => s.Entries).Any(e => e.Keys == "F8"));
+        string code = string.Join("\n", Directory.GetFiles(Path.Combine(Application.dataPath, "!_Project"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains("_Tests")).Select(File.ReadAllText));
+        Assert.IsFalse(Regex.IsMatch(code, @"\bKeyCode\.(F3|F9|F10)\b"), "F3, F9 and F10 should be free");
     }
 }

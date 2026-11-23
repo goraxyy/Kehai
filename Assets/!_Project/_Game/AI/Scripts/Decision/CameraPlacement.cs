@@ -125,7 +125,7 @@ namespace Kehai.Karen
             IEnumerable<ShelfSlot> pool = slots ?? AllSlots();
             foreach (ShelfSlot s in pool)
             {
-                if (s == null || s.IsBlocked) continue;
+                if (s == null || s.IsBlocked || s.Display) continue;   // a display slot is never emptied (C12.2)
                 Vector3 p = s.Position;
                 if (StoreMap.AreaAt(p) != "Sales floor") continue;
                 float d = Vector3.Distance(p, centre);

@@ -16,13 +16,16 @@ public static class SandboxChecks
 
     static SandboxChecks()
     {
-        if (!Application.isBatchMode || Array.IndexOf(Environment.GetCommandLineArgs(), "SandboxChecks.Sight") < 0) return;
+        if (!Application.isBatchMode) return;
+        string[] args = Environment.GetCommandLineArgs();
+        bool interactions = Array.IndexOf(args, "SandboxChecks.Interactions") >= 0;
+        if (!interactions && Array.IndexOf(args, "SandboxChecks.Sight") < 0) return;
         EditorApplication.update += () =>
         {
-            if (SightChecks.Done)
+            if (interactions ? InteractionChecks.Done : SightChecks.Done)
             {
-                Debug.Log("SandboxChecks: finished, report " + SightChecks.ReportPath);
-                EditorApplication.Exit(SightChecks.ExitCode);
+                Debug.Log("SandboxChecks: finished, report " + (interactions ? InteractionChecks.ReportPath : SightChecks.ReportPath));
+                EditorApplication.Exit(interactions ? InteractionChecks.ExitCode : SightChecks.ExitCode);
             }
             else if (EditorApplication.timeSinceStartup > TimeLimitSeconds)
             {
@@ -33,14 +36,18 @@ public static class SandboxChecks
     }
 
     [MenuItem("Kehai/Sandbox/Run Sight Checks")]
-    public static void Sight()
+    public static void Sight() => Open<SightChecks>("Sight sandbox (checks)");
+
+    [MenuItem("Kehai/Sandbox/Run Interaction Checks")]
+    public static void Interactions() => Open<InteractionChecks>("Interactions sandbox (checks)");
+
+    static void Open<T>(string name) where T : Component
     {
         if (EditorApplication.isPlaying) EditorApplication.isPlaying = false;
         if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        EditorUtility.audioMasterMute = true;
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        var go = new GameObject("Sight sandbox (checks)");
-        go.AddComponent<SightSandbox>();
-        go.AddComponent<SightChecks>();
+        new GameObject(name).AddComponent<T>();
         EditorApplication.EnterPlaymode();
     }
 }

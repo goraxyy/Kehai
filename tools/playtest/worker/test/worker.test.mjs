@@ -64,6 +64,20 @@ test("the upload key can't read, and nothing works without the right key", async
   assert.equal(e.SESSIONS.store.size, 0);
 });
 
+test("generated tester IDs keep two sessions from the same second distinct", async () => {
+  const e = env();
+  const tester = "A1".repeat(16);
+  const first = `round1/${tester}/20261004_101500-${"ab".repeat(16)}.zip`;
+  const second = `round1/${tester}/20261004_101500-${"cd".repeat(16)}.zip`;
+  const upload = { headers: { "X-Kehai-Key": UPLOAD }, body: zip() };
+  assert.equal((await call(e, "PUT", "/sessions/" + first, upload)).status, 201);
+  assert.equal((await call(e, "PUT", "/sessions/" + second, upload)).status, 201);
+  const admin = { headers: { Authorization: "Bearer " + ADMIN } };
+  assert.equal((await call(e, "GET", "/admin/sessions/" + first, admin)).status, 200);
+  const list = await (await call(e, "GET", "/admin/sessions", admin)).json();
+  assert.deepEqual(list.sessions.map(s => s.key).sort(), [first, second].sort());
+});
+
 test("only zips, only session addresses, only so big", async () => {
   const e = env();
   const h = { "X-Kehai-Key": UPLOAD };

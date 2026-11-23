@@ -60,10 +60,8 @@ Keys marked *(in the replay)*, *(on the F1 map)* or *(in the blink test)* only w
 
 | Key | What it does |
 |---|---|
-| F8 | Turn webcam blink tracking on (asks first) or off |
+| F8 | Open or close the webcam panel. Turn tracking on or off, calibrate, and test your blinks |
 | Y / N | Answer the webcam question |
-| F9 | Calibrate: eyes open, then closed until the beep, then 3 blinks |
-| F10 | Blink test panel: is the game reading your eyes? |
 | R (in the blink test) | Restart the camera helper |
 | V (in the blink test) | Switch to the next camera |
 | M (in the blink test) | Switch between the Apple Vision and MediaPipe helpers |
@@ -114,25 +112,20 @@ timeline. Open it with **R** after a shift, or in the editor with Kehai → Repl
 | F7 | Mark this moment for a clip; a tick shows for a second |
 | Left Shift + F7 | Mark a bug at this moment (in a playtest build, then say what went wrong) |
 
-## For testing
-
-| Key | What it does |
-|---|---|
-| L | Cut the power to the whole store |
-
 ## Settings (Esc)
 
 - **Sound**: **all sounds** at once, then effects, Karen (the sounds of her tricks), music (the radio) and announcements (the PA). A sample plays when you let go of a slider.
 - **Display**: resolution, full screen, and quality (Low, Medium, High). High is the game as designed; Medium and Low draw fewer pixels, with less anti-aliasing and shorter shadows.
 - **Mouse**: sensitivity.
-- **Webcam blinking**: turn it on or off, calibrate, test.
+- **Webcam blinking** opens the same panel as F8. The shift pauses while the panel is open.
 - Along the bottom: **Resume**, **Restart shift** (the store resets and the same shift begins again; Karen still remembers earlier shifts), **Main menu** and **Quit**. Restart and Main menu ask first.
 
 The game pauses while the menu is open, and your choices are remembered.
 
 ## Developer only
 
-In the Unity editor and development builds, **F3** toggles Karen's footsteps and floor cone.
+In the Unity editor and development builds, **V on the F1 map** toggles Karen's footsteps and floor cone (F3 until the squashed keys, 0.5.2 C11.16).
+**L on the F1 map** cuts the store's power.
 It starts off each Play session. It is absent from release builds and is not a player setting.
 The cone is blue on her rounds, orange while investigating and red while hunting or seeing you.
 Player replays omit her footsteps and floor cone.

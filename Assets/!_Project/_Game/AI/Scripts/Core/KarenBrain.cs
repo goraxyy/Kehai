@@ -170,6 +170,8 @@ namespace Kehai.Karen
         void OnCoffeeRoute(Vector3 p) => Ledger.CompleteRoute("coffee");
         void OnClockRoute(bool accepted) => Ledger.CompleteRoute("time clock");
 
+        void OnDisable() => StopHidingFollowUp();
+
         // The events are static and outlive the scene; an eval reset reloads it, so every
         // subscription is undone here or the old Karen would go on listening.
         void OnDestroy()
@@ -390,6 +392,7 @@ namespace Kehai.Karen
             wasStunned = false;
             chasing = false;   // a hunt left between plans at the shift's end doesn't carry over
             Pursuit.Reset();
+            StopHidingFollowUp();
             if (chaseDrain) Burnout?.SetChaseState(false);
             chaseDrain = false;
         }
@@ -448,6 +451,7 @@ namespace Kehai.Karen
             // After a vanish she does nothing but wait (BlinkDash.TickLurk).
             if (Dash.Lurking)
             {
+                StopHidingFollowUp();
                 Dash.TickLurk(Ctx);
                 ExpireClosures();
                 return;
@@ -938,8 +942,9 @@ namespace Kehai.Karen
             BrainPolicy = BrainPolicies.Create(config, out string why);
             BrainPay = config.brain != KarenBrainKind.Planner ? new BrainPay(config.brain) { Dial = config.catchDial } : null;
             if (config.brain == KarenBrainKind.Planner) return;
+            var generated = BrainPolicy as GeneratedBrain;
             Note("SYSTEM", BrainPolicy != null
-                ? $"brain: {config.brain} — {BrainPolicy.Name} {BrainPolicy.Version}{(BrainPolicy is GeneratedBrain g && g.Warning != null ? " (" + g.Warning + ")" : "")}"
+                ? $"brain: {config.brain} — {generated?.DisplayName ?? BrainPolicy.Name} {BrainPolicy.Version}{(generated?.Warning != null ? " (" + generated.Warning + ")" : "")}"
                 : $"brain: {config.brain}, but {why} — the planner decides{(config.PacingOff ? ", with pacing off (the hunter)" : "")}");
         }
 
@@ -1313,13 +1318,20 @@ namespace Kehai.Karen
         // reach to where her eye last saw you, and the game ends once she is within 3 m of that
         // point while you are still in there: the eye answers yes or no
         // (SightSensor.CanCatchWitnessedHide), and she never gets your hidden position. If you
-        // slipped out, she still goes, looks for a second, finds nothing and goes back to deciding,
-        // so nothing she does before the catch depends on whether you are still inside.
+        // slipped out, she still goes and looks for a second. A failed catch can lead to a brief
+        // follow-up near that entry (0.5.2, C9.1).
         bool pursuingHide, hidingRepathed;
         int pursuedEntry = -1;
         Vector3 hidingDestination;
         float hidingPathAt, hidingArrivedAt = -1f;
         const float HidingLookSeconds = 1f;
+        const float HidingSearchTravelSeconds = 2.5f, HidingSearchLookSeconds = 0.75f;
+        const float HidingSearchStandBack = 1.25f;
+        Vector3[] hidingSearchPoints = System.Array.Empty<Vector3>();
+        Vector3 hidingSearchOrigin;
+        int hidingSearchIndex;
+        float hidingSearchStepUntil;
+        bool hidingSearchLooking;
 
         void OnSawHidingBoundary(Vector3 observed)
         {
@@ -1344,10 +1356,11 @@ namespace Kehai.Karen
             if (!memory.Active)
             {
                 if (pursuingHide) { pursuingHide = false; decideNow = true; }
-                return false;
+                return TickHidingFollowUp();
             }
             if (!pursuingHide || pursuedEntry != memory.Entry)
             {
+                StopHidingFollowUp();
                 pursuingHide = true;
                 pursuedEntry = memory.Entry;
                 // AbortPlan ends a chase; this one goes on, so hold it across the abort rather
@@ -1391,12 +1404,69 @@ namespace Kehai.Karen
             Body.TurnToward(memory.Position + Vector3.up);
             if (Time.time - hidingArrivedAt < HidingLookSeconds) return true;
 
-            // As close as she could get, and nothing to catch: the search is over.
+            Vector3 remembered = memory.Position;
+            HidingPlace entered = memory.Place;
             memory.Clear();
             pursuingHide = false;
             decideNow = true;
             Note("SENSE", "looked where she saw the entry into hiding; nothing to catch");
+            return entered != null && StartHidingFollowUp(remembered, entered);
+        }
+
+        bool StartHidingFollowUp(Vector3 remembered, HidingPlace entered)
+        {
+            hidingSearchPoints = HidingApproach.NearbySearchPoints(remembered, entered);
+            if (hidingSearchPoints.Length == 0) return false;
+            hidingSearchOrigin = remembered;
+            hidingSearchIndex = 0;
+            MoveToHidingSearchPoint();
+            return true;
+        }
+
+        void MoveToHidingSearchPoint()
+        {
+            hidingSearchLooking = false;
+            hidingSearchStepUntil = Time.time + HidingSearchTravelSeconds;
+            Vector3 point = hidingSearchPoints[hidingSearchIndex];
+            Vector3 back = hidingSearchOrigin - point;
+            back.y = 0f;
+            Vector3 stand = point + Vector3.ClampMagnitude(back, HidingSearchStandBack);
+            Body.MoveTo(HidingApproach.ClosestReachable(Body.Agent, stand), KarenBody.Pace.Hurry);
+        }
+
+        bool TickHidingFollowUp()
+        {
+            if (hidingSearchPoints.Length == 0) return false;
+            if (!Body.Sight.SeesNow)
+            {
+                if (Time.time < hidingSearchStepUntil && (hidingSearchLooking || !Body.PathFailed))
+                {
+                    // At each stop she only looks from where she can stand.
+                    if (!hidingSearchLooking && Body.Arrived(0.4f))
+                    {
+                        Body.Stop();
+                        Body.TurnToward(hidingSearchPoints[hidingSearchIndex]);
+                        hidingSearchLooking = true;
+                        hidingSearchStepUntil = Time.time + HidingSearchLookSeconds;
+                    }
+                    return true;
+                }
+                if (++hidingSearchIndex < hidingSearchPoints.Length)
+                {
+                    MoveToHidingSearchPoint();
+                    return true;
+                }
+            }
+            StopHidingFollowUp();
             return false;
+        }
+
+        void StopHidingFollowUp()
+        {
+            if (hidingSearchPoints.Length == 0) return;
+            hidingSearchPoints = System.Array.Empty<Vector3>();
+            if (Body != null) Body.Stop();
+            decideNow = true;
         }
 
         // ---- the stun gate (0.5.1, item 14) -------------------------------------------------
@@ -1421,6 +1491,7 @@ namespace Kehai.Karen
                 chasing = false;   // the plan stops, the hunt doesn't
                 AbortPlan();
                 chasing = wasChasing;
+                StopHidingFollowUp();
                 Dash.Cancel(Ctx);  // a vanish is over once you've found her
                 Body.InterruptForStun();
                 Body.ClearPendingTouches();
@@ -1449,7 +1520,7 @@ namespace Kehai.Karen
                 EndHunt($"{config.huntMemorySeconds:0}s since she last saw you: the hunt is over");
 
             // The chase's extra drain on your energy is for being run after, not for her searching.
-            bool drain = chasing && !Pursuit.Searching;
+            bool drain = chasing && !Pursuit.Searching && hidingSearchPoints.Length == 0;
             if (drain == chaseDrain) return;
             chaseDrain = drain;
             Burnout?.SetChaseState(drain);
@@ -1457,6 +1528,7 @@ namespace Kehai.Karen
 
         void EndHunt(string why)
         {
+            StopHidingFollowUp();
             Pursuit.Ending(why);
             if (CurrentPlan != null && CurrentPlan.Action == ActionId.Hunt) AbortPlan();
             if (chasing) SetChasing(false);
@@ -1507,7 +1579,7 @@ namespace Kehai.Karen
             if (config.rung == KarenRung.B_ScriptedPatrol && Rng.Value < 0.002f)
             {
                 // The old random sabotage.
-                ShelfSlot slot = ShelfStock.Current.Nearest(Body.Position, 3f, s => s.isFilled);
+                ShelfSlot slot = ShelfStock.Current.Nearest(Body.Position, 3f, s => s.isFilled && !s.Display);
                 if (slot != null) slot.Eject();
             }
 
@@ -1563,6 +1635,7 @@ namespace Kehai.Karen
         {
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;
             if (Body.IsStunned) return;   // stunned, she catches nobody (0.5.1, item 14)
+            StopHidingFollowUp();
             string doing = CurrentPlan != null ? CurrentPlan.Name : "no plan";
             if (config.sandboxCatchFreezes)
             {

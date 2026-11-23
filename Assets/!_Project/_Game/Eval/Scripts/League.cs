@@ -47,6 +47,13 @@ namespace Kehai.Eval
 
         public bool KarenLearns => learner == "vital" || learner == "basic";
 
+        public int? ShopperCapForLesson(int lesson)
+        {
+            if (split == Split.Training && (learner == "employee" || KarenLearns) && lesson >= 0 && lesson < lessons.Count)
+                return lessons[lesson].shopperCap;
+            return null;
+        }
+
         public static LeagueSpec Parse(string json)
         {
             Dictionary<string, object> o = MiniJson.ParseObject(json) ?? throw new System.FormatException("not a JSON object");
@@ -159,10 +166,9 @@ namespace Kehai.Eval
         public static LessonSpec From(Dictionary<string, object> o)
         {
             var l = new LessonSpec { name = o.GetString("name", "lesson") };
-            if (o.ContainsKey("shopper_cap"))
+            if (o.TryGetValue("shopper_cap", out object value))
             {
-                double cap = o.GetNumber("shopper_cap", -1);
-                if (cap < 0 || cap > SaleRules.Ceiling || cap != System.Math.Truncate(cap))
+                if (!(value is double cap) || cap < 0 || cap > SaleRules.Ceiling || cap != System.Math.Truncate(cap))
                     throw new System.ArgumentException("shopper_cap must be an integer from 0 to " + SaleRules.Ceiling);
                 l.shopperCap = (int)cap;
             }
@@ -336,8 +342,7 @@ namespace Kehai.Eval
                     shiftSeconds = Spec.shiftSeconds, fps = Spec.fps, render = false, freshLedger = true,
                     startShift = Spec.startShift, agent = c.Persona.Name, syntheticBlinks = true,
                     layout = Spec.layout, heldoutLayout = Spec.heldoutLayout,
-                    shopperCap = Spec.split == Split.Training && lesson >= 0 && lesson < Spec.lessons.Count
-                        ? Spec.lessons[lesson].shopperCap : null,
+                    shopperCap = Spec.ShopperCapForLesson(lesson),
                     trainingLayouts = !Spec.heldoutLayout
                 };
                 yield return env.ResetEpisode(config);

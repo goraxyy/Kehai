@@ -330,7 +330,7 @@ namespace Kehai.Sandbox
 
         void MissedHunt() => Result(false, $"No confirmed hunt within {HuntStartLimit:0} s. {HuntState()}");
 
-        string HuntState() => $"Sees player: {Eye.SeesNow}. Chasing: {Brain.IsChasing}. " +
+        string HuntState() => $"You at {bot.Feet - PursuitSandbox.Centre} (room-local). Sees player: {Eye.SeesNow}. Chasing: {Brain.IsChasing}. " +
             $"Searching: {Pursuit.Searching}. Window left: {Pursuit.Left(Time.time):0.00} s. Caught: {sandbox.Caught}.";
 
         void OnDestroy()

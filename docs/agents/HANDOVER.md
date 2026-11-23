@@ -71,7 +71,7 @@ The GitHub repository holds **code and docs only**. Everything else lives only o
   | **Scene** | `Organize by Area and Name Objects` (`SceneHierarchyOrganizer.cs`) and its undo |
   | **Map** | `Export STORE_MAP.md`, `Log Map Summary` |
   | **Endless** | open the endless maze |
-  | **Sandbox** | `Sight` and `Pursuit`: small test rooms, built in an empty scene; `Tricks`: a stall per trick outside the real store, on a private shift ([SANDBOX.md](game/SANDBOX.md)) |
+  | **Sandbox** | `Sight`, `Pursuit`, `Tricks`, `Interactions`, and `Island`. [Controls and recorded checks](game/SANDBOX.md) |
   | **Eval** | env server (port 5555), quick and full ablations, an eval build, watch one bot shift |
   | **Replay** | open the latest shift, or any shift |
   | **RL** | set up ML-Agents, build training players |

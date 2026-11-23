@@ -34,14 +34,17 @@ namespace Kehai.Sandbox
         public static void FixFrames() => Time.captureDeltaTime = FrameSeconds;
         public static void FreeFrames() => Time.captureDeltaTime = 0f;
 
-        public Vector3 Feet => motor.transform.position;
+        // The bottom of the player's body, whichever player it is: the sandbox's own has its origin
+        // at its feet, the store's at the middle of its body (the island, C11.11).
+        Vector3 FeetOffset => controller != null ? controller.center - Vector3.up * (controller.height * 0.5f) : Vector3.zero;
+        public Vector3 Feet => motor.transform.position + FeetOffset;
 
         // Put the body somewhere at once (between checks, never during one).
         public void Teleport(Vector3 feet)
         {
             MoveWorld = Vector3.zero;
             controller.enabled = false;
-            motor.transform.position = feet + Vector3.up * 0.02f;
+            motor.transform.position = feet - FeetOffset + Vector3.up * 0.02f;
             controller.enabled = true;
             Physics.SyncTransforms();
         }

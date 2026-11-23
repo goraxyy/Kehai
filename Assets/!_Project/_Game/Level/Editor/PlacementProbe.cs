@@ -60,8 +60,13 @@ public sealed class PlacementProbe
         HasNavigation = true;
     }
 
+    // The cupboard or cabinet door the last check's aim landed on, if any: the audit opens it,
+    // as you would, and measures again.
+    public FurnitureDoor DoorInTheWay { get; private set; }
+
     public Result Check(MonoBehaviour component)
     {
+        DoorInTheWay = null;
         var target = (IInteractable)component;
         var result = new Result();
         var rack = component as ToolSnapPoint;
@@ -116,11 +121,25 @@ public sealed class PlacementProbe
 
     public Result CheckSlot(ShelfSlot slot)
     {
+        DoorInTheWay = null;
         var result = new Result();
         ReadPrompt(result, slot.GetPrompt, slot.IsBlocked, mayBeSilent: slot.IsBlocked);
         if (slot.frame == null) return result;
         Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * .5f);
         CheckApproach(result, centre, new[] { slot.Outward }, player != null ? player.interactRange : 0f, slot);
+        // A shelf is measured at its board, where you put the stock, not at the middle of what
+        // stands on it (the owner's call, 23 November): a tall pack on a 1.5 m board is in reach.
+        // The aim above still goes for the pack's middle.
+        if (result.Height.HasValue) result.Height -= centre.y - slot.Position.y;
+        // A display face (your call, 23 November): it stays stocked and nothing ever empties it,
+        // so nobody needs to reach it. Reported, not flagged.
+        if (slot.Display && result.Approach != "reachable")
+        {
+            result.Approach = "display";
+            result.Height ??= slot.Position.y - slot.frame.position.y;
+            result.Evidence = string.IsNullOrEmpty(result.Evidence) ? "Display face: stays stocked, never emptied."
+                : "Display face: stays stocked, never emptied. " + result.Evidence;
+        }
         return result;
     }
 
@@ -200,12 +219,13 @@ public sealed class PlacementProbe
                 if (!CanStand(feet)) { Stopped(1, "no room to stand in front"); continue; }
                 Vector3 eye = feet + Vector3.up * eyeHeight;
                 if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) { Stopped(2, "too far from the door"); continue; }
-                if (!CanAimAt(eye, centre, range, target, colliders, out string aim)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
+                if (!CanAimAt(eye, centre, range, target, colliders, out string aim, out bool frontCleared)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
                 if (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete) { Stopped(4, "no route from the spawn"); continue; }
 
                 result.Approach = "reachable";
                 result.Standing = feet;
                 result.Height = centre.y - feet.y;
+                if (frontCleared) result.Evidence = Add(result.Evidence, "Reachable after taking the stock in front on the same shelf and face");
                 return;
             }
         }
@@ -219,14 +239,20 @@ public sealed class PlacementProbe
         feet = default;
         // The first floor-like surface could be a table. Check its height against the NavMesh
         // at this XZ so a tabletop won't masquerade as floor or get snapped to a nearby aisle.
+        // Looks past a tabletop, a lid or a box lip to the floor under it; whether there's room to
+        // stand there is CanStand's question, asked next.
         Vector3 from = horizontal + Vector3.up * .2f;
-        if (!Physics.Raycast(from, Vector3.down, out var floor, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ||
-            floor.normal.y < .5f ||
-            !NavMesh.SamplePosition(floor.point, out var nav, .2f, filter)) return false;
-        Vector3 delta = nav.position - floor.point;
-        if (Mathf.Abs(delta.y) > EdgeTolerance || new Vector2(delta.x, delta.z).magnitude > EdgeTolerance) return false;
-        feet = new Vector3(nav.position.x, floor.point.y, nav.position.z);
-        return true;
+        var hits = Physics.RaycastAll(from, Vector3.down, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (var floor in hits)
+        {
+            if (floor.normal.y < .5f || !NavMesh.SamplePosition(floor.point, out var nav, .2f, filter)) continue;
+            Vector3 delta = nav.position - floor.point;
+            if (Mathf.Abs(delta.y) > EdgeTolerance || new Vector2(delta.x, delta.z).magnitude > EdgeTolerance) continue;
+            feet = new Vector3(nav.position.x, floor.point.y, nav.position.z);
+            return true;
+        }
+        return false;
     }
 
     bool CanStand(Vector3 feet)
@@ -242,9 +268,11 @@ public sealed class PlacementProbe
         return true;
     }
 
-    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders, out string why)
+    bool CanAimAt(Vector3 eye, Vector3 centre, float range, IInteractable target, Collider[] colliders,
+        out string why, out bool frontCleared)
     {
         why = null;
+        frontCleared = false;
         Vector3 delta = centre - eye;
         if (delta.sqrMagnitude < .0001f || Vector3.Angle(Vector3.ProjectOnPlane(delta, Vector3.up), delta) > maxLookAngle)
         {
@@ -254,9 +282,12 @@ public sealed class PlacementProbe
         var ray = new Ray(eye, delta.normalized);
         if (target != null)
         {
-            IInteractable aimed = player.FindAimedTarget(ray);
-            if (!ReferenceEquals(aimed, target))
+            IInteractable aimed = player.FindAimedTarget(ray, includeEmptySlots: true);
+            if (aimed is ShelfSlot nearer && target is ShelfSlot behind && nearer.InFrontOf(behind))
+                frontCleared = ReferenceEquals(player.FindAimedTarget(ray, includeEmptySlots: true, frontClearedFor: behind), target);
+            if (!frontCleared && !ReferenceEquals(aimed, target))
             {
+                if (aimed is FurnitureDoor door && door.roomDoor == null) DoorInTheWay ??= door;
                 why = "the aim lands on " + Describe(aimed);
                 return false;
             }

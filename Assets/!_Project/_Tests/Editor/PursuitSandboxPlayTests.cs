@@ -4,6 +4,7 @@ using Kehai.Karen;
 using Kehai.Sandbox;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -19,9 +20,12 @@ public class PursuitSandboxPlayTests
     public IEnumerator PursuitSandbox_HerRealBrainHuntsYou_KeepsOnAfterLosingYou_AndACatchFreezes()
     {
         SessionState.EraseString(FailureKey);
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         yield return new EnterPlayMode();
 
         var root = new GameObject("Pursuit sandbox (test)");
+        float previousFrameStep = Time.captureDeltaTime;
+        SandboxBot.FixFrames();
         Exception failure = null;
         IEnumerator steps = null;
         try { steps = Checks(root.AddComponent<PursuitSandbox>()); }
@@ -43,6 +47,7 @@ public class PursuitSandboxPlayTests
         }
 
         Object.Destroy(root);
+        Time.captureDeltaTime = previousFrameStep;
         if (failure != null) SessionState.SetString(FailureKey, failure.GetType().Name + ": " + failure.Message);
         yield return null;
         yield return new ExitPlayMode();
@@ -50,15 +55,6 @@ public class PursuitSandboxPlayTests
         string failed = SessionState.GetString(FailureKey, "");
         SessionState.EraseString(FailureKey);
         if (!string.IsNullOrEmpty(failed)) Assert.Fail(failed);
-    }
-
-    static void Teleport(PlayerPresence player, Vector3 feet)
-    {
-        var controller = player.GetComponent<CharacterController>();
-        controller.enabled = false;
-        player.transform.position = feet + Vector3.up * 0.02f;
-        controller.enabled = true;
-        Physics.SyncTransforms();
     }
 
     static IEnumerator Wait(float seconds)
@@ -80,23 +76,36 @@ public class PursuitSandboxPlayTests
         Assert.IsTrue(brain.config.sandboxNoTricks && brain.config.sandboxCatchFreezes && brain.config.hunter);
         Assert.AreEqual(sandbox.LedgerPath, brain.Ledger.SavePath, "her Ledger is the sandbox's temporary file, never your save");
         Assert.IsFalse(sandbox.Running, "she waits, frozen, for Start");
+        var bot = new SandboxBot(sandbox.Player.GetComponent<PlayerMotor>());
+        var eye = brain.Body.Sight;
 
-        // You stand in the open in front of her: she becomes sure and hunts.
+        // Hold her gaze for the initial sighting. Otherwise her first patrol decision can
+        // turn her away while the eye is still accumulating awareness.
         Vector3 spot = brain.Body.transform.position;
-        Teleport(sandbox.Player, spot + brain.Body.transform.forward * 6f);
+        bot.Teleport(spot + brain.Body.transform.forward * 6f);
+        until = Time.time + 6f;
+        while (eye.Awareness < eye.confirmAt && Time.time < until)
+        {
+            eye.Tick(Time.deltaTime);
+            yield return null;
+        }
+        Assert.GreaterOrEqual(eye.Awareness, eye.confirmAt, "the initial setup gives her a confirmed sighting");
         sandbox.StartRunning();
         until = Time.time + 6f;
         while (!brain.IsChasing && Time.time < until) yield return null;
         Assert.IsTrue(brain.IsChasing, "seen in the open, she hunts");
 
-        // You vanish behind the shelves at the far end: she keeps pursuing for the hunt's window.
-        Teleport(sandbox.Player, PursuitSandbox.World(new Vector3(10.5f, 0f, -6.5f)));
-        yield return Wait(3f);
+        // Jump straight to cover, far from the last sighting. A hidden entry she watched
+        // would start a different behaviour. The recorded corner check covers the walk around shelving.
+        Vector3 fridge = PursuitSandbox.FridgeFront + Vector3.right * (SandboxKit.FridgeInside.z * .5f);
+        bot.Teleport(PursuitSandbox.World(fridge));
+        yield return Wait(1f);
+        Assert.IsFalse(eye.SeesNow, "the fridge hides the player");
         Assert.IsTrue(brain.IsChasing && brain.Pursuit.Active(Time.time), "after losing you she keeps on, inside the 60 s window");
         Assert.IsTrue(brain.CurrentPlan == null || brain.CurrentPlan.Tactic == null || brain.CurrentPlan.Tactic.Tier == 0, "only her movement tactics run");
 
         // You walk into her: the catch freezes the test instead of ending the shift.
-        Teleport(sandbox.Player, brain.Body.transform.position + brain.Body.transform.forward * 0.3f);
+        bot.Teleport(brain.Body.transform.position + Vector3.up * 0.02f);
         until = Time.time + 3f;
         while (!sandbox.Caught && Time.time < until) yield return null;
         Assert.IsTrue(sandbox.Caught, "touching her is a catch");
@@ -113,8 +122,8 @@ public class PursuitSandboxPlayTests
         // A hit stuns her senses too (C9.10): in plain view while stunned, she gains nothing;
         // when the stun ends, she sees you.
         sandbox.StartRunning();
-        Teleport(sandbox.Player, spot + brain.Body.transform.forward * 6f);
-        Assert.IsTrue(brain.Body.Stun.TryImpact(Thrown(), 9f, 9f), "a fast throw stuns her");
+        bot.Teleport(spot + brain.Body.transform.forward * 6f);
+        Assert.IsTrue(brain.Body.Stun.TryImpact(Thrown(sandbox.transform), 9f, 9f), "a fast throw stuns her");
         yield return Wait(0.8f);
         Assert.IsTrue(brain.Body.IsStunned);
         Assert.AreEqual(0f, brain.Body.Sight.Awareness, "stunned, she sees nothing, though you stand in plain view");
@@ -124,9 +133,11 @@ public class PursuitSandboxPlayTests
         Assert.Greater(brain.Body.Sight.Awareness, brain.Body.Sight.glimpseAt, "awake again, she sees you");
     }
 
-    static Item Thrown()
+    static Item Thrown(Transform parent)
     {
         var go = new GameObject("thrown item (test)");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = Vector3.up * 20f;
         go.AddComponent<BoxCollider>();
         go.AddComponent<Rigidbody>().useGravity = false;
         var item = go.AddComponent<Item>();

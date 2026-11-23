@@ -159,10 +159,15 @@ namespace Kehai.Sandbox
 
         // Ceiling lamps go under a root named "CeilingLights": that's where LightProbe, the light
         // sense her eye uses, looks for them.
-        public static Transform CeilingLights(Transform parent) => Group(parent, "CeilingLights", Vector3.zero);
+        public static Transform CeilingLights(Transform parent)
+        {
+            Kehai.Karen.LightProbe.Refresh();   // its lamps join her light sense when it next looks
+            return Group(parent, "CeilingLights", Vector3.zero);
+        }
 
         public static Light Lamp(Transform ceilingLights, Vector3 at, float intensity = 2.2f, float range = 9f)
         {
+            Kehai.Karen.LightProbe.Refresh();
             var go = new GameObject("Lamp");
             go.transform.SetParent(ceilingLights, false);
             go.transform.localPosition = at;

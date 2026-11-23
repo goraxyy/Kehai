@@ -6,7 +6,7 @@
 #   tools/belief/train_all.sh [recordings folder]
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; root="$(cd "$here/../.." && pwd)"
-rec="${1:-$HOME/Library/Application Support/TokenLimit/Kehai/kehai_eval/belief040}"
+rec="${1:-$HOME/Library/Application Support/TokenLimit/Kehai/kehai_eval/belief052}"
 py="$root/tools/rl/.venv/bin/python"; [ -x "$py" ] || py="$HOME/Developer/Kehai/tools/rl/.venv/bin/python"
 # One stage at a time, each adding to $rec/fit_report.json: a stopped run starts again where it
 # stopped (a finished stage is skipped). Delete the report to fit everything again.

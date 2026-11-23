@@ -21,7 +21,13 @@ namespace Kehai.Sandbox
     // every cell as hers. It's an empty scene, so nothing of the store is there.
     public sealed class PursuitSandbox : MonoBehaviour
     {
-        public static readonly Vector3 Centre = new Vector3(55f, 0f, -148f);
+        // On its own (Kehai → Sandbox → Pursuit) it stands inside the store's sales-floor rectangle;
+        // on the sandbox island (C11.11) the island sets the centre and her test map covers it.
+        public static readonly Vector3 StandaloneCentre = new Vector3(55f, 0f, -148f);
+        public static Vector3 Centre { get; set; } = StandaloneCentre;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetCentre() => Centre = StandaloneCentre;
         public static readonly Vector2 RoomSize = new Vector2(24f, 16f);
         public const float DoorWidth = 1.4f;
         public const float PanelHeight = 1.3f;   // within reach: below eye level (1.6 m)
@@ -139,12 +145,13 @@ namespace Kehai.Sandbox
             while (Brain != null && Brain.Body == null) yield return null;
             if (Brain == null) yield break;
             Brain.BeginShift();
-            Brain.Body.transform.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            FaceStart();
             Freeze();
             Indicators = SandboxIndicators.Build(transform, Brain.Body, "Pursuit sandbox");
+            Indicators.showInArea = ControlsInArea;
             Indicators.status = Status;
             Indicators.extra = Extra;
-            Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F3 her cone   Ctrl crouch   Esc frees the mouse";
+            Indicators.keys = "F5 start or freeze   F6 restart   F1 her map   F4 hide these   F1 then V her cone   Ctrl crouch   Esc frees the mouse";
             Indicators.Watch(Fridge, FridgeFront + new Vector3(-0.3f, 2.75f, 0f));
             Indicators.Watch(Rack, RackCentre + new Vector3(0f, 2.7f, 0f));
             Ready = true;
@@ -178,8 +185,15 @@ namespace Kehai.Sandbox
             Caught = false;
             Brain.BeginShift();
             Brain.Body.Warp(World(KarenSpot));
-            Brain.Body.transform.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            FaceStart();
             Freeze();
+        }
+
+        void FaceStart()
+        {
+            Transform body = Brain.Body.transform;
+            body.rotation = Quaternion.Euler(0f, KarenYaw, 0f);
+            Brain.Body.TurnToward(body.position + body.forward * 5f);
         }
 
         void OnCaught()
@@ -229,7 +243,7 @@ namespace Kehai.Sandbox
 
         void Update()
         {
-            if (!Ready) return;
+            if (!Ready || !ControlsInArea()) return;
             foreach (KeyCode key in Keys) if (Input.GetKeyDown(key)) Press(key);
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -238,6 +252,11 @@ namespace Kehai.Sandbox
                 Cursor.visible = locked;
             }
         }
+
+        bool ControlsInArea() => buildPlayer || Player != null &&
+            Mathf.Abs(Player.Position.x - Centre.x) <= RoomSize.x * .5f + 1f &&
+            Player.Position.z >= Centre.z + PlayerStart.z - 1f &&
+            Player.Position.z <= Centre.z + RoomSize.y * .5f + 1f;
 
         void OnDestroy()
         {

@@ -12,9 +12,10 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 > **Changing:** the [playtest v2 build plan](../../you/plans/playtest-v2.md), updated 12 November,
 > covers the illustrated instructions and live connection. The owner's target is no typed code,
 > cloud retention, and a later manual dataset download/training run on Windows. No Mac job or
-> training run is required when a session arrives. These changes are not implemented yet:
-> everything below describes v1, including its delete-after-pull behavior. Do not treat its
-> old Form/itch setup as requirements for v2. The v2 plan owns implementation checkboxes.
+> training run is required when a session arrives. The first-launch code box is removed. Each
+> install creates its own tester ID and keeps it across launches. Existing installs keep their
+> IDs. The upload worker accepts old and new session names. The sections below describe v1,
+> including its Form/itch setup and delete-after-pull behavior. The v2 plan tracks the remaining work.
 
 ---
 
@@ -97,7 +98,7 @@ shifts for the player's own reports and sends nothing.
 |---|---|
 | The whole session as 3D replays: each shift (`shift_NN_*.krec`) and the stretches between them, from launch to the first clock-in and after each clock-out (`interlude_NN_*.krec`) | `ReplayRecorder` |
 | Each shift's data and clip markers, including Shift+F7 bug marks | `ShiftRecorder`, `ClipMarkerRecorder` |
-| `session.jsonl`, one line per event: the computer (OS, CPU, GPU, RAM, screen, quality); every menu and panel opened and closed (main menu, settings, pause, task list, F1 map, F2 replay, review, playtest screens); the keys that matter (E with what it was aimed at, or "nothing"; Q, C, F1, F2, F7, F8–F10, L, Esc); where the tester stood and looked, twice a second, with the replay file and time it belongs to; frame rate every 5 s; errors; focus lost and regained; shifts; bug notes; answers | `PlaytestSession` |
+| `session.jsonl`, one line per event: the computer (OS, CPU, GPU, RAM, screen, quality); every menu and panel opened and closed (main menu, settings, pause, task list, F1 map, F2 replay, review, playtest screens); the keys that matter (E with what it was aimed at, or "nothing"; Q, C, F1, F2, F7, F8, L, Esc); where the tester stood and looked, twice a second, with the replay file and time it belongs to; frame rate every 5 s; errors; focus lost and regained; shifts; bug notes; answers | `PlaytestSession` |
 | Karen's thought logs and her ledger (what she learned about this tester) | `karen_logs/`, `karen_ledger.json` |
 | The game's own log (and the one before, after a crash) | `Player.log` |
 

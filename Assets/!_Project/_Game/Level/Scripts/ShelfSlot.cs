@@ -70,6 +70,58 @@ public sealed class ShelfSlot : IInteractable
     public ShelfSlot(ShelfUnit owner, Transform frame, Vector3 local, bool facesBack, Vector2 cell, float height)
         : this(owner, frame, local, facesBack ? ShelfGrid.Side.Back : ShelfGrid.Side.Front, cell, height) { }
 
+    // A slot on a face you can't stand in front of (pressed to a wall, a chiller or another bay):
+    // it stays stocked to look at, and nothing ever empties it, so no task asks you to reach it
+    // (the owner's call, 23 November; the placement audit, C12.2). Shoppers and Karen's
+    // knock-offs leave it alone.
+    public bool Display { get; set; }
+
+    // Whether this slot's face has somewhere to stand: a step out from it there's room for a
+    // body and a clear look at it. Its own bay, cupboard doors and triggers don't count.
+    public static bool FaceReachable(ShelfSlot slot, Collider[] own)
+    {
+        if (slot.frame == null) return true;
+        Vector3 outward = slot.Outward;
+        outward.y = 0f;
+        if (outward.sqrMagnitude < 1e-4f) return true;
+        outward.Normalize();
+        Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * 0.5f);
+        float floor = slot.frame.position.y;
+        foreach (float step in ReachSteps)
+        {
+            Vector3 feet = centre + outward * step;
+            feet.y = floor;
+            // The player's body, as the placement audit stands it: 2 m tall, from just over the floor.
+            int n = Physics.OverlapCapsuleNonAlloc(feet + Vector3.up * (BodyRadius + 0.06f), feet + Vector3.up * (2f - BodyRadius),
+                BodyRadius, overlaps, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            if (AnyOther(overlaps, n, own, feet.y)) continue;
+            Vector3 eye = feet + Vector3.up * 1.6f;
+            Vector3 d = centre - eye;
+            n = Physics.RaycastNonAlloc(eye, d.normalized, hits, Mathf.Max(0f, d.magnitude - 0.05f),
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            bool seen = true;
+            for (int i = 0; i < n && seen; i++) seen = Ignored(hits[i].collider, own);
+            if (seen) return true;
+        }
+        return false;
+    }
+
+    static readonly float[] ReachSteps = { 0.6f, 0.9f, 1.2f, 1.5f };
+    const float BodyRadius = 0.3f;
+    static readonly Collider[] overlaps = new Collider[16];
+    static readonly RaycastHit[] hits = new RaycastHit[16];
+
+    // The floor, a mat or a step under the feet isn't in the way: only what rises past the ankles.
+    static bool AnyOther(Collider[] found, int n, Collider[] own, float floor)
+    {
+        for (int i = 0; i < n; i++)
+            if (!Ignored(found[i], own) && found[i].bounds.max.y > floor + 0.2f) return true;
+        return false;
+    }
+
+    static bool Ignored(Collider c, Collider[] own) => c == null || c is CharacterController || System.Array.IndexOf(own, c) >= 0 ||
+        c.GetComponentInParent<FurnitureDoor>() != null || c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic;
+
     internal void Attach(ShelfStock to, int index)
     {
         stock = to;
@@ -83,7 +135,10 @@ public sealed class ShelfSlot : IInteractable
     public Quaternion Rotation => frame.rotation * Quaternion.Euler(0f, ShelfGrid.Yaw(side), 0f);
 
     // Toward the aisle it faces.
-    public Vector3 Outward => Rotation * Vector3.back;
+    public Vector3 Outward => frame.TransformVector(ShelfGrid.Outward(side)).normalized;
+
+    public bool InFrontOf(ShelfSlot other) => frame == other.frame && side == other.side &&
+        Mathf.Abs(local.y - other.local.y) < .01f && Vector3.Dot(Position - other.Position, other.Outward) > .01f;
 
     // The SKU stocked here, or null on a facing that has only been given a section.
     public ProductDef Product => ProductCatalog.Get(productId);
@@ -300,7 +355,7 @@ public sealed class ShelfSlot : IInteractable
     {
         distance = 0f;
         Vector3 o = frame.InverseTransformPoint(ray.origin) - local - new Vector3(0f, height * 0.5f, 0f);
-        Vector3 d = frame.InverseTransformDirection(ray.direction);
+        Vector3 d = frame.InverseTransformVector(ray.direction);
         var half = new Vector3(cell.x * 0.5f - 0.005f, height * 0.5f, cell.y * 0.5f - 0.005f);
 
         float near = float.NegativeInfinity, far = float.PositiveInfinity;

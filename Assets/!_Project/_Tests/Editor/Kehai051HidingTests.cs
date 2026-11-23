@@ -192,6 +192,26 @@ public class Kehai051HidingTests
         finally { InfrastructureFeed.CameraSawEntry -= Receive; }
     }
 
+    [Test]
+    public void AFeedComingLiveOnTheEntryCannotUseTheApproachItMissed()
+    {
+        int reports = 0;
+        void Receive(HidingPlace _, Vector3 __) => reports++;
+        InfrastructureFeed.CameraSawEntry += Receive;
+        try
+        {
+            player.transform.position = Vector3.forward * 4.95f;
+            Physics.SyncTransforms();
+            InfrastructureFeed.TickCamera(eye, .02f, liveFeed: false);
+            Assert.IsTrue(eye.SeesNow, "the camera can still score its ordinary view while the feed is looped");
+            player.transform.position = Vector3.forward * 5.31f;
+            Physics.SyncTransforms();
+            InfrastructureFeed.TickCamera(eye, .02f);
+            Assert.AreEqual(0, reports);
+        }
+        finally { InfrastructureFeed.CameraSawEntry -= Receive; }
+    }
+
     [TestCase(true)]
     [TestCase(false)]
     public void CustomerTestimonyRetainsOnlyWhatTheCustomerSaw(bool sawApproach)
@@ -282,6 +302,74 @@ public class Kehai051HidingTests
         Assert.AreSame(other, HidingPlace.At(player, out _));
         Assert.IsFalse(eye.CanCatchWitnessedHide(remembered));
         Assert.IsFalse(eye.CanCatchWitnessedHide(new Vector3(3f, 0f, 4f)));
+    }
+
+    static HidingPlace SearchPlace(string name, float x, float z) =>
+        HidingPlace.Author(new GameObject(name), new Bounds(new Vector3(x, 1.5f, z), new Vector3(2f, 3f, 2f)));
+
+    [Test]
+    public void FailedWitnessedCatch_OrdersNearbyChecksFromEntryEvenWhenTheHiddenPlayerMoves()
+    {
+        HidingPlace right = SearchPlace("right cabinet", 3.5f, 6f);
+        HidingPlace left = SearchPlace("left cabinet", -3.5f, 6f);
+        HidingPlace third = SearchPlace("third cabinet", 0f, 10.5f);
+        SearchPlace("out of range", 0f, 13f);
+        SearchPlace("disabled cabinet", 0f, 4f).enabled = false;
+
+        At(5.29f); At(5.31f);
+        Vector3 remembered = eye.HiddenEntry.Position;
+        Assert.AreSame(place, eye.HiddenEntry.Place);
+        eye.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+        At(new Vector3(3.5f, 0f, 6f));
+        Assert.AreSame(right, HidingPlace.At(player, out _));
+        Assert.IsFalse(eye.SeesNow);
+        Assert.IsFalse(eye.CanCatchWitnessedHide(remembered));
+        var order = HidingApproach.NearbySearchPoints(eye.HiddenEntry.Position, eye.HiddenEntry.Place);
+        CollectionAssert.AreEqual(new[] { new Vector3(-2.5f, 0f, remembered.z), new Vector3(2.5f, 0f, remembered.z) }, order);
+
+        At(new Vector3(-3.5f, 0f, 6f));
+        Assert.AreSame(left, HidingPlace.At(player, out _));
+        Assert.IsFalse(eye.SeesNow);
+        Assert.IsFalse(eye.CanCatchWitnessedHide(remembered));
+        CollectionAssert.AreEqual(order, HidingApproach.NearbySearchPoints(eye.HiddenEntry.Position, eye.HiddenEntry.Place));
+
+        right.enabled = left.enabled = third.enabled = false;
+        Assert.IsEmpty(HidingApproach.NearbySearchPoints(remembered, place), "skip the witnessed, disabled and distant places");
+    }
+
+    [Test]
+    public void HidingFollowUp_StopsAfterTwoChecks_AndClearsOnSightOrShiftReset()
+    {
+        SearchPlace("left cabinet", -3.5f, 6f);
+        SearchPlace("right cabinet", 3.5f, 6f);
+        var brain = new GameObject("Karen").AddComponent<KarenBrain>();
+        var body = new GameObject("body").AddComponent<KarenBody>();
+        body.GetComponent<UnityEngine.AI.NavMeshAgent>().enabled = false;
+        typeof(KarenBody).GetProperty("Sight").SetValue(body, eye);
+        typeof(KarenBrain).GetProperty("Body").SetValue(brain, body);
+
+        bool StartFollowUp() => (bool)typeof(KarenBrain).GetMethod("StartHidingFollowUp", Private)
+            .Invoke(brain, new object[] { new Vector3(0f, 0f, 5.29f), place });
+        bool Tick() => (bool)typeof(KarenBrain).GetMethod("PursueWitnessedHide", Private).Invoke(brain, null);
+        void ExpireStep() => typeof(KarenBrain).GetField("hidingSearchStepUntil", Private).SetValue(brain, Time.time);
+
+        Assert.IsFalse(Tick(), "without a witnessed entry there is no search");
+        Assert.IsTrue(StartFollowUp());
+        Assert.IsTrue(Tick(), "first look");
+        ExpireStep();
+        Assert.IsTrue(Tick(), "move toward the second stop");
+        ExpireStep();
+        Assert.IsFalse(Tick(), "skip a timed-out approach and finish at the last stop");
+
+        Assert.IsTrue(StartFollowUp());
+        eye.Integrate(1f, 0.02f, 0f);
+        Assert.IsFalse(Tick(), "a direct sighting takes over");
+        eye.ResetAwareness();
+        Assert.IsFalse(Tick(), "losing sight again doesn't resume the old search");
+
+        Assert.IsTrue(StartFollowUp());
+        typeof(KarenBrain).GetMethod("ResetStunAndHunt", Private).Invoke(brain, null);
+        Assert.IsFalse(Tick(), "shift reset discards the old search");
     }
 
     [Test]

@@ -8,6 +8,45 @@ using UnityEngine;
 public class StorageBoxesTests
 {
     [Test]
+    public void ABoxCanShrinkToKeepItsCentreInReachWithoutSinkingIntoTheBoard()
+    {
+        const float board = 1.475f;
+        Vector3 fitted = StorageBoxes.FitWorkingBox(StorageBoxes.RackBox, board, out bool reachable);
+        Assert.IsTrue(reachable);
+        Assert.Less(fitted.y, StorageBoxes.RackBox.y);
+        Assert.That(board + fitted.y * .5f + .005f, Is.EqualTo(StorageBoxes.WorkingCentreHeight).Within(.001f));
+        Assert.AreEqual(StorageBoxes.RackBox, StorageBoxes.FitWorkingBox(StorageBoxes.RackBox, 2.829f, out reachable));
+        Assert.IsFalse(reachable, "a box on the high board is scenery");
+    }
+
+    // 0.5.2, C12.2: a box behind a wall panel or a prop is scenery; its own rack doesn't count.
+    [Test]
+    public void ABoxBehindSomethingIsNotOneYouCanPickUp()
+    {
+        var rack = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        try
+        {
+            Vector3 at = new Vector3(0f, 1.0f, 0f), front = Vector3.forward, box = StorageBoxes.RackBox;
+            rack.transform.position = at;                       // the rack round the box: its own
+            rack.transform.localScale = new Vector3(2f, 2f, box.z + 0.1f);
+            wall.transform.position = at + front * 0.6f;        // a panel between you and the box
+            wall.transform.localScale = new Vector3(2f, 3f, 0.05f);
+            Physics.SyncTransforms();
+            Collider[] own = rack.GetComponentsInChildren<Collider>();
+            Assert.IsFalse(StorageBoxes.FrontClear(at, front, box, 0f, own), "the panel hides it");
+            wall.SetActive(false);
+            Physics.SyncTransforms();
+            Assert.IsTrue(StorageBoxes.FrontClear(at, front, box, 0f, own), "nothing but its rack in the way");
+        }
+        finally
+        {
+            Object.DestroyImmediate(rack);
+            Object.DestroyImmediate(wall);
+        }
+    }
+
+    [Test]
     public void DairyAndFrozen_AreKeptCold_WithTheFewThatWouldSpoil()
     {
         foreach (ProductDef p in ProductCatalog.All)

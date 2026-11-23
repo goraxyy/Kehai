@@ -55,13 +55,24 @@ namespace Kehai.Karen
         void OnEnable() => all.Add(this);
         void OnDisable() => all.Remove(this);
 
-        void Update()
+        void Update() => TickObservation();
+
+        internal void TickObservation()
         {
             if (Time.time >= nextLook)
             {
                 nextLook = Time.time + LookInterval;
                 Look();
             }
+        }
+
+        internal void ResetObservation()
+        {
+            nextLook = Time.time;
+            lastSeenTime = -999f;
+            lastLookWasVisible = SawHidingEntry = HasSpokenToKaren = false;
+            LastSeenAt = Vector3.zero;
+            SightingConfidence = 0f;
         }
 
         void Look()

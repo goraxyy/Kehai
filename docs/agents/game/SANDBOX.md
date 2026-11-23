@@ -1,8 +1,39 @@
 # The sandboxes
 
-Small test scenes for checking one thing at a time (0.5.2 plan, Phase 11). Each is built by code
-when Play starts, from an empty scene: no scene file, no art, nothing in git but code. Built so far:
-the **sight sandbox** and the **pursuit sandbox**; tricks and interactions follow, from the same kit.
+The **Kehai → Sandbox** menu opens the [sight](#the-sight-sandbox), [pursuit](#the-pursuit-sandbox),
+[tricks](#the-tricks-sandbox), and [interactions](#the-interactions-sandbox) sandboxes. The rooms
+are built by code when Play starts. Leave Play to return to editing.
+
+## The sandbox island
+
+Open **Kehai → Sandbox → Island** for the quiet store and its sight, pursuit and interactions rooms.
+Leave the front door, follow the protected walkway north to the road, and turn west. The models
+island is beside the sandbox island. The trick stalls are along the south edge in **Tricks** mode.
+
+This batch check drives the store player from the lobby to the road, the trick stalls' approach,
+through the three room doors, and across to the models island. It logs each route and the position
+of any stop. It opens the sandbox doors before the walk.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Walk
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Pursuit       # the pursuit checks in the island's pursuit room
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Interactions  # the interaction checks in the island's interactions room
+```
+
+**The island against a room on its own** (23 November). Two things made her play differ there,
+both fixed; the pursuit checks still pass 3 of 4 on the island against 4 of 4 alone (below):
+- **Her light sense** (`LightProbe`) read only the first group named `CeilingLights`, the store's,
+  so the island rooms' lamps didn't light you for her: you looked darker there and she saw you
+  0.8 s later. It now reads every `CeilingLights` group, and `SandboxKit` refreshes it as a room's
+  lamps are built. (After the fix she first saw the bot at 0.8 s on the island, 1.0 s alone.)
+- **Her test map's 1.5 m grid** started 0.2 and 0.4 m off the standalone room's, so her search spots
+  fell elsewhere. `SandboxIsland.MapBounds` is nudged onto the standalone room's grid
+  (`PursuitGrid`, as `PursuitSandboxChecks` logs it), and `SandboxIslandCheck.Pursuit` checks it.
+
+**Still different: corner-search fails on the island.** There her map covers the whole room, and
+her first search spot is the shelf the bot hides behind, so she sees it. Alone, her first sighting
+logs as "off the map" and she searches where she last saw you, which is likely what that check's
+escape relies on (one run's log; not yet confirmed).
 
 ## The sight sandbox
 
@@ -25,8 +56,8 @@ and no tricks, no hunt, no catch. She starts frozen on her spot in the north-wes
 | ROUTE | panel only | switches between walking her loop and standing while turning a quarter every 3 s |
 
 There's a panel outside by the door and one inside. Look at a button and press **E**.
-**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F3** toggles her floor cone, **F4**
-hides the other indicators (and shows them again).
+**Ctrl** crouches, **Shift** sprints, **Esc** frees the mouse, **F4** hides the indicators and her floor cone
+(and shows them again); in the pursuit sandbox V on the F1 map toggles the cone too.
 
 **What it shows you:**
 
@@ -137,13 +168,14 @@ her 60 s pursuit. Fixed by `KarenBrain.AbortPlanFor` (a hunt chosen again goes o
 kept) and `EndHeldHunt` (a held hunt that no hunt plan takes up still ends), with a test in
 `Kehai051PursuitTests`.
 
-The silent video clips are code only: none has been rendered yet.
+The sight suite's [eight silent clips](../../../tools/run/README.md#sight-check-review-clips) have
+been rendered and verified. The pursuit suite has replays and still needs its clip render.
 
 ## The tricks sandbox
 
 **Kehai → Sandbox → Tricks** (C11.8) opens the real store in Play, muted, on a private shift
 four: its own career numbers and a fresh temporary Ledger each time, so your save is never read
-or written. A row of stalls stands outside the entrance, between the two crossings: one plate per
+or written. A row of stalls stands on the sandbox island (out of the front door, north across the parking lot to the road, then west), near its south edge: one plate per
 live trick (the same list the trick check uses, `TrickCheck.Tricks`).
 
 - **E at a plate** makes her start that trick now (`KarenBrain.Force`: past the Director's
@@ -160,6 +192,33 @@ she start it, did it land (its own evidence, not just an EFFECT line), and did t
 (a repair, a dodge, a turn back), each in a replay. It writes `trick_check_<time>.md`, `.json`
 and the `.tsv` the clip tools read. **It runs in the recorded test pass after 0.5.2 merges**
 (Q1), not before.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod EvalBatch.Play -kehai-trick-check
+```
+
+## The interactions sandbox
+
+Open **Kehai → Sandbox → Interactions**, or walk to the room north of the sight area in
+**Kehai → Sandbox → Island**. Its panel switches the camera feed, asks the nearby shopper,
+and clears the readings. Pick up the torch with E. Switch it on and aim out through the open
+fridge door while hidden to see whether the light reaches a surface Karen can see.
+
+**Kehai → Sandbox → Run Interaction Checks** drives nine cases. It writes a result report and
+one replay per case under
+`sandbox_checks/interactions_<time>/`. The cases cover camera on, off and turned away,
+shopper facing toward and away from the approach, torch on and off, and the Ledger's weight
+when Karen sees the entry or faces away. The testimony case
+asks from outside and then inside talking distance. The recordings use the sight room replay
+viewer. The evidence appears in the report and replay annotations.
+
+```sh
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxChecks.Interactions
+```
+
+The room uses the game's sensors. Its findings stay in the room. The pursuit room keeps the
+island's one full Karen brain. The fridge and rack search actions have separate acceptance in
+[the 0.5.2 plan](../../you/plans/0.5.2-plan.md#phase-9-interactions-c-with-you--opus-55--this-mac-checks-through-kehai-run-on-the-pc).
 
 ## For agents
 

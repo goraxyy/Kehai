@@ -13,6 +13,8 @@ from tools.benchmark.stats import estimate, rmst, survival_summary
 from tools.benchmark.fixture_adapter import rows
 from tools.benchmark.cli import main
 from tools.reports.common import digest, read_json, read_lines, write_json
+from tools.reports.register import latest
+from tools.reports.report import benchmark_history, main as report_main
 
 
 def request(model='fixture', half='practice', arm='planner'):
@@ -164,6 +166,36 @@ class Statistics(unittest.TestCase):
 
 
 class Runner(unittest.TestCase):
+    def test_training_report_pairs_two_registered_model_versions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            for version in ('Satori 1.0.0', 'Satori 1.1.0'):
+                self.assertEqual(0, main(['run', '--fixture', '--home', str(home), '--model', version, '--arm', 'Basic',
+                                          '--', sys.executable, '-B', '-m', 'tools.benchmark.fixture_adapter']))
+            register = home / 'runs.jsonl'
+            events = latest(register)
+            cards, pairs, warnings = benchmark_history(events)
+            self.assertEqual(['Satori 1.0.0', 'Satori 1.1.0'], [card['model'] for card in cards])
+            self.assertEqual([], warnings)
+            self.assertEqual(1, len(pairs))
+            label, groups = pairs[0]
+            self.assertIn('synthetic fixture', label)
+            self.assertTrue(any(field['se'] is not None for metrics in groups.values() for field in metrics.values()))
+
+            output = home / 'report.html'
+            self.assertEqual(0, report_main(['--register', str(register), '--benchmark-history', '--out', str(output)]))
+            report = output.read_text()
+            self.assertIn('Satori 1.0.0 → Satori 1.1.0', report)
+            self.assertIn('Paired changes and standard errors', report)
+            self.assertIn('SYNTHETIC FIXTURE', report)
+
+            rows_path = Path(cards[0]['provenance']['rows']['path'])
+            rows_path.write_text('changed')
+            cards, pairs, warnings = benchmark_history(events)
+            self.assertEqual(2, len(cards))
+            self.assertEqual([], pairs)
+            self.assertIn('missing or changed benchmark file', warnings[0])
+
     def test_fixture_cli_end_to_end_and_register(self):
         with tempfile.TemporaryDirectory() as tmp:
             code = main(['run', '--fixture', '--home', tmp, '--model', 'FIXTURE', '--', sys.executable, '-B', '-m', 'tools.benchmark.fixture_adapter'])

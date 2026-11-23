@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// While a full-screen panel is open (the F1 map, the F2 replay, the F10 blink test), the
+// While a full-screen panel is open (the F1 map, the F2 replay, the F8 webcam panel), the
 // game's HUD canvases are switched off: Unity draws screen-space canvases on top of IMGUI,
 // so the task list and inventory would otherwise sit across the map. They come back, as
 // they were, when the last panel closes.

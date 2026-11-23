@@ -129,6 +129,10 @@ namespace Kehai.Karen
             LastSeenVelocity = Vector3.zero;
         }
 
+        // A looped feed may still draw and score its ordinary view, but cannot supply the
+        // approach for a newly witnessed entry when its live picture comes back.
+        internal void ForgetVisibleApproach() => hasLastVisible = false;
+
         public void Tick(float dt)
         {
             PlayerPresence player = PlayerPresence.Current;

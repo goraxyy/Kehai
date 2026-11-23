@@ -1223,12 +1223,11 @@ Every key in the game is in `CONTROLS.md` (and in the game under Esc → Keys). 
 | Key | What |
 |---|---|
 | Esc | settings: restart the shift, volume by kind of sound (Karen's own slider included), mouse, the webcam |
-| F3 | in the editor and development builds only: her footsteps and floor cone, on or off (0.2.0; players don't get them) |
+| V (on the F1 map) | in the editor and development builds only: her footsteps and floor cone, on or off (0.2.0 on F3; V since 0.5.2's squashed keys; players don't get them) |
 | F1 | live map of the store (you, Karen, her guess, customers, sounds, jobs) and a plain-words story of what Karen is doing; **H** adds her belief heat map, **T** the technical view |
 | F2 | replay of the shift so far on the same map: drag the timeline, Space plays, 1/2/3 speed, ←/→ jump 5 s, O opens the full report |
-| F8 | blink channel consent panel (webcam path stays off until you agree); starts the camera helper |
-| F9 | guided blink calibration (~12 s): eyes open, closed until the beep, then three blinks it counts |
-| F10 | blink test panel: a checklist of consent → helper → signal → calibration, and a live open/closed meter and graph; R restarts the helper, V switches camera, M switches between Apple Vision and MediaPipe |
+| F8 | webcam panel with consent, guided calibration and a live blink meter and graph. R restarts the helper, V switches camera and M switches between Apple Vision and MediaPipe |
+| L (on the F1 map) | cut store power in the editor and development builds |
 | B | keyboard blink — hold to keep your eyes shut |
 | O | after a shift: open the shift report in the browser |
 | Enter / Q | after a shift: continue / hand in your notice (from shift 5) |
@@ -1260,7 +1259,7 @@ something, red when she's hunting; it pulses red while she can actually see you.
 says the same, but a spotlight is hard to read in a lit store.
 
 **Since 0.2.0 the cone is for the developer only:** it's drawn only in the editor and development
-builds, while F3's switch (`KarenFx`) is on, together with her footsteps. Players, bots and
+builds, while the developer switch (`KarenFx`, V on the F1 map) is on, together with her footsteps. Players, bots and
 replays get neither, and the cone is no longer in Settings.
 
 ### Shift records
@@ -1350,7 +1349,7 @@ and sees it within about 9 s instead of 32–61 s, the held-out player included.
 | Tricks | 34, all of them in play | 36: 14 live, 22 drafts; Cut and Throw are new, Block door rebuilt |
 | Warnings | every trick warned ≥ 0.8 s ahead | removed (rule 3) |
 | Combos | welded into tricks (Blackout's wait, Funnel) | none built in; a combo room she fills herself |
-| Her footsteps and floor cone | for everyone | for the developer only (F3) |
+| Her footsteps and floor cone | for everyone | for the developer only (V on the F1 map) |
 
 ### 16.1 Her eyes
 
@@ -1544,7 +1543,7 @@ her last trick. Whether real chains exist in the store, and pay, is the ablation
 - **Pillar 2 is reworded:** the Director never gives the Body your *exact location*. Its bounded
   hint stays: after 45 s with no clue, at most 0.15 of her belief a minute toward your real
   region, never past half, and never while you can see her path (`KarenDirector.MaybeBias`).
-- **Her footsteps and floor cone are for the developer only** (F3, `KarenFx`): players, bots and
+- **Her footsteps and floor cone are for the developer only** (V on the F1 map, `KarenFx`): players, bots and
   replays never get them.
 - **The bots still know her only through what a person would see.** A throw reaches them as
   `EnvWorld.ThrowSeen` (in view, nothing in the way, on a line that passes within 1.5 m), never as
@@ -2059,6 +2058,12 @@ code entry points in [the implementation notes](../integration/0.5.1-plan.md).
   you more than 3 m from your live position, or miss you though close. A literal "3 m from the
   player" would need your live position, which the fairness contract forbids (§9 rule 1).
 - `WitnessedHide` and `HidingApproach` are under the "she never reads the player" scan.
+
+**0.5.2 follow-up:** if she reaches the remembered entry and the one-second look finds nobody,
+she can look toward two other authored hiding places within 5 m. Distance from the entry sets
+the order, with coordinates breaking ties. Each stop gives her up to 2.5 s to walk and 0.75 s to
+look. She uses her usual sight from the reachable spot. A new sighting, a new witnessed entry,
+a stun, or the end of the hunt or shift clears this search.
 
 ### 21.3 The hunt after she loses you (item 13)
 

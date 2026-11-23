@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import signal
 import socket
@@ -36,10 +37,16 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+CLONES = 'clones.noindex'   # where the project copies go, under the run home
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools.run import lock as heavy  # noqa: E402
+
+if TYPE_CHECKING:
+    from tools.run.sight_clips import SightReview
 
 UNITY = '/Applications/Unity/Hub/Editor/6000.5.10f1/Unity.app/Contents/MacOS/Unity'
 UNITY_PATTERN = 'Unity.app/Contents/MacOS/Unity'
@@ -109,6 +116,7 @@ class Card:
     prefs: dict = field(default_factory=dict)
     commit: str = ''
     created: float = 0.0
+    export_dir: str = ''
 
     def path(self, s: Settings) -> Path:
         return s.cards / f'{self.id}.json'
@@ -263,24 +271,65 @@ def janitor(s: Settings, log=print) -> list[str]:
             continue
         if heavy.alive(card.pid, card.started or None):
             continue
-        copy_out(card)
+        export_error = copy_out(card)
         cleanup(s, card, log)
+        if export_error:
+            log('kehai-run: ' + export_error)
         record(s, card, 'interrupted', exit=INTERRUPTED, note='cleaned up by a later run: its process had died')
         cleaned.append(card.id)
     return cleaned
 
 
-def copy_out(card: Card) -> None:
-    """What the run produced in its data folder: shift records, replays, eval output (Q1)."""
+def copy_out(card: Card) -> str:
+    """Retain the run's output and report any error delivering the caller's export."""
     data = Path(card.data)
     out = Path(card.out)
     for name in ('shift_records', 'kehai_eval', 'karen_logs', 'replays', 'sandbox_checks'):
         if (data / name).exists():
             shutil.copytree(data / name, out / name, dirs_exist_ok=True)
+    if card.export_dir:
+        export = Path(card.export_dir)
+        try:
+            live_log = unity_log_file(card.job, export)
+            if live_log.is_file():
+                shutil.copy2(live_log, out / 'unity.log')
+            if card.job != 'demos':
+                for name in ('shift_records', 'kehai_eval'):
+                    if (out / name).is_dir():
+                        shutil.copytree(out / name, export / name, dirs_exist_ok=True)
+        except OSError as err:
+            return f'output export to {export} failed ({err}). Retained results: {out}'
+    return ''
 
 
-def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: str | None) -> list[str]:
-    base = ['-batchmode', '-nographics', '-projectPath', str(clone), '-logFile', str(out / 'unity.log')]
+def unity_log_file(job: str, folder: Path) -> Path:
+    return folder / ('record.log' if job == 'demos' else 'unity.log')
+
+
+def demo_args(mode: str, steps: str, export_dir: Path) -> list[str]:
+    if mode == 'employee':
+        return ['-ablation-rungs', 'E', '-ablation-profiles', 'efficient,skittish,reckless',
+                '-bot-mind', 'trainer', '-bot-record-demos', str(export_dir), '-bot-demo-steps', steps]
+    return ['-ablation-rungs', 'E', '-karen-brain', mode,
+            '-karen-record-demos', str(export_dir), '-karen-demo-steps', steps]
+
+
+def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: str | None,
+               *, league: Path | None = None, eval_timeout: str | None = None,
+               export_dir: Path | None = None) -> list[str]:
+    base = ['-batchmode', '-nographics', '-projectPath', str(clone)]
+    logging = ['-logFile', str(unity_log_file(job, export_dir or out))]
+    if job == 'demos':
+        return base + ['-executeMethod', 'EvalBatch.Play', '-kehai-ablation', '-ablation-interleave',
+                       '-ablation-careers', '1000', '-ablation-shifts', '6', '-ablation-start', '1',
+                       '-ablation-seconds', '150', '-kehai-no-records'] + logging + extra
+    if job in ('league', 'ablation'):
+        mode = ['-league', str(clone / league)] if league is not None else ['-kehai-ablation']
+        eval_args = ['-executeMethod', 'EvalBatch.Play', *mode]
+        if eval_timeout is not None:
+            return base + eval_args + ['-eval-timeout-min', eval_timeout] + logging + extra
+        return base + logging + eval_args + extra
+    base += logging
     if job in ('trick-clip', 'sandbox-clip'):
         base.remove('-nographics')
         entry = 'PursuitSandboxChecks.Render' if job == 'sandbox-clip' else 'Kehai.Replay.ReplayRenderBatch.Run'
@@ -291,8 +340,6 @@ def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: 
         if test_filter:
             args += ['-testFilter', test_filter]
         return args + extra
-    if job == 'ablation':
-        return base + ['-executeMethod', 'EvalBatch.Play', '-kehai-ablation'] + extra
     return base + extra
 
 
@@ -312,37 +359,80 @@ def progress_line(log: Path) -> str:
             tail = f.read().decode('utf-8', 'replace').splitlines()
     except OSError:
         return ''
+    last_nonblank = ''
     for line in reversed(tail):
-        if 'EvalBatch progress' in line or 'Running tests' in line or 'Test run' in line:
-            return line.strip()[:200]
-    return tail[-1].strip()[:200] if tail else ''
+        line = line.strip()
+        last_nonblank = last_nonblank or line
+        if ('EvalBatch progress' in line or 'Running tests' in line or 'Test run' in line
+                or line.startswith('Placement audit:')
+                or (line.startswith('Placement audit ') and ':' in line)):
+            return line[:200]
+    return last_nonblank[:200]
 
 
 def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min: float = 90.0,
-        test_filter: str | None = None, dry_run: bool = False, log=print) -> int:
-    if '-kehai-no-records' in extra and (job in ('tests', 'ablation') or 'EvalBatch.Play' in extra):
+        test_filter: str | None = None, dry_run: bool = False, log=print,
+        sight: SightReview | None = None, *, league: Path | None = None,
+        eval_timeout: str | None = None, export_dir: Path | None = None,
+        clone_root: Path | None = None, result_dir_file: Path | None = None) -> int:
+    if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
+    if job == 'demos' and export_dir is None:
+        log('kehai-run: demos require an export directory.')
+        return 2
     rid = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:6]
-    commit = git(s.repo, 'rev-parse', '--verify', ref + '^{commit}')
+    commit = git(s.repo, 'rev-parse', '--verify', (sight.commit if sight else ref) + '^{commit}')
+    if league is not None:
+        repo = Path(os.path.abspath(s.repo))
+        try:
+            league = Path(os.path.abspath(repo / league)).relative_to(repo)
+        except ValueError:
+            log('kehai-run: the league must be a path inside the checkout.')
+            return 1
+        entry = git(repo, '--literal-pathspecs', 'ls-tree', commit, '--', league.as_posix())
+        if not entry.startswith(('100644 blob ', '100755 blob ')):
+            log(f'kehai-run: league {league} must be a file committed at {commit}.')
+            return 1
     product = 'Kehai-run-' + rid
     out = s.runs / rid
-    clone = s.home / 'clones' / rid
-    args = [s.unity] + unity_args(job, clone, out, extra, test_filter)
+    # .noindex: Spotlight skips the folder. It indexed every fresh copy otherwise, loading the
+    # Mac enough to fail timing tests (22 November).
+    clone = (clone_root or s.home / CLONES) / rid
+    args = [s.unity] + unity_args(job, clone, out, extra, test_filter,
+                                 league=league, eval_timeout=eval_timeout, export_dir=export_dir)
+    commands = [(out, args)] if sight is None else [
+        (out / case.name, [s.unity] + unity_args('sandbox-clip', clone, out / case.name, case.shot(), None))
+        for case in sight.cases
+    ]
     if dry_run:
-        log(' '.join(args))
+        for _, command in commands:
+            log(shlex.join(command))
         return 0
+    # The archive in the clone has no .git directory. Let Unity stamp the ref we actually exported.
+    env = {**os.environ, 'KEHAI_RUN_CODE_COMMIT': commit}
+    if sight:
+        from tools.reports.common import private_path
+        from tools.run.sight_clips import verify_sight_movie, video_tools
+        try:
+            private_path(out)
+            encoder, probe = video_tools(s.main)
+        except ValueError as err:
+            log(f'kehai-run: {err}')
+            return 3
+        env['KEHAI_FFMPEG'] = str(encoder)
     try:
         if unity_open(s):
             log('kehai-run: Unity is open. Close the editor first, or use the PC.')
-            return 3
+            return 1 if export_dir is not None else 3
     except OSError as err:
         log(f'kehai-run: {err}')
-        return 3
+        return 1 if export_dir is not None else 3
     s.home.mkdir(parents=True, exist_ok=True)
-    if free_gb(s.home) < s.min_free_gb:
+    disk = next(p for p in (clone_root, *clone_root.parents) if p.exists()) if clone_root else s.home
+    if free_gb(disk) < s.min_free_gb:
         log(f'kehai-run: less than {s.min_free_gb:g} GB free; not starting.')
-        return 4
+        return 1 if export_dir is not None else 4
     try:
         ok, dead = heavy.take(s.lock, f'kehai-run {job} {commit} ({rid})')
     except OSError as err:
@@ -357,6 +447,8 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     try:
         janitor(s, log)
         out.mkdir(parents=True)
+        if result_dir_file is not None:
+            result_dir_file.write_text(str(out.resolve()) + '\n', encoding='utf-8')
     except Exception:
         heavy.release(s.lock)
         raise
@@ -365,30 +457,82 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
                 prefs_plist=str(s.prefs_root / f'unity.TokenLimit.{product}.plist'),
                 prefs=read_prefs(s), commit=commit, created=time.time())
     card.save(s)
-    record(s, card, 'running', args=args[1:])
+    if sight:
+        record(s, card, 'running', source=str(sight.source), shots=[cmd[1:] for _, cmd in commands])
+    else:
+        record(s, card, 'running', args=args[1:])
     old = {sig: signal.signal(sig, _stop) for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     code, state, note = 1, 'failed', ''
     began = time.time()
     proc = None
+    results = {}
     try:
+        if sight:
+            sight.write(out, results)
         log(f'kehai-run: {rid}: cloning the project')
         make_clone(s, clone, commit)
         set_product(clone, product)
-        log(f'kehai-run: {rid}: running Unity ({job}), at most {timeout_min:g} min; log {out / "unity.log"}')
-        proc = subprocess.Popen(args, start_new_session=True)
-        limit = began + timeout_min * 60
-        while proc.poll() is None:
-            if time.time() > limit:
-                os.killpg(proc.pid, signal.SIGKILL)
-                proc.wait()
-                note = f'timed out after {timeout_min:g} min'
+        if export_dir is not None:
+            export_dir.mkdir(parents=True, exist_ok=True)
+            unity_log_file(job, export_dir).write_text('')
+            card.export_dir = str(export_dir.absolute())
+            card.save(s)
+        log_path = out / 'review.md' if sight else unity_log_file(job, export_dir or out)
+        time_limit = f', at most {timeout_min:g} min' if timeout_min < float('inf') else ''
+        log(f'kehai-run: {rid}: running Unity ({job}){time_limit}; {log_path}')
+        limit = (time.time() if eval_timeout is not None else began) + timeout_min * 60
+        code = 0
+        for i, (destination, command) in enumerate(commands):
+            if sight and time.time() >= limit:
+                code, note = 124, f'timed out after {timeout_min:g} min'
                 break
-            (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(out / "unity.log")}\n')
-            time.sleep(1.0)
-        code = proc.returncode if not note else 124
+            destination.mkdir(exist_ok=True)
+            unity_log = unity_log_file(job, export_dir or destination)
+            if sight:
+                name = sight.cases[i].name
+                log(f'kehai-run: rendering {name}; log {unity_log}')
+            proc = subprocess.Popen(command, start_new_session=True, env=env)
+            while proc.poll() is None:
+                if time.time() > limit:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait()
+                    note = f'timed out after {timeout_min:g} min'
+                    break
+                (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(unity_log)}\n')
+                time.sleep(1.0)
+            code = proc.returncode if not note else 124
+            if export_dir is not None and code < 0:
+                code = 128 - code
+            if sight:
+                if code == 0:
+                    try:
+                        verify_sight_movie(destination, sight.cases[i], probe)
+                        results[name] = None
+                    except (OSError, ValueError, subprocess.TimeoutExpired) as err:
+                        log(f'kehai-run: {name}: {err}')
+                        (destination / 'verification.txt').write_text(str(err) + '\n')
+                        results[name] = f'[Verification failed]({name}/verification.txt)'
+                else:
+                    results[name] = f'Render exited {code}'
+                sight.write(out, results)
+            if note:
+                break
+        if sight:
+            verified = sum(result is None for result in results.values())
+            failed_checks = sum(not case.passed for case in sight.cases)
+            if not note:
+                code = int(verified != len(sight.cases) or failed_checks > 0)
+                note = f'{verified}/{len(sight.cases)} clips verified, {failed_checks} bot checks failed'
+            log(f'kehai-run: review {out / "review.md"}')
         if code == 0 and job in ('trick-clip', 'sandbox-clip'):
             from tools.run.trick_clip import verify_movie
             verify_movie(out)
+        if code == 0 and job == 'demos':
+            demos = sorted(p for p in export_dir.glob('*.demo') if p.is_file() and not p.name.startswith('.'))
+            if not demos:
+                code, note = 1, f'no .demo files in {export_dir}'
+            for demo in demos:
+                log(str(demo))
         state = 'completed' if code == 0 else 'failed'
     except Stopped as why:
         note = f'stopped ({why})'
@@ -406,11 +550,15 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         for sig, handler in old.items():
             signal.signal(sig, handler)
         # If preservation fails, leave the source data and card for recovery.
-        copy_out(card)
+        export_error = copy_out(card)
         cleanup(s, card, log)
+        if export_error:
+            note = f'{note}. {export_error}' if note else export_error
+            if code == 0:
+                code, state = 1, 'failed'
     minutes = (time.time() - began) / 60
     record(s, card, state, exit=code, minutes=round(minutes, 1), note=note)
-    summary = f'{job} on {commit}: {state}' + (f' ({note})' if note else '') + f', {minutes:.0f} min. Results: {out}'
+    summary = f'{job} on {commit}: {state}' + (f' ({note})' if note else '') + f', {minutes:.0f} min. Results: {export_dir or out}'
     log('kehai-run: ' + summary)
     notify(s, summary)
     return code
@@ -468,14 +616,28 @@ def doctor(s: Settings, clean: bool = False, log=print) -> int:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog='kehai-run', description=__doc__.split('\n\n')[0])
     sub = p.add_subparsers(dest='cmd', required=True)
-    for name in ('tests', 'ablation', 'unity'):
+    for name in ('tests', 'ablation', 'league', 'demos', 'unity'):
         r = sub.add_parser(name)
         r.add_argument('--ref', default='HEAD', help='the commit to test (default HEAD)')
-        r.add_argument('--timeout-min', type=float, default=90.0)
+        r.add_argument('--timeout-min', type=float)
         r.add_argument('--dry-run', action='store_true', help='print the Unity command and stop')
         if name == 'tests':
             r.add_argument('--filter', help='a -testFilter for Unity')
-        r.add_argument('rest', nargs=argparse.REMAINDER, help='after --: passed to Unity')
+        if name == 'unity':
+            r.add_argument('--result-dir-file', type=Path, help='write this run’s absolute output path to a file')
+        if name == 'league':
+            r.add_argument('--league', type=Path, required=True, help='a league file in the selected commit')
+        if name in ('league', 'ablation'):
+            r.add_argument('--eval-timeout-min', help='EvalBatch timeout, with a five-minute runner grace period')
+            r.add_argument('--export-dir', type=Path, help='write the live log and export eval and shift output here')
+        if name == 'demos':
+            r.add_argument('--mode', choices=('employee', 'vital', 'basic'), required=True)
+            r.add_argument('--steps', default='20000', help='number of decisions to record')
+            r.add_argument('--export-dir', type=Path, required=True, help='write demonstrations and record.log here')
+        else:
+            r.add_argument('rest', nargs=argparse.REMAINDER, help='after --: passed to Unity')
+        if name in ('league', 'ablation', 'demos'):
+            r.add_argument('--clone-root', type=Path, help='parent directory for the runner-managed clone')
     clip = sub.add_parser('trick-clip', help='film one trick from a retained run')
     clip.add_argument('report', type=Path, help='the trick check TSV in the run output')
     clip.add_argument('trick', help='the tactic ID in the report')
@@ -485,6 +647,10 @@ def main(argv=None) -> int:
     room_clip.add_argument('--start', type=float, default=0)
     room_clip.add_argument('--end', type=float, default=12)
     room_clip.add_argument('--dry-run', action='store_true')
+    sight_clips = sub.add_parser('sight-clips', help='film the eight cases in a retained sight report')
+    sight_clips.add_argument('report', type=Path)
+    sight_clips.add_argument('--timeout-min', type=float, default=30, help='total time limit (default 30)')
+    sight_clips.add_argument('--dry-run', action='store_true')
     offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
     offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
     offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
@@ -493,6 +659,15 @@ def main(argv=None) -> int:
     d.add_argument('--clean', action='store_true')
     a = p.parse_args(argv)
     s = Settings.from_env()
+    if a.cmd == 'sight-clips':
+        from tools.run.sight_clips import read_review
+        try:
+            if not 0 < a.timeout_min < float('inf'):
+                raise ValueError('--timeout-min must be positive and finite')
+            sight = read_review(a.report)
+            return run(s, a.cmd, [], sight=sight, timeout_min=a.timeout_min, dry_run=a.dry_run)
+        except (OSError, ValueError, subprocess.CalledProcessError) as err:
+            p.error(str(err))
     if a.cmd in ('trick-clip', 'sandbox-clip'):
         from tools.run.trick_clip import read_shot, sandbox_shot
         try:
@@ -511,9 +686,29 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == 'doctor':
         return doctor(s, a.clean)
-    rest = [x for x in a.rest if x != '--']
-    return run(s, a.cmd, rest, ref=a.ref, timeout_min=a.timeout_min,
-               test_filter=getattr(a, 'filter', None), dry_run=a.dry_run)
+    export_dir = getattr(a, 'export_dir', None)
+    if a.cmd == 'demos':
+        export_dir = export_dir.absolute()
+        rest = demo_args(a.mode, a.steps, export_dir)
+    else:
+        rest = a.rest[1:] if a.rest[:1] == ['--'] else a.rest
+    eval_timeout = getattr(a, 'eval_timeout_min', None)
+    timeout = a.timeout_min
+    if timeout is None:
+        timeout = float('inf') if a.cmd == 'demos' else 90.0
+        if eval_timeout is not None:
+            try:
+                minutes = float(eval_timeout)
+            except ValueError:
+                minutes = 0.0  # Match EvalBatch's treatment of an unparseable timeout.
+            timeout = minutes + 5 if minutes > 0 else float('inf')
+    clone_root = getattr(a, 'clone_root', None)
+    return run(s, a.cmd, rest, ref=a.ref, timeout_min=timeout,
+               test_filter=getattr(a, 'filter', None), dry_run=a.dry_run,
+               league=getattr(a, 'league', None), eval_timeout=eval_timeout,
+               export_dir=export_dir,
+               clone_root=clone_root.absolute() if clone_root is not None else None,
+               result_dir_file=getattr(a, 'result_dir_file', None))
 
 
 if __name__ == '__main__':
