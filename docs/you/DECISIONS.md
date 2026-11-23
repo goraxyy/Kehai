@@ -6,6 +6,8 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-23 | Shelves are measured at the board you put stock on (at most 1.6 m), not at the middle of the pack standing on it; everything else keeps the centre rule | [placement](plans/0.5.2/placement.md#1-the-rule), C12.2 |
+| 2026-11-23 | The power box's three switches are labelled EAST, WEST and BACK, and each prompt names the lights it runs (Q25: label them) | [placement](plans/0.5.2/placement.md), C12.3 |
 | 2026-11-21 | The squashed key map: seven F keys (F1 map with her cone, F2 replay, F4–F6 sandbox, F7 clip, F8 one webcam panel); F3, F9, F10 freed | [sandboxes, section 8](plans/0.5.2/sandboxes.md#8-the-sandbox-island-in-the-store-scene-your-call-21-november) |
 | 2026-11-21 | The sandboxes move into the store scene as one island beside the store, the models island beside it, walkable between all three; the store is quiet there (no shift, her store self off); she gets a separate test map of the island; sandbox keys stop clashing, and the keys get sorted and squashed | [sandboxes, section 8](plans/0.5.2/sandboxes.md#8-the-sandbox-island-in-the-store-scene-your-call-21-november) |
 | 2026-11-21 | The staff room's radio comes down to 1.4 m on its wall, moved in code at load (it sat at 2.1 m, above eye level) | [0.5.2 plan](plans/0.5.2-plan.md), C12.2 |
