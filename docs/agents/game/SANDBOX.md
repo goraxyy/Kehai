@@ -16,7 +16,19 @@ of any stop. It opens the sandbox doors before the walk.
 
 ```sh
 tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Walk
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Pursuit       # the pursuit checks in the island's pursuit room
+tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Interactions  # the interaction checks in the island's interactions room
 ```
+
+**The island is the same for her as a room on its own** (23 November). Two things made it
+differ, both fixed:
+- **Her light sense** (`LightProbe`) read only the first group named `CeilingLights`, the store's,
+  so the island rooms' lamps didn't light you for her: you looked darker there and she saw you
+  0.8 s later. It now reads every `CeilingLights` group, and `SandboxKit` refreshes it as a room's
+  lamps are built.
+- **Her test map's 1.5 m grid** started 0.2 and 0.4 m off the standalone room's, so her search spots
+  fell elsewhere. `SandboxIsland.MapBounds` is nudged onto the standalone room's grid
+  (`PursuitGrid`, as `PursuitSandboxChecks` logs it), and `SandboxIslandCheck.Pursuit` checks it.
 
 ## The sight sandbox
 

@@ -557,6 +557,16 @@ reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's
 
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 
+- **Her light sense ignored a second set of ceiling lamps (23 November).** `LightProbe` read only
+  the first group named `CeilingLights` in the scene. On the sandbox island that's the store's, so
+  the island rooms' lamps didn't light you for her: she first saw the pursuit bot at 1.8 s there
+  against 1.0 s in the same room on its own. Found by comparing the two runs' logs. Fixed: every
+  `CeilingLights` group counts. The store has one such group, so a shift there is unchanged.
+- **Her island map was cut on a different grid (23 November).** Her 1.5 m cells started 0.2 and
+  0.4 m off the standalone room's, so her search spots moved, and the island pursuit checks passed
+  2 of 4 against 4 of 4 alone. Aligned (`SandboxIsland.MapBounds`): 3 of 4 on the island before the
+  light fix. Sandbox-only; the store's map is untouched.
+
 - **Her eye tested your feet and chest 1 m too high in the store (22 November).** `PlayerPresence`
   measured them from the player's origin; the store's player starts a shift with its body centred
   on its origin, 1 m up, until the first crouch. So your chest point sat about 2.3 m up, over a
