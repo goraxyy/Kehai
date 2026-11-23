@@ -84,12 +84,15 @@ namespace Kehai.Sandbox
             // only, compare exactly the same route with her eye turned either way.
             var eye = room.Karen.Body.Sight;
             bool seesEntry = channel == Channel.Ledger && active;
-            room.Karen.PlaceAt(transform.TransformPoint(InteractionSandbox.Observer), transform.eulerAngles.y + (seesEntry ? 90f : -90f));
+            Vector3 observer = InteractionSandbox.Observer;
+            // Give the beam a clear path past Karen to the tall shelf.
+            if (channel == Channel.Torch) observer += Vector3.forward * 1.2f;
+            room.Karen.PlaceAt(transform.TransformPoint(observer), transform.eulerAngles.y + (seesEntry ? 90f : -90f));
             door.Set(true, instantly: true);
             Physics.SyncTransforms();
             Vector3 threshold = SightSandbox.FridgeFront + Vector3.left * 1.2f;
             bot.Teleport(transform.TransformPoint(threshold));
-            player.transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + (channel == Channel.Torch ? -90f : 90f), 0f);
+            player.transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + (channel == Channel.Torch ? -95f : 90f), 0f);
 
             bool expect = active && facing;
             var row = new Row { name = name, expected = expect ? "Evidence" : "No evidence", replay = name + ".krec" };
@@ -131,8 +134,15 @@ namespace Kehai.Sandbox
                     break;
                 case Channel.Torch:
                     observed = eye.TryHiddenTorchGlow(out Vector3 spot);
-                    valid = !observed || Vector3.Distance(player.Position, spot) > .5f;
+                    var beam = sandbox.Torch.beam;
+                    bool hitSurface = Physics.Raycast(beam.transform.position, beam.transform.forward,
+                        out RaycastHit hit, beam.range, ~0, QueryTriggerInteraction.Ignore);
+                    string target = hitSurface ? hit.collider.transform.parent?.name : "none";
+                    valid = player.HeldTorch == sandbox.Torch && sandbox.Torch.IsOn == active &&
+                        target == "Tall shelf 1" && eye.CanSee(hit.point + hit.normal * .015f) &&
+                        (!observed || Vector3.Distance(player.Position, spot) > .5f);
                     row.observed = observed ? $"Light on a surface at {spot:F1}" : "No visible light from the torch";
+                    row.observed += $". Beam target {target}";
                     break;
                 default:
                     float weight = TestLedger(boundaries, Path.Combine(folder, name + "-ledger.json"));
