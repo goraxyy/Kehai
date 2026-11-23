@@ -98,6 +98,27 @@ Each trained Karen gets her own number, apart from the game's: **Satori** (the g
 | **Which Karen** | the one being trained or benchmarked | the newest that passed the gate | the newest that passed the gate for release |
 | **Who gets it** | you, the sound designer, the artist, the agents, the PC | playtesters | players |
 
+Run from the 0.5.2 checkout with the editor closed. Each command is a separate Unity job. The
+output goes outside the temporary clone, so it survives cleanup. Use `-playtest <round>` on
+Testing when its feedback configuration is ready.
+
+```sh
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -buildTarget Win64 -executeMethod KehaiBuild.Build \
+  -platform windows -channel dev -release-version 0.5.2 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/dev-windows/Kehai.exe"
+
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -executeMethod KehaiBuild.Build \
+  -platform macos -channel testing -release-version 0.5.2 -beta 1 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/testing-macos/Kehai.app"
+
+tools/run/kehai-run unity --timeout-min 60 -- -noaudio -executeMethod KehaiBuild.Build \
+  -platform macos -channel prod -release-version 0.5.2 \
+  -kehai-build-out "$HOME/TokenLimit/builds/0.5.2/prod-macos/Kehai.app"
+```
+
+For Windows Testing or Prod use `-buildTarget Win64 -platform windows` and an `.exe` output in
+its own folder. The build's `build.txt` and Settings screen both use the channel version.
+
 **Later, on Steam:** Steam doesn't read version numbers; it has branches. The default branch
 would carry prod, and a password-protected beta branch would carry testing.
 

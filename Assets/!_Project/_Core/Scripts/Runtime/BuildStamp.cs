@@ -17,6 +17,7 @@ public static class BuildStamp
     {
         public string version = "";   // e.g. 0.5.2-testing
         public string edition = "";
+        public string channel;        // dev, testing or prod for a channel build
         public string satori, oni;    // bundled card versions; absent in older build.json files
         public string code = "";      // the public repo's commit, short; "+changes" when built from a dirty tree
         public string art = "";       // the private project's commit (kehai-project), or "none" before it exists
