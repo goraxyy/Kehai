@@ -319,10 +319,15 @@ def progress_line(log: Path) -> str:
             tail = f.read().decode('utf-8', 'replace').splitlines()
     except OSError:
         return ''
+    last_nonblank = ''
     for line in reversed(tail):
-        if 'EvalBatch progress' in line or 'Running tests' in line or 'Test run' in line:
-            return line.strip()[:200]
-    return tail[-1].strip()[:200] if tail else ''
+        line = line.strip()
+        last_nonblank = last_nonblank or line
+        if ('EvalBatch progress' in line or 'Running tests' in line or 'Test run' in line
+                or line.startswith('Placement audit:')
+                or (line.startswith('Placement audit ') and ':' in line)):
+            return line[:200]
+    return last_nonblank[:200]
 
 
 def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min: float = 90.0,

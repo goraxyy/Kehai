@@ -95,6 +95,21 @@ class Fixture(unittest.TestCase):
         return False
 
 
+class ProgressTests(unittest.TestCase):
+    def test_last_nonblank_line_and_placement_audit_markers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / 'unity.log'
+            audit_lines = ('Placement audit island: 32 rows and 0 findings so far.',
+                           'Placement audit: 32 rows, 0 findings, report placement.tsv')
+            for message in audit_lines:
+                with self.subTest(message=message):
+                    log.write_text(f'{message}\nUnityEngine.Debug:Log (object)\n\n  \n')
+                    self.assertEqual(kr.progress_line(log), message)
+
+            log.write_text('Import started\n  Import finished  \n\n  \n')
+            self.assertEqual(kr.progress_line(log), 'Import finished')
+
+
 class RunTests(Fixture):
     def test_success_cleans_up_records_and_tests_the_branch_not_the_main_folder(self):
         code = kr.run(self.s, 'tests', [], log=lambda *_: None)
@@ -113,6 +128,44 @@ class RunTests(Fixture):
         self.assertEqual(out.name, self.events()[0]['id'])
         states = [e['state'] for e in self.events()]
         self.assertEqual(['running', 'completed'], states)
+
+    def test_status_shows_live_progress_and_register_outcome_from_stand_in(self):
+        finish = self.t / 'finish'
+        marker = 'Running tests for ExecutionSettings'
+
+        def status_output():
+            with self.run_cli('status') as status:
+                output, _ = status.communicate(timeout=10)
+                self.assertEqual(status.returncode, 0, output)
+                return output
+
+        def progress_seen():
+            return any(marker in progress.read_text() for progress in self.s.runs.glob('*/progress'))
+
+        with self.run_cli('tests', '--timeout-min', '0.5', STANDIN_FINISH_FILE=str(finish)) as runner:
+            try:
+                self.assertTrue(self.wait_for(lambda: runner.poll() is not None or progress_seen()),
+                                'the runner recorded progress')
+                if runner.poll() is not None:
+                    output, _ = runner.communicate()
+                    self.fail(f'stand-in runner exited before recording progress:\n{output}')
+                start, = self.events()
+                self.assertEqual(start['state'], 'running')
+                rid = start['id']
+                output = status_output()
+                self.assertRegex(output, rf'{rid} tests running: tests {rid} \d+s {marker}\n')
+                self.assertIn(f'last: {rid} tests running', output)
+            finally:
+                finish.touch()
+                output, _ = runner.communicate(timeout=20)
+            self.assertEqual(runner.returncode, 0, output)
+
+        self.assert_clean()
+        self.assertEqual([(e['id'], e['state']) for e in self.events()],
+                         [(rid, 'running'), (rid, 'completed')])
+        output = status_output()
+        self.assertIn('The heavy-work lock: free', output)
+        self.assertIn(f'last: {rid} tests completed', output)
 
     def test_unknown_editor_state_stops_before_cleanup(self):
         result = subprocess.CompletedProcess([], 1, '', 'cannot get process list')

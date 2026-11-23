@@ -32,6 +32,11 @@ if data_root:
     d.mkdir(parents=True, exist_ok=True)
     (d / 'shift_001.json').write_text('{}')
     (d / 'shift_001.krec').write_bytes(b'fixture replay')
+finish_file = os.environ.get('STANDIN_FINISH_FILE')
+if finish_file:
+    finish = Path(finish_file)
+    while not finish.exists():
+        time.sleep(.05)
 time.sleep(float(os.environ.get('STANDIN_SLEEP', '0')))
 results = arg('-testResults')
 if results:

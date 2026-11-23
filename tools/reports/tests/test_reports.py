@@ -2,16 +2,19 @@ import concurrent.futures
 import copy
 import json
 import math
+import os
 from pathlib import Path
+import platform
 import re
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
 from tools.reports.common import atomic_write, digest, private_path, read_json, read_lines, source, write_json
-from tools.reports.register import append, audit, latest, main
+from tools.reports.register import append, audit, latest, locked, main
 from tools.reports.fixtures import create
 from tools.reports.html import page, scoreboard
 from tools.reports.network import inspect
@@ -61,6 +64,134 @@ class Register(unittest.TestCase):
                 values=list(executor.map(lambda i:append(p, {'id':str(i),'state':'imported'}), range(16)))
             self.assertEqual(len(read_lines(p)),16)
             self.assertTrue(all(values))
+
+    def test_lock_excludes_live_writer_and_is_released_when_killed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'runs.jsonl'
+            legacy = path.with_name(path.name + '.lock')
+            ready = Path(tmp) / 'writer-ready'
+            start = {'id': 'existing', 'state': 'running'}
+            end = {'id': 'existing', 'state': 'completed'}
+            append(path, start)
+            command = [
+                sys.executable, '-c',
+                'from pathlib import Path\n'
+                'import sys, time\n'
+                'from tools.reports.register import locked\n'
+                'with locked(sys.argv[1]):\n'
+                '    Path(sys.argv[2]).touch()\n'
+                '    time.sleep(30)\n',
+                str(path), str(ready),
+            ]
+            with subprocess.Popen(command, cwd=ROOT) as writer:
+                try:
+                    deadline = time.monotonic() + 5
+                    while not ready.exists() and writer.poll() is None and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertTrue(ready.exists(), 'the writer acquired the lock')
+                    with self.assertRaises(FileExistsError):
+                        legacy.mkdir()
+                    with self.assertRaisesRegex(ValueError, 'lock busy'):
+                        with locked(path, timeout=.1):
+                            self.fail('a second writer entered while the lock was held')
+                    self.assertIsNone(writer.poll())
+                    self.assertEqual(read_lines(path), [start])
+                finally:
+                    writer.kill()
+                    writer.wait(timeout=5)
+
+            self.assertTrue(legacy.is_dir())
+            self.assertTrue(append(path, end))
+            self.assertFalse(legacy.exists())
+            self.assertEqual(read_lines(path), [start, end])
+            self.assertEqual(latest(path), [end])
+
+    def test_legacy_writer_can_acquire_and_its_dead_lock_is_recovered(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'runs.jsonl'
+            lock = path.with_name(path.name + '.lock')
+            ready = Path(tmp) / 'legacy-ready'
+            start = {'id': 'shared', 'state': 'running'}
+            end = {'id': 'shared', 'state': 'completed'}
+            append(path, start)
+            self.assertTrue(path.with_name(path.name + '.lock.guard').is_file())
+            command = [
+                sys.executable, '-c',
+                'from pathlib import Path\n'
+                'import os, platform, sys, time\n'
+                'lock, ready = map(Path, sys.argv[1:])\n'
+                'lock.mkdir(mode=0o700)\n'
+                'holder = lock / "holder"\n'
+                'try:\n'
+                '    holder.write_text(f"{platform.node()} pid={os.getpid()}\\n")\n'
+                '    ready.touch()\n'
+                '    time.sleep(30)\n'
+                'finally:\n'
+                '    holder.unlink()\n'
+                '    lock.rmdir()\n',
+                str(lock), str(ready),
+            ]
+            with subprocess.Popen(command) as writer:
+                try:
+                    deadline = time.monotonic() + 5
+                    while not ready.exists() and writer.poll() is None and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertTrue(ready.exists(), 'the old writer acquired the lock')
+                    with self.assertRaisesRegex(ValueError, 'lock busy'):
+                        with locked(path, timeout=.1):
+                            self.fail('the new writer entered while the legacy lock was held')
+                    self.assertEqual((lock / 'holder').read_text(), f'{platform.node()} pid={writer.pid}\n')
+                    self.assertIsNone(writer.poll())
+                finally:
+                    writer.kill()
+                    writer.wait(timeout=5)
+
+            self.assertTrue(lock.is_dir())
+            self.assertTrue(append(path, end))
+            self.assertFalse(lock.exists())
+            self.assertEqual(read_lines(path), [start, end])
+
+    def test_foreign_and_unverifiable_legacy_locks_are_left_alone(self):
+        markers = (None, 'foreign-host.invalid pid=123\n', f'{platform.node()} pid=123',
+                   f'{platform.node()} pid=0\n', f'{platform.node()} pid=9999999999\n')
+        for marker in markers:
+            with self.subTest(marker=marker), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / 'runs.jsonl'
+                lock = path.with_name(path.name + '.lock')
+                lock.mkdir()
+                holder = lock / 'holder'
+                if marker is not None:
+                    holder.write_text(marker)
+                with patch('tools.reports.register._pid_is_dead') as check_pid:
+                    with self.assertRaisesRegex(ValueError, 'lock busy'):
+                        with locked(path, timeout=0):
+                            self.fail('lock ownership was unverifiable')
+                    check_pid.assert_not_called()
+                self.assertTrue(lock.is_dir())
+                if marker is not None:
+                    self.assertEqual(holder.read_text(), marker)
+
+    def test_recovery_leaves_a_legacy_lock_replaced_during_pid_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'runs.jsonl'
+            lock = path.with_name(path.name + '.lock')
+            lock.mkdir()
+            holder = lock / 'holder'
+            holder.write_text(f'{platform.node()} pid=123\n')
+            live_marker = f'{platform.node()} pid={os.getpid()}\n'
+
+            def replace_lock(pid):
+                holder.unlink()
+                lock.rmdir()
+                lock.mkdir()
+                holder.write_text(live_marker)
+                return True
+
+            with patch('tools.reports.register._pid_is_dead', side_effect=replace_lock):
+                with self.assertRaisesRegex(ValueError, 'lock busy'):
+                    with locked(path, timeout=0):
+                        self.fail('the replacement writer lost its lock')
+            self.assertEqual(holder.read_text(), live_marker)
 
     def test_wrapper_records_failure_and_input_hashes(self):
         with tempfile.TemporaryDirectory() as tmp:
