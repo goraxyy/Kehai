@@ -18,23 +18,30 @@ namespace Kehai.Sandbox
 
         // A panel of buttons in a row, centred on `at` (its local space faces +z), each a
         // small coloured block with its label above it. `at` sits at chest height, within reach.
+        // Each button gets half a metre, and a label never runs wider than its button's share.
+        public const float Spacing = 0.5f;
+        public const float LabelSize = 0.02f;
+
         public static SandboxButton[] Panel(Transform parent, string name, Vector3 at, float yaw, params (string label, string prompt, Color colour, Action pressed)[] buttons)
         {
             Transform panel = SandboxKit.Group(parent, name, at, yaw);
-            float spacing = 0.32f;
-            float start = -(buttons.Length - 1) * spacing * 0.5f;
-            SandboxKit.Box(panel, "Backplate", new Vector3(0f, 0f, -0.02f), new Vector3(buttons.Length * spacing + 0.1f, 0.42f, 0.03f), new Color(0.15f, 0.15f, 0.17f));
+            float start = -(buttons.Length - 1) * Spacing * 0.5f;
+            SandboxKit.Box(panel, "Backplate", new Vector3(0f, 0f, -0.02f), new Vector3(buttons.Length * Spacing + 0.1f, 0.42f, 0.03f), new Color(0.15f, 0.15f, 0.17f));
             var made = new SandboxButton[buttons.Length];
             for (int i = 0; i < buttons.Length; i++)
             {
                 var b = buttons[i];
-                GameObject block = SandboxKit.Box(panel, b.label, new Vector3(start + i * spacing, -0.05f, 0.03f), new Vector3(0.22f, 0.22f, 0.08f), b.colour);
+                GameObject block = SandboxKit.Box(panel, b.label, new Vector3(start + i * Spacing, -0.05f, 0.03f), new Vector3(0.22f, 0.22f, 0.08f), b.colour);
+                block.layer = SandboxKit.InteractLayer;   // so the store's player can press it on the island
                 var button = block.AddComponent<SandboxButton>();
                 button.label = b.label;
                 button.prompt = b.prompt;
                 button.pressed = b.pressed;
                 made[i] = button;
-                Label(panel, b.label, new Vector3(start + i * spacing, 0.13f, 0.03f), 0.045f);
+                TextMesh text = Label(panel, b.label, new Vector3(start + i * Spacing, 0.13f, 0.03f), LabelSize);
+                float width = text.GetComponent<Renderer>().localBounds.size.x;
+                float room = Spacing - 0.08f;
+                if (width > room) text.transform.localScale *= room / width;
             }
             return made;
         }
@@ -51,6 +58,19 @@ namespace Kehai.Sandbox
                 }
                 return builtinFont;
             }
+        }
+
+        // The built-in font's material draws over everything, so a label showed through walls (the
+        // panels inside and outside a door sit back to back). This copy hides behind what's in front.
+        static Material depthTested;
+        static Material DepthTested(Font font)
+        {
+            if (depthTested == null || depthTested.mainTexture != font.material.mainTexture)
+            {
+                depthTested = new Material(font.material) { name = "Sandbox label" };
+                depthTested.SetFloat("unity_GUIZTestMode", (float)UnityEngine.Rendering.CompareFunction.LessEqual);
+            }
+            return depthTested;
         }
 
         // A world-space text label, facing the way its parent faces.
@@ -73,7 +93,7 @@ namespace Kehai.Sandbox
             if (font != null)
             {
                 mesh.font = font;
-                go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+                go.GetComponent<MeshRenderer>().sharedMaterial = DepthTested(font);
             }
             return mesh;
         }

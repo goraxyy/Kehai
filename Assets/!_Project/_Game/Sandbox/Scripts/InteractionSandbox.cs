@@ -46,6 +46,7 @@ namespace Kehai.Sandbox
             var torch = SandboxKit.Box(transform, "Test torch", new Vector3(3f, .72f, -2.5f),
                 new Vector3(.09f, .09f, .23f), SandboxKit.Fridge);
             torch.SetActive(false);
+            torch.layer = SandboxKit.InteractLayer;
             torch.AddComponent<Rigidbody>().isKinematic = true;
             Torch = torch.AddComponent<Flashlight>();
             torch.GetComponent<Item>().type = ItemType.Flashlight;

@@ -91,11 +91,16 @@ namespace Kehai.Sandbox
             return roomCentre + new Vector3(0f, 0f, -hz);
         }
 
+        // The layer the store's player aims along (PlayerInteract.interactLayer). Anything you use
+        // with E on the island goes on it; her eye still sees it, as it does the store's doors.
+        public static int InteractLayer => LayerMask.NameToLayer("Interactable");
+
         // A door leaf hinged at the doorway's west edge, swinging into the room.
         public static SandboxDoor Door(Transform parent, Vector3 doorway, float width, string name = "Door")
         {
             Transform hinge = Group(parent, name, doorway + new Vector3(-width * 0.5f, 0f, 0f));
             GameObject leaf = Box(hinge, "Leaf", new Vector3(width * 0.5f, 1.05f, 0f), new Vector3(width - 0.04f, 2.1f, 0.05f), Shelf);
+            leaf.layer = InteractLayer;   // the store's player only reaches things on this layer
             var door = hinge.gameObject.AddComponent<SandboxDoor>();
             door.leaf = leaf.transform;
             door.openAngle = -95f;
@@ -121,6 +126,7 @@ namespace Kehai.Sandbox
             // The door, hinged on the left of the opening, swinging out.
             Transform hinge = Group(f, "Fridge door", new Vector3(-inside.x * 0.5f, 0f, -0.03f));
             GameObject leaf = Box(hinge, "Leaf", new Vector3(inside.x * 0.5f, inside.y * 0.5f, 0f), new Vector3(inside.x, inside.y - 0.02f, 0.05f), Fridge);
+            leaf.layer = InteractLayer;
             var door = hinge.gameObject.AddComponent<SandboxDoor>();
             door.leaf = leaf.transform;
             door.openAngle = 100f;

@@ -128,7 +128,7 @@ namespace Kehai.Sandbox
             Transform stalls = SandboxKit.Group(transform, "Trick stalls", StallsAt, 180f);
             BuildStalls(stalls, id => TryFire(id));
             var controls = SandboxButton.Panel(stalls, "Shift controls",
-                new Vector3(-(Columns + 1) * ColumnSpacing / 2f, 1.25f, 0f), 0f,
+                new Vector3(-(Columns + 1) * ColumnSpacing / 2f - 0.4f, 1.25f, 0f), 0f,   // clear of the last column of plates
                 ("START", "Start the shift and release Karen", SandboxKit.Rack, StartRunning),
                 ("RESTART", "Restart the private shift", SandboxKit.Rack, Restart),
                 ("FREEZE", "Freeze Karen", SandboxKit.Rack, Freeze));
