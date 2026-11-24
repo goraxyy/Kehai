@@ -141,7 +141,7 @@ namespace Kehai.Sandbox
             // it, before the store's room lighting and stocking read the map.
             var doors = root.GetComponentsInChildren<HingeDoor>(true);
             Physics.SyncTransforms();
-            SandboxKit.Bake(root);
+            Bake(root);
             StoreMap.Rebuild();
             report.Add($"her map: {StoreMap.Current.CellCount} cells, rooms {string.Join(", ", StoreMap.Current.Rooms)}; {doors.Length} hinged doors");
 
@@ -169,8 +169,10 @@ namespace Kehai.Sandbox
             {
                 var centre = new Vector3(r.center.x, 0f, r.center.y);
                 var size = new Vector3(r.width + Wall, 0f, r.height + Wall);
-                Slab(shell, name + " floor", centre + Vector3.down * 0.05f, size + Vector3.up * 0.12f, m.Floor);
-                Slab(shell, name + " ceiling", centre + Vector3.up * (WallHeight + 0.05f), size + Vector3.up * 0.1f, m.Ceiling);
+                // Marked as a room's surface (an interior anchor, named floor or ceiling), so the
+                // store lights it by the rooms over it, not by its edges, as walls are.
+                Slab(shell, name + " floor", centre + Vector3.down * 0.05f, size + Vector3.up * 0.12f, m.Floor).AddComponent<InteriorLightAnchor>();
+                Slab(shell, name + " ceiling", centre + Vector3.up * (WallHeight + 0.05f), size + Vector3.up * 0.1f, m.Ceiling).AddComponent<InteriorLightAnchor>();
             }
 
             // Outside walls.
@@ -247,9 +249,11 @@ namespace Kehai.Sandbox
             Place(sales, m.Bins, new Vector3(-13.6f, 0f, Front - 0.45f), 0f, "Bins", report);
 
             Transform stock = Group(root, "Stockroom");
-            Place(stock, m.Rack, new Vector3(-11.5f, 0f, Back + 1.05f), 0f, "Rack", report);
-            Place(stock, m.Rack, new Vector3(-5.5f, 0f, Back + 1.05f), 0f, "Rack", report);
-            Place(stock, m.Rack, new Vector3(-12.5f, 0f, Middle - 2.6f), 90f, "Rack", report);
+            // Three of the store's own racks, moved, not copied: the stockroom's boxes are laid on
+            // the racks in the store's rack group (StorageBoxes), so they keep their place in it.
+            Move("Storage_Rack_07", new Vector3(-11.5f, 0f, Back + 1.05f), 0f, null, report);
+            Move("Storage_Rack_08", new Vector3(-5.5f, 0f, Back + 1.05f), 0f, null, report);
+            Move("Storage_Rack_03", new Vector3(-12.5f, 0f, Middle - 2.6f), 90f, null, report);
 
             Transform cold = Group(root, "Cold room");
             Place(cold, m.HideChiller, new Vector3(6.5f, 0f, Middle - 0.8f), 0f, "Chiller you can hide in", report);
@@ -262,6 +266,21 @@ namespace Kehai.Sandbox
             Place(doors, m.DoorAlongX, ColdDoor, 0f, "Door to the cold room", report);
             Place(doors, m.DoorAlongZ, InnerDoor, 0f, "Door between the stockroom and the cold room", report);
             Place(doors, m.AutoDoor, ShopperDoor, 0f, "Shoppers' doors", report);
+        }
+
+        // Its floor's NavMesh: everything inside its walls and on its pavement, the racks moved in
+        // from the store included (they stay in the store's rack group), baked the way the store's
+        // is (StoreRebake leaves people, stand-ins and the doors' leaves out).
+        static void Bake(GameObject root)
+        {
+            var surface = root.GetComponent<Unity.AI.Navigation.NavMeshSurface>() ?? root.AddComponent<Unity.AI.Navigation.NavMeshSurface>();
+            surface.collectObjects = Unity.AI.Navigation.CollectObjects.Volume;
+            surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.PhysicsColliders;
+            float z0 = Back - 1f, z1 = Front + 7.5f;
+            surface.center = new Vector3(0f, 2f, (z0 + z1) * 0.5f);   // the root stands at Origin
+            surface.size = new Vector3(East - West + 2f, 5f, z1 - z0);
+            Physics.SyncTransforms();
+            using (new Kehai.Karen.StoreRebake(surface)) surface.BuildNavMesh();
         }
 
         // ---- what her tricks need (M4) -------------------------------------------------------
@@ -297,21 +316,25 @@ namespace Kehai.Sandbox
 
         static void MoveAnchors(Transform root, List<string> report)
         {
-            Transform moved = Group(root, "Moved from the store");   // under the root: in its NavMesh bake
-            foreach (var (name, at, turn) in Anchors)
-            {
-                GameObject go = SceneObjectNames.Find(name) ?? GameObject.Find(name);
-                if (go == null) { report.Add($"MISSING anchor {name}"); continue; }
-                Vector3 offset = Footprint(go).center - go.transform.position;
-                if (Footprint(go).size == Vector3.zero) offset = Vector3.zero;
-                Quaternion spin = Quaternion.Euler(0f, turn, 0f);
-                Vector3 world = World(at);
-                Vector3 turned = spin * offset;
-                go.transform.SetParent(moved, true);
-                go.transform.SetPositionAndRotation(new Vector3(world.x - turned.x, go.transform.position.y, world.z - turned.z),
-                    spin * go.transform.rotation);
-                report.Add($"moved {name} into the {StoreMap.AreaAt(go.transform.position)}");
-            }
+            Transform moved = Group(root, "Moved from the store");
+            foreach (var (name, at, turn) in Anchors) Move(name, at, turn, moved, report);
+        }
+
+        // One of the store's own things, its footprint's middle moved to `at` (mini store metres),
+        // turned `turn` degrees; into `parent`, or left in its own group when that's null.
+        static void Move(string name, Vector3 at, float turn, Transform parent, List<string> report)
+        {
+            GameObject go = SceneObjectNames.Find(name) ?? GameObject.Find(name);
+            if (go == null) { report.Add($"MISSING anchor {name}"); return; }
+            Bounds b = Footprint(go);
+            Vector3 offset = b.size == Vector3.zero ? Vector3.zero : b.center - go.transform.position;
+            Quaternion spin = Quaternion.Euler(0f, turn, 0f);
+            Vector3 world = World(at);
+            Vector3 turned = spin * offset;
+            if (parent != null) go.transform.SetParent(parent, true);
+            go.transform.SetPositionAndRotation(new Vector3(world.x - turned.x, go.transform.position.y, world.z - turned.z),
+                spin * go.transform.rotation);
+            report.Add($"moved {name} into the {StoreMap.AreaAt(go.transform.position)}");
         }
 
         // Shoppers come in through the automatic doors, browse the shelves and pay at the till.

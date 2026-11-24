@@ -38,6 +38,7 @@ namespace Kehai.Sandbox
         bool runOne, resumeAgent;
         string feedback = "Waiting for the store.";
         MiniStorePanel panel;   // the mini store's (C11.17); null elsewhere
+        bool freezeOnceBuilt;
 
         public string Feedback => feedback;
         public bool HasPanel => panel != null;   // the mini store's (C11.17)
@@ -219,7 +220,9 @@ namespace Kehai.Sandbox
         void Freeze()
         {
             if (!brain.enabled) return;
-            if (brain.Body == null) { brain.enabled = false; feedback = "Karen is frozen."; return; }   // before her body is built
+            // Asked before her body is built (her Start hasn't run): freeze her once it is. Turning
+            // her off now would skip her Start, and she'd never be built.
+            if (brain.Body == null) { freezeOnceBuilt = true; feedback = "Karen is frozen."; return; }
             var agent = brain.Body.Agent;
             if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
             {
@@ -238,6 +241,7 @@ namespace Kehai.Sandbox
 
         public void StartRunning()
         {
+            freezeOnceBuilt = false;
             if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return; }
             if (!brain.Shift.IsShiftActive) brain.Shift.StartShift();
             runOne = false;
@@ -251,6 +255,7 @@ namespace Kehai.Sandbox
         {
             // The mini store's panel: Tab, even while it has the game paused.
             if (panel != null && Input.GetKeyDown(KeyCode.Tab)) { panel.SetOpen(!panel.Open); return; }
+            if (freezeOnceBuilt && brain != null && brain.Body != null) { freezeOnceBuilt = false; Freeze(); }
             if (GamePause.Paused || brain == null || brain.Ctx == null) return;
             bool mini = panel != null;
             // Plain keys in the mini store (no Fn on a MacBook): P and Backspace beside F5 and F6.
