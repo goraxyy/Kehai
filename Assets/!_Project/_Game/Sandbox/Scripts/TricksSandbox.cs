@@ -123,6 +123,8 @@ namespace Kehai.Sandbox
         {
             if (brain == null) return;
             Freeze();
+            // The mini store (C11.17) has its own panel; no stalls there.
+            if (MiniStore.Active) { feedback = "Karen is frozen."; return; }
             feedback = "F5 starts shift four. The trick stalls stand on the sandbox island: out of the front door, north to the road, then west.";
             // Facing south: the plates face you as you come onto the island from the road.
             Transform stalls = SandboxKit.Group(transform, "Trick stalls", StallsAt, 180f);
