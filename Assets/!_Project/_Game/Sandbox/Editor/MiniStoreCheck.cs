@@ -153,6 +153,36 @@ public static class MiniStoreCheck
         Expect(moved > 8f, $"she walks when started ({moved:0.0} m in 45 s)");
         Expect(outside == 0f, $"she stays inside ({outside:0.0} s outside)");
         yield return Shots("karen");
+
+        // Every trick: would she use it here now, and if not, why (her gate, then the trick's own
+        // conditions). With all tricks allowed for this look; the panel's choice is put back.
+        var before = MiniStoreSettings.Allowed;
+        MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.All;
+        MiniStoreSettings.ApplyTo(brain.config);
+        var table = new List<string>();
+        foreach (string id in TricksSandbox.Catalogue)
+            table.Add($"{id,-16} {MiniStorePanel.Readiness(brain, id)}");
+        MiniStoreSettings.Allowed = before;
+        MiniStoreSettings.ApplyTo(brain.config);
+        Debug.Log("MiniStoreCheck: tricks here now\n  " + string.Join("\n  ", table));
+
+        // The panel's limit holds for her own choices: with none allowed, every trick is refused.
+        MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.None;
+        MiniStoreSettings.ApplyTo(brain.config);
+        int open = 0;
+        foreach (string id in TricksSandbox.Catalogue)
+        {
+            Tactic t = TacticLibrary.Get(id);
+            if (t != null && HtnPlanner.Gated(t, brain.Ctx, out _)) open++;
+        }
+        Expect(open == 0, $"with no tricks allowed, none passes her gate ({open} did)");
+        MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.OnlyOne;
+        MiniStoreSettings.Chosen = "spill";
+        MiniStoreSettings.ApplyTo(brain.config);
+        var passing = TricksSandbox.Catalogue.Where(id => TacticLibrary.Get(id) is Tactic t && HtnPlanner.Gated(t, brain.Ctx, out _)).ToList();
+        Expect(passing.All(id => id == "spill"), $"with only Spill allowed, only Spill passes her gate ([{string.Join(", ", passing)}])");
+        MiniStoreSettings.Allowed = before;
+        MiniStoreSettings.ApplyTo(brain.config);
     }
 
     // Screenshots from where you'd stand in each room, when Unity renders.
