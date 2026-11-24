@@ -45,18 +45,28 @@ The panel also says what she's doing and why she isn't using a trick right now (
 
 Each step ends with screenshots I check myself and send you, a commit and a note.
 
-- [ ] **M1 The building:** the three rooms from the store's models, doors that open with E, lamps.
-  You start inside. Screenshots.
-- [ ] **M2 Her map and the real Karen:** her map of the three rooms with their real names (sales
-  floor, cold storage, stockroom); she patrols and hunts there.
+- [x] **M1 The building:** the three rooms from the store's models, doors that open with E, lamps.
+  You start inside. Screenshots. **Done 24 November:** every door opens with E from where you'd
+  stand, each room's lamps light that room (MiniStoreCheck, run 20261124-010928).
+- [x] **M2 Her map and the real Karen:** her map of the three rooms with their real names (sales
+  floor, cold storage, stockroom); she patrols and hunts there. **Done 24 November:** three rooms
+  by name, all copied shelves stocked by aisle, she starts in the stockroom and walks 23 m in 45 s
+  without leaving.
 - [ ] **M3 The panel:** Start, Freeze, Restart; tricks None / Only one / All, and Fire now; the
-  senses switches.
+  senses switches. **Built 24 November:** the panel comes up and the limits hold at her gate (none:
+  no trick passes; only Spill: only Spill passes). Not yet tried by hand.
 - [ ] **M4 The tricks' things:** the breaker box and light circuits, cameras and screens, fog box,
   PA, time clock, mop rack, bins, till and shoppers, freezer alarm, stock boxes, in the three rooms.
+  **Part done 24 November:** all moved in or made there; 16 of 24 tricks are ready for her at once,
+  the other 8 wait on their own conditions (a throw needs distance, The overtime the last two
+  minutes, Fog that she thinks you're in the cold room or stockroom). Shoppers and the screens not
+  yet seen working.
 - [ ] **M5 End-to-end checks:** a bot plays it the way you would: walks in, opens every door, uses
   the panel. Then, for each of the 24 tricks with only that one allowed, she uses it herself within
   a time limit, and Fire now works. Results in a table. What fails is reported as it is.
-- [ ] **M6 Clean-up:** the old island rooms and trick stalls come out of the menu; the automatic
+  **Started:** with a tester standing still she used 10 of 24 herself in 40 s, and caught the
+  tester first in the rest; the rerun with the tester hiding was stopped after 2 tricks.
+- [ ] **M6 Clean-up:** (menu and docs done 24 November; merged without the full suite, your call) the old island rooms and trick stalls come out of the menu; the automatic
   sight and pursuit checks stay (the recorded test pass uses them). Docs and tests.
 
 **Done when:** you open Kehai → Sandbox → Mini store, everything on this page works, and you say
