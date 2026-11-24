@@ -95,6 +95,8 @@ namespace Kehai.Sandbox
             Shell(root.transform, models);
             Furnish(root.transform, models, report);
             Lamps(root.transform, models);
+            if (holder != null) Object.Destroy(holder.gameObject);
+            holder = null;
 
             // The store's own player starts inside, by the till, facing the shelves.
             GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -221,7 +223,6 @@ namespace Kehai.Sandbox
             for (float x = West + 3f; x < ColdWest; x += 6f) spots.Add(new Vector3(x, 0f, -7f));
             for (float x = ColdWest + 3f; x < East; x += 6f) spots.Add(new Vector3(x, 0f, -7f));
             float height = WallHeight - 0.4f;
-            float scale = height / m.LampHeight;
             int n = 0;
             foreach (Vector3 at in spots)
             {
@@ -242,8 +243,10 @@ namespace Kehai.Sandbox
                 light.spotAngle = m.SpotAngle;
                 light.innerSpotAngle = m.InnerSpotAngle;
                 light.color = m.LightColour;
-                light.range = m.LightRange * scale;
-                light.intensity = m.LightIntensity * scale * scale;
+                // The store's own strength and reach: scaled down to the lower ceiling, the walls
+                // and the fixtures' sides went black (screenshots, 24 November).
+                light.range = m.LightRange;
+                light.intensity = m.LightIntensity;
                 light.shadows = LightShadows.None;
             }
             Kehai.Karen.LightProbe.Refresh();
@@ -274,11 +277,17 @@ namespace Kehai.Sandbox
         // A copy of one of the store's fixtures, its footprint centred on `at` (mini store metres,
         // on the floor), turned `turn` degrees from the way the original stands. Renamed, so
         // nothing that looks the store's fixtures up by name finds the copy instead.
+        //
+        // Made under an inactive holder, so the copy wakes only once it's ready: the store's doors
+        // add their NavMesh obstacles when they wake (FurnitureDoor, HingeDoor, AutoDoubleDoor),
+        // and a copy that already carried the original's would fail to add its own.
         static GameObject Place(Transform parent, GameObject original, Vector3 at, float turn, string name, List<string> report)
         {
             if (original == null) { report.Add($"missing model for {name}"); return null; }
-            GameObject copy = Object.Instantiate(original, original.transform.position, original.transform.rotation, parent);
+            GameObject copy = Object.Instantiate(original, original.transform.position, original.transform.rotation, Holder);
             copy.name = "Mini " + name;
+            copy.SetActive(true);   // the original may be one the store hid; the holder keeps it asleep
+            StripRuntimeParts(copy);
             Vector3 offset = Footprint(copy).center - copy.transform.position;
             Quaternion spin = Quaternion.Euler(0f, turn, 0f);
             copy.transform.rotation = spin * original.transform.rotation;
@@ -286,7 +295,30 @@ namespace Kehai.Sandbox
             Vector3 turned = spin * offset;
             copy.transform.position = new Vector3(world.x - turned.x, original.transform.position.y, world.z - turned.z);
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true)) t.gameObject.isStatic = false;
+            copy.transform.SetParent(parent, true);   // wakes here
             return copy;
+        }
+
+        static Transform holder;
+        static Transform Holder
+        {
+            get
+            {
+                if (holder != null) return holder;
+                var go = new GameObject("Mini store copies (asleep)");
+                go.SetActive(false);
+                holder = go.transform;
+                return holder;
+            }
+        }
+
+        // The parts the store's fixtures add to themselves in Play: a door's NavMesh obstacles.
+        static void StripRuntimeParts(GameObject copy)
+        {
+            bool door = copy.GetComponentInChildren<HingeDoor>(true) != null || copy.GetComponentInChildren<FurnitureDoor>(true) != null ||
+                        copy.GetComponentInChildren<AutoDoubleDoor>(true) != null;
+            if (!door) return;
+            foreach (var obstacle in copy.GetComponentsInChildren<UnityEngine.AI.NavMeshObstacle>(true)) Object.DestroyImmediate(obstacle);
         }
 
         public static Bounds Footprint(GameObject go)
@@ -324,7 +356,7 @@ namespace Kehai.Sandbox
                 AutoDoor = Need("Auto_Double_Door_03", report);
                 Lamp = Need("Lamp_01", report);
                 Floor = MaterialOf("Original_Floor_01", report);
-                Ceiling = MaterialOf("Roof_Slab_01", report);
+                Ceiling = MaterialOf("Original_Roof_01", report);
                 Wall = MaterialOf("Cream_Wall_Panel_02", report);
                 Plinth = MaterialOf("Charcoal_Plinth_01", report);
                 GameObject light = Find("Ceiling_Light_42_5_132_01");
@@ -340,7 +372,15 @@ namespace Kehai.Sandbox
                 }
             }
 
-            static GameObject Find(string name) => SceneObjectNames.Find(name) ?? GameObject.Find(name);
+            // Hidden ones too: a shift's layout hides the store's own shelves (StoreLayoutRuntime).
+            static GameObject Find(string name)
+            {
+                GameObject found = SceneObjectNames.Find(name) ?? GameObject.Find(name);
+                if (found != null) return found;
+                foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+                    if (t.name == name && t.gameObject.scene.IsValid()) return t.gameObject;
+                return null;
+            }
 
             static GameObject Need(string name, List<string> report)
             {
@@ -366,7 +406,26 @@ namespace Kehai.Sandbox
         public Transform player;
         int frames;
 
-        void Start() => Move();
+        void Start()
+        {
+            Move();
+            LightTogether();
+        }
+
+        // The store keeps each room's lights to that room (RoomLighting, run as the store loads,
+        // after the mini store is built): a copy keeps its original's room, and the lamps get the
+        // room of where they hang. Until her map knows the mini store's rooms (M2), its lamps and
+        // everything in it share one set of layers, so the copies aren't left black.
+        void LightTogether()
+        {
+            foreach (Light light in GetComponentsInChildren<Light>(true))
+            {
+                var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+                if (data == null) data = light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+                data.renderingLayers = RoomLighting.Everything;
+            }
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask = RoomLighting.Everything;
+        }
 
         void Update()
         {
