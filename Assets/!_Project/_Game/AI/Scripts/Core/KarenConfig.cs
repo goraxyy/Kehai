@@ -222,6 +222,12 @@ namespace Kehai.Karen
         [Header("Sandboxes (0.5.2)")]
         [Tooltip("Sandbox only: her movement tactics alone (tier 0: patrol, investigate, sweep, ask the customers, withdraw, hunt), never a trick.")]
         public bool sandboxNoTricks;
+        // Sandbox only (the mini store, C11.17): the tricks she may choose herself (empty: none);
+        // null, all of them. It holds every tier-1+ tactic and the ids in sandboxTrickIds (the
+        // tricks list, which counts "Ask the customers", a tier-0 move). "Fire now"
+        // (KarenBrain.Force) isn't held to it.
+        [System.NonSerialized] public System.Collections.Generic.HashSet<string> sandboxTricks;
+        [System.NonSerialized] public System.Collections.Generic.HashSet<string> sandboxTrickIds;
         [Tooltip("Sandbox only: a catch freezes the test (KarenBrain.SandboxCaught) instead of ending the shift.")]
         public bool sandboxCatchFreezes;
 

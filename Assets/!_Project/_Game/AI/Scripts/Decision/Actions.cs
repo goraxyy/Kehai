@@ -231,6 +231,10 @@ namespace Kehai.Karen
             if (t.Draft) { why = "draft"; return false; }
             // A sandbox's Karen (0.5.2): walking, looking, hunting and searching only. Off in the game.
             if (c.Config != null && c.Config.sandboxNoTricks && t.Tier > 0) { why = "sandbox: tricks off"; return false; }
+            // The mini store's "only one trick" (C11.17): the others are off for her own choices.
+            if (c.Config != null && c.Config.sandboxTricks != null && !c.Config.sandboxTricks.Contains(t.Id) &&
+                (t.Tier > 0 || c.Config.sandboxTrickIds != null && c.Config.sandboxTrickIds.Contains(t.Id)))
+            { why = c.Config.sandboxTricks.Count == 0 ? "sandbox: tricks off" : "sandbox: not the trick allowed"; return false; }
             // Not a pacing gate, so it holds on every rung, the shield or no shield.
             if (t.LeavesChore && FairnessGuard.DoorsClosed(c)) { why = FairnessGuard.ClosedWhy; return false; }
             why = null;

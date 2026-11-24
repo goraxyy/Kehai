@@ -37,6 +37,7 @@ namespace Kehai.Sandbox
         int selected;
         bool runOne, resumeAgent;
         string feedback = "Waiting for the store.";
+        MiniStorePanel panel;   // the mini store's (C11.17); null elsewhere
 
         public string Feedback => feedback;
 
@@ -49,7 +50,11 @@ namespace Kehai.Sandbox
                 learningRecords = false, writeJsonl = false,
                 ledgerPath = Path.Combine(Application.temporaryCachePath, "tricks_" + Guid.NewGuid().ToString("N") + ".json")
             };
-            if (MiniStore.Active) config.start = MiniStore.World(MiniStore.KarenStart);   // she starts in its stockroom
+            if (MiniStore.Active)
+            {
+                config.start = MiniStore.World(MiniStore.KarenStart);   // she starts in its stockroom
+                MiniStoreSettings.ApplyTo(config);                       // the tricks you allowed her
+            }
             return config;
         }
 
@@ -129,7 +134,14 @@ namespace Kehai.Sandbox
             if (brain == null) return;
             Freeze();
             // The mini store (C11.17) has its own panel; no stalls there.
-            if (MiniStore.Active) { feedback = "Karen is frozen."; return; }
+            if (MiniStore.Active)
+            {
+                panel = new MiniStorePanel(this);
+                MiniStoreSettings.ApplySenses(brain);
+                selected = Mathf.Max(0, Array.IndexOf(TrickCheck.Tricks, MiniStoreSettings.Chosen));
+                feedback = "Karen is frozen in the stockroom. P starts her; Tab opens the panel.";
+                return;
+            }
             feedback = "F5 starts shift four. The trick stalls stand on the sandbox island: out of the front door, north to the road, then west.";
             // Facing south: the plates face you as you come onto the island from the road.
             Transform stalls = SandboxKit.Group(transform, "Trick stalls", StallsAt, 180f);
@@ -172,6 +184,7 @@ namespace Kehai.Sandbox
             int index = Array.IndexOf(TrickCheck.Tricks, id);
             if (index < 0) { feedback = "Unknown sandbox trick: " + id; return false; }
             selected = index;
+            if (panel != null) panel.Choose(brain, id);
             if (brain == null || brain.Ctx == null) { feedback = "Waiting for the store."; return false; }
             if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return false; }
             if (brain.ForcedPlanRunning)
@@ -199,6 +212,9 @@ namespace Kehai.Sandbox
             brain.enabled = true;
         }
 
+        public void FreezeNow() => Freeze();
+        public void RestartNow() => Restart();
+
         void Freeze()
         {
             if (!brain.enabled) return;
@@ -218,7 +234,7 @@ namespace Kehai.Sandbox
             feedback = "Caught. F6 restarts the sandbox.";
         }
 
-        void StartRunning()
+        public void StartRunning()
         {
             if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return; }
             if (!brain.Shift.IsShiftActive) brain.Shift.StartShift();
@@ -231,20 +247,27 @@ namespace Kehai.Sandbox
 
         void Update()
         {
+            // The mini store's panel: Tab, even while it has the game paused.
+            if (panel != null && Input.GetKeyDown(KeyCode.Tab)) { panel.SetOpen(!panel.Open); return; }
             if (GamePause.Paused || brain == null || brain.Ctx == null) return;
-            if (Input.GetKeyDown(KeyCode.F6)) { Restart(); return; }
+            bool mini = panel != null;
+            // Plain keys in the mini store (no Fn on a MacBook): P and Backspace beside F5 and F6.
+            if (Input.GetKeyDown(KeyCode.F6) || mini && Input.GetKeyDown(KeyCode.Backspace)) { Restart(); return; }
             if (runOne && !brain.ForcedPlanRunning) { runOne = false; Freeze(); }
             // F5 starts or freezes her; F7 stays the store's clip mark.
-            if (Input.GetKeyDown(KeyCode.F5)) { if (brain.enabled && !runOne) Freeze(); else StartRunning(); }
+            if (Input.GetKeyDown(KeyCode.F5) || mini && Input.GetKeyDown(KeyCode.P)) { if (brain.enabled && !runOne) Freeze(); else StartRunning(); }
             int count = Catalogue.Count;
             if (count == 0) return;
+            int was = selected;
             if (Input.GetKeyDown(KeyCode.LeftBracket)) selected = (selected + count - 1) % count;
             if (Input.GetKeyDown(KeyCode.RightBracket)) selected = (selected + 1) % count;
+            if (mini && selected != was) panel.Choose(brain, Catalogue[selected]);
             if (Input.GetKeyDown(KeyCode.Return)) TryFire(Catalogue[selected]);
         }
 
         void OnGUI()
         {
+            if (panel != null) { panel.Draw(brain, feedback); return; }
             if (GamePause.Paused) return;
             float width = Mathf.Min(465f, Screen.width - 16f);
             GUILayout.BeginArea(new Rect(Screen.width - width - 8f, 8f, width, Screen.height - 16f));
