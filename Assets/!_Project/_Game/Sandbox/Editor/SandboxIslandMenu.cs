@@ -15,10 +15,9 @@ public static class SandboxIslandMenu
 
     static SandboxIslandMenu() => EditorApplication.playModeStateChanged += Changed;
 
-    [MenuItem(Menu, true)]
+    // Out of the menu since the mini store replaced the island (24 November); its checks still open it.
     static bool CanOpen() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
-    [MenuItem(Menu, false, 0)]
     public static void Open()
     {
         if (!CanOpen()) return;

@@ -9,13 +9,11 @@ using UnityEngine;
 // first, and reopens as usual when you open it again.
 public static class SandboxMenu
 {
-    [MenuItem("Kehai/Sandbox/Sight")]
+    // Out of the menu since the mini store (24 November): the automatic checks still open these.
     public static void OpenSight() => Open<SightSandbox>("Sight sandbox");
 
-    [MenuItem("Kehai/Sandbox/Pursuit")]
     public static void OpenPursuit() => Open<PursuitSandbox>("Pursuit sandbox");
 
-    [MenuItem("Kehai/Sandbox/Interactions")]
     public static void OpenInteractions() => Open<InteractionSandbox>("Interactions sandbox");
 
     static void Open<T>(string name) where T : Component

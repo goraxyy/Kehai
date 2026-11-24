@@ -14,10 +14,9 @@ public static class TricksSandboxMenu
 
     static TricksSandboxMenu() => EditorApplication.playModeStateChanged += Changed;
 
-    [MenuItem(Menu, true)]
+    // Out of the menu since the mini store (24 November), which opens its private shift through this.
     static bool CanOpen() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
-    [MenuItem(Menu)]
     public static void Open()
     {
         if (!CanOpen()) return;
