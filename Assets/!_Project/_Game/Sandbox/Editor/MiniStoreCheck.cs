@@ -19,7 +19,8 @@ using UnityEngine;
 [InitializeOnLoad]
 public static class MiniStoreCheck
 {
-    const double Limit = 900;
+    // Long enough for each trick alone (-mini-tricks): 24 restarts and up to a minute each.
+    static double Limit => Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") >= 0 ? 3600 : 900;
     static readonly Stack<IEnumerator> steps = new Stack<IEnumerator>();
     static bool begun;
     static int frame = -1;
@@ -235,6 +236,7 @@ public static class MiniStoreCheck
             }
             if (started) used++;
             results.Add(started ? $"{id,-16} used it after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}");
+            Debug.Log("MiniStoreCheck: alone: " + results[results.Count - 1]);
         }
         Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used)\n  " + string.Join("\n  ", results));
         MiniStoreSettings.Allowed = before;
