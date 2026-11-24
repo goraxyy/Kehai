@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Kehai.Store;
 
 namespace Kehai.Sandbox
 {
@@ -89,7 +90,7 @@ namespace Kehai.Sandbox
             Root = null;
             if (!Active) return;
             StoreFrame.Use(ToStore);
-            Kehai.Store.StoreMap.UseTestArea(MapBounds);   // her map: the mini store only
+            StoreMap.UseTestArea(MapBounds);   // her map: the mini store only
             // Before the store's own handlers (StoreLayout stocks every shelf it finds on load,
             // the copies included), so this one is added first.
             SceneManager.sceneLoaded += OnLoaded;
@@ -101,7 +102,7 @@ namespace Kehai.Sandbox
             if (Active)
             {
                 StoreFrame.Use(null);
-                Kehai.Store.StoreMap.UseTestArea(null);
+                StoreMap.UseTestArea(null);
             }
             Active = false;
             Root = null;
@@ -127,6 +128,10 @@ namespace Kehai.Sandbox
 
             Shell(root.transform, models);
             Furnish(root.transform, models, report);
+            Apron(root.transform, models);
+            MoveAnchors(root.transform, report);
+            Shoppers(root.transform, report);
+            Cameras(report);
             Lamps(root.transform, models);
             if (holder != null) Object.Destroy(holder.gameObject);
             holder = null;
@@ -137,8 +142,8 @@ namespace Kehai.Sandbox
             var doors = root.GetComponentsInChildren<HingeDoor>(true);
             Physics.SyncTransforms();
             SandboxKit.Bake(root);
-            Kehai.Store.StoreMap.Rebuild();
-            report.Add($"her map: {Kehai.Store.StoreMap.Current.CellCount} cells, rooms {string.Join(", ", Kehai.Store.StoreMap.Current.Rooms)}; {doors.Length} hinged doors");
+            StoreMap.Rebuild();
+            report.Add($"her map: {StoreMap.Current.CellCount} cells, rooms {string.Join(", ", StoreMap.Current.Rooms)}; {doors.Length} hinged doors");
 
             // The store's own player starts inside, by the till, facing the shelves.
             GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -251,6 +256,106 @@ namespace Kehai.Sandbox
             Place(doors, m.DoorAlongX, ColdDoor, 0f, "Door to the cold room", report);
             Place(doors, m.DoorAlongZ, InnerDoor, 0f, "Door between the stockroom and the cold room", report);
             Place(doors, m.AutoDoor, ShopperDoor, 0f, "Shoppers' doors", report);
+        }
+
+        // ---- what her tricks need (M4) -------------------------------------------------------
+
+        // Outside the shoppers' doors: a strip of pavement they arrive and leave by, outside her
+        // map (StoreMap.TestArea stops at the walls), as the store's pavement is outside her part.
+        static void Apron(Transform root, Models m)
+        {
+            Slab(Group(root, "Pavement"), "Pavement", new Vector3(ShopperDoor.x, -0.05f, Front + 3.5f), new Vector3(10f, 0.12f, 7f), m.Floor);
+        }
+
+        // The store's own fixtures her tricks and chores are built beside, moved into the mini
+        // store before the store puts those up (KarenFixtures.Install: the fog box beside the
+        // breaker box, the PA box and the microphone beside the time clock, the radio lowered;
+        // StorageBoxes; the cameras' screens on the security desk). Moved, not copied: there is
+        // one of each, and everything finds them by kind or by name.
+        //   (name, where its footprint's middle goes, how far its foot stands off the floor, turn)
+        static readonly (string name, Vector3 at, float turn)[] Anchors =
+        {
+            ("Electric_Box_02", new Vector3(ColdWest - 0.6f, 0f, -9.7f), 0f),        // breaker box, on the cold room wall
+            ("Time_Clock_01", new Vector3(ColdWest - 0.2f, 0f, -4.2f), 0f),          // time clock, beside the door to the shop
+            ("Staff_Radio_01", new Vector3(West + 0.25f, 0f, -9.6f), 0f),            // radio, on the west wall
+            ("Security workstation", new Vector3(-1.2f, 0f, -9.9f), 0f),             // the screens' desk, by the back wall
+            ("Stock_Test_Crate_01", new Vector3(-3.2f, 0f, -7.2f), 0f),             // the stock crate
+            ("Stock_Snap_Point_01", new Vector3(-3.2f, 0f, -7.2f), 0f),
+            ("Mop_01", new Vector3(West + 0.4f, 0f, -2f - 1.6f), 0f),                // the staff mop and its rack, sales floor's back
+            ("Mop_Snap_Point_01", new Vector3(West + 0.4f, 0f, -2f - 1.6f), 0f),
+            ("WC_Cleaning_Mop_01", new Vector3(ColdWest - 0.3f, 0f, -10.4f), 0f),   // the WC mop Tool theft takes, and its rack
+            ("WC_Mop_Home_01", new Vector3(ColdWest - 0.3f, 0f, -10.4f), 0f),
+            ("Flashlight_01", new Vector3(-12f, 0f, 11.2f), 0f),                     // the torch, on the till
+            ("Counter_Facing_01", new Vector3(-10f, 0f, 9.3f), 0f),                  // where a shopper faces the till
+        };
+
+        static void MoveAnchors(Transform root, List<string> report)
+        {
+            Transform moved = Group(root, "Moved from the store");   // under the root: in its NavMesh bake
+            foreach (var (name, at, turn) in Anchors)
+            {
+                GameObject go = SceneObjectNames.Find(name) ?? GameObject.Find(name);
+                if (go == null) { report.Add($"MISSING anchor {name}"); continue; }
+                Vector3 offset = Footprint(go).center - go.transform.position;
+                if (Footprint(go).size == Vector3.zero) offset = Vector3.zero;
+                Quaternion spin = Quaternion.Euler(0f, turn, 0f);
+                Vector3 world = World(at);
+                Vector3 turned = spin * offset;
+                go.transform.SetParent(moved, true);
+                go.transform.SetPositionAndRotation(new Vector3(world.x - turned.x, go.transform.position.y, world.z - turned.z),
+                    spin * go.transform.rotation);
+                report.Add($"moved {name} into the {StoreMap.AreaAt(go.transform.position)}");
+            }
+        }
+
+        // Shoppers come in through the automatic doors, browse the shelves and pay at the till.
+        static void Shoppers(Transform root, List<string> report)
+        {
+            CustomerSpawner spawner = Object.FindAnyObjectByType<CustomerSpawner>();
+            if (spawner == null) { report.Add("MISSING the shoppers' spawner"); return; }
+            Transform points = Group(root, "Shopper points");
+            Transform Point(string name, Vector3 local, float yaw)
+            {
+                Transform t = Group(points, name);
+                t.position = World(local);
+                t.rotation = Quaternion.Euler(0f, yaw, 0f);
+                return t;
+            }
+            spawner.transform.position = World(new Vector3(ShopperDoor.x, 0f, Front + 5.5f));
+            spawner.entrancePoint = Point("Entrance", new Vector3(ShopperDoor.x, 0f, Front + 1.5f), 180f);
+            spawner.exitPoint = Point("Exit", new Vector3(ShopperDoor.x, 0f, Front + 2.5f), 0f);
+            spawner.cashierPoint = Point("Till", new Vector3(-10f, 0f, 9.3f), 0f);
+            var stands = new List<Transform>();
+            foreach (float x in new[] { -11f, -7f, 1f, 5f })
+                foreach (float z in new[] { -0.4f, 4.5f, 9.4f })
+                    stands.Add(Point("Browse", new Vector3(x, 0f, z), z < 4f ? 0f : 180f));
+            spawner.shelfPoints = stands.ToArray();
+            report.Add($"shoppers come in at the front: {stands.Count} browsing spots");
+        }
+
+        // Three cameras of the store's own kind, one in each room, with their screens on the moved
+        // security desk; the store's own list (StoreCameras.Spots) is for the store's rooms.
+        public static StoreCameras.Spot[] CameraSpots => new[]
+        {
+            Spot("SALES FLOOR", "Sales floor", new Vector3(West + 1f, 0f, Front - 1f), new Vector2(-1f, 0f), new Vector3(3f, 0f, 3f)),
+            Spot("STOCKROOM", "Stockroom", new Vector3(ColdWest - 1f, 0f, -3.8f), new Vector2(0f, 1f), new Vector3(-8f, 0f, -7f)),
+            Spot("COLD ROOM", "Cold storage", new Vector3(East - 1f, 0f, -3.8f), new Vector2(0f, 1f), new Vector3(8f, 0f, -8f)),
+        };
+
+        static StoreCameras.Spot Spot(string name, string area, Vector3 probe, Vector2 wall, Vector3 look)
+        {
+            Vector3 p = World(probe), l = World(look);
+            return new StoreCameras.Spot(name, area, new Vector2(p.x, p.z), wall, l);
+        }
+
+        static void Cameras(List<string> report)
+        {
+            Physics.SyncTransforms();
+            Material outline = null;
+            foreach (OutlineHighlight o in Object.FindObjectsByType<OutlineHighlight>())
+                if (o != null && o.outlineMaterial != null) { outline = o.outlineMaterial; break; }
+            StoreCameras cams = StoreCameras.InstallAt(CameraSpots, outline);
+            report.Add(cams != null ? $"cameras: {cams.Cameras.Count}, screens {(cams.Wall != null ? "on the desk" : "MISSING")}" : "MISSING cameras");
         }
 
         // Lamps from the store's own model, a light under each in a "CeilingLights" group so her
