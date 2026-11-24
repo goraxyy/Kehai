@@ -1,41 +1,79 @@
 # The sandboxes
 
-The **Kehai → Sandbox** menu opens the [sight](#the-sight-sandbox), [pursuit](#the-pursuit-sandbox),
-[tricks](#the-tricks-sandbox), and [interactions](#the-interactions-sandbox) sandboxes. The rooms
-are built by code when Play starts. Leave Play to return to editing.
+**Kehai → Sandbox → Mini store** is the sandbox (the owner's call of 24 November, replacing the
+island). The other rooms below are the **automatic check rooms**: the sight, pursuit and
+interaction checks still build and play them (`Run … Checks`, `Watch … Replay`), but they're no
+longer in the menu. The owner's page is [mini-store.md](../../you/plans/0.5.2/mini-store.md).
 
-## The sandbox island
+## The mini store
 
-Open **Kehai → Sandbox → Island** for the quiet store and its sight, pursuit and interactions rooms.
-Leave the front door, follow the protected walkway north to the road, and turn west. The models
-island is beside the sandbox island. The trick stalls are along the south edge in **Tricks** mode.
+A small copy of the store, built when Play starts on the sandbox island west of the store, with
+the real Karen on a private shift four (the tricks sandbox's harness: the career is never read or
+written, a catch freezes everything). You start inside, by the till.
 
-This batch check drives the store player from the lobby to the road, the trick stalls' approach,
-through the three room doors, and across to the models island. It logs each route and the position
-of any stop. It opens the sandbox doors before the walk.
-
-```sh
-tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Walk
-tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Pursuit       # the pursuit checks in the island's pursuit room
-tools/run/kehai-run unity -- -noaudio -executeMethod SandboxIslandCheck.Interactions  # the interaction checks in the island's interactions room
+```
+  z 13  front wall, the shoppers' automatic doors at x 9, a pavement strip outside
+        SALES FLOOR  x -15..15, z -3..13: tall shelves west, short east, till, bins, two chillers
+  z -3  door at x -6 ─────────────┬──── door at x 9
+        STOCKROOM  x -15..3       │ COLD ROOM  x 3..15
+        racks with boxes, breaker │ chillers (two you hide in)
+        box, time clock, PA, desk │
+  z -11 ──────────── door at z -7 ┴────────────────
 ```
 
-**The island against a room on its own** (23 November). Two things made her play differ there,
-both fixed; the pursuit checks still pass 3 of 4 on the island against 4 of 4 alone (below):
-- **Her light sense** (`LightProbe`) read only the first group named `CeilingLights`, the store's,
-  so the island rooms' lamps didn't light you for her: you looked darker there and she saw you
-  0.8 s later. It now reads every `CeilingLights` group, and `SandboxKit` refreshes it as a room's
-  lamps are built. (After the fix she first saw the bot at 0.8 s on the island, 1.0 s alone.)
-- **Her test map's 1.5 m grid** started 0.2 and 0.4 m off the standalone room's, so her search spots
-  fell elsewhere. `SandboxIsland.MapBounds` is nudged onto the standalone room's grid
-  (`PursuitGrid`, as `PursuitSandboxChecks` logs it), and `SandboxIslandCheck.Pursuit` checks it.
+(metres from its centre, `MiniStore.Origin` = (-40, 0, -10); the store's way round, front north.)
 
-**Still different: corner-search fails on the island.** There her map covers the whole room, and
-her first search spot is the shelf the bot hides behind, so she sees it. Alone, her first sighting
-logs as "off the map" and she searches where she last saw you, which is likely what that check's
-escape relies on (one run's log; not yet confirmed).
+**How it's made** (`Sandbox/Scripts/MiniStore.cs`):
+- **Copies of the store's models**, made in `SceneManager.sceneLoaded` before the store's own
+  handlers (`StoreLayout` stocks every shelf it finds, the copies included): tall and short bays,
+  retail chillers, the till, bins, cold chillers, hinged and automatic doors, lamps. Copies are
+  made under an inactive holder and stripped of the NavMesh obstacles the store's doors add when
+  they wake, so each wakes and sets itself up fresh. Walls, floors and ceilings are boxes in the
+  store's own materials; each room has its own floor and ceiling, marked as room surfaces
+  (`InteriorLightAnchor`, named floor/ceiling) so `RoomLighting` lights them by their room.
+- **Moved, not copied:** the store's own breaker box, time clock, radio, security desk, stock
+  crate, mops and racks (`Anchors`, `Move`). There is one of each and the fixtures and tricks find
+  them by kind or name, so the fog box, the PA box and microphone, the cameras' screens and the
+  stockroom's boxes are put up beside them where they now stand.
+- **`StoreFrame`** (`Level/Scripts/StoreFrame.cs`): the store's position tables read a point on the
+  mini store's floor as the matching point in the store (each room's floor stretched over its part
+  of the store, `MiniStore.ToStore`). So `StoreMap.AreaAt` names its rooms Sales floor, Stockroom
+  and Cold storage, `StoreLayout.ZoneAt` stocks its shelves by aisle, and `LightControl.CircuitOf`
+  puts its lamps on EAST, WEST and BACK. `KarenArea.Install` does nothing under a frame (its outside
+  boxes, in the store's metres, would mark the island outside).
+- **Her map** is the mini store only (`StoreMap.UseTestArea(MiniStore.MapBounds)`), cut from its own
+  NavMesh (baked by volume over its walls and pavement, so the moved racks count).
+- **Shoppers** come in by its automatic doors from the pavement strip, browse twelve spots and pay
+  at its till (`Shoppers`). **Cameras**: one per room (`CameraSpots`, `StoreCameras.InstallAt`).
+
+**The panel** (`MiniStorePanel.cs`, drawn by `TricksSandbox` in mini store mode): Tab opens it and
+pauses the game (`GamePause`, the mouse free); Tab closes it. Start, Freeze, Restart; **tricks she
+may use**: None, Only one (the trick picked), All; **Fire now**; why she won't use the picked trick
+now (`MiniStorePanel.Readiness`: `HtnPlanner.Gated`, then the trick's own `Available`); **what she
+can sense** beyond her eyes: hearing, building sensors, shoppers' reports, traces
+(`Sensorium.Use*`). Plain keys: P start or freeze, Backspace restart, [ ] pick, Return fire now.
+The choices live in `MiniStoreSettings` and survive a restart.
+
+**Her limits** (`KarenConfig`, sandbox only): `sandboxTricks` is the set she may choose herself
+(empty: none; null: all), held at `HtnPlanner.Gated` for every tier-1+ tactic and for the ids in
+`sandboxTrickIds` (the tricks list, which counts "Ask the customers", a tier-0 move). Fire now
+(`KarenBrain.Force`) isn't held to it. `sandboxPacingOff` switches the Director's tension pacing
+off (`PacingOff`), so a trick you allowed is hers as soon as it fits.
+
+**The check** opens it from the menu and looks the way you would: you start inside, her map has
+the three rooms by name, every copied shelf is stocked, each room's lamps light that room, every
+hinged door opens with E from where you'd stand, Karen starts in the stockroom and walks its rooms
+without leaving, the panel is up, the limits hold at her gate, and a table of every trick's
+readiness. `-mini-tricks` adds each trick alone (only it allowed, a fresh shift, does she use it
+herself within 40 s). Screenshots land next to the log with `--graphics`:
+
+```sh
+tools/run/kehai-run unity --graphics -- -executeMethod MiniStoreCheck.Run -mini-tricks
+```
 
 ## The sight sandbox
+
+> Out of the menu since 24 November (the mini store replaced it); the checks below still open it in code.
 
 **Open it:** in the Unity editor, **Kehai → Sandbox → Sight**. Unity offers to save your open
 scene, opens an empty one and enters Play. Leave Play to stop; open the store scene again as usual.
@@ -97,6 +135,8 @@ fails as "the check itself failed", never as her eye's fault.
 The furniture is plain boxes at real sizes.
 
 ## The pursuit sandbox
+
+> Out of the menu since 24 November (the mini store replaced it); the checks below still open it in code.
 
 **Open it:** **Kehai → Sandbox → Pursuit**, the same way.
 
@@ -173,6 +213,8 @@ been rendered and verified. The pursuit suite has replays and still needs its cl
 
 ## The tricks sandbox
 
+> Out of the menu since 24 November (the mini store replaced it); the checks below still open it in code.
+
 **Kehai → Sandbox → Tricks** (C11.8) opens the real store in Play, muted, on a private shift
 four: its own career numbers and a fresh temporary Ledger each time, so your save is never read
 or written. A row of stalls stands on the sandbox island (out of the front door, north across the parking lot to the road, then west), near its south edge: one plate per
@@ -199,6 +241,8 @@ tools/run/kehai-run unity -- -noaudio -executeMethod EvalBatch.Play -kehai-trick
 
 ## The interactions sandbox
 
+> Out of the menu since 24 November (the mini store replaced it); the checks below still open it in code.
+
 Open **Kehai → Sandbox → Interactions**, or walk to the room north of the sight area in
 **Kehai → Sandbox → Island**. Its panel switches the camera feed, asks the nearby shopper,
 and clears the readings. Pick up the torch with E. Switch it on and aim out through the open
@@ -222,7 +266,8 @@ island's one full Karen brain. The fridge and rack search actions have separate 
 
 ## For agents
 
-- Code: `Assets/!_Project/_Game/Sandbox/` (`SandboxKit` the parts, `SandboxKaren` her
+- Code: `Assets/!_Project/_Game/Sandbox/` (`MiniStore`, `MiniStorePanel` and `Editor/MiniStoreMenu`,
+  `MiniStoreCheck` the mini store; `SandboxKit` the parts of the check rooms, `SandboxKaren` her
   walk-and-see mode, `SandboxPlayer` the player, `SandboxIndicators` the readouts, `SightSandbox`
   and `PursuitSandbox` the rooms) and `Editor/SandboxMenu.cs`.
 - The pursuit sandbox runs `KarenBrain` without `KarenBootstrap` (no recorders, no blink tracker)
