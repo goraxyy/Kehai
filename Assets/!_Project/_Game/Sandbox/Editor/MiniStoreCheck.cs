@@ -196,7 +196,10 @@ public static class MiniStoreCheck
         MiniStoreSettings.ApplyTo(brain.config);
 
         // M5: each trick on its own. Only it allowed, a fresh shift, she starts: does she use it
-        // herself within the limit? You stand where you start, as a tester would at first.
+        // herself within the limit? The tester hides in a cold room chiller, door shut, as you
+        // might; for the throws, which need her to see you from 8-20 m, they stand in the sales
+        // floor's far corner instead. For The overtime the shift is short enough that its last two
+        // minutes have begun.
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
         var results = new List<string>();
         int used = 0;
@@ -213,11 +216,16 @@ public static class MiniStoreCheck
                 yield return null;
             }
             if (her == null || her.Body == null) { results.Add($"{id,-16} no Karen after the restart"); continue; }
-            if (her.Shift != null && !her.Shift.IsShiftActive) her.Shift.StartShift();
+            if (her.Shift != null && !her.Shift.IsShiftActive)
+            {
+                if (id == "overtime") her.Shift.shiftDurationSeconds = 115f;
+                her.Shift.StartShift();
+            }
+            Tester(id.StartsWith("throw_"));
             her.enabled = true;
             string seenWhy = "";
             bool started = false;
-            float limit = 40f, at = 0f;
+            float limit = 60f, at = 0f;
             for (; at < limit; at += Time.deltaTime)
             {
                 if (her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id) { started = true; break; }
@@ -230,6 +238,33 @@ public static class MiniStoreCheck
         }
         Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used)\n  " + string.Join("\n  ", results));
         MiniStoreSettings.Allowed = before;
+    }
+
+    // Where the tester waits for a trick: in a cold room chiller you can hide in, its door shut;
+    // or, to be seen from afar, in the sales floor's far corner.
+    static void Tester(bool inView)
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null || MiniStore.Root == null) return;
+        Vector3 to = MiniStore.World(new Vector3(MiniStore.East - 1.5f, 0f, MiniStore.Front - 1.5f));
+        FurnitureDoor shut = null;
+        if (!inView)
+        {
+            foreach (HidingPlace place in MiniStore.Root.GetComponentsInChildren<HidingPlace>())
+            {
+                Vector3 centre = place.transform.TransformPoint(place.interior.center);
+                if (StoreMap.AreaAt(centre) != "Cold storage") continue;
+                to = new Vector3(centre.x, place.transform.TransformPoint(place.interior.min).y, centre.z);
+                shut = place.GetComponentInParent<ColdFixture>()?.GetComponentInChildren<FurnitureDoor>();
+                break;
+            }
+        }
+        var controller = player.GetComponent<CharacterController>();
+        if (controller != null) controller.enabled = false;
+        player.transform.position = to + Vector3.up * 0.05f;
+        if (controller != null) controller.enabled = true;
+        if (shut != null) shut.SetOpen(false);
+        Physics.SyncTransforms();
     }
 
     // Screenshots from where you'd stand in each room, when Unity renders.
