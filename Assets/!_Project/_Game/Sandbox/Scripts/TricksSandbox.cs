@@ -40,6 +40,7 @@ namespace Kehai.Sandbox
         MiniStorePanel panel;   // the mini store's (C11.17); null elsewhere
 
         public string Feedback => feedback;
+        public bool HasPanel => panel != null;   // the mini store's (C11.17)
 
         internal static KarenConfig NewConfig()
         {
@@ -218,6 +219,7 @@ namespace Kehai.Sandbox
         void Freeze()
         {
             if (!brain.enabled) return;
+            if (brain.Body == null) { brain.enabled = false; feedback = "Karen is frozen."; return; }   // before her body is built
             var agent = brain.Body.Agent;
             if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
             {

@@ -20,7 +20,8 @@ using UnityEngine;
 public static class MiniStoreCheck
 {
     const double Limit = 900;
-    static IEnumerator steps;
+    static readonly Stack<IEnumerator> steps = new Stack<IEnumerator>();
+    static bool begun;
     static int frame = -1;
     static readonly List<string> failures = new List<string>();
 
@@ -38,11 +39,19 @@ public static class MiniStoreCheck
         if (!EditorApplication.isPlaying) return;
         if (frame == Time.frameCount) return;   // one step a frame
         frame = Time.frameCount;
-        if (steps == null) steps = Steps();
-        bool more;
-        try { more = steps.MoveNext(); }
+        if (!begun) { steps.Push(Steps()); begun = true; }
+        // One step a frame, nested steps (waits, screenshots) run in place.
+        try
+        {
+            while (steps.Count > 0)
+            {
+                IEnumerator top = steps.Peek();
+                if (!top.MoveNext()) { steps.Pop(); continue; }
+                if (top.Current is IEnumerator inner) { steps.Push(inner); continue; }
+                return;
+            }
+        }
         catch (Exception e) { Debug.LogError("MiniStoreCheck: " + e); EditorApplication.Exit(1); return; }
-        if (more) return;
         EditorApplication.update -= Tick;
         Debug.Log(failures.Count == 0 ? "MiniStoreCheck: all held" : "MiniStoreCheck: failed:\n  " + string.Join("\n  ", failures));
         EditorApplication.Exit(failures.Count == 0 ? 0 : 1);
@@ -132,6 +141,8 @@ public static class MiniStoreCheck
         // Karen: inside, and started, she walks its rooms and stays in them.
         KarenBrain brain = UnityEngine.Object.FindAnyObjectByType<KarenBrain>();
         Expect(brain != null && brain.Body != null, "Karen is here");
+        TricksSandbox sandbox = UnityEngine.Object.FindAnyObjectByType<TricksSandbox>();
+        Expect(sandbox != null && sandbox.HasPanel, "the mini store's panel is up");
         if (brain == null || brain.Body == null) yield break;
         Vector3 start = brain.Body.transform.position;
         Expect(MiniStore.Contains(start), $"she starts inside, in the {StoreMap.AreaAt(start)} (at {start})");
@@ -183,6 +194,42 @@ public static class MiniStoreCheck
         Expect(passing.All(id => id == "spill"), $"with only Spill allowed, only Spill passes her gate ([{string.Join(", ", passing)}])");
         MiniStoreSettings.Allowed = before;
         MiniStoreSettings.ApplyTo(brain.config);
+
+        // M5: each trick on its own. Only it allowed, a fresh shift, she starts: does she use it
+        // herself within the limit? You stand where you start, as a tester would at first.
+        if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
+        var results = new List<string>();
+        int used = 0;
+        foreach (string id in TricksSandbox.Catalogue)
+        {
+            MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.OnlyOne;
+            MiniStoreSettings.Chosen = id;
+            UnityEngine.Object.FindAnyObjectByType<TricksSandbox>()?.RestartNow();
+            yield return Wait(3f);
+            KarenBrain her = null;
+            for (float t = 0f; t < 20f && (her == null || her.Body == null || her.Ctx == null); t += Time.deltaTime)
+            {
+                her = UnityEngine.Object.FindAnyObjectByType<KarenBrain>();
+                yield return null;
+            }
+            if (her == null || her.Body == null) { results.Add($"{id,-16} no Karen after the restart"); continue; }
+            if (her.Shift != null && !her.Shift.IsShiftActive) her.Shift.StartShift();
+            her.enabled = true;
+            string seenWhy = "";
+            bool started = false;
+            float limit = 40f, at = 0f;
+            for (; at < limit; at += Time.deltaTime)
+            {
+                if (her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id) { started = true; break; }
+                if (her.KilledThisShift) { seenWhy = "she caught you first"; break; }
+                seenWhy = MiniStorePanel.Readiness(her, id);
+                yield return null;
+            }
+            if (started) used++;
+            results.Add(started ? $"{id,-16} used it after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}");
+        }
+        Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used)\n  " + string.Join("\n  ", results));
+        MiniStoreSettings.Allowed = before;
     }
 
     // Screenshots from where you'd stand in each room, when Unity renders.

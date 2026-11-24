@@ -22,6 +22,7 @@ namespace Kehai.Sandbox
         public static void ApplyTo(KarenConfig config)
         {
             config.sandboxNoTricks = false;
+            config.sandboxPacingOff = true;
             config.sandboxTrickIds = new HashSet<string>(TricksSandbox.Catalogue);
             config.sandboxTricks = Allowed == Tricks.All ? null
                 : Allowed == Tricks.OnlyOne ? new HashSet<string> { Chosen } : new HashSet<string>();

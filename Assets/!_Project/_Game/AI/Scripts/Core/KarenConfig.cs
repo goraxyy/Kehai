@@ -236,7 +236,10 @@ namespace Kehai.Karen
         // The Director's pacing off (0.4.0, C5.4): Vital, and the hunter (the planner with the same
         // freedom). Tiers, the tension budget, cooldowns, settling in and the recovery stop gating;
         // the Director's hint toward your area stops; every fairness rule stays.
-        public bool PacingOff => hunter || brain == KarenBrainKind.Vital;
+        public bool PacingOff => hunter || brain == KarenBrainKind.Vital || sandboxPacingOff;
+        // Sandbox only (the mini store, C11.17): no tension pacing, so a trick you allowed her is
+        // hers as soon as it fits, not after the Director's settling phase.
+        [System.NonSerialized] public bool sandboxPacingOff;
 
         public KarenConfig Clone() => (KarenConfig)MemberwiseClone();
     }

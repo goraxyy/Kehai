@@ -163,9 +163,15 @@ namespace Kehai.Sandbox
         static void Shell(Transform root, Models m)
         {
             Transform shell = Group(root, "Shell");
-            float w = East - West, d = Front - Back;
-            Slab(shell, "Floor", new Vector3(0f, -0.05f, (Front + Back) * 0.5f), new Vector3(w + Wall, 0.12f, d + Wall), m.Floor);
-            Slab(shell, "Ceiling", new Vector3(0f, WallHeight + 0.05f, (Front + Back) * 0.5f), new Vector3(w + Wall, 0.1f, d + Wall), m.Ceiling);
+            // A floor and a ceiling for each room: the store lights each room's own surfaces with
+            // that room's lamps (RoomLighting), so one slab across all three took only one room's.
+            foreach (var (name, r) in new[] { ("Sales floor", SalesFloor), ("Stockroom", Stockroom), ("Cold room", ColdRoom) })
+            {
+                var centre = new Vector3(r.center.x, 0f, r.center.y);
+                var size = new Vector3(r.width + Wall, 0f, r.height + Wall);
+                Slab(shell, name + " floor", centre + Vector3.down * 0.05f, size + Vector3.up * 0.12f, m.Floor);
+                Slab(shell, name + " ceiling", centre + Vector3.up * (WallHeight + 0.05f), size + Vector3.up * 0.1f, m.Ceiling);
+            }
 
             // Outside walls.
             WallX(shell, "Front wall", Front, West, East, m, ShopperDoor.x, AutoDoorGap);
