@@ -40,13 +40,18 @@ namespace Kehai.Sandbox
 
         public string Feedback => feedback;
 
-        internal static KarenConfig NewConfig() => new KarenConfig
+        internal static KarenConfig NewConfig()
         {
-            seed = 4242, rung = KarenRung.E_Ledger,
-            sandboxNoTricks = true, sandboxCatchFreezes = true,
-            learningRecords = false, writeJsonl = false,
-            ledgerPath = Path.Combine(Application.temporaryCachePath, "tricks_" + Guid.NewGuid().ToString("N") + ".json")
-        };
+            var config = new KarenConfig
+            {
+                seed = 4242, rung = KarenRung.E_Ledger,
+                sandboxNoTricks = true, sandboxCatchFreezes = true,
+                learningRecords = false, writeJsonl = false,
+                ledgerPath = Path.Combine(Application.temporaryCachePath, "tricks_" + Guid.NewGuid().ToString("N") + ".json")
+            };
+            if (MiniStore.Active) config.start = MiniStore.World(MiniStore.KarenStart);   // she starts in its stockroom
+            return config;
+        }
 
         // Before ShiftManager.Awake or StoreLayout reads the career. The editor holds the
         // override through teardown, including a scene reload or Play with domain reload off.

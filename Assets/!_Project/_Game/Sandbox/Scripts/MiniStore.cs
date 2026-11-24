@@ -33,6 +33,7 @@ namespace Kehai.Sandbox
         public const float WallHeight = 6f, Wall = 0.2f, DoorGap = 2.1f, AutoDoorGap = 3.2f;
         public const float West = -15f, East = 15f, Front = 13f, Middle = -3f, Back = -11f, ColdWest = 3f;
         public static readonly Vector3 PlayerStart = new Vector3(0f, 0f, 10.5f);
+        public static readonly Vector3 KarenStart = new Vector3(-8f, 0f, -6.5f);   // in the stockroom
         public static readonly Vector3 StockDoor = new Vector3(-6f, 0f, Middle);
         public static readonly Vector3 ColdDoor = new Vector3(9f, 0f, Middle);
         public static readonly Vector3 InnerDoor = new Vector3(ColdWest, 0f, -7f);
@@ -49,6 +50,31 @@ namespace Kehai.Sandbox
 
         public static Vector3 World(Vector3 local) => Origin + local;
         public static Vector3 Local(Vector3 world) => world - Origin;
+        // Her map of the mini store only (StoreMap.TestArea): its floor, a little round it.
+        public static Bounds MapBounds => new Bounds(World(new Vector3(0f, 2f, (Front + Back) * 0.5f)),
+            new Vector3(East - West + 1f, 6f, Front - Back + 1f));
+
+        // The store's parts each room stands for (StoreFrame): its sales floor, stockroom and cold
+        // room, as StoreMap.AreaAt, StoreLayout.Zones and LightControl.CircuitOf draw them.
+        public static readonly Rect StoreSalesFloor = Rect.MinMaxRect(25.5f, -175f, 85f, -121f);
+        public static readonly Rect StoreStockroom = Rect.MinMaxRect(11f, -189f, 54.5f, -176f);
+        public static readonly Rect StoreColdRoom = Rect.MinMaxRect(55.5f, -189f, 85f, -176f);
+
+        // A point on the mini store's floor, as the matching point in the store: each room's floor
+        // stretched over its part of the store. Points elsewhere are themselves.
+        public static Vector3 ToStore(Vector3 world)
+        {
+            if (!Contains(world)) return world;
+            Vector3 p = Local(world);
+            Rect from, to;
+            if (p.z >= Middle) { from = SalesFloor; to = StoreSalesFloor; }
+            else if (p.x < ColdWest) { from = Stockroom; to = StoreStockroom; }
+            else { from = ColdRoom; to = StoreColdRoom; }
+            float u = Mathf.Clamp01(Mathf.InverseLerp(from.xMin, from.xMax, p.x));
+            float v = Mathf.Clamp01(Mathf.InverseLerp(from.yMin, from.yMax, p.z));
+            return new Vector3(Mathf.Lerp(to.xMin, to.xMax, u), world.y, Mathf.Lerp(to.yMin, to.yMax, v));
+        }
+
         public static bool Contains(Vector3 world)
         {
             Vector3 p = Local(world);
@@ -62,6 +88,8 @@ namespace Kehai.Sandbox
             Active = SessionState.GetBool(SessionKey, false);
             Root = null;
             if (!Active) return;
+            StoreFrame.Use(ToStore);
+            Kehai.Store.StoreMap.UseTestArea(MapBounds);   // her map: the mini store only
             // Before the store's own handlers (StoreLayout stocks every shelf it finds on load,
             // the copies included), so this one is added first.
             SceneManager.sceneLoaded += OnLoaded;
@@ -70,6 +98,11 @@ namespace Kehai.Sandbox
         public static void EndSession()
         {
             SceneManager.sceneLoaded -= OnLoaded;
+            if (Active)
+            {
+                StoreFrame.Use(null);
+                Kehai.Store.StoreMap.UseTestArea(null);
+            }
             Active = false;
             Root = null;
         }
@@ -97,6 +130,15 @@ namespace Kehai.Sandbox
             Lamps(root.transform, models);
             if (holder != null) Object.Destroy(holder.gameObject);
             holder = null;
+
+            // Her floor: the mini store's own NavMesh, baked the way the store's is (StoreRebake
+            // leaves the doors' leaves out, so doorways stay walkable). Then her map is cut from
+            // it, before the store's room lighting and stocking read the map.
+            var doors = root.GetComponentsInChildren<HingeDoor>(true);
+            Physics.SyncTransforms();
+            SandboxKit.Bake(root);
+            Kehai.Store.StoreMap.Rebuild();
+            report.Add($"her map: {Kehai.Store.StoreMap.Current.CellCount} cells, rooms {string.Join(", ", Kehai.Store.StoreMap.Current.Rooms)}; {doors.Length} hinged doors");
 
             // The store's own player starts inside, by the till, facing the shelves.
             GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -406,26 +448,7 @@ namespace Kehai.Sandbox
         public Transform player;
         int frames;
 
-        void Start()
-        {
-            Move();
-            LightTogether();
-        }
-
-        // The store keeps each room's lights to that room (RoomLighting, run as the store loads,
-        // after the mini store is built): a copy keeps its original's room, and the lamps get the
-        // room of where they hang. Until her map knows the mini store's rooms (M2), its lamps and
-        // everything in it share one set of layers, so the copies aren't left black.
-        void LightTogether()
-        {
-            foreach (Light light in GetComponentsInChildren<Light>(true))
-            {
-                var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
-                if (data == null) data = light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
-                data.renderingLayers = RoomLighting.Everything;
-            }
-            foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask = RoomLighting.Everything;
-        }
+        void Start() => Move();
 
         void Update()
         {

@@ -53,6 +53,10 @@ namespace Kehai.Karen
         // it did, for the thought log.
         public static string Install()
         {
+            // A sandbox with its own floor (the mini store, C11.17) is hers to walk as it is: its
+            // NavMesh holds only its rooms, and the outside boxes, in the store's metres, would
+            // mark it all outside.
+            if (StoreFrame.Active) return "a sandbox's own floor: nothing marked outside";
             NavMeshSurface surface = KarenWorld.StoreSurface();
             if (surface == null) return "no NavMeshSurface covers the store: her body isn't kept inside";
 
