@@ -168,6 +168,41 @@ public class SandboxTests
         Assert.AreEqual(1, started);
     }
 
+    // 0.5.2: on the island you are the store's player, who aims only along the Interactable
+    // layer. A room's door, a fridge door and a panel button are on it, so E reaches them.
+    [Test]
+    public void TheStoresPlayer_CanAimAtASandboxDoorAndButton()
+    {
+        SandboxDoor door = SandboxKit.Door(root, new Vector3(0f, 0f, 3f), SightSandbox.DoorWidth);
+        SandboxButton[] buttons = SandboxButton.Panel(root, "panel", new Vector3(2f, SightSandbox.PanelHeight, 3f), 180f,
+            ("START", "Start her", Color.green, () => { }));
+        Physics.SyncTransforms();
+        var player = new GameObject("store player").AddComponent<PlayerInteract>();
+        player.interactLayer = 1 << SandboxKit.InteractLayer;
+        player.interactRange = 2.5f;
+
+        Assert.AreSame(door, player.FindAimedTarget(new Ray(new Vector3(0f, 1.2f, 1.5f), Vector3.forward)));
+        Vector3 button = buttons[0].transform.position;
+        Assert.AreSame(buttons[0], player.FindAimedTarget(new Ray(button + Vector3.back * 1.2f, Vector3.forward)));
+    }
+
+    // Each panel label fits its button's share, so neighbouring labels never run into each other.
+    [Test]
+    public void PanelLabels_FitTheirButtons()
+    {
+        SandboxButton.Panel(root, "panel", Vector3.up * SightSandbox.PanelHeight, 0f,
+            ("START", "", Color.green, () => { }), ("RESTART", "", Color.green, () => { }),
+            ("FREEZE", "", Color.green, () => { }), ("ROUTE", "", Color.green, () => { }));
+        int labels = 0;
+        foreach (TextMesh text in root.GetComponentsInChildren<TextMesh>())
+        {
+            labels++;
+            float width = text.GetComponent<Renderer>().bounds.size.x;
+            Assert.LessOrEqual(width, SandboxButton.Spacing - 0.05f, text.text);
+        }
+        Assert.AreEqual(4, labels);
+    }
+
     // C11.13: her island map is cut on the standalone pursuit room's 1.5 m grid, so the pursuit
     // checks meet the same cells there.
     [Test]
