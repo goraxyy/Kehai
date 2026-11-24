@@ -374,7 +374,8 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         test_filter: str | None = None, dry_run: bool = False, log=print,
         sight: SightReview | None = None, *, league: Path | None = None,
         eval_timeout: str | None = None, export_dir: Path | None = None,
-        clone_root: Path | None = None, result_dir_file: Path | None = None) -> int:
+        clone_root: Path | None = None, result_dir_file: Path | None = None,
+        graphics: bool = False) -> int:
     if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
@@ -401,6 +402,10 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     clone = (clone_root or s.home / CLONES) / rid
     args = [s.unity] + unity_args(job, clone, out, extra, test_filter,
                                  league=league, eval_timeout=eval_timeout, export_dir=export_dir)
+    if graphics and '-nographics' in args:
+        # A unity job that renders (screenshots of a sandbox): still batch mode, still silent.
+        args.remove('-nographics')
+        args.insert(1, '-noaudio')
     commands = [(out, args)] if sight is None else [
         (out / case.name, [s.unity] + unity_args('sandbox-clip', clone, out / case.name, case.shot(), None))
         for case in sight.cases
@@ -625,6 +630,7 @@ def main(argv=None) -> int:
             r.add_argument('--filter', help='a -testFilter for Unity')
         if name == 'unity':
             r.add_argument('--result-dir-file', type=Path, help='write this run’s absolute output path to a file')
+            r.add_argument('--graphics', action='store_true', help='let Unity render (screenshots); still silent')
         if name == 'league':
             r.add_argument('--league', type=Path, required=True, help='a league file in the selected commit')
         if name in ('league', 'ablation'):
@@ -708,7 +714,8 @@ def main(argv=None) -> int:
                league=getattr(a, 'league', None), eval_timeout=eval_timeout,
                export_dir=export_dir,
                clone_root=clone_root.absolute() if clone_root is not None else None,
-               result_dir_file=getattr(a, 'result_dir_file', None))
+               result_dir_file=getattr(a, 'result_dir_file', None),
+               graphics=getattr(a, 'graphics', False))
 
 
 if __name__ == '__main__':

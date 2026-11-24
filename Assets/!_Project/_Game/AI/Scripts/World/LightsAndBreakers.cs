@@ -31,6 +31,7 @@ namespace Kehai.Karen
 
         public static LightCircuit CircuitOf(Vector3 p)
         {
+            p = StoreFrame.ToStore(p);   // a sandbox's lamps on the breaker of the store's part they stand for
             if (p.z < -175.5f || p.x < 25f) return LightCircuit.Back;
             return p.x >= 55f ? LightCircuit.East : LightCircuit.West;
         }

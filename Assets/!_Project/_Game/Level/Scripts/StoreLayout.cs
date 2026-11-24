@@ -114,6 +114,7 @@ public static class StoreLayout
 
     public static Zone ZoneAt(Vector3 position)
     {
+        position = StoreFrame.ToStore(position);   // a sandbox's shelves sell what the store's there do
         foreach (Zone zone in Zones)
             if (zone.Contains(position)) return zone;
 

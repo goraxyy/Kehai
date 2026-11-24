@@ -222,6 +222,12 @@ namespace Kehai.Karen
         [Header("Sandboxes (0.5.2)")]
         [Tooltip("Sandbox only: her movement tactics alone (tier 0: patrol, investigate, sweep, ask the customers, withdraw, hunt), never a trick.")]
         public bool sandboxNoTricks;
+        // Sandbox only (the mini store, C11.17): the tricks she may choose herself (empty: none);
+        // null, all of them. It holds every tier-1+ tactic and the ids in sandboxTrickIds (the
+        // tricks list, which counts "Ask the customers", a tier-0 move). "Fire now"
+        // (KarenBrain.Force) isn't held to it.
+        [System.NonSerialized] public System.Collections.Generic.HashSet<string> sandboxTricks;
+        [System.NonSerialized] public System.Collections.Generic.HashSet<string> sandboxTrickIds;
         [Tooltip("Sandbox only: a catch freezes the test (KarenBrain.SandboxCaught) instead of ending the shift.")]
         public bool sandboxCatchFreezes;
 
@@ -230,7 +236,10 @@ namespace Kehai.Karen
         // The Director's pacing off (0.4.0, C5.4): Vital, and the hunter (the planner with the same
         // freedom). Tiers, the tension budget, cooldowns, settling in and the recovery stop gating;
         // the Director's hint toward your area stops; every fairness rule stays.
-        public bool PacingOff => hunter || brain == KarenBrainKind.Vital;
+        public bool PacingOff => hunter || brain == KarenBrainKind.Vital || sandboxPacingOff;
+        // Sandbox only (the mini store, C11.17): no tension pacing, so a trick you allowed her is
+        // hers as soon as it fits, not after the Director's settling phase.
+        [System.NonSerialized] public bool sandboxPacingOff;
 
         public KarenConfig Clone() => (KarenConfig)MemberwiseClone();
     }

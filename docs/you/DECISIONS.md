@@ -6,6 +6,8 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-24 | Merge the mini store without the full test suite this once (no time to keep Unity closed); the suite runs before the next merge | [mini store](plans/0.5.2/mini-store.md) |
+| 2026-11-24 | The island is replaced by one mini store sandbox: three rooms (sales floor, cold room, stockroom) from the store's own models, a new building, the real Karen, and a panel to allow her no tricks, one trick or all, and to switch what she can sense | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-23 | A shelf face you can't stand in front of is display only: it stays stocked, and shoppers and Karen's tricks never empty it, so no task asks for it (freezer 4 too, by name) | [placement](plans/0.5.2/placement.md#4-where-it-stands-23-november), C12.2 |
 | 2026-11-23 | Shelves are measured at the board you put stock on (at most 1.6 m), not at the middle of the pack standing on it; everything else keeps the centre rule | [placement](plans/0.5.2/placement.md#1-the-rule), C12.2 |
 | 2026-11-23 | The power box's three switches are labelled EAST, WEST and BACK, and each prompt names the lights it runs (Q25: label them) | [placement](plans/0.5.2/placement.md), C12.3 |

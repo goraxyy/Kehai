@@ -631,6 +631,7 @@ namespace Kehai.Store
         // three rooms of 13⅓ m each (INTERIOR_MODELS.md): staff room, office and WC.
         public static string AreaAt(Vector3 p)
         {
+            p = StoreFrame.ToStore(p);                 // a sandbox's floor read as the store's (C11.17)
             if (InTestArea(p)) return "Sales floor";   // her test map (C11.13)
             if (p.z > -110f) return p.z <= PavementEdge && p.x >= 10.5f && p.x <= 85.5f ? "Pavement" : "Street";
             if (p.x < 10.5f) return "West alley";

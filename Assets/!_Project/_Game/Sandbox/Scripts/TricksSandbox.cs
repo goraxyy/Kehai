@@ -37,16 +37,28 @@ namespace Kehai.Sandbox
         int selected;
         bool runOne, resumeAgent;
         string feedback = "Waiting for the store.";
+        MiniStorePanel panel;   // the mini store's (C11.17); null elsewhere
+        bool freezeOnceBuilt;
 
         public string Feedback => feedback;
+        public bool HasPanel => panel != null;   // the mini store's (C11.17)
 
-        internal static KarenConfig NewConfig() => new KarenConfig
+        internal static KarenConfig NewConfig()
         {
-            seed = 4242, rung = KarenRung.E_Ledger,
-            sandboxNoTricks = true, sandboxCatchFreezes = true,
-            learningRecords = false, writeJsonl = false,
-            ledgerPath = Path.Combine(Application.temporaryCachePath, "tricks_" + Guid.NewGuid().ToString("N") + ".json")
-        };
+            var config = new KarenConfig
+            {
+                seed = 4242, rung = KarenRung.E_Ledger,
+                sandboxNoTricks = true, sandboxCatchFreezes = true,
+                learningRecords = false, writeJsonl = false,
+                ledgerPath = Path.Combine(Application.temporaryCachePath, "tricks_" + Guid.NewGuid().ToString("N") + ".json")
+            };
+            if (MiniStore.Active)
+            {
+                config.start = MiniStore.World(MiniStore.KarenStart);   // she starts in its stockroom
+                MiniStoreSettings.ApplyTo(config);                       // the tricks you allowed her
+            }
+            return config;
+        }
 
         // Before ShiftManager.Awake or StoreLayout reads the career. The editor holds the
         // override through teardown, including a scene reload or Play with domain reload off.
@@ -123,6 +135,15 @@ namespace Kehai.Sandbox
         {
             if (brain == null) return;
             Freeze();
+            // The mini store (C11.17) has its own panel; no stalls there.
+            if (MiniStore.Active)
+            {
+                panel = new MiniStorePanel(this);
+                MiniStoreSettings.ApplySenses(brain);
+                selected = Mathf.Max(0, Array.IndexOf(TrickCheck.Tricks, MiniStoreSettings.Chosen));
+                feedback = "Karen is frozen in the stockroom. P starts her; Tab opens the panel.";
+                return;
+            }
             feedback = "F5 starts shift four. The trick stalls stand on the sandbox island: out of the front door, north to the road, then west.";
             // Facing south: the plates face you as you come onto the island from the road.
             Transform stalls = SandboxKit.Group(transform, "Trick stalls", StallsAt, 180f);
@@ -165,6 +186,7 @@ namespace Kehai.Sandbox
             int index = Array.IndexOf(TrickCheck.Tricks, id);
             if (index < 0) { feedback = "Unknown sandbox trick: " + id; return false; }
             selected = index;
+            if (panel != null) panel.Choose(brain, id);
             if (brain == null || brain.Ctx == null) { feedback = "Waiting for the store."; return false; }
             if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return false; }
             if (brain.ForcedPlanRunning)
@@ -192,9 +214,15 @@ namespace Kehai.Sandbox
             brain.enabled = true;
         }
 
+        public void FreezeNow() => Freeze();
+        public void RestartNow() => Restart();
+
         void Freeze()
         {
             if (!brain.enabled) return;
+            // Asked before her body is built (her Start hasn't run): freeze her once it is. Turning
+            // her off now would skip her Start, and she'd never be built.
+            if (brain.Body == null) { freezeOnceBuilt = true; feedback = "Karen is frozen."; return; }
             var agent = brain.Body.Agent;
             if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
             {
@@ -211,8 +239,9 @@ namespace Kehai.Sandbox
             feedback = "Caught. F6 restarts the sandbox.";
         }
 
-        void StartRunning()
+        public void StartRunning()
         {
+            freezeOnceBuilt = false;
             if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return; }
             if (!brain.Shift.IsShiftActive) brain.Shift.StartShift();
             runOne = false;
@@ -224,20 +253,28 @@ namespace Kehai.Sandbox
 
         void Update()
         {
+            // The mini store's panel: Tab, even while it has the game paused.
+            if (panel != null && Input.GetKeyDown(KeyCode.Tab)) { panel.SetOpen(!panel.Open); return; }
+            if (freezeOnceBuilt && brain != null && brain.Body != null) { freezeOnceBuilt = false; Freeze(); }
             if (GamePause.Paused || brain == null || brain.Ctx == null) return;
-            if (Input.GetKeyDown(KeyCode.F6)) { Restart(); return; }
+            bool mini = panel != null;
+            // Plain keys in the mini store (no Fn on a MacBook): P and Backspace beside F5 and F6.
+            if (Input.GetKeyDown(KeyCode.F6) || mini && Input.GetKeyDown(KeyCode.Backspace)) { Restart(); return; }
             if (runOne && !brain.ForcedPlanRunning) { runOne = false; Freeze(); }
             // F5 starts or freezes her; F7 stays the store's clip mark.
-            if (Input.GetKeyDown(KeyCode.F5)) { if (brain.enabled && !runOne) Freeze(); else StartRunning(); }
+            if (Input.GetKeyDown(KeyCode.F5) || mini && Input.GetKeyDown(KeyCode.P)) { if (brain.enabled && !runOne) Freeze(); else StartRunning(); }
             int count = Catalogue.Count;
             if (count == 0) return;
+            int was = selected;
             if (Input.GetKeyDown(KeyCode.LeftBracket)) selected = (selected + count - 1) % count;
             if (Input.GetKeyDown(KeyCode.RightBracket)) selected = (selected + 1) % count;
+            if (mini && selected != was) panel.Choose(brain, Catalogue[selected]);
             if (Input.GetKeyDown(KeyCode.Return)) TryFire(Catalogue[selected]);
         }
 
         void OnGUI()
         {
+            if (panel != null) { panel.Draw(brain, feedback); return; }
             if (GamePause.Paused) return;
             float width = Mathf.Min(465f, Screen.width - 16f);
             GUILayout.BeginArea(new Rect(Screen.width - width - 8f, 8f, width, Screen.height - 16f));
