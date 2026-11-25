@@ -120,6 +120,17 @@ namespace Kehai.Eval
                    || hit.collider.transform.IsChildOf(brain.Body.transform);
         }
 
+        // Karen as a person sees her at this moment, with no side effects: the observation's
+        // "visible" and "at", for a choice made between observations (the door wait, 0.5.2).
+        public static bool SeesKaren(PlayerPresence me, out Vector3 at)
+        {
+            at = default;
+            KarenBrain brain = KarenBrain.Instance;
+            if (!CanSee(me, brain, out _)) return false;
+            at = brain.Body.Position;
+            return true;
+        }
+
         // A throw of hers, as a person sees it coming: what it is, how soon it's here, where it
         // is, and which way to step to be off its line (left or right of where you face).
         public struct ThrowSeen

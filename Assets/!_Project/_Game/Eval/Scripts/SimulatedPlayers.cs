@@ -62,6 +62,10 @@ namespace Kehai.Eval
         public int TurnBacks { get; private set; }
         public int ThrowsSeen { get; private set; }
         public int Dodges { get; private set; }
+        // The counters to the decoy throw and the swinging door (0.5.2 Phase 9): items thrown away
+        // from the hiding place before going there, and doors held back from while she could see them.
+        public int Decoys { get; private set; }
+        public int DoorWaits { get; private set; }
         // The completed sidestep's projectile, so a recorded check can distinguish a dodge
         // from a wall hit or a missed throw while the bot was doing something else.
         public int LastDodgedProjectile { get; private set; }
@@ -212,6 +216,8 @@ namespace Kehai.Eval
             env.Metrics.BotTurnBacks = TurnBacks;
             env.Metrics.BotThrowsSeen = ThrowsSeen;
             env.Metrics.BotDodges = Dodges;
+            env.Metrics.BotDecoys = Decoys;
+            env.Metrics.BotDoorWaits = DoorWaits;
             env.Metrics.BotReactive = reactive;
         }
 
@@ -552,8 +558,9 @@ namespace Kehai.Eval
                 FindOpenHide(from, out HidingPlace place, out Vector3 feet))
             {
                 TurnOffHeldTorch();
+                yield return ThrowDecoy(feet);
                 string region = map.NameAt(feet);
-                yield return Act(new EnvAction { verb = "move_to", target = region, movePoint = feet, crouch = true, timeout = 25f });
+                yield return ActWaitingAtDoors(new EnvAction { verb = "move_to", target = region, movePoint = feet, crouch = true, timeout = 25f });
                 if (env.CheckDone())
                 {
                     env.Driver.Crouch = false;
@@ -581,6 +588,98 @@ namespace Kehai.Eval
             RecordHide(hide.Name, hide.Centroid, EmployeeHow.Hurry);
             yield return Act(new EnvAction { verb = "move_to", target = hide.Name, sprint = true, timeout = 25f });
             yield return WaitInHiding();
+        }
+
+        // ---- the counters to the decoy throw and the swinging door (0.5.2 Phase 9) ----------
+
+        public const float DecoyReach = 5f;        // how far a 9 m/s throw from the hand carries before it lands
+        public const float DecoyThrowSpeed = 9f;   // within the player's own throw (3–13 m/s)
+        public const float DecoyMinGain = 2f;      // it lands at least this much further from the hide than you are
+        public const float DoorWaitSeconds = 5f;   // how long it holds back from one door before going anyway
+        public const float DoorSeenWithin = 12f;
+
+        static readonly Vector3[] Compass =
+        {
+            Vector3.forward, new Vector3(1f, 0f, 1f).normalized, Vector3.right, new Vector3(1f, 0f, -1f).normalized,
+            Vector3.back, new Vector3(-1f, 0f, -1f).normalized, Vector3.left, new Vector3(-1f, 0f, 1f).normalized
+        };
+
+        // Lure her away, then move: which way to throw so the item lands furthest from where you'll
+        // hide. `clearAlong` is how far a throw can fly that way before something stops it. False
+        // when no way lands it at least DecoyMinGain further from the hide than you stand.
+        public static bool DecoyAim(Vector3 me, Vector3 hide, System.Func<Vector3, float> clearAlong, out Vector3 direction)
+        {
+            direction = default;
+            float best = DecoyMinGain, from = Flat(hide - me).magnitude;
+            foreach (Vector3 d in Compass)
+            {
+                float clear = Mathf.Min(clearAlong(d), DecoyReach);
+                if (clear < DecoyReach * 0.6f) continue;   // a wall a step away: it would land at your feet
+                float gain = Flat(hide - (me + d * clear)).magnitude - from;
+                if (gain <= best) continue;
+                best = gain;
+                direction = d;
+            }
+            return direction != default;
+        }
+
+        // What can be thrown as a decoy: a product from the shelves, not the torch, a tool or a crate.
+        public static bool IsDecoy(Item item) =>
+            item != null && item.type == ItemType.Stock && item.GetComponent<StockCrate>() == null;
+
+        // With a product in hand and her out of sight, throw it away from the hiding place first.
+        IEnumerator ThrowDecoy(Vector3 hide)
+        {
+            CarrySlot hand = env.Driver.Carry;
+            if (hand == null || !IsDecoy(hand.currentItem)) yield break;
+            if (!env.Driver.TryGetComponent(out PlayerPresence me) || EnvWorld.SeesKaren(me, out _)) yield break;
+            Vector3 at = env.Driver.transform.position;
+            Vector3 hand0 = at + Vector3.up * 1.4f;
+            if (!DecoyAim(at, hide, d => Physics.Raycast(hand0, d, out RaycastHit hit, DecoyReach + 1f, ~0, QueryTriggerInteraction.Ignore) ? hit.distance : DecoyReach + 1f,
+                          out Vector3 way)) yield break;
+            env.Driver.LookAt(at + way * 4f);
+            for (float t = 0f; t < 0.6f && Vector3.Angle(Flat(env.Driver.transform.forward), way) > 8f; t += Time.deltaTime) yield return null;
+            env.Driver.Drop(DecoyThrowSpeed);
+            yield return null;
+            yield return null;
+            env.Driver.ClearLook();
+            if (!IsDecoy(hand.currentItem)) Decoys++;
+        }
+
+        // Whether she, where you see her, has a clear line to a door within DoorSeenWithin: open it
+        // now and she sees it swing.
+        public static bool DoorInHerView(Vector3 her, HingeDoor door)
+        {
+            if (door == null || Flat(door.DoorCentre - her).magnitude > DoorSeenWithin) return false;
+            Vector3 eye = her + Vector3.up * 1.4f, leaf = door.DoorCentre + Vector3.up * 1f;
+            return !Physics.Linecast(eye, leaf, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) ||
+                   hit.collider.GetComponentInParent<HingeDoor>() == door;
+        }
+
+        // The run to a hiding place: at a closed door she can see, it waits (up to DoorWaitSeconds)
+        // for her to look away or move off rather than open it in front of her, as a person would.
+        IEnumerator ActWaitingAtDoors(EnvAction a)
+        {
+            HingeDoor held = null;
+            float heldSince = 0f;
+            env.Driver.TryGetComponent(out PlayerPresence me);
+            env.Driver.WaitAtDoor = door =>
+            {
+                if (me == null || !EnvWorld.SeesKaren(me, out Vector3 her) || !DoorInHerView(her, door)) return false;
+                if (door != held)
+                {
+                    held = door;
+                    heldSince = Time.time;
+                    DoorWaits++;
+                }
+                return Time.time - heldSince < DoorWaitSeconds;
+            };
+            try
+            {
+                IEnumerator run = Act(a);
+                while (run.MoveNext()) yield return run.Current;
+            }
+            finally { env.Driver.WaitAtDoor = null; }
         }
 
         void TurnOffHeldTorch()

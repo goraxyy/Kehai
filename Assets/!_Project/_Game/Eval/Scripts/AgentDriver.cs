@@ -59,6 +59,10 @@ namespace Kehai.Eval
         public float PitchDelta { get; private set; }
 
         public bool Moving => moving;
+        // Asked of each closed door it's about to open: true holds it in front of the door, not
+        // opening it (the simulated player's wait, 0.5.2). Null, as everywhere but its hiding run: open.
+        [System.NonSerialized] public System.Func<HingeDoor, bool> WaitAtDoor;
+        bool doorHeld;
         public bool PathFailed { get; private set; }
         public Vector3 Goal => goal;
         public PlayerInteract Hands => hands;
@@ -267,8 +271,12 @@ namespace Kehai.Eval
 
                     // A closed door in the way: open it, as a person presses E on reaching it,
                     // then re-plan once it has swung (the open panel is carved out of the NavMesh).
+                    // Unless the bot holds back from it (WaitAtDoor: the counter to the swinging
+                    // door, 0.5.2), then it stands still in front of it.
                     HingeDoor door = HingeDoor.ClosedAhead(here, MoveWorld, 2.2f);
-                    if (door != null && !door.Locked && door.OpenFor(here, Kehai.Karen.NoiseAuthor.Player))
+                    doorHeld = door != null && !door.Locked && WaitAtDoor != null && WaitAtDoor(door);
+                    if (doorHeld) MoveWorld = Vector3.zero;
+                    else if (door != null && !door.Locked && door.OpenFor(here, Kehai.Karen.NoiseAuthor.Player))
                         replanAt = Time.time + 1.2f;
                     if (replanAt > 0f && Time.time > replanAt)
                     {
@@ -280,7 +288,7 @@ namespace Kehai.Eval
                     Vector3 moved = here - lastPosition;
                     moved.y = 0f;
                     // Held still by the death screen: that's waiting, not being stuck.
-                    bool held = motor != null && motor.movementLocked;
+                    bool held = (motor != null && motor.movementLocked) || doorHeld;
                     if (held) progressFrom = here;
                     stuckFor = !held && moved.magnitude < 0.3f * dt ? stuckFor + dt : 0f;
                     if (stuckFor > 1.5f)
@@ -327,6 +335,7 @@ namespace Kehai.Eval
             else
             {
                 MoveWorld = Vector3.zero;
+                doorHeld = false;
             }
 
             if (hasLookTarget)
