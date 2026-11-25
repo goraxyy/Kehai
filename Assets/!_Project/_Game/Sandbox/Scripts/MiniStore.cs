@@ -130,10 +130,13 @@ namespace Kehai.Sandbox
             ("Sales_Floor_Bin_02", new Vector3(54f, 0f, -121f), 0f),
             // The staff room: the counter the coffee machine stands on, the table the torch lies on,
             // lockers you can hide in, the bin, the dining table (the fridge would stand in the counter).
-            ("Appliance_Counter_01", null, 0f), ("Uniform_Folding_Table_01", new Vector3(17f, 0f, -146.4f), 0f),
+            // The kitchen as in the store, along the west wall at its real spacing (the owner's ask,
+            // 25 November): fridge, counter (the coffee machine, the torch and the PA microphone on
+            // it), microwave, sink. No tables: they stood in the way.
+            ("Staff_Fridge_01", new Vector3(10.7f, 0f, -148.3f), 0f), ("Appliance_Counter_01", new Vector3(10.7f, 0f, -146.1f), 0f),
+            ("Microwave_01", new Vector3(10.5f, 0f, -145.3f), 0f), ("Sink_And_Soap_01", new Vector3(10.7f, 0f, -143.7f), 0f),
             ("Locker_01", new Vector3(11.5f, 0f, -137.5f), 0f), ("Locker_02", new Vector3(13.9f, 0f, -137.5f), 0f), ("Locker_03", new Vector3(16.3f, 0f, -137.5f), 0f),
             ("Staff_Room_Furnished_Recycling_01", new Vector3(21f, 0f, -149.6f), 0f),
-            ("Shared_Dining_Table_01", null, 0f),
         };
 
         // The store's own things her tricks and your chores are built beside, moved here (one of
@@ -148,8 +151,8 @@ namespace Kehai.Sandbox
             ("Service_Yard_Light_01", new Vector3(24.6f, 3.4f, -154f), null), ("Service_Yard_Light_02", new Vector3(24.6f, 3.4f, -168f), null),
             ("Time_Clock_01", null, null),                      // the PA box and its microphone go up beside it
             ("Staff_Radio_01", null, null),
-            ("Coffee_Machine_01", null, "Appliance_Counter_01"),
-            ("Flashlight_01", null, "Uniform_Folding_Table_01"),
+            ("Coffee_Machine_01", new Vector3(10.6f, 1.0f, -145.4f), null),   // on the counter
+            ("Flashlight_01", new Vector3(10.7f, 1.05f, -146.7f), null),      // on the counter; the PA microphone goes beside it (MiniStoreStart)
             ("Mop_Snap_Point_01", new Vector3(24.5f, 1.0f, -147f), null),       // its rack, on the staff room's east wall
             ("Mop_01", null, "Mop_Snap_Point_01"),
             ("Stock_Snap_Point_01", new Vector3(14.6f, 0.5f, -148.7f), null),  // the stock crate: in the staff room, as in the store
@@ -457,8 +460,11 @@ namespace Kehai.Sandbox
             get
             {
                 var spots = new List<StoreCameras.Spot>();
-                foreach (StoreCameras.Spot s in StoreCameras.Spots)
+                foreach (StoreCameras.Spot store in StoreCameras.Spots)
                 {
+                    StoreCameras.Spot s = store.Area == "Staff room"
+                        ? new StoreCameras.Spot(store.Name, store.Area, new Vector2(12f, -143f), new Vector2(-1f, 0f), new Vector3(22f, 0f, -140f))
+                        : store;   // halved, the staff room's hung behind the lockers: over the sink instead
                     Vector3 probe = Half(new Vector3(s.Probe.x, 0f, s.Probe.y));
                     spots.Add(new StoreCameras.Spot(s.Name, s.Area, new Vector2(probe.x, probe.z), s.Wall, Half(s.LookAt)));
                 }
@@ -661,17 +667,18 @@ namespace Kehai.Sandbox
             foreach (var paint in copy.GetComponentsInChildren<ParentMaterialController>(true)) Object.DestroyImmediate(paint);
         }
 
-        // A shelf bay's middle panel (Wall_01) shows see-through on a copy; a solid panel of the same
-        // grey in its place, so you can't see through a shelf and her eye can't either.
+        // A shelf bay's middle panel (Wall_01) and its boards (Shelf_Deck_*) show see-through on a
+        // copy; a solid one of the same grey in each place, so you can't see through a shelf, her eye
+        // can't either, and the stock stands on a board.
         static void BackPanel(GameObject copy)
         {
             if (copy.GetComponent<ShelfUnit>() == null || copy.GetComponent<ColdFixture>() != null) return;
             foreach (Renderer wall in copy.GetComponentsInChildren<Renderer>(true))
             {
-                if (wall.name != "Wall_01") continue;
+                if (wall.name != "Wall_01" && !wall.name.StartsWith("Shelf_Deck")) continue;
                 Transform t = wall.transform;
                 GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                panel.name = "Back panel";
+                panel.name = wall.name == "Wall_01" ? "Back panel" : "Board";
                 panel.transform.SetParent(t.parent, false);
                 panel.transform.localPosition = t.localPosition;
                 panel.transform.localRotation = t.localRotation;
@@ -752,7 +759,37 @@ namespace Kehai.Sandbox
         public Transform player;
         int frames;
 
-        void Start() => Move();
+        void Start()
+        {
+            Move();
+            LightEveryRoom();
+            MicBesideTorch();
+        }
+
+        // Some rooms stayed dark under the store's room lighting (its rooms are the store's, not
+        // these): here every lamp lights everything (the owner's ask, 25 November).
+        void LightEveryRoom()
+        {
+            foreach (Light light in GetComponentsInChildren<Light>(true))
+            {
+                var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>()
+                           ?? light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+                data.renderingLayers = RoomLighting.Everything;
+            }
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask = RoomLighting.Everything;
+        }
+
+        // The PA microphone, put up beside the PA box by the store (KarenFixtures), on the kitchen
+        // counter beside the torch.
+        void MicBesideTorch()
+        {
+            ClosingMic mic = FindAnyObjectByType<ClosingMic>();
+            Item torch = null;
+            foreach (Item i in FindObjectsByType<Item>()) if (i.type == ItemType.Flashlight && MiniStore.Contains(i.transform.position)) { torch = i; break; }
+            if (mic == null || torch == null) return;
+            mic.transform.position = torch.transform.position + new Vector3(0f, 0.05f, 0.4f);
+            Physics.SyncTransforms();
+        }
 
         void Update()
         {

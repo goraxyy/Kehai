@@ -71,7 +71,7 @@ namespace Kehai.Sandbox
         RenderTexture view;
         const int ViewWidth = 400, ViewHeight = 225;
 
-        void KarenView(KarenBrain brain, float width)
+        void KarenView(KarenBrain brain)
         {
             Transform at = brain != null && brain.Body != null && brain.Body.Sight != null ? brain.Body.Sight.transform : null;
             if (at == null) return;
@@ -88,9 +88,9 @@ namespace Kehai.Sandbox
             eye.transform.SetPositionAndRotation(at.position, at.rotation);
             eye.enabled = true;
             eye.Render();   // the game is paused while the panel is open: draw it now
-            float w = Mathf.Min(width - 16f, ViewWidth), h = w * ViewHeight / ViewWidth;
-            GUILayout.Label("<b>Karen's view</b>", Rich());
-            Rect r = GUILayoutUtility.GetRect(w, h, GUILayout.Width(w), GUILayout.Height(h));
+            float w = Mathf.Min(Screen.width * 0.35f, ViewWidth), h = w * ViewHeight / ViewWidth;
+            var r = new Rect(Screen.width - w - 12f, Screen.height - h - 12f, w, h);
+            GUI.Box(new Rect(r.x - 4f, r.y - 22f, w + 8f, h + 26f), "Karen's view");
             GUI.DrawTexture(r, view, ScaleMode.ScaleToFit);
         }
 
@@ -164,12 +164,11 @@ namespace Kehai.Sandbox
             changed |= Toggle(ref MiniStoreSettings.Traces, "Traces: footprints, spills, your torch's light");
             if (changed) MiniStoreSettings.ApplySenses(brain);
 
-            GUILayout.Space(6f);
-            KarenView(brain, width);
             GUILayout.FlexibleSpace();
             GUILayout.Label("Keys: Tab panel · P start or freeze · Backspace restart · [ ] pick · Return fire now · E doors and things");
             GUILayout.EndVertical();
             GUILayout.EndArea();
+            KarenView(brain);   // in the screen's bottom-right corner
         }
 
         public void Choose(KarenBrain brain, string id)
