@@ -259,13 +259,15 @@ namespace Kehai.Sandbox
                 Vector3 a = HalfLocal(new Vector3(store.xMin, 0f, store.yMin)), b = HalfLocal(new Vector3(store.xMax, 0f, store.yMax));
                 var centre = new Vector3((a.x + b.x) * 0.5f, 0f, (a.z + b.z) * 0.5f);
                 var size = new Vector3(b.x - a.x + Wall, 0f, b.z - a.z + Wall);
-                var floor = Slab(shell, name + " floor", centre + Vector3.down * 0.05f, size + Vector3.up * 0.12f, outdoors ? m.Yard ?? m.Floor : m.Floor);
+                // Its top 2 cm below the doorways: a door leaf swinging over the next room's floor
+                // piece took it for something in its way and swung the other way, toward you.
+                var floor = Slab(shell, name + " floor", centre + Vector3.down * 0.08f, size + Vector3.up * 0.12f, outdoors ? m.Yard ?? m.Floor : m.Floor);
                 floor.AddComponent<InteriorLightAnchor>().outdoors = outdoors;
                 if (!outdoors)
                     Slab(shell, name + " ceiling", centre + Vector3.up * (WallHeight + 0.05f), size + Vector3.up * 0.1f, m.Ceiling).AddComponent<InteriorLightAnchor>();
             }
             Vector3 p0 = HalfLocal(new Vector3(StoreBuilding.xMin, 0f, StoreBuilding.yMax)), p1 = HalfLocal(new Vector3(StoreBuilding.xMax, 0f, StoreBuilding.yMax));
-            Slab(shell, "Pavement", new Vector3((p0.x + p1.x) * 0.5f, -0.05f, p0.z + 3.5f), new Vector3(p1.x - p0.x + 1f, 0.12f, 7f), m.Yard ?? m.Floor);
+            Slab(shell, "Pavement", new Vector3((p0.x + p1.x) * 0.5f, -0.08f, p0.z + 3.5f), new Vector3(p1.x - p0.x + 1f, 0.12f, 7f), m.Yard ?? m.Floor);
 
             foreach (var (a, b, gaps) in Walls)
             {
