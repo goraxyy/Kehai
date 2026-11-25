@@ -3,6 +3,18 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
+    // A door on a hiding place that Karen opens to look inside (0.5.2: the fridge and locker
+    // checks, HideCheck). A locker's or cabinet's door (FurnitureDoor), a sandbox's fridge door.
+    public interface IHidingDoor
+    {
+        bool IsHidingDoor { get; }   // false for a room door wrapped as furniture
+        bool IsOpen { get; }
+        Vector3 DoorPoint { get; }   // the middle of the closed leaf
+        float LeafWidth { get; }     // how far the leaf sweeps out from its hinge
+        float OpenFraction { get; }  // 0 shut, 1 fully open
+        void SetOpenForCheck(bool open);
+    }
+
     // A code-authored empty interior, not the bounds of the solid furniture. Coverage is
     // the fraction of the current controller's body envelope inside it. It is independent
     // of the observer: an open cabinet or a ray under a rack does not defeat concealment.
@@ -27,6 +39,12 @@ namespace Kehai.Karen
 
         // Not isActiveAndEnabled: that stays false in edit mode for a script that doesn't run there.
         public bool Usable => this != null && enabled && gameObject.activeInHierarchy;
+
+        // Every registered hiding place (the store's furniture, which she knows; not who's in it).
+        public static IReadOnlyList<HidingPlace> All
+        {
+            get { places.RemoveAll(p => p == null); return places; }
+        }
 
         public static bool Conceals(float coverage) => coverage >= CoveredThreshold;
         public static float OverlapFraction(Bounds body, Bounds space)

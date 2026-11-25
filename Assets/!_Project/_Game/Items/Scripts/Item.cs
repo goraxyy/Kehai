@@ -163,7 +163,7 @@ public class Item : MonoBehaviour
         if (!isCarried && !isOnShelf && PhysicsSpeed < KarenStun.MinimumSpeed
             && collision.rigidbody != null && collision.rigidbody.GetComponent<KarenStun>() != null)
             lastAuthor = NoiseAuthor.Karen;
-        if (impactSound == null || isCarried || isOnShelf) return;
+        if (isCarried || isOnShelf) return;
         if (Time.time < nextImpactTime) return;
 
         float speed = collision.relativeVelocity.magnitude;
@@ -173,7 +173,9 @@ public class Item : MonoBehaviour
 
         Vector3 where = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
         float loudness = Mathf.InverseLerp(impactMinSpeed, impactLoudSpeed, speed);
-        OneShotAudio.PlayAt(impactSound, where, Mathf.Lerp(0.3f, 1f, loudness));
+        if (impactSound != null) OneShotAudio.PlayAt(impactSound, where, Mathf.Lerp(0.3f, 1f, loudness));
+        // Karen hears the landing with or without a clip (0.5.2, the decoy throw): a thrown item
+        // with no sound of its own yet still lands with a noise.
         NoiseBus.Emit(where, Mathf.Lerp(0.3f, 0.8f, loudness), NoiseKind.Impact, lastAuthor);
     }
 

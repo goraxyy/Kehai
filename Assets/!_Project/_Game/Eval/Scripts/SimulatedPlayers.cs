@@ -622,6 +622,22 @@ namespace Kehai.Eval
             return TryChooseOpenHide(feet, threat, radius, height, motor.crouchCameraY * Mathf.Abs(scale.y), out place, out target);
         }
 
+        // Whether a working store camera, or a shopper within 10 m, has a clear line to a hide's
+        // entry: the places I2 (a camera saw you hide) and I3 (a shopper saw you) report.
+        public static bool Watched(Vector3 at)
+        {
+            Vector3 target = at + Vector3.up * 1f;
+            StoreCameras cams = StoreCameras.Instance;
+            if (cams != null)
+                foreach (StoreCamera cam in cams.Cameras)
+                    if (cam != null && !cam.IsBroken && Vector3.Distance(cam.transform.position, target) < 20f &&
+                        !Physics.Linecast(cam.transform.position, target, ~0, QueryTriggerInteraction.Ignore)) return true;
+            foreach (Kehai.Karen.CustomerMemory shopper in Object.FindObjectsByType<Kehai.Karen.CustomerMemory>())
+                if (shopper != null && shopper.isActiveAndEnabled && Vector3.Distance(shopper.transform.position, target) < 10f &&
+                    !Physics.Linecast(shopper.transform.position + Vector3.up * 1.6f, target, ~0, QueryTriggerInteraction.Ignore)) return true;
+            return false;
+        }
+
         // The bot needs an open route to the interior's floor centre. Furniture interaction
         // and crouch entries that go off the NavMesh require their own movement steps.
         public static bool TryChooseOpenHide(Vector3 feet, Vector3 threat, float radius, float height, float eyeHeight,
@@ -640,7 +656,11 @@ namespace Kehai.Eval
                     centre.y = p.interior.min.y;
                     return (place: p, feet: p.transform.TransformPoint(centre));
                 })
-                .OrderBy(p => (p.feet - feet).sqrMagnitude)
+                // The counter to I2 and I3 (0.5.2 Phase 9): a hide no working camera and no shopper
+                // nearby can see comes first, so its entry isn't reported; a watched one only if
+                // nothing else is open.
+                .OrderBy(p => Watched(p.feet) ? 1 : 0)
+                .ThenBy(p => (p.feet - feet).sqrMagnitude)
                 .ThenBy(p => p.feet.x).ThenBy(p => p.feet.y).ThenBy(p => p.feet.z)
                 .ThenBy(p => p.place.name, System.StringComparer.Ordinal);
 

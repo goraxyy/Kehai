@@ -1199,6 +1199,30 @@ namespace Kehai.Karen
 #endif
         }
 
+        // One hide check now (0.5.2, the sandbox and its check): she walks to `place` and opens it
+        // or kneels at it. `needReason` keeps her own rule (she skips a place she has no reason to
+        // suspect); without it the check goes ahead regardless. Developer builds and the editor only.
+        public CheckHiding ForceHideCheck(HidingPlace place, bool needReason, out string why)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (place == null) { why = "no hiding place"; return null; }
+            if (!ShiftActive) { why = "no shift running"; return null; }
+            if (Body.IsStunned) { why = "she is stunned"; return null; }
+            var check = new CheckHiding(place, needReason);
+            AbortPlan();
+            CurrentPlan = new PlanTree($"{ActionId.Search.Name()}(hide check)", ActionId.Search, TacticLibrary.Get("sweep"),
+                                       new List<Primitive> { check }, _ => false) { Target = place.name };
+            forcedPlan = true;
+            planStartedAt = Time.time;
+            Note("PLAN", $"PLAN     hide check of {place.name} forced");
+            why = null;
+            return check;
+#else
+            why = "developer builds only";
+            return null;
+#endif
+        }
+
         // A decision that picks the hunt again while she hunts (a forced re-decision on a fresh
         // sighting, or a replan with her guesses in hand) goes on with the same hunt: the chase
         // is held across the abort, as the witnessed-hide pursuit does. Ending it here retired
@@ -1630,6 +1654,17 @@ namespace Kehai.Karen
 
         // Set when she gets you; the shift then ends without counting as clocked out.
         public bool KilledThisShift { get; private set; }
+
+        // The hide checks (0.5.2: the fridge, locker and kneel checks): she has opened `place`, or
+        // knelt at it, and looked. Her eye answers (SightSensor.FindsInHiding); a yes is a catch,
+        // at once. She chose the place from what she sensed (HideCheck), never from where you are.
+        public bool CatchInHiding(HidingPlace place, bool seesWholeInside)
+        {
+            if (Body.Sight == null || !Body.Sight.FindsInHiding(place, Body.Position, HideCheck.Reach, seesWholeInside)) return false;
+            Kill();
+            Note("SENSE", KilledThisShift ? "found the employee hiding in " + place.name : "found the employee in " + place.name + " but couldn't catch");
+            return KilledThisShift;
+        }
 
         void Kill()
         {
