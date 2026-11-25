@@ -1,7 +1,13 @@
 # Karen does her tricks at the thing (plan, your calls of 25 November)
 
-**Draft for your yes.** Nothing is built yet: Karen's changes are planned first, then built as
-one PR.
+**Built 25 November** (your yes). Her trick tests pass (124 of 124 in the touched area). In the mini
+store, each trick alone with only it allowed and the tester hidden in a cold-room chiller: she used
+12 of 24 herself within 60 s (Blackout, The overtime, Room lights, Phantom chime, Flash sale, The
+understudy, Freezer alarm, Bin tamper, Tool theft, Screen loop, Camera watch, Shelf sweep). Of the
+rest, five waited on their own conditions, the three throws ended in her catching the tester, and
+Camera bolt-on, Spill, Block door and Camera break were ready but she chose to hunt instead. Not yet
+checked: a tester walking in on her during the 3 s. The visible action is a pulse of the thing's
+outline (the time clock's display flickers); per-thing animations are for the redesign.
 
 ## The rule
 
