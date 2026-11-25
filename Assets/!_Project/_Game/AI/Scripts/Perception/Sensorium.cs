@@ -268,7 +268,7 @@ namespace Kehai.Karen
                 if ((t.Position - sight.Eye).sqrMagnitude > 14f * 14f) continue;
                 // A swinging door is seen by its leaf, not by the hinge's foot (0.5.2).
                 bool swinging = SwingingDoor(t, sight.Eye, out Vector3 beyond, out Vector3 through);
-                Vector3 seenAt = swinging ? ((HingeDoor)t.Source).DoorCentre : t.Position + Vector3.up * 0.15f;
+                Vector3 seenAt = swinging ? DoorwayFacing(((HingeDoor)t.Source).DoorCentre, sight.Eye) : t.Position + Vector3.up * 0.15f;
                 if (!sight.CanSee(seenAt, bodyRoot)) continue;
 
                 tracesRead.Add(t.Id);
@@ -288,6 +288,15 @@ namespace Kehai.Karen
         }
 
         public const float BeyondDoor = 2f;
+
+        // The doorway's middle, a hand's width toward her: a ray to the middle itself ends on the
+        // leaf, so she would never see a door swing.
+        public static Vector3 DoorwayFacing(Vector3 doorCentre, Vector3 eye)
+        {
+            Vector3 toward = eye - doorCentre;
+            toward.y = 0f;
+            return toward.sqrMagnitude > 1e-4f ? doorCentre + toward.normalized * 0.2f : doorCentre;
+        }
 
         // A hinged door she can see still swinging, and the point BeyondDoor past it from her eye.
         public static bool SwingingDoor(Trace t, Vector3 eye, out Vector3 beyond, out Vector3 through)

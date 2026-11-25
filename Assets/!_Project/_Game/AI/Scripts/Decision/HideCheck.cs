@@ -20,7 +20,7 @@ namespace Kehai.Karen
     public static class HideCheck
     {
         public const float Reach = 1.5f;          // Q24: from her, to the inside (door open) or to you (under a rack)
-        public const float Near = 2.5f;           // her belief this close to a place is about that place
+        public const float Near = 2.5f;           // her belief this close to a place's inside is about that place
         public const float MinReason = 0.04f;     // the share of her belief beside it before she'd look
         public const float MaxChance = 0.85f;
         public const float HabitReason = 0.05f;   // a Ledger favourite, weighed as Search weighs it
@@ -47,7 +47,7 @@ namespace Kehai.Karen
             int room = at >= 0 ? map.CellRoom[at] : -1;
             if (room >= 0)
                 for (int cell = 0; cell < map.CellCount; cell++)
-                    if (map.CellRoom[cell] == room && FairnessGuard.Flat(map.CellPosition[cell], centre) <= Near) cells.Add(cell);
+                    if (map.CellRoom[cell] == room && place.DistanceTo(map.CellPosition[cell]) <= Near) cells.Add(cell);   // to its inside: a long rack's ends too
             beside[place] = (map, cells);
             return cells;
         }

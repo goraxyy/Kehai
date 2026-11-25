@@ -198,7 +198,7 @@ public static partial class MiniStoreCheck
         float length = alongX ? size.x : size.z;
         Vector3 axis = alongX ? rack.transform.right : rack.transform.forward;
         Vector3 centre = Floor(rack);
-        Vector3 endA = centre - axis * (length * 0.5f - 0.5f), endB = centre + axis * (length * 0.5f - 0.5f);
+        Vector3 endA = centre - axis * (length * 0.5f - 0.9f), endB = centre + axis * (length * 0.5f - 0.9f);
         Vector3 you = endA, clankAt = expectCatch ? endA : endB;
         var bot = new SandboxBot(Player().GetComponent<PlayerMotor>());
         PutPlayer(you);
@@ -290,7 +290,7 @@ public static partial class MiniStoreCheck
                 her.Body.Warp(spot);
                 her.Body.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(d.DoorCentre - spot, Vector3.up));
                 Physics.SyncTransforms();
-                if (!her.Body.Sight.CanSee(d.DoorCentre)) continue;
+                if (!her.Body.Sight.CanSee(Sensorium.DoorwayFacing(d.DoorCentre, her.Body.Sight.Eye))) continue;
                 door = d; normal = side; centre = d.DoorCentre; near = spot;
                 break;
             }
@@ -304,7 +304,7 @@ public static partial class MiniStoreCheck
         door.Use(centre - normal * 0.8f, NoiseAuthor.Player);
         yield return Wait(0.4f);
         float after = MassNear(beyond, 1.5f);
-        bool sees = her.Body.Sight.CanSee(centre);
+        bool sees = her.Body.Sight.CanSee(Sensorium.DoorwayFacing(centre, her.Body.Sight.Eye));
         yield return Snap("door_" + (traces ? "traces" : "no_traces"), near);
         Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief 2 m past it {before:P0} → {after:P0}");
         SwingMass[traces ? 1 : 0] = after - before;
