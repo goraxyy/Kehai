@@ -63,6 +63,35 @@ namespace Kehai.Sandbox
         {
             Open = open;
             GamePause.Set(open);
+            if (eye != null) eye.enabled = open;
+        }
+
+        // Karen's view (the owner's ask, 25 November): a camera on her eye, drawn in the panel.
+        Camera eye;
+        RenderTexture view;
+        const int ViewWidth = 400, ViewHeight = 225;
+
+        void KarenView(KarenBrain brain, float width)
+        {
+            Transform at = brain != null && brain.Body != null && brain.Body.Sight != null ? brain.Body.Sight.transform : null;
+            if (at == null) return;
+            if (eye == null)
+            {
+                view = new RenderTexture(ViewWidth, ViewHeight, 16);
+                var go = new GameObject("Karen's view (sandbox panel)");
+                eye = go.AddComponent<Camera>();
+                if (Camera.main != null) eye.CopyFrom(Camera.main);
+                eye.targetTexture = view;
+                eye.fieldOfView = 70f;
+                eye.nearClipPlane = 0.2f;
+            }
+            eye.transform.SetPositionAndRotation(at.position, at.rotation);
+            eye.enabled = true;
+            eye.Render();   // the game is paused while the panel is open: draw it now
+            float w = Mathf.Min(width - 16f, ViewWidth), h = w * ViewHeight / ViewWidth;
+            GUILayout.Label("<b>Karen's view</b>", Rich());
+            Rect r = GUILayoutUtility.GetRect(w, h, GUILayout.Width(w), GUILayout.Height(h));
+            GUI.DrawTexture(r, view, ScaleMode.ScaleToFit);
         }
 
         public void Draw(KarenBrain brain, string feedback)
@@ -135,6 +164,8 @@ namespace Kehai.Sandbox
             changed |= Toggle(ref MiniStoreSettings.Traces, "Traces: footprints, spills, your torch's light");
             if (changed) MiniStoreSettings.ApplySenses(brain);
 
+            GUILayout.Space(6f);
+            KarenView(brain, width);
             GUILayout.FlexibleSpace();
             GUILayout.Label("Keys: Tab panel · P start or freeze · Backspace restart · [ ] pick · Return fire now · E doors and things");
             GUILayout.EndVertical();
