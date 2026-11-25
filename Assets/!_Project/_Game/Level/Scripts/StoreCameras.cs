@@ -292,7 +292,15 @@ public sealed class StoreCameras : MonoBehaviour
     {
         if (Wall == null || !CanDraw || Time.unscaledTime < nextFeedAt || cameras.Count == 0) return;
         Camera view = Camera.main;
-        if (view == null || (view.transform.position - Wall.transform.position).sqrMagnitude > FeedRange * FeedRange) return;
+        // In a sandbox (the mini store) the feeds are always live and smooth: every feed every
+        // frame, wherever you are (the owner's call of 25 November).
+        bool sandbox = StoreFrame.Active;
+        if (!sandbox && (view == null || (view.transform.position - Wall.transform.position).sqrMagnitude > FeedRange * FeedRange)) return;
+        if (sandbox)
+        {
+            foreach (StoreCamera cam in cameras) if (cam != null) cam.RenderFeed();
+            return;
+        }
         nextFeedAt = Time.unscaledTime + FeedInterval;
         nextFeed = (nextFeed + 1) % cameras.Count;
         if (cameras[nextFeed] != null) cameras[nextFeed].RenderFeed();
