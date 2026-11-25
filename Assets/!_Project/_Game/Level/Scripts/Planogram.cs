@@ -343,6 +343,8 @@ public static class Planogram
         foreach (ShelfSlot slot in FacingsOf(productId))
         {
             if (slot == null || slot == except) continue;
+            // While a sandbox runs (the mini store), its shoppers shop its shelves only.
+            if (!StoreFrame.Covers(slot.Position)) continue;
             if (except != null && except.owner != null && slot.owner == except.owner) continue;
             bool filled = slot.isFilled;
             if (mustBeFilled && !filled) continue;

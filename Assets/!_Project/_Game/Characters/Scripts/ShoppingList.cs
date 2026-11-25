@@ -41,6 +41,8 @@ public static class ShoppingList
         {
             float w = Weight(p);
             if (w <= 0f) continue;
+            // While a sandbox runs, only what its own shelves sell (Planogram.Nearest keeps to them).
+            if (StoreFrame.Active && Planogram.Nearest(p.Id, UnityEngine.Vector3.zero, mustBeFilled: false) == null) continue;
             pool.Add(p);
             weights.Add(w);
         }
