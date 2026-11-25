@@ -85,10 +85,10 @@ public static partial class MiniStoreCheck
                     Debug.Log($"MiniStoreCheck: her: {r.Kind} {r.Text}");
             };
         MiniStoreSettings.ApplyTo(her.config);
-        MiniStoreSettings.ApplySenses(her);
         if (her.Shift != null && !her.Shift.IsShiftActive) her.Shift.StartShift();
         her.enabled = true;
         yield return Wait(0.5f);
+        MiniStoreSettings.ApplySenses(her);   // after the shift starts: its start sets her senses to the rung's
     }
 
     static GameObject Player() => GameObject.FindGameObjectWithTag("Player");
@@ -199,16 +199,26 @@ public static partial class MiniStoreCheck
         Vector3 axis = alongX ? rack.transform.right : rack.transform.forward;
         Vector3 centre = Floor(rack);
         Vector3 endA = centre - axis * (length * 0.5f - 0.9f), endB = centre + axis * (length * 0.5f - 0.9f);
-        Vector3 you = endA, clankAt = expectCatch ? endA : endB;
+        Vector3 clankAt = expectCatch ? endA : endB;
+        // On her map's cell beside the rack nearest that end: a clank from under it, heard in the aisle.
+        List<int> beside = HideCheck.CellsBeside(her.Ctx.Map, rack);
+        if (beside.Count == 0) { Expect(false, row + ": her map has no cells beside the rack"); yield break; }
+        Vector3 aisle = her.Ctx.Map.CellPosition[beside.OrderBy(c => (her.Ctx.Map.CellPosition[c] - clankAt).sqrMagnitude).First()];
+        // Within: under the rack right across from that cell. Past her reach: under the other end.
+        Vector3 you = endA;
+        if (expectCatch)
+        {
+            you = rack.transform.TransformPoint(rack.interior.ClosestPoint(rack.transform.InverseTransformPoint(aisle)));
+            Vector3 inward = centre - you; inward.y = 0f;
+            Vector3 across = inward - axis * Vector3.Dot(inward, axis);   // to the rack's middle line, not along it
+            you += across;
+            you.y = centre.y;
+        }
         var bot = new SandboxBot(Player().GetComponent<PlayerMotor>());
         PutPlayer(you);
         yield return bot.SetCrouch(true);
         yield return Wait(0.3f);
         bool hidden = Concealed();
-        // On her map's cell beside the rack nearest that end: a clank from under it, heard in the aisle.
-        List<int> beside = HideCheck.CellsBeside(her.Ctx.Map, rack);
-        if (beside.Count == 0) { Expect(false, row + ": her map has no cells beside the rack"); yield break; }
-        Vector3 aisle = her.Ctx.Map.CellPosition[beside.OrderBy(c => (her.Ctx.Map.CellPosition[c] - clankAt).sqrMagnitude).First()];
         Clank(aisle);
         Debug.Log($"MiniStoreCheck: {row}: clank at {aisle}, {FairnessGuard.Flat(aisle, you):0.0} m from you; reason {HideCheck.Reason(her.Ctx, rack):P0}");
         CheckHiding check = her.ForceHideCheck(rack, true, out string why);

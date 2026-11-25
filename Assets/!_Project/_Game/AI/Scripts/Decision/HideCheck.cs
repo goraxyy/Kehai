@@ -155,15 +155,17 @@ namespace Kehai.Karen
             opening = Reachable(c, door + floor + outward * 0.55f);
         }
 
-        // Under a rack: where along it her belief beside it is heaviest, from the aisle.
+        // Under a rack: where along it her belief beside it is heaviest (the cell she heard it
+        // from, not an average that a long rack pulls to its middle), from the aisle.
         public static Vector3 KneelSpot(KarenContext c, HidingPlace place)
         {
             Vector3 centre = Centre(place);
-            Vector3 sum = Vector3.zero;
-            float mass = 0f;
+            int peak = -1;
+            float most = 0f;
             if (c.Map != null && c.Belief != null)
-                foreach (int cell in CellsBeside(c.Map, place)) { sum += c.Map.CellPosition[cell] * c.Belief[cell]; mass += c.Belief[cell]; }
-            Vector3 toward = mass > 1e-6f ? sum / mass : c.Body != null ? c.Body.Position : centre;
+                foreach (int cell in CellsBeside(c.Map, place))
+                    if (c.Belief[cell] > most) { most = c.Belief[cell]; peak = cell; }
+            Vector3 toward = peak >= 0 ? c.Map.CellPosition[peak] : c.Body != null ? c.Body.Position : centre;
             Vector3 along = place.transform.TransformPoint(place.interior.ClosestPoint(place.transform.InverseTransformPoint(toward)));
             along.y = FloorOf(place);
             return Reachable(c, along);
