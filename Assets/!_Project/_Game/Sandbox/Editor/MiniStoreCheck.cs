@@ -301,6 +301,7 @@ public static class MiniStoreCheck
         Expect(UnityEngine.Object.FindObjectsByType<ToolSnapPoint>().Count(In) >= 2, "the mops' racks (Tool theft, spills)");
         Expect(Count<TrashContainer>() >= 1 && Count<Trashcan>() >= 3, "the bins and the yard's containers (Bin tamper)");
         Expect(Count<FreezerAlarm>() >= 1, $"freezer alarms (Freezer alarm): {Count<FreezerAlarm>()}");
+        Expect(Count<Item>() >= 3 && UnityEngine.Object.FindObjectsByType<Item>().Any(i => In(i) && i.GetComponent<ItemHome>() != null && i.GetComponent<StockCrate>() == null), "the staff mop, on its rack");
         Expect(Count<StockCrate>() >= 1 && Count<ProductBox>() >= 3, $"the stock crate and boxes on the racks (Block door): {Count<StockCrate>()} crates, {Count<ProductBox>()} boxes");
         CustomerSpawner spawner = UnityEngine.Object.FindAnyObjectByType<CustomerSpawner>();
         Expect(spawner != null && In(spawner.entrancePoint) && In(spawner.cashierPoint), "shoppers come in at its front and pay at its till (Ask the customers, Flash sale, The complaint)");

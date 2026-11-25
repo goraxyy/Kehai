@@ -154,8 +154,10 @@ namespace Kehai.Sandbox
             ("Staff_Radio_01", null, null),
             ("Coffee_Machine_01", null, "Appliance_Counter_01"),
             ("Flashlight_01", null, "Uniform_Folding_Table_01"),
-            ("Mop_Snap_Point_01", new Vector3(24.5f, 1.0f, -147f), null),       // its rack, on the staff room's east wall ("Mop_01", null, "Mop_Snap_Point_01"),
-            ("Stock_Snap_Point_01", new Vector3(40f, 0.5f, -180f), null),      // the stock crate, in the stockroom ("Stock_Test_Crate_01", null, "Stock_Snap_Point_01"),
+            ("Mop_Snap_Point_01", new Vector3(24.5f, 1.0f, -147f), null),       // its rack, on the staff room's east wall
+            ("Mop_01", null, "Mop_Snap_Point_01"),
+            ("Stock_Snap_Point_01", new Vector3(40f, 0.5f, -180f), null),      // the stock crate, in the stockroom
+            ("Stock_Test_Crate_01", null, "Stock_Snap_Point_01"),
             ("WC_Mop_Home_01", null, null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),
             ("Security workstation", null, null),               // the cameras' screens go up on it
             ("Counter_Facing_01", null, null),
