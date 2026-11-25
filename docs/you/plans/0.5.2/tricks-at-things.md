@@ -13,7 +13,8 @@ For every trick that uses a thing in the store, Karen:
 3. **then the trick happens.**
 
 **You can stop her:** if she sees you within about 4 m during those 3 seconds, she gives the trick
-up and comes for you instead. No chore is left behind.
+up and comes for you instead. No chore is left behind, and the trick goes back on its usual wait:
+she can try it again later in the shift (Q2).
 
 Example, The overtime: she walks into the staff room, stops at the time clock, its display
 flickers while the punch buzz plays, and after 3 s the time stops and blinks red. If you walk in
@@ -27,7 +28,7 @@ on her in those 3 s, the clock keeps running and she turns on you.
 | **Blackout** | the power box (backstreet) | from anywhere | the box's door opens, the switches go dark one by one |
 | **Fog** | the fog box, beside the power box | from anywhere | its lamp lights, a hiss |
 | **Room lights** | that room's light switch | from anywhere (two flickers) | her hand on the switch, the room flickers |
-| **Camera break** | the cameras' box | from anywhere | the box sparks |
+| **Camera break** | each camera in turn (your answer to Q1) | all from anywhere | each camera sparks and goes dark as she leaves it; you mend them all at the cameras' box |
 | **Screen loop** | the screens (office) | walks there, at once | the screens fill with static |
 | **Camera bolt-on** | the shelf she drills into | walks there, drills at once | drilling, the camera going up |
 | **Flash sale** | the PA microphone (staff room) | from anywhere | the PA box's light comes on |
@@ -52,9 +53,8 @@ and Ambush (where she stands is the trick).
 - With a tester walking in on her in the 3 s: the trick doesn't happen and she hunts.
 - Her trick tests in the full suite still pass.
 
-## Open
+## Answered (25 November)
 
-- **Q1:** The cameras' box: today it's where you fix the cameras. Is that also where she breaks
-  them, or should she break a camera itself (walk to one camera)?
-- **Q2:** If she gives a trick up because she saw you, may she try the same trick again later in
-  the shift, or is it spent?
+- **Q1:** to break all the cameras she has to go to each one (3 s at each); the ones she reached go
+  dark. You mend them all at the cameras' box, as today.
+- **Q2:** a trick she gave up goes back on its usual wait and can come again later in the shift.
