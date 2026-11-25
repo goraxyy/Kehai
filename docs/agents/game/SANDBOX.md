@@ -51,7 +51,10 @@ may use**: None, Only one (the trick picked), All; **Fire now**; why she won't u
 now (`MiniStorePanel.Readiness`: `HtnPlanner.Gated`, then the trick's own `Available`); **what she
 can sense** beyond her eyes: hearing, building sensors, shoppers' reports, traces
 (`Sensorium.Use*`). Plain keys: P start or freeze, Backspace restart, [ ] pick, Return fire now.
-The choices live in `MiniStoreSettings` and survive a restart.
+The choices live in `MiniStoreSettings` and survive a restart. Starting her, or firing a trick
+before she's started, starts the shift (`TricksSandbox.EnsureShift`) and then puts the panel's
+senses back on her: the shift's start sets her senses to the rung's, which used to switch a sense
+you'd turned off back on.
 
 **Her limits** (`KarenConfig`, sandbox only): `sandboxTricks` is the set she may choose herself
 (empty: none; null: all), held at `HtnPlanner.Gated` for every tier-1+ tactic and for the ids in
@@ -66,7 +69,15 @@ machine, torch, light switches, cameras and screens, mop racks, bins and contain
 the crate and boxes, the shoppers' route, both pairs of automatic doors), every copied shelf is
 stocked, each room's lamps light that room, every hinged door opens with E from one side or the
 other, Karen starts inside and walks without leaving, the panel is up, the limits hold at her gate,
-and a table of every trick's readiness. `-mini-tricks` adds each trick alone. Screenshots of every
+a table of every trick's readiness, then **the panel by its controls** (`MiniStoreCheck.Panel.cs`:
+Restart gives a fresh Karen, frozen; Start starts her shift; a sense switched off stays off once she
+starts; Freeze stops her; Tab opens the panel and pauses the game; Fire now starts the picked
+trick) and **Phase 9's interactions with the real Karen** (`MiniStoreCheck.Interactions.cs`: the
+fridge check with you inside and in the next chiller, the kneel check within and past 1.5 m, the
+decoy throw yours and nobody's, the swinging door with traces on and off; one picture each,
+`mini_interaction_*.png`). `-mini-tricks` adds each trick alone (only it allowed, 60 s); a trick
+she doesn't use herself is then fired with Fire now, so the run says whether every trick can start
+here at all. Screenshots of every
 room land next to the log with `--graphics`:
 
 ```sh
@@ -263,8 +274,8 @@ tools/run/kehai-run unity -- -noaudio -executeMethod SandboxChecks.Interactions
 ```
 
 The room uses the game's sensors. Its findings stay in the room. The pursuit room keeps the
-island's one full Karen brain. The fridge and rack search actions have separate acceptance in
-[the 0.5.2 plan](../../you/plans/0.5.2-plan.md#phase-9-interactions-c-with-you--opus-55--this-mac-checks-through-kehai-run-on-the-pc).
+island's one full Karen brain. The fridge, locker and kneel checks, the decoy throw and the swinging door are checked
+in the mini store with the real Karen (above; [Karen.md §22](../karen/Karen.md#22-kehai-052-what-tells-her-where-you-hid-and-checking-hiding-places)).
 
 ## For agents
 

@@ -269,12 +269,14 @@ public static partial class MiniStoreCheck
         // might; for the throws, which need her to see you from 8-20 m, they stand in the sales
         // floor's far corner instead. For The overtime the shift is short enough that its last two
         // minutes have begun.
-        // Phase 9's interactions with the real Karen (MiniStoreCheck.Interactions.cs).
+        // The panel's controls, as you'd use them (C11.19), then Phase 9's interactions with the
+        // real Karen (MiniStoreCheck.Interactions.cs).
+        yield return PanelControls();
         yield return Interactions();
 
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
         var results = new List<string>();
-        int used = 0;
+        int used = 0, firedOk = 0;
         foreach (string id in TricksSandbox.Catalogue)
         {
             MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.OnlyOne;
@@ -305,11 +307,23 @@ public static partial class MiniStoreCheck
                 seenWhy = MiniStorePanel.Readiness(her, id);
                 yield return null;
             }
+            // Not by herself: can it start here at all? Fire now, as the panel's button does (C11.20).
+            string fired = "";
+            if (!started && !her.KilledThisShift)
+            {
+                TricksSandbox box = UnityEngine.Object.FindAnyObjectByType<TricksSandbox>();
+                bool ok = box != null && box.TryFire(id);
+                yield return Wait(0.5f);
+                bool running = her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id;
+                fired = ok && running ? "; Fire now starts it" : $"; Fire now: {box?.Feedback}";
+                if (ok && running) firedOk++;
+            }
             if (started) used++;
-            results.Add(started ? $"{id,-16} used it after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}");
+            results.Add(started ? $"{id,-16} used it after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}{fired}");
             Debug.Log("MiniStoreCheck: alone: " + results[results.Count - 1]);
         }
-        Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used)\n  " + string.Join("\n  ", results));
+        Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used by her, {firedOk} more started by Fire now)\n  " + string.Join("\n  ", results));
+        Expect(used + firedOk == TricksSandbox.Catalogue.Count, $"every trick can start in the mini store ({used} by her, {firedOk} by Fire now, of {TricksSandbox.Catalogue.Count})");
         MiniStoreSettings.Allowed = before;
     }
 
