@@ -334,8 +334,21 @@ public static partial class MiniStoreCheck
         var go = new GameObject("MiniStoreCheck camera");
         var cam = go.AddComponent<Camera>();
         cam.CopyFrom(main);
+        // A corner above and behind her with nothing between it and her (a wall or a rack's top
+        // would fill the picture).
+        Vector3 look = at + Vector3.up * 0.8f;
         Vector3 from = at + new Vector3(-2.5f, 3.2f, -2.5f);
-        go.transform.SetPositionAndRotation(from, Quaternion.LookRotation(at + Vector3.up * 0.8f - from));
+        foreach (float h in new[] { 2.6f, 1.9f })
+        foreach (Vector3 d in new[] { new Vector3(-1, 0, -1), new Vector3(1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, 1), Vector3.left, Vector3.right, Vector3.forward, Vector3.back })
+        {
+            Vector3 c = at + d.normalized * 2.8f + Vector3.up * h;
+            if (Physics.CheckSphere(c, 0.25f, ~0, QueryTriggerInteraction.Ignore)) continue;
+            if (Physics.Linecast(c, look, out RaycastHit hit, ~0, QueryTriggerInteraction.Ignore) && !KarenBody.IsHers(hit.collider)) continue;
+            from = c;
+            goto chosen;
+        }
+        chosen:
+        go.transform.SetPositionAndRotation(from, Quaternion.LookRotation(look - from));
         yield return null;
         var rt = new RenderTexture(1280, 720, 24);
         cam.targetTexture = rt;
