@@ -7,44 +7,36 @@ longer in the menu. The owner's page is [mini-store.md](../../you/plans/0.5.2/mi
 
 ## The mini store
 
-A small copy of the store, built when Play starts on the sandbox island west of the store, with
-the real Karen on a private shift four (the tricks sandbox's harness: the career is never read or
-written, a catch freezes everything). You start inside, by the till.
-
-```
-  z 13  front wall, the shoppers' automatic doors at x 9, a pavement strip outside
-        SALES FLOOR  x -15..15, z -3..13: tall shelves west, short east, till, bins, two chillers
-  z -3  door at x -6 ─────────────┬──── door at x 9
-        STOCKROOM  x -15..3       │ COLD ROOM  x 3..15
-        racks with boxes, breaker │ chillers (two you hide in)
-        box, time clock, PA, desk │
-  z -11 ──────────── door at z -7 ┴────────────────
-```
-
-(metres from its centre, `MiniStore.Origin` = (-40, 0, -10); the store's way round, front north.)
+**The whole store at half size** (the owner's call of 25 November, after the three-room version of
+24 November): the lobby, sales floor, WC, office, staff room, backstreet, stockroom and cold room,
+built when Play starts on the sandbox island west of the store, with the real Karen on a private
+shift four (the tricks sandbox's harness: the career is never read or written, a catch freezes
+everything). You start on the sales floor by the tills.
 
 **How it's made** (`Sandbox/Scripts/MiniStore.cs`):
-- **Copies of the store's models**, made in `SceneManager.sceneLoaded` before the store's own
-  handlers (`StoreLayout` stocks every shelf it finds, the copies included): tall and short bays,
-  retail chillers, the till, bins, cold chillers, hinged and automatic doors, lamps. Copies are
-  made under an inactive holder and stripped of the NavMesh obstacles the store's doors add when
-  they wake, so each wakes and sets itself up fresh. Walls, floors and ceilings are boxes in the
-  store's own materials; each room has its own floor and ceiling, marked as room surfaces
-  (`InteriorLightAnchor`, named floor/ceiling) so `RoomLighting` lights them by their room.
-- **Moved, not copied:** the store's own breaker box, time clock, radio, security desk, stock
-  crate, mops and racks (`Anchors`, `Move`). There is one of each and the fixtures and tricks find
-  them by kind or name, so the fog box, the PA box and microphone, the cameras' screens and the
-  stockroom's boxes are put up beside them where they now stand.
-- **`StoreFrame`** (`Level/Scripts/StoreFrame.cs`): the store's position tables read a point on the
-  mini store's floor as the matching point in the store (each room's floor stretched over its part
-  of the store, `MiniStore.ToStore`). So `StoreMap.AreaAt` names its rooms Sales floor, Stockroom
-  and Cold storage, `StoreLayout.ZoneAt` stocks its shelves by aisle, and `LightControl.CircuitOf`
-  puts its lamps on EAST, WEST and BACK. `KarenArea.Install` does nothing under a frame (its outside
-  boxes, in the store's metres, would mark the island outside).
-- **Her map** is the mini store only (`StoreMap.UseTestArea(MiniStore.MapBounds)`), cut from its own
-  NavMesh (baked by volume over its walls and pavement, so the moved racks count).
-- **Shoppers** come in by its automatic doors from the pavement strip, browse twelve spots and pay
-  at its till (`Shoppers`). **Cameras**: one per room (`CameraSpots`, `StoreCameras.InstallAt`).
+- **One map both ways:** `Half(store) = Origin + (store - StoreCentre) * 0.5` and `ToStore` back,
+  with `StoreCentre` (47.5, 0, -150) and `Origin` (-40, 0, -12). So `StoreFrame` reads every point of
+  it as the matching point of the store: `StoreMap.AreaAt` names its rooms, `StoreLayout.ZoneAt`
+  stocks its shelves, `LightControl.CircuitOf` wires its lamps, and the store's six camera spots
+  (`StoreCameras.Spots`) are halved into `CameraSpots`. `KarenArea.Install` does nothing under a
+  frame; her map is the mini store and its pavement (`StoreMap.UseTestArea(MapBounds)`).
+- **Walls and doors** from the store's own plan (`Walls`, in the store's metres, doorways at their
+  real widths), the 4 automatic and 9 hinged doors copied to half their distance (`Doors`); the
+  office's door to the staff room moves 0.9 m so its leaf clears the wall. The backstreet's open
+  west side is walled (the alley isn't hers). Each room has its own floor, and a ceiling indoors,
+  marked as room surfaces for `RoomLighting`.
+- **Furniture** (`Copies`): the store's own, at full size, at half the distance, then nudged inside
+  its room (`KeepInside`) where halving put it in a wall. Left out where it wouldn't fit: the staff
+  fridge, the manager's desk and chairs, the snack machine. The sales floor's 18 bays and 10 chillers
+  and the cold room's chillers are laid out by hand (`SalesFloor`, `ColdRoom`).
+- **Moved, not copied** (`Anchors`): the power box, the yard's containers, drop zone and lights, the
+  time clock, radio, coffee machine (with its counter), torch (with its table), both mops and their
+  racks, the stock crate, the security desk, the till's facing point and three racks (left in the
+  store's rack group, so `StorageBoxes` lays boxes on them). A thing on another keeps its place on it.
+  The yard's things get outdoor `InteriorLightAnchor`s so the yard's lamps light them.
+- **Per-room fixtures go up on its own doors:** `StoreFrame.Covers` keeps `PhaseOneFixtures`'s light
+  switches to the sandbox's doors and lamps while it runs.
+- **Shoppers** come in by the front's automatic doors from the pavement and pay at its till.
 
 **The panel** (`MiniStorePanel.cs`, drawn by `TricksSandbox` in mini store mode): Tab opens it and
 pauses the game (`GamePause`, the mouse free); Tab closes it. Start, Freeze, Restart; **tricks she
@@ -60,12 +52,15 @@ The choices live in `MiniStoreSettings` and survive a restart.
 (`KarenBrain.Force`) isn't held to it. `sandboxPacingOff` switches the Director's tension pacing
 off (`PacingOff`), so a trick you allowed is hers as soon as it fits.
 
-**The check** opens it from the menu and looks the way you would: you start inside, her map has
-the three rooms by name, every copied shelf is stocked, each room's lamps light that room, every
-hinged door opens with E from where you'd stand, Karen starts in the stockroom and walks its rooms
-without leaving, the panel is up, the limits hold at her gate, and a table of every trick's
-readiness. `-mini-tricks` adds each trick alone (only it allowed, a fresh shift, does she use it
-herself within 40 s). Screenshots land next to the log with `--graphics`:
+**The check** opens it from the menu and looks the way you would: you start inside, each room's
+middle reads as that room and her map has every room, every key thing the tricks and interactions
+need is inside (power box and breakers, fog box, PA and microphone, time clock, radio, coffee
+machine, torch, light switches, cameras and screens, mop racks, bins and containers, freezer alarms,
+the crate and boxes, the shoppers' route, both pairs of automatic doors), every copied shelf is
+stocked, each room's lamps light that room, every hinged door opens with E from one side or the
+other, Karen starts inside and walks without leaving, the panel is up, the limits hold at her gate,
+and a table of every trick's readiness. `-mini-tricks` adds each trick alone. Screenshots of every
+room land next to the log with `--graphics`:
 
 ```sh
 tools/run/kehai-run unity --graphics -- -executeMethod MiniStoreCheck.Run -mini-tricks

@@ -11,7 +11,7 @@ public static class PhaseOneFixtures
         var byRoom = new Dictionary<string, List<Light>>();
         foreach (Light light in LightProbe.CeilingLights)
         {
-            if (light == null) continue;
+            if (light == null || !StoreFrame.Covers(light.transform.position)) continue;
             string room = RoomLightSwitch.RoomOf(light.transform.position);
             if (!byRoom.TryGetValue(room, out var lamps)) byRoom[room] = lamps = new List<Light>();
             lamps.Add(light);
@@ -21,7 +21,7 @@ public static class PhaseOneFixtures
         Physics.SyncTransforms();
         foreach (HingeDoor door in HingeDoor.All)
         {
-            if (door == null) continue;
+            if (door == null || !StoreFrame.Covers(door.transform.position)) continue;
             BoxCollider panel = door.Panel ?? door.FindPanel();
             if (panel == null) continue;
             Bounds bounds = panel.bounds;

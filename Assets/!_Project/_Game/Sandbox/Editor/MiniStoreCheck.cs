@@ -83,14 +83,17 @@ public static class MiniStoreCheck
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         Expect(player != null && MiniStore.Contains(player.transform.position), $"you start inside (at {player?.transform.position})");
 
-        // Her map: three rooms with the store's names, and nothing else.
+        // Her map: every room of the store by its name (the backstreet and the pavement are
+        // "Outside" to her, as in the store), and each room's middle reads as that room.
         StoreMap map = StoreMap.Current;
         Debug.Log($"MiniStoreCheck: her map {map.CellCount} cells, rooms [{string.Join(", ", map.Rooms)}]");
-        foreach (string room in new[] { "Sales floor", "Stockroom", "Cold storage" })
-            Expect(map.Rooms.Contains(room), $"her map has a room called {room}");
-        Expect(map.Rooms.Count == 3, $"her map has three rooms (has {map.Rooms.Count})");
-        foreach (var (name, local) in new[] { ("Sales floor", new Vector3(0f, 0f, 5f)), ("Stockroom", new Vector3(-8f, 0f, -7f)), ("Cold storage", new Vector3(9f, 0f, -7f)) })
-            Expect(StoreMap.AreaAt(MiniStore.World(local)) == name, $"the middle of its {name} reads as {name} ({StoreMap.AreaAt(MiniStore.World(local))})");
+        foreach (var (name, store, outdoors) in MiniStore.Rooms)
+        {
+            Vector3 middle = MiniStore.Half(new Vector3(store.center.x, 0f, store.center.y));
+            Expect(StoreMap.AreaAt(middle) == name, $"the middle of its {name} reads as {name} ({StoreMap.AreaAt(middle)})");
+            if (!outdoors) Expect(map.Rooms.Contains(name), $"her map has a room called {name}");
+        }
+        Expect(map.Rooms.Exists(r => r.StartsWith("Outside")), "her map has the outside (backstreet, pavement)");
 
         // The copied shelves are stocked, and sell more than one thing.
         var bays = root.GetComponentsInChildren<ShelfUnit>().Where(u => u.GetComponent<ColdFixture>() == null).ToArray();
@@ -121,20 +124,31 @@ public static class MiniStoreCheck
                 Expect(false, $"{light.name} in {StoreMap.AreaAt(light.transform.position)} lights {near.name} under it (layers {lightLayers} vs {near.renderingLayerMask})");
         }
 
-        // Every hinged door opens with E from where you'd stand.
+        // Every key thing her tricks and your interactions need is here.
+        yield return Wait(2f);
+        KeyThings();
+
+        // Every hinged door opens with E from where you'd stand, on one side or the other.
         var interact = player != null ? player.GetComponent<PlayerInteract>() : null;
         foreach (HingeDoor door in root.GetComponentsInChildren<HingeDoor>())
         {
             Bounds b = MiniStore.Footprint(door.gameObject);
             bool alongZ = b.size.z > b.size.x;
-            Vector3 face = alongZ ? Vector3.left : Vector3.forward;
-            var ray = new Ray(new Vector3(b.center.x, 1.5f, b.center.z) + face * 1.4f, -face);
-            IInteractable target = interact != null ? interact.FindAimedTarget(ray) : null;
-            Expect(target != null, $"{door.transform.parent?.name ?? door.name}: you can aim at it");
+            IInteractable target = null;
+            foreach (float side in new[] { 1f, -1f })
+            {
+                Vector3 face = (alongZ ? Vector3.left : Vector3.forward) * side;
+                var ray = new Ray(new Vector3(b.center.x, 1.5f, b.center.z) + face * 1.4f, -face);
+                target = interact != null ? interact.FindAimedTarget(ray) : null;
+                if (target != null) break;
+            }
+            string label = door.GetComponentInParent<Transform>().name;
+            for (Transform t = door.transform; t != null; t = t.parent) if (t.name.StartsWith("Mini ")) { label = t.name; break; }
+            Expect(target != null, $"{label} ({StoreMap.AreaAt(b.center)}): you can aim at it");
             if (target == null) continue;
             target.Interact(interact);
             yield return Wait(1f);
-            Expect(door.IsOpen, $"{door.transform.parent?.name ?? door.name}: E opens it");
+            Expect(door.IsOpen, $"{label}: E opens it");
         }
 
         yield return Shots("built");
@@ -248,7 +262,7 @@ public static class MiniStoreCheck
     {
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player == null || MiniStore.Root == null) return;
-        Vector3 to = MiniStore.World(new Vector3(MiniStore.East - 1.5f, 0f, MiniStore.Front - 1.5f));
+        Vector3 to = MiniStore.Half(new Vector3(82f, 0f, -123f));   // the sales floor's far front corner
         FurnitureDoor shut = null;
         if (!inView)
         {
@@ -269,6 +283,31 @@ public static class MiniStoreCheck
         Physics.SyncTransforms();
     }
 
+    // The things her tricks and your interactions need, each inside the mini store.
+    static void KeyThings()
+    {
+        bool In(Component c) => c != null && MiniStore.Contains(c.transform.position);
+        int Count<T>() where T : Component => UnityEngine.Object.FindObjectsByType<T>().Count(In);
+        Expect(Count<ElectricBox>() == 1 && BreakerPanel.Instance != null, "the power box and its breakers (Blackout)");
+        Expect(Count<FogBox>() >= 1, "the fog box (Fog)");
+        Expect(Count<PaBox>() >= 1 && Count<ClosingMic>() >= 1, "the PA box and its microphone (Phantom chime, the closing call)");
+        Expect(Count<Puncher>() == 1, "the time clock (The overtime)");
+        Expect(Count<MusicBox>() == 1, "the radio");
+        Expect(Count<CoffeeMachine>() == 1, "the coffee machine");
+        Expect(UnityEngine.Object.FindObjectsByType<Item>().Count(i => In(i) && i.type == ItemType.Flashlight) >= 1, "the torch");
+        Expect(Count<RoomLightSwitch>() >= 5, $"a light switch per room (Room lights): {Count<RoomLightSwitch>()}");
+        StoreCameras cams = StoreCameras.Instance;
+        Expect(cams != null && cams.Cameras.Count(In) >= 4 && In(cams.Wall), $"the cameras and their screens (Camera watch, break, Screen loop): {cams?.Cameras.Count(In)} cameras");
+        Expect(UnityEngine.Object.FindObjectsByType<ToolSnapPoint>().Count(In) >= 2, "the mops' racks (Tool theft, spills)");
+        Expect(Count<TrashContainer>() >= 1 && Count<Trashcan>() >= 3, "the bins and the yard's containers (Bin tamper)");
+        Expect(Count<FreezerAlarm>() >= 1, $"freezer alarms (Freezer alarm): {Count<FreezerAlarm>()}");
+        Expect(Count<Item>() >= 3 && UnityEngine.Object.FindObjectsByType<Item>().Any(i => In(i) && i.GetComponent<ItemHome>() != null && i.GetComponent<StockCrate>() == null), "the staff mop, on its rack");
+        Expect(Count<StockCrate>() >= 1 && Count<ProductBox>() >= 3, $"the stock crate and boxes on the racks (Block door): {Count<StockCrate>()} crates, {Count<ProductBox>()} boxes");
+        CustomerSpawner spawner = UnityEngine.Object.FindAnyObjectByType<CustomerSpawner>();
+        Expect(spawner != null && In(spawner.entrancePoint) && In(spawner.cashierPoint), "shoppers come in at its front and pay at its till (Ask the customers, Flash sale, The complaint)");
+        Expect(Count<AutoDoubleDoor>() == 4, "both pairs of automatic doors (Phantom chime)");
+    }
+
     // Screenshots from where you'd stand in each room, when Unity renders.
     static IEnumerator Shots(string tag)
     {
@@ -280,16 +319,20 @@ public static class MiniStoreCheck
         var go = new GameObject("MiniStoreCheck camera");
         var cam = go.AddComponent<Camera>();
         cam.CopyFrom(main);
-        var views = new (string name, Vector3 at, float yaw)[]
+        // From where you'd stand: your start, and in each room from a corner toward its middle.
+        var views = new List<(string name, Vector3 at, Vector3 look)>
         {
-            ("start", MiniStore.PlayerStart + Vector3.up * 1.6f, 180f),
-            ("sales", new Vector3(13f, 1.7f, 11.5f), 235f),
-            ("stockroom", new Vector3(1.5f, 1.7f, -4f), 250f),
-            ("cold", new Vector3(3.5f, 1.7f, -6f), 70f),
+            ("start", MiniStore.World(MiniStore.PlayerStart) + Vector3.up * 1.6f, MiniStore.World(MiniStore.PlayerStart) + new Vector3(0f, 1.4f, -6f)),
         };
+        foreach (var (name, store, _) in MiniStore.Rooms)
+        {
+            Vector3 corner = MiniStore.Half(new Vector3(store.xMax - 1.2f, 0f, store.yMax - 1.2f));
+            Vector3 middle = MiniStore.Half(new Vector3(store.center.x, 0f, store.center.y));
+            views.Add((name.ToLowerInvariant().Replace(' ', '_'), corner + Vector3.up * 1.7f, middle + Vector3.up * 1.2f));
+        }
         foreach (var v in views)
         {
-            go.transform.SetPositionAndRotation(MiniStore.World(v.at), Quaternion.Euler(8f, v.yaw, 0f));
+            go.transform.SetPositionAndRotation(v.at, Quaternion.LookRotation(v.look - v.at));
             yield return null;
             var rt = new RenderTexture(1280, 720, 24);
             cam.targetTexture = rt;

@@ -1,73 +1,53 @@
-# The mini store sandbox (your call, 24 November)
+# The mini store sandbox (your calls, 24 and 25 November)
 
-You tried the island and called it horrible: grey boxes, a walk across the car park, a fake Karen
-in each room, buttons that didn't work and labels you couldn't read. This replaces it.
+On 24 November you called the island horrible, and the three-room mini store replaced it
+(PR #95). On 25 November you asked for more: **the whole store at half size**, backstreet
+included, parking lot not, with every thing her tricks and your interactions need.
 
 ## What you get
 
-**One sandbox, Kehai → Sandbox → Mini store.** A small copy of the store with three rooms, made
-from the store's own models, with the real Karen in it.
+**One sandbox, Kehai → Sandbox → Mini store.** The store's own floor plan at half its size, made
+from the store's own models when Play starts, with the real Karen in it. You start inside.
 
-```
-  STOCKROOM          |  COLD ROOM
-  racks and boxes,   |  chillers you can hide in,
-  breaker box, PA,   |  fog, the freezer alarm
-  time clock, mop    |
-  -------door--------+--------door-------
-  SALES FLOOR: tall and short shelves, a till, bins,
-  two cameras and the screens, the shoppers' auto doors
-  about 30 × 25 m. You start here.
-```
+| Room in the store | In the mini store | What's there |
+|---|---|---|
+| Lobby (the two pairs of automatic doors) | 37.5 × 5 m | the doors shoppers come in by, the bins |
+| Sales floor | 30 × 27.5 m | tall and short shelves stocked by aisle, the tills, retail chillers, cameras |
+| WC, office, staff room | 7.5 m wide each, down the west side | WC mop and its rack; the security desk and screens; the time clock, PA, radio, coffee machine, mop, torch |
+| Backstreet | 7.5 × 12.5 m, outside | the power box with its EAST, WEST and BACK switches, the fog box, the bins and containers |
+| Stockroom | 22 × 7 m | racks with boxes, the stock crate |
+| Cold room | 15 × 7 m | chillers, two you can hide in, freezer alarms |
 
-- **Real models:** copies of the store's own tall and short shelves, racks, chillers, doors and
-  lamps, made when Play starts. Nothing is saved to the scene.
-- **The real Karen:** her real brain, body and senses, on a private shift (your save is never
-  touched). A catch freezes everything and shows CAUGHT instead of ending the shift.
-- **You start inside,** by the till. No walk.
+- **Half size:** every wall and door stands where the store's does, at half the distance. The
+  furniture stays full size (you and Karen are full size), so each room holds fewer shelves.
+- **Same names, same switches:** her map names the rooms as the store's, the shelves sell what the
+  store's do in the same place, and each lamp is on the same breaker as in the store. So a
+  blackout, a room-lights trick or a fog fills the same rooms it would in the store.
+- **The real Karen** on a private shift (your save is never touched). A catch freezes everything.
 
 ## The controls
 
-A panel on screen (Tab shows or hides it and frees the mouse). Plain keys, no F keys, so a MacBook
-needs no Fn.
+A panel on screen: **Tab** opens it and pauses the game; Tab again closes it. Plain keys, no Fn.
 
 | Part | What you choose |
 |---|---|
-| **Karen** | Start · Freeze · Restart (a fresh shift, her memory cleared) |
-| **Tricks she may use** | **None** (she only hunts) · **Only one** (pick it from the list; she uses it herself when it fits) · **All** |
-| **Fire now** | Make her do the chosen trick at once, to see it without waiting |
-| **What she can sense** (the "interactions") | Each on or off: her eyes and ears always; the cameras, the shoppers' reports, your torch's light, sounds you make |
-| **Show** | Her cone and meters on or off |
+| **Karen** | Start · Freeze · Restart (a fresh shift, her memory cleared). Keys: **P** start or freeze, **Backspace** restart |
+| **Tricks she may use** | **None** (she only hunts) · **Only one** (the trick you pick; she uses it herself when it fits) · **All** |
+| **Fire now** | Make her do the picked trick at once (**[ ]** pick, **Return** fire) |
+| **What she can sense** | Her eyes always; hearing, the building's sensors (cameras, door chime, till, power box), shoppers' reports, traces (footprints, spills, your torch's light): each on or off |
 
-The panel also says what she's doing and why she isn't using a trick right now (for example
-"blackout refused: the lights are already out").
+The panel says what she's doing and why she won't use the picked trick right now.
 
 ## Steps
 
-Each step ends with screenshots I check myself and send you, a commit and a note.
+The plan's Phase 11 (C11.17–C11.22, Y11.1) tracks these with tick boxes.
 
-- [x] **M1 The building:** the three rooms from the store's models, doors that open with E, lamps.
-  You start inside. Screenshots. **Done 24 November:** every door opens with E from where you'd
-  stand, each room's lamps light that room (MiniStoreCheck, run 20261124-010928).
-- [x] **M2 Her map and the real Karen:** her map of the three rooms with their real names (sales
-  floor, cold storage, stockroom); she patrols and hunts there. **Done 24 November:** three rooms
-  by name, all copied shelves stocked by aisle, she starts in the stockroom and walks 23 m in 45 s
-  without leaving.
-- [ ] **M3 The panel:** Start, Freeze, Restart; tricks None / Only one / All, and Fire now; the
-  senses switches. **Built 24 November:** the panel comes up and the limits hold at her gate (none:
-  no trick passes; only Spill: only Spill passes). Not yet tried by hand.
-- [ ] **M4 The tricks' things:** the breaker box and light circuits, cameras and screens, fog box,
-  PA, time clock, mop rack, bins, till and shoppers, freezer alarm, stock boxes, in the three rooms.
-  **Part done 24 November:** all moved in or made there; 16 of 24 tricks are ready for her at once,
-  the other 8 wait on their own conditions (a throw needs distance, The overtime the last two
-  minutes, Fog that she thinks you're in the cold room or stockroom). Shoppers and the screens not
-  yet seen working.
-- [ ] **M5 End-to-end checks:** a bot plays it the way you would: walks in, opens every door, uses
-  the panel. Then, for each of the 24 tricks with only that one allowed, she uses it herself within
-  a time limit, and Fire now works. Results in a table. What fails is reported as it is.
-  **Started:** with a tester standing still she used 10 of 24 herself in 40 s, and caught the
-  tester first in the rest; the rerun with the tester hiding was stopped after 2 tricks.
-- [ ] **M6 Clean-up:** (menu and docs done 24 November; merged without the full suite, your call) the old island rooms and trick stalls come out of the menu; the automatic
-  sight and pursuit checks stay (the recorded test pass uses them). Docs and tests.
+- **Done for three rooms (24 November):** the building, her map and the real Karen, the panel,
+  the check (all held). In the three rooms 16 of 24 tricks were ready for her at once.
+- **Now (25 November):** the whole store at half size, the backstreet, and every thing the tricks
+  and interactions need, in the rooms where the store has them.
+- **Then:** the check finds every room and door, every shelf stocked, Karen walking inside; each
+  trick alone; screenshots of every room I look at myself and send you.
 
-**Done when:** you open Kehai → Sandbox → Mini store, everything on this page works, and you say
-yes or what to change.
+**Done when:** you open Kehai → Sandbox → Mini store, walk every room, try the panel and a few
+tricks, and say yes or what to change.
