@@ -14,6 +14,8 @@ namespace Kehai.Sandbox
         // Karen's hide checks open it to look inside (0.5.2).
         public bool IsHidingDoor => true;
         public Vector3 DoorPoint => leaf != null ? leaf.position : transform.position;
+        public float LeafWidth => leaf != null ? Mathf.Max(leaf.lossyScale.x, leaf.lossyScale.z) : 0.6f;
+        public float OpenFraction => t;
         public void SetOpenForCheck(bool open) => Set(open);
         float t;   // 0 shut, 1 open
 

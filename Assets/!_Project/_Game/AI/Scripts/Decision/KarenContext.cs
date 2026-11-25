@@ -67,6 +67,8 @@ namespace Kehai.Karen
         public float Now => NowOverride ?? Time.time;
         public float? NowOverride;     // a simulation's clock (ComboTests), instead of the game's
         public LastTrick Last;         // her last trick, for the combo learner (KarenBrain.Decide sets it)
+        // When she last looked into each hiding place (HideCheck, 0.5.2): she leaves it alone a while.
+        public readonly System.Collections.Generic.Dictionary<HidingPlace, float> HideChecked = new System.Collections.Generic.Dictionary<HidingPlace, float>();
         public float ShiftTime => Brain != null ? Brain.ShiftTime : 0f;
         public int ShiftNumber => Shift != null ? Mathf.Max(1, Shift.ShiftNumber) : 1;
         public RungFeatures Features => Config.Features;

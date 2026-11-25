@@ -17,7 +17,7 @@ using UnityEngine;
 //   tools/run/kehai-run unity --graphics -- -executeMethod MiniStoreCheck.Run
 // Exit 0 when all hold, 1 when one doesn't, 2 if Play never got there.
 [InitializeOnLoad]
-public static class MiniStoreCheck
+public static partial class MiniStoreCheck
 {
     // Long enough for each trick alone (-mini-tricks): 24 restarts and up to a minute each.
     static double Limit => Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") >= 0 ? 3600 : 900;
@@ -269,6 +269,9 @@ public static class MiniStoreCheck
         // might; for the throws, which need her to see you from 8-20 m, they stand in the sales
         // floor's far corner instead. For The overtime the shift is short enough that its last two
         // minutes have begun.
+        // Phase 9's interactions with the real Karen (MiniStoreCheck.Interactions.cs).
+        yield return Interactions();
+
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
         var results = new List<string>();
         int used = 0;

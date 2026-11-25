@@ -1,0 +1,297 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Kehai.Karen;
+using Kehai.Sandbox;
+using Kehai.Store;
+using UnityEngine;
+
+// Phase 9's interactions, tried in the mini store with the real Karen (0.5.2, C9.8, C9.9, C9.11).
+// Each row starts a fresh shift with no tricks allowed, puts the tester somewhere, gives her
+// something to have sensed (a clank beside a place, a thrown item, a door left swinging) and
+// watches what she does. Each has its seen and unseen pair:
+//   fridge check:  you in the chiller she checks → caught, after its door opened;
+//                  you in another chiller → nobody, and her belief there drops
+//   kneel check:   you under the rack where she kneels → caught; past 1.5 m → nobody
+//   decoy throw:   an item you threw lands → her belief moves there; one nobody threw → nothing
+//   swinging door: a door you went through, seen moving → her belief goes past it; traces off → less
+public static partial class MiniStoreCheck
+{
+    static IEnumerator Interactions()
+    {
+        var before = MiniStoreSettings.Allowed;
+        MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.None;
+        HidingPlace[] chillers = MiniStore.Root.GetComponentsInChildren<HidingPlace>()
+            .Where(p => p.Usable && !p.requiresCrouch && StoreMap.AreaAt(HideCheck.Centre(p)) == "Cold storage" && HideCheck.DoorOf(p) != null)
+            .OrderBy(p => HideCheck.Centre(p).x).ToArray();
+        HidingPlace rack = MiniStore.Root.GetComponentsInChildren<HidingPlace>()
+            .Where(p => p.Usable && p.requiresCrouch && StoreMap.AreaAt(HideCheck.Centre(p)) == "Stockroom")
+            .OrderByDescending(p => p.interior.size.x * p.transform.lossyScale.x).FirstOrDefault();
+        Expect(chillers.Length >= 2, $"two chillers you can hide in, with doors she can open ({chillers.Length})");
+        Expect(rack != null, "a stockroom rack you can crouch under");
+        if (chillers.Length >= 2)
+        {
+            yield return FridgeCheck(chillers[0], chillers[0], true);
+            yield return FridgeCheck(chillers[0], chillers[1], false);
+        }
+        if (rack != null)
+        {
+            yield return KneelCheck(rack, true);
+            yield return KneelCheck(rack, false);
+        }
+        if (chillers.Length >= 2)
+        {
+            yield return Decoy(chillers[1], true);
+            yield return Decoy(chillers[1], false);
+            yield return SwingingDoor(chillers[1], true);
+            yield return SwingingDoor(chillers[1], false);
+        }
+        MiniStoreSettings.Allowed = before;
+        MiniStoreSettings.Traces = true;
+        KarenBrain last = UnityEngine.Object.FindAnyObjectByType<KarenBrain>();
+        if (last != null) { MiniStoreSettings.ApplyTo(last.config); MiniStoreSettings.ApplySenses(last); }
+    }
+
+    static KarenBrain her;
+
+    // A fresh shift (her memory cleared), no tricks, started; `her` is the new Karen.
+    static IEnumerator Fresh()
+    {
+        her = null;
+        UnityEngine.Object.FindAnyObjectByType<TricksSandbox>()?.RestartNow();
+        yield return Wait(2f);
+        for (float t = 0f; t < 20f && (her == null || her.Body == null || her.Ctx == null || her.Ctx.Belief == null); t += Time.deltaTime)
+        {
+            her = UnityEngine.Object.FindAnyObjectByType<KarenBrain>();
+            yield return null;
+        }
+        if (her == null) yield break;
+        MiniStoreSettings.ApplyTo(her.config);
+        MiniStoreSettings.ApplySenses(her);
+        if (her.Shift != null && !her.Shift.IsShiftActive) her.Shift.StartShift();
+        her.enabled = true;
+        yield return Wait(0.5f);
+    }
+
+    static GameObject Player() => GameObject.FindGameObjectWithTag("Player");
+
+    static void PutPlayer(Vector3 feet)
+    {
+        GameObject player = Player();
+        var controller = player.GetComponent<CharacterController>();
+        if (controller != null) controller.enabled = false;
+        player.transform.position = feet + Vector3.up * 0.05f;
+        if (controller != null) controller.enabled = true;
+        Physics.SyncTransforms();
+    }
+
+    static Vector3 Floor(HidingPlace p) => new Vector3(HideCheck.Centre(p).x, p.transform.TransformPoint(p.interior.min).y, HideCheck.Centre(p).z);
+
+    // Out in front of a place's door, where a clank from it would be heard.
+    static Vector3 InFront(HidingPlace p)
+    {
+        Vector3 door = HideCheck.DoorOf(p).DoorPoint;
+        Vector3 outward = door - HideCheck.Centre(p);
+        outward.y = 0f;
+        return new Vector3(door.x, Floor(p).y, door.z) + outward.normalized * 1f;
+    }
+
+    static float MassNear(Vector3 at, float radius)
+    {
+        StoreMap map = her.Ctx.Map;
+        float mass = 0f;
+        for (int cell = 0; cell < map.CellCount; cell++)
+            if (FairnessGuard.Flat(map.CellPosition[cell], at) <= radius) mass += her.Ctx.Belief[cell];
+        return mass;
+    }
+
+    static void Clank(Vector3 at) =>
+        her.Ctx.Belief.Apply(new Observation(SenseChannel.Hearing, at, 0.9f, 1.2f, "check: a clank from here"));
+
+    static bool Concealed()
+    {
+        PlayerPresence you = PlayerPresence.Current;
+        if (you == null) return false;
+        HidingPlace place = HidingPlace.At(you, out float coverage);
+        return place != null && place.Conceals(you, coverage);
+    }
+
+    // Wait for the check to end: she looked, she caught you, or the time is up.
+    static IEnumerator Watch(CheckHiding check, float seconds, Action<bool> doorOpenBeforeCatch, IHidingDoor door)
+    {
+        bool openSeen = door == null;
+        for (float t = 0f; t < seconds && !check.Looked && !her.KilledThisShift; t += Time.deltaTime)
+        {
+            if (door != null && door.OpenFraction >= CheckHiding.OpenEnough) openSeen = true;
+            yield return null;
+        }
+        doorOpenBeforeCatch(openSeen);
+    }
+
+    static IEnumerator FridgeCheck(HidingPlace checks, HidingPlace youIn, bool expectCatch)
+    {
+        string row = expectCatch ? "fridge check, you inside" : "fridge check, you in the next one";
+        yield return Fresh();
+        if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        IHidingDoor yours = HideCheck.DoorOf(youIn);
+        yours.SetOpenForCheck(false);
+        yield return Wait(1f);
+        PutPlayer(Floor(youIn));
+        yield return Wait(0.3f);
+        bool hidden = Concealed();
+        Clank(InFront(checks));
+        float beside = MassNear(HideCheck.Centre(checks), HideCheck.Near);
+        CheckHiding check = her.ForceHideCheck(checks, true, out string why);
+        Expect(check != null, $"{row}: she sets out ({why})");
+        if (check == null) yield break;
+        bool openFirst = false;
+        yield return Watch(check, 40f, o => openFirst = o, HideCheck.DoorOf(checks));
+        yield return Snap("fridge_" + (expectCatch ? "inside" : "next"), her.Body.Position);
+        float after = her.KilledThisShift ? beside : MassNear(HideCheck.Centre(checks), HideCheck.Near);
+        Debug.Log($"MiniStoreCheck: {row}: hidden {hidden}, looked {check.Looked}, caught {her.KilledThisShift}, door open first {openFirst}, belief beside {beside:P0} → {after:P0}");
+        Expect(hidden, $"{row}: the tester is hidden in {youIn.name}");
+        if (expectCatch)
+            Expect(her.KilledThisShift && check.Found && openFirst, $"{row}: she opens {checks.name}, looks, and catches you (caught {her.KilledThisShift}, door open first {openFirst})");
+        else
+            Expect(check.Looked && !her.KilledThisShift && after < beside * 0.5f, $"{row}: she opens {checks.name}, nobody, and her belief beside it drops ({beside:P0} → {after:P0})");
+    }
+
+    static IEnumerator KneelCheck(HidingPlace rack, bool expectCatch)
+    {
+        string row = expectCatch ? "kneel check, you under where she kneels" : "kneel check, you past her reach";
+        yield return Fresh();
+        if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        // Along the rack's length (its longer side): one end and the other.
+        Vector3 size = Vector3.Scale(rack.interior.size, rack.transform.lossyScale);
+        bool alongX = size.x >= size.z;
+        float length = alongX ? size.x : size.z;
+        Vector3 axis = alongX ? rack.transform.right : rack.transform.forward;
+        Vector3 centre = Floor(rack);
+        Vector3 endA = centre - axis * (length * 0.5f - 0.5f), endB = centre + axis * (length * 0.5f - 0.5f);
+        Vector3 you = endA, clankAt = expectCatch ? endA : endB;
+        var bot = new SandboxBot(Player().GetComponent<PlayerMotor>());
+        PutPlayer(you);
+        yield return bot.SetCrouch(true);
+        yield return Wait(0.3f);
+        bool hidden = Concealed();
+        Vector3 aisle = HidingApproach.ClosestReachable(her.Body.Agent, clankAt);
+        Clank(aisle);
+        CheckHiding check = her.ForceHideCheck(rack, true, out string why);
+        Expect(check != null, $"{row}: she sets out ({why})");
+        if (check == null) { bot.Crouch = false; yield break; }
+        yield return Watch(check, 40f, _ => { }, null);
+        float reach = FairnessGuard.Flat(her.Body.Position, Player().transform.position);
+        yield return Snap("kneel_" + (expectCatch ? "within" : "beyond"), her.Body.Position);
+        Debug.Log($"MiniStoreCheck: {row}: rack {length:0.0} m, hidden {hidden}, kneels {check.Kneels}, looked {check.Looked}, caught {her.KilledThisShift}, her to you {reach:0.0} m");
+        Expect(hidden, $"{row}: the tester is crouched under {rack.name}");
+        if (expectCatch)
+            Expect(her.KilledThisShift && check.Kneels, $"{row}: she kneels and catches you ({reach:0.0} m)");
+        else
+            Expect(length < 2f * HideCheck.Reach + 1f ? !her.KilledThisShift : check.Looked && !her.KilledThisShift && reach > HideCheck.Reach,
+                   $"{row}: she kneels {reach:0.0} m from you and catches nobody");
+        bot.Crouch = false;
+        yield return Wait(0.5f);
+    }
+
+    // A thrown item lands 8 m from her in her room: by your hand, or nobody's.
+    static IEnumerator Decoy(HidingPlace youIn, bool yours)
+    {
+        string row = yours ? "decoy throw" : "decoy, an item nobody threw";
+        yield return Fresh();
+        if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        PutPlayer(Floor(youIn));
+        yield return Wait(0.3f);
+        StoreMap map = her.Ctx.Map;
+        int here = map.CellAt(her.Body.Position);
+        int land = Enumerable.Range(0, map.CellCount)
+            .Where(c => here >= 0 && map.CellRoom[c] == map.CellRoom[here] && map.IsKarens(c))
+            .OrderBy(c => Mathf.Abs(FairnessGuard.Flat(map.CellPosition[c], her.Body.Position) - 8f)).DefaultIfEmpty(-1).First();
+        if (land < 0) { Expect(false, row + ": no spot 8 m away"); yield break; }
+        Vector3 at = map.CellPosition[land];
+        float before = MassNear(at, 2.5f);
+        GameObject tin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        tin.name = "Check decoy";
+        tin.transform.localScale = Vector3.one * 0.15f;
+        tin.transform.position = at + Vector3.up * 2.5f;
+        var body = tin.AddComponent<Rigidbody>();
+        body.mass = 0.4f;
+        var item = tin.AddComponent<Item>();
+        item.lastAuthor = yours ? NoiseAuthor.Player : NoiseAuthor.World;
+        body.linearVelocity = Vector3.down * 4f;
+        yield return Wait(1.5f);
+        float after = MassNear(at, 2.5f);
+        Debug.Log($"MiniStoreCheck: {row}: landed {FairnessGuard.Flat(at, her.Body.Position):0.0} m from her, belief there {before:P0} → {after:P0}");
+        if (yours) Expect(after > before + 0.15f, $"{row}: she hears it land and her belief goes there ({before:P0} → {after:P0})");
+        else Expect(after < before + 0.05f, $"{row}: nothing for her ({before:P0} → {after:P0})");
+        UnityEngine.Object.Destroy(tin);
+    }
+
+    // A staff door she can see: you go through it as she looks, with her traces on or off.
+    static IEnumerator SwingingDoor(HidingPlace youIn, bool traces)
+    {
+        string row = traces ? "swinging door" : "swinging door, traces off";
+        MiniStoreSettings.Traces = traces;
+        yield return Fresh();
+        if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        PutPlayer(Floor(youIn));
+        HingeDoor door = UnityEngine.Object.FindObjectsByType<HingeDoor>()
+            .Where(d => MiniStore.Contains(d.transform.position) && !d.Locked && d.Panel != null && !d.IsOpen)
+            .OrderBy(d => d.DoorCentre.x).ThenBy(d => d.DoorCentre.z).FirstOrDefault();
+        if (door == null) { Expect(false, row + ": no closed staff door"); yield break; }
+        Vector3 size = door.Panel.bounds.size;
+        Vector3 normal = size.x < size.z ? Vector3.right : Vector3.forward;
+        Vector3 centre = door.DoorCentre;
+        Vector3 near = HidingApproach.ClosestReachable(her.Body.Agent, centre + normal * 4.5f);
+        if (FairnessGuard.Flat(near, centre) < 2f) { normal = -normal; near = HidingApproach.ClosestReachable(her.Body.Agent, centre + normal * 4.5f); }
+        her.enabled = false;
+        her.Body.Warp(near);
+        her.Body.TurnToward(centre);
+        her.Body.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(centre - near, Vector3.up));
+        her.enabled = true;
+        yield return Wait(0.6f);
+        Vector3 beyond = centre - normal * Sensorium.BeyondDoor;
+        float before = MassNear(beyond, 1.5f);
+        door.Use(centre - normal * 0.8f, NoiseAuthor.Player);
+        yield return Wait(0.4f);
+        float after = MassNear(beyond, 1.5f);
+        bool sees = her.Body.Sight.CanSee(centre);
+        yield return Snap("door_" + (traces ? "traces" : "no_traces"), near);
+        Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief 2 m past it {before:P0} → {after:P0}");
+        SwingMass[traces ? 1 : 0] = after - before;
+        if (!traces)
+            Expect(SwingMass[1] > SwingMass[0] + 0.05f, $"the swinging door moves her belief past it more than the creak alone ({SwingMass[1]:P0} vs {SwingMass[0]:P0})");
+        else
+            Expect(sees, $"{row}: she can see {door.name}'s leaf from {FairnessGuard.Flat(near, centre):0.0} m");
+    }
+    static readonly float[] SwingMass = new float[2];
+
+    // One picture from above and behind her, looking where she is.
+    static IEnumerator Snap(string tag, Vector3 at)
+    {
+        if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) yield break;
+        string dir = OutDir();
+        Camera main = Camera.main;
+        if (dir == null || main == null) yield break;
+        var go = new GameObject("MiniStoreCheck camera");
+        var cam = go.AddComponent<Camera>();
+        cam.CopyFrom(main);
+        Vector3 from = at + new Vector3(-2.5f, 3.2f, -2.5f);
+        go.transform.SetPositionAndRotation(from, Quaternion.LookRotation(at + Vector3.up * 0.8f - from));
+        yield return null;
+        var rt = new RenderTexture(1280, 720, 24);
+        cam.targetTexture = rt;
+        cam.Render();
+        RenderTexture.active = rt;
+        var tex = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+        tex.Apply();
+        RenderTexture.active = null;
+        cam.targetTexture = null;
+        File.WriteAllBytes(Path.Combine(dir, $"mini_interaction_{tag}.png"), tex.EncodeToPNG());
+        UnityEngine.Object.Destroy(rt);
+        UnityEngine.Object.Destroy(tex);
+        UnityEngine.Object.Destroy(go);
+    }
+}

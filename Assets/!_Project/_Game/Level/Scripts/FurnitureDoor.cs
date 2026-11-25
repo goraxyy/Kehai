@@ -16,6 +16,9 @@ public sealed class FurnitureDoor : HighlightInteractable, IHidingDoor
     // Karen's hide checks open it to look inside (0.5.2).
     public bool IsHidingDoor => roomDoor == null;
     public Vector3 DoorPoint => panel != null ? panel.bounds.center : transform.position;
+    public float LeafWidth => panel != null ? Mathf.Max(panel.bounds.size.x, panel.bounds.size.z) : 0.6f;
+    public float OpenFraction => roomDoor != null ? (roomDoor.IsOpen ? 1f : 0f)
+                               : Mathf.Abs(chosenOpenAngle) > 1f ? Mathf.Clamp01(Mathf.Abs(angle / chosenOpenAngle)) : 0f;
     public void SetOpenForCheck(bool open) => SetOpen(open);
 
     Quaternion closed;

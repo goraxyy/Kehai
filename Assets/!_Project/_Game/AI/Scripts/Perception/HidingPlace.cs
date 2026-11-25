@@ -10,6 +10,8 @@ namespace Kehai.Karen
         bool IsHidingDoor { get; }   // false for a room door wrapped as furniture
         bool IsOpen { get; }
         Vector3 DoorPoint { get; }   // the middle of the closed leaf
+        float LeafWidth { get; }     // how far the leaf sweeps out from its hinge
+        float OpenFraction { get; }  // 0 shut, 1 fully open
         void SetOpenForCheck(bool open);
     }
 
@@ -37,6 +39,12 @@ namespace Kehai.Karen
 
         // Not isActiveAndEnabled: that stays false in edit mode for a script that doesn't run there.
         public bool Usable => this != null && enabled && gameObject.activeInHierarchy;
+
+        // Every registered hiding place (the store's furniture, which she knows; not who's in it).
+        public static IReadOnlyList<HidingPlace> All
+        {
+            get { places.RemoveAll(p => p == null); return places; }
+        }
 
         public static bool Conceals(float coverage) => coverage >= CoveredThreshold;
         public static float OverlapFraction(Bounds body, Bounds space)
