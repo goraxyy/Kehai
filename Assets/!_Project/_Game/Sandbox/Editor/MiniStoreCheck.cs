@@ -128,6 +128,25 @@ public static class MiniStoreCheck
         yield return Wait(2f);
         KeyThings();
 
+        // What floats or sits in a wall (the owner saw a sweet floating by the till, and something
+        // in the staff room's wall right of the camera controls): logged with where it is.
+        foreach (Renderer r in UnityEngine.Object.FindObjectsByType<Renderer>())
+        {
+            if (r == null || !MiniStore.Contains(r.bounds.center) || r.bounds.size.magnitude > 0.6f || r.bounds.min.y < 0.3f) continue;
+            if (r.GetComponentInParent<Light>() != null || r.name.StartsWith("Lamp")) continue;
+            bool held = Physics.Raycast(r.bounds.center, Vector3.down, out RaycastHit below, r.bounds.extents.y + 0.12f, ~0, QueryTriggerInteraction.Ignore);
+            bool onWall = Physics.CheckBox(r.bounds.center, r.bounds.extents * 0.9f, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            if (!held && !onWall) Debug.Log($"MiniStoreCheck: floating {PathOf(r.transform)} at {r.bounds.center:F2} in the {StoreMap.AreaAt(r.bounds.center)}");
+        }
+        foreach (Transform shellPart in MiniStore.Root.transform.Find("Shell"))
+        {
+            if (!shellPart.name.StartsWith("Wall") || shellPart.name.Contains("plinth")) continue;
+            Bounds w = shellPart.GetComponent<Renderer>().bounds;
+            foreach (Collider c in Physics.OverlapBox(w.center, w.extents * 0.98f, Quaternion.identity, ~0, QueryTriggerInteraction.Collide))
+                if (c != null && !c.transform.IsChildOf(MiniStore.Root.transform.Find("Shell")) && c.GetComponentInParent<HingeDoor>() == null && c.GetComponentInParent<AutoDoubleDoor>() == null)
+                    Debug.Log($"MiniStoreCheck: in a wall: {PathOf(c.transform)} at {c.bounds.center:F2} ({StoreMap.AreaAt(c.bounds.center)})");
+        }
+
         // Every hinged door opens with E from where you'd stand, on one side or the other.
         var interact = player != null ? player.GetComponent<PlayerInteract>() : null;
         foreach (HingeDoor door in root.GetComponentsInChildren<HingeDoor>())
@@ -149,6 +168,20 @@ public static class MiniStoreCheck
             target.Interact(interact);
             yield return Wait(1f);
             Expect(door.IsOpen, $"{label}: E opens it");
+            // Away from you, and E again while it swings reverses it.
+            Transform leaf = door.transform;
+            Vector3 eye = interact.transform.position;
+            target.Interact(interact);
+            yield return Wait(0.15f);
+            Expect(!door.IsOpen, $"{label}: E while it moves turns it back");
+            yield return Wait(1.2f);
+            target.Interact(interact);
+            float near = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
+            yield return Wait(0.4f);
+            float after = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
+            Debug.Log($"MiniStoreCheck: {label} opening: leaf {near:0.00} m from you, then {after:0.00} m");
+            target.Interact(interact);   // and shut again
+            yield return Wait(1.2f);
         }
 
         yield return Shots("built");
@@ -380,6 +413,13 @@ public static class MiniStoreCheck
         }
         UnityEngine.Object.Destroy(go);
         Debug.Log($"MiniStoreCheck: screenshots ({tag}) in {dir}");
+    }
+
+    static string PathOf(Transform t)
+    {
+        string path = t.name;
+        for (Transform p = t.parent; p != null && p.parent != null; p = p.parent) path = p.name + "/" + path;
+        return path;
     }
 
     // The run's folder: the one its log is written to.
