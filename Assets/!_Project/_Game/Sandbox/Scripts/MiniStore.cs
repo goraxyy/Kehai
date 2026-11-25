@@ -389,7 +389,7 @@ namespace Kehai.Sandbox
             Transform cold = Group(root, "Cold room");
             float north = HalfLocal(new Vector3(0f, 0f, -175f)).z, south = HalfLocal(new Vector3(0f, 0f, -190f)).z;
             float east = HalfLocal(new Vector3(85f, 0f, 0f)).x;
-            Place(cold, m.HideChiller, new Vector3(6.5f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);
+            Place(cold, m.HideChiller, new Vector3(7.6f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);   // clear of the stockroom door's swing
             Place(cold, m.HideChiller, new Vector3(13.5f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);
             Place(cold, m.ColdChiller, new Vector3(east - 0.8f, 0f, -16.5f), 0f, "Cold chiller", report);
             Place(cold, m.ColdChiller, new Vector3(9f, 0f, south + 0.9f), 90f, "Cold chiller", report);
