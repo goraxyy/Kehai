@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-25 | Merge the whole-store mini store without the full test suite again (the mini store check passed); the suite still waits for the next merge | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-25 | The mini store becomes the whole store at half size: lobby, sales floor, WC, office, staff room, backstreet, stockroom, cold room (not the parking lot), with every thing the tricks and interactions need; the plan's Phase 11 is the mini store only | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-24 | Merge the mini store without the full test suite this once (no time to keep Unity closed); the suite runs before the next merge | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-24 | The island is replaced by one mini store sandbox: three rooms (sales floor, cold room, stockroom) from the store's own models, a new building, the real Karen, and a panel to allow her no tricks, one trick or all, and to switch what she can sense | [mini store](plans/0.5.2/mini-store.md) |
