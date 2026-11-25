@@ -30,9 +30,20 @@ public class Kehai052HideCheckInTheStoreTests
         chillers = HidingPlace.All
             .Where(p => p.Usable && !p.requiresCrouch && StoreMap.AreaAt(HideCheck.Centre(p)) == "Cold storage")
             .OrderBy(p => HideCheck.Centre(p).x).ThenBy(p => HideCheck.Centre(p).z).ToArray();
-        GameObject you = GameObject.FindGameObjectWithTag("Player");
-        player = you != null ? you.GetComponent<PlayerPresence>() : null;
-        if (player != null) typeof(PlayerPresence).GetMethod("Awake", Private)?.Invoke(player, null);
+        // The store's own employee is spawned in play; a stand-in body, as the 0.5.1 hiding tests use.
+        var person = new GameObject("hide check employee");
+        var controller = person.AddComponent<CharacterController>();
+        controller.radius = 0.4f;
+        controller.height = 1.8f;
+        controller.center = Vector3.up * 0.9f;
+        player = person.AddComponent<PlayerPresence>();
+        typeof(PlayerPresence).GetMethod("Awake", Private)?.Invoke(player, null);
+    }
+
+    [OneTimeTearDown]
+    public void RemoveStandIn()
+    {
+        if (player != null) Object.DestroyImmediate(player.gameObject);
     }
 
     KarenContext Context(BeliefGrid belief, int seed) =>
