@@ -1631,6 +1631,17 @@ namespace Kehai.Karen
         // Set when she gets you; the shift then ends without counting as clocked out.
         public bool KilledThisShift { get; private set; }
 
+        // The hide checks (0.5.2: the fridge, locker and kneel checks): she has opened `place`, or
+        // knelt at it, and looked. Her eye answers (SightSensor.FindsInHiding); a yes is a catch,
+        // at once. She chose the place from what she sensed (HideCheck), never from where you are.
+        public bool CatchInHiding(HidingPlace place, bool seesWholeInside)
+        {
+            if (Body.Sight == null || !Body.Sight.FindsInHiding(place, Body.Position, HideCheck.Reach, seesWholeInside)) return false;
+            Note("SENSE", "found the employee hiding in " + place.name);
+            Kill();
+            return KilledThisShift;
+        }
+
         void Kill()
         {
             if (!PresentThisShift || !ShiftActive || KilledThisShift) return;

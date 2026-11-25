@@ -92,6 +92,23 @@ namespace Kehai.Karen
             return HiddenEntry.CanCatch(observer);
         }
 
+        // The look into a hiding place she has walked up to and opened, or knelt at (0.5.2: the
+        // fridge, locker and kneel checks, I8 and I9). A sense she uses on purpose: the eye looks
+        // into `place` from `observer` and finds you only if you are concealed in that place, and
+        // within `reach`: of its inside once its door is open (`seesWholeInside`), or of you when
+        // she kneels and looks under a rack (Q24: 1.5 m, past it you're safe). The brain picked the
+        // place from what it sensed before (HideCheck) and gets only this yes or no.
+        public bool FindsInHiding(HidingPlace place, Vector3 observer, float reach, bool seesWholeInside)
+        {
+            var player = PlayerPresence.Current;
+            if (player == null || place == null || !place.Usable) return false;
+            if (HidingPlace.At(player, out float coverage) != place || !place.Conceals(player, coverage)) return false;
+            if (seesWholeInside) return place.DistanceTo(observer) <= reach;
+            Vector3 you = player.transform.position - observer;
+            you.y = 0f;
+            return you.magnitude <= reach;
+        }
+
         public float Awareness { get; private set; }
         public float DetectNow { get; private set; }
         public float Exposure { get; private set; }

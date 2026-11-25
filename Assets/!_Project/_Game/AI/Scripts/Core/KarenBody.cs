@@ -239,6 +239,20 @@ namespace Kehai.Karen
         // Head sweep in degrees off the body's forward; drives the sight cone for sweeps.
         public void SweepHead(float degrees) => headYaw = degrees;
 
+        // The kneel check (0.5.2, I9): her eye drops low and looks down, under the rack in front
+        // of her. You see the glow sink. A proper kneel animation is for the redesign.
+        public const float KneelDrop = 0.95f, KneelPitch = 35f;
+        public bool Kneeling { get; private set; }
+        Vector3 headStandingAt;
+        bool headStandingKnown;
+        public void Kneel(bool on)
+        {
+            if (Head == null || on == Kneeling) return;
+            if (!headStandingKnown) { headStandingAt = Head.localPosition; headStandingKnown = true; }
+            Kneeling = on;
+            Head.localPosition = on ? headStandingAt + Vector3.down * KneelDrop : headStandingAt;
+        }
+
         // The blink channel's move: a burst of speed straight at a point for a window of
         // time — honest movement, only faster than anyone would choose to be seen moving.
         public void BurstToward(Vector3 point, float speed, float seconds, float maxDistance)
@@ -328,7 +342,7 @@ namespace Kehai.Karen
             }
 
             KeepPersonalSpace();
-            Head.localRotation = Quaternion.Euler(8f, headYaw, 0f);
+            Head.localRotation = Quaternion.Euler(Kneeling ? KneelPitch : 8f, headYaw, 0f);
             Footsteps();
             OpenDoorsInTheWay();
         }

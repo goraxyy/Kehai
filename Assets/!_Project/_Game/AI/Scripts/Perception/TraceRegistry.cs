@@ -146,9 +146,14 @@ namespace Kehai.Karen
             if (can != null) Add(TraceKind.BaggedBin, can.transform.position, 240f, default, can);
         }
 
+        // A door you opened stays a trace for a while. One you shut is a trace only while it is
+        // still swinging (0.5.2, the swinging door): once it's still, a shut door says nothing.
+        public const float OpenedLifetime = 8f, ShutLifetime = 1.2f;
         static void OnDoor(Component door, bool opened)
         {
-            if (door != null && opened) Add(TraceKind.DoorOpened, door.transform.position, 8f, default, door);
+            if (door == null) return;
+            if (opened) Add(TraceKind.DoorOpened, door.transform.position, OpenedLifetime, default, door);
+            else if (door is HingeDoor) Add(TraceKind.DoorOpened, door.transform.position, ShutLifetime, default, door);
         }
     }
 }

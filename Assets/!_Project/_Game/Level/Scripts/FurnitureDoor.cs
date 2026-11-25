@@ -3,7 +3,7 @@ using Kehai.Karen;
 
 // Aimed interaction: opening one locker never toggles the lockers beside it.
 // Door leaves remain solid and stop if a player or other object is in their sweep.
-public sealed class FurnitureDoor : HighlightInteractable
+public sealed class FurnitureDoor : HighlightInteractable, IHidingDoor
 {
     public string label = "locker";
     public float openAngle = 105f;
@@ -13,6 +13,10 @@ public sealed class FurnitureDoor : HighlightInteractable
     public HingeDoor roomDoor;
     public bool IsOpen => roomDoor != null ? roomDoor.IsOpen : wantsOpen;
     public bool IsFullyOpen => roomDoor != null ? roomDoor.IsOpen : Mathf.Abs(angle - chosenOpenAngle) < 2f;
+    // Karen's hide checks open it to look inside (0.5.2).
+    public bool IsHidingDoor => roomDoor == null;
+    public Vector3 DoorPoint => panel != null ? panel.bounds.center : transform.position;
+    public void SetOpenForCheck(bool open) => SetOpen(open);
 
     Quaternion closed;
     float angle;

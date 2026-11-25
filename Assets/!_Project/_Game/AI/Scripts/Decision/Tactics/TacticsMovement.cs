@@ -70,6 +70,8 @@ namespace Kehai.Karen
             plan.Add(new MoveTo(k => k.Belief.RegionCentroid(region), KarenBody.Pace.Hurry, "investigate " + plan.Target, 1.6f)
                 .When(k => k.Belief.RegionMass[region] > 0.02f || outside && k.Belief.OutsideMass > 0.02f, "belief still there"));
             plan.Add(new LookAround(3f));
+            // The hide checks (0.5.2): a closed hiding place there she has reason to suspect.
+            if (!outside) HideCheck.AddTo(c, plan, c.Belief.RegionCentroid(region), 6f, new HashSet<HidingPlace>());
         }
     }
 
@@ -107,10 +109,12 @@ namespace Kehai.Karen
 
             if (ranked.Count == 0) return;
             plan.Target = string.Join(", ", ranked.Select(x => x.r.Name));
+            var checking = new HashSet<HidingPlace>();
             foreach (var x in ranked)
             {
                 plan.Go(x.r.Centroid, KarenBody.Pace.Walk, "sweep " + x.r.Name, 2f);
                 plan.Add(new LookAround(2f));
+                HideCheck.AddTo(c, plan, x.r.Centroid, 6f, checking);   // the hide checks (0.5.2)
             }
         }
     }

@@ -266,17 +266,42 @@ namespace Kehai.Karen
             {
                 if (tracesRead.Contains(t.Id)) continue;
                 if ((t.Position - sight.Eye).sqrMagnitude > 14f * 14f) continue;
-                if (!sight.CanSee(t.Position + Vector3.up * 0.15f, bodyRoot)) continue;
+                // A swinging door is seen by its leaf, not by the hinge's foot (0.5.2).
+                bool swinging = SwingingDoor(t, sight.Eye, out Vector3 beyond, out Vector3 through);
+                Vector3 seenAt = swinging ? ((HingeDoor)t.Source).DoorCentre : t.Position + Vector3.up * 0.15f;
+                if (!sight.CanSee(seenAt, bodyRoot)) continue;
 
                 tracesRead.Add(t.Id);
 
                 Senses.Trace(t.Kind, t.Freshness, t.Age, out float confidence, out float sigma);
                 if (confidence < 0.05f) continue;
 
-                Positive.Add(new Observation(SenseChannel.Trace, t.Position, confidence, sigma,
-                                             $"trace({t.Kind}, {t.Age:0}s)", t.Heading));
+                // The swinging door (0.5.2): a door she sees still moving means someone just went
+                // through it, so the trace points past the door, away from her.
+                if (swinging)
+                    Positive.Add(new Observation(SenseChannel.Trace, beyond, confidence, sigma, $"trace(swinging door, {t.Age:0.0}s)", through));
+                else
+                    Positive.Add(new Observation(SenseChannel.Trace, t.Position, confidence, sigma,
+                                                 $"trace({t.Kind}, {t.Age:0}s)", t.Heading));
                 Raw.Add(new SenseRaw { Channel = SenseChannel.Trace, Kind = (int)t.Kind, Age = t.Age, Freshness = t.Freshness });
             }
+        }
+
+        public const float BeyondDoor = 2f;
+
+        // A hinged door she can see still swinging, and the point BeyondDoor past it from her eye.
+        public static bool SwingingDoor(Trace t, Vector3 eye, out Vector3 beyond, out Vector3 through)
+        {
+            beyond = through = default;
+            if (t == null || t.Kind != TraceKind.DoorOpened || !(t.Source is HingeDoor door) || door == null || !door.IsMoving) return false;
+            Vector3 centre = door.DoorCentre;
+            through = centre - eye;
+            through.y = 0f;
+            if (through.sqrMagnitude < 1e-4f) return false;
+            through.Normalize();
+            beyond = centre + through * BeyondDoor;
+            beyond.y = t.Position.y;
+            return true;
         }
 
         void CollectTestimony(Vector3 bodyPosition)

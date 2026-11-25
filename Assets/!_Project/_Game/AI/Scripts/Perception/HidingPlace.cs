@@ -3,6 +3,16 @@ using UnityEngine;
 
 namespace Kehai.Karen
 {
+    // A door on a hiding place that Karen opens to look inside (0.5.2: the fridge and locker
+    // checks, HideCheck). A locker's or cabinet's door (FurnitureDoor), a sandbox's fridge door.
+    public interface IHidingDoor
+    {
+        bool IsHidingDoor { get; }   // false for a room door wrapped as furniture
+        bool IsOpen { get; }
+        Vector3 DoorPoint { get; }   // the middle of the closed leaf
+        void SetOpenForCheck(bool open);
+    }
+
     // A code-authored empty interior, not the bounds of the solid furniture. Coverage is
     // the fraction of the current controller's body envelope inside it. It is independent
     // of the observer: an open cabinet or a ray under a rack does not defeat concealment.
