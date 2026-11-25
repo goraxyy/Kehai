@@ -42,6 +42,7 @@ namespace Kehai.Sandbox
 
         public string Feedback => feedback;
         public bool HasPanel => panel != null;   // the mini store's (C11.17)
+        public MiniStorePanel Panel => panel;
 
         internal static KarenConfig NewConfig()
         {
@@ -146,7 +147,7 @@ namespace Kehai.Sandbox
                 panel = new MiniStorePanel(this);
                 MiniStoreSettings.ApplySenses(brain);
                 selected = Mathf.Max(0, Array.IndexOf(TrickCheck.Tricks, MiniStoreSettings.Chosen));
-                feedback = "Karen is frozen in the stockroom. P starts her; Tab opens the panel.";
+                feedback = "Karen is frozen. P starts her; Tab opens the panel.";
                 return;
             }
             feedback = "F5 starts shift four. The trick stalls stand on the sandbox island: out of the front door, north to the road, then west.";
@@ -186,6 +187,18 @@ namespace Kehai.Sandbox
             }
         }
 
+        // The keys this sandbox answers to, for what it tells you: plain keys in the mini store.
+        string StartKey => panel != null ? "P" : "F5";
+        string RestartKey => panel != null ? "Backspace" : "F6";
+
+        // A shift starts before she does anything: from Start, or a trick fired first. Its start
+        // sets her senses to the rung's, so the panel's choice goes back on after it.
+        void EnsureShift()
+        {
+            if (brain.Shift != null && !brain.Shift.IsShiftActive) brain.Shift.StartShift();
+            if (panel != null) MiniStoreSettings.ApplySenses(brain);
+        }
+
         public bool TryFire(string id)
         {
             int index = Array.IndexOf(TrickCheck.Tricks, id);
@@ -193,12 +206,13 @@ namespace Kehai.Sandbox
             selected = index;
             if (panel != null) panel.Choose(brain, id);
             if (brain == null || brain.Ctx == null) { feedback = "Waiting for the store."; return false; }
-            if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return false; }
+            if (brain.KilledThisShift) { feedback = $"Caught. {RestartKey} restarts the sandbox."; return false; }
             if (brain.ForcedPlanRunning)
             {
-                feedback = $"Still running {brain.CurrentPlan.Name}. F5 resumes if frozen.";
+                feedback = $"Still running {brain.CurrentPlan.Name}. {StartKey} resumes if frozen.";
                 return false;
             }
+            EnsureShift();
             if (!brain.Force(id, out string why))
             {
                 feedback = $"{id} refused: {why}";
@@ -241,14 +255,14 @@ namespace Kehai.Sandbox
         void Caught()
         {
             Freeze();
-            feedback = "Caught. F6 restarts the sandbox.";
+            feedback = $"Caught. {RestartKey} restarts the sandbox.";
         }
 
         public void StartRunning()
         {
             freezeOnceBuilt = false;
-            if (brain.KilledThisShift) { feedback = "Caught. F6 restarts the sandbox."; return; }
-            if (!brain.Shift.IsShiftActive) brain.Shift.StartShift();
+            if (brain.KilledThisShift) { feedback = $"Caught. {RestartKey} restarts the sandbox."; return; }
+            EnsureShift();
             runOne = false;
             Resume();
             feedback = "Karen is moving.";

@@ -60,6 +60,8 @@ public static partial class MiniStoreCheck
         }
         MiniStoreSettings.Allowed = before;
         MiniStoreSettings.Traces = true;
+        MiniStoreSettings.Hearing = true;
+        MiniStoreSettings.Building = true;
         KarenBrain last = UnityEngine.Object.FindAnyObjectByType<KarenBrain>();
         if (last != null) { MiniStoreSettings.ApplyTo(last.config); MiniStoreSettings.ApplySenses(last); }
     }
@@ -203,7 +205,10 @@ public static partial class MiniStoreCheck
         // On her map's cell beside the rack nearest that end: a clank from under it, heard in the aisle.
         List<int> beside = HideCheck.CellsBeside(her.Ctx.Map, rack);
         if (beside.Count == 0) { Expect(false, row + ": her map has no cells beside the rack"); yield break; }
-        Vector3 aisle = her.Ctx.Map.CellPosition[beside.OrderBy(c => (her.Ctx.Map.CellPosition[c] - clankAt).sqrMagnitude).First()];
+        // Beside its long side, not past its end: a noise from under it is heard in the aisle.
+        List<int> alongside = beside.Where(c => Mathf.Abs(Vector3.Dot(her.Ctx.Map.CellPosition[c] - centre, axis)) <= length * 0.5f - 0.5f).ToList();
+        if (alongside.Count == 0) alongside = beside;
+        Vector3 aisle = her.Ctx.Map.CellPosition[alongside.OrderBy(c => (her.Ctx.Map.CellPosition[c] - clankAt).sqrMagnitude).First()];
         // Within: under the rack right across from that cell. Past her reach: under the other end.
         Vector3 you = endA;
         if (expectCatch)
@@ -276,7 +281,11 @@ public static partial class MiniStoreCheck
     static IEnumerator SwingingDoor(int youAt, bool traces)
     {
         string row = traces ? "swinging door" : "swinging door, traces off";
+        // Only her eye on the door: the building's door sensor and the creak would tell her the
+        // door was used either way, so both rows have them off and differ only in the trace.
         MiniStoreSettings.Traces = traces;
+        MiniStoreSettings.Hearing = false;
+        MiniStoreSettings.Building = false;
         yield return Fresh();
         if (her == null) { Expect(false, row + ": no Karen"); yield break; }
         HidingPlace youIn = Chillers().ElementAtOrDefault(youAt);
@@ -308,17 +317,30 @@ public static partial class MiniStoreCheck
         her.enabled = true;
         if (door == null) { Expect(false, row + ": no door she can stand back from and see"); yield break; }
         yield return Wait(0.6f);
-        Vector3 beyond = centre - normal * Sensorium.BeyondDoor;
-        float before = MassNear(beyond, 1.5f);
+        // The far side of the door, within 8 m: what she can see through the doorway her eye
+        // clears; the trace's spread lands in the room past it.
+        float FarSide()
+        {
+            StoreMap map = her.Ctx.Map;
+            float mass = 0f;
+            for (int cell = 0; cell < map.CellCount; cell++)
+            {
+                Vector3 to = map.CellPosition[cell] - centre;
+                if (Vector3.Dot(to, normal) < -0.5f && FairnessGuard.Flat(map.CellPosition[cell], centre) <= 8f) mass += her.Ctx.Belief[cell];
+            }
+            return mass;
+        }
+        float before = FarSide();
         door.Use(centre - normal * 0.8f, NoiseAuthor.Player);
         yield return Wait(0.4f);
-        float after = MassNear(beyond, 1.5f);
+        float after = FarSide();
         bool sees = her.Body.Sight.CanSee(Sensorium.DoorwayFacing(centre, her.Body.Sight.Eye));
         yield return Snap("door_" + (traces ? "traces" : "no_traces"), near);
-        Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief 2 m past it {before:P0} → {after:P0}");
+        Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief past it (8 m) {before:P0} → {after:P0}");
         SwingMass[traces ? 1 : 0] = after - before;
         if (!traces)
-            Expect(SwingMass[1] > SwingMass[0] + 0.05f, $"the swinging door moves her belief past it more than the creak alone ({SwingMass[1]:P0} vs {SwingMass[0]:P0})");
+            // Small by today's numbers (the door trace's trust 0.5, spread 4 m), but only the trace does it.
+            Expect(SwingMass[1] > 0.02f && SwingMass[0] < 0.01f, $"seen swinging, the door moves her belief past it; with traces off it doesn't ({SwingMass[1]:P0} vs {SwingMass[0]:P0})");
         else
             Expect(sees, $"{row}: she can see {door.name}'s leaf from {FairnessGuard.Flat(near, centre):0.0} m");
     }
