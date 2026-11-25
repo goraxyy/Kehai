@@ -119,6 +119,11 @@ namespace Kehai.Sandbox
             ledgerPath = config.ledgerPath;
             PlayerMotor motor = player.GetComponent<PlayerMotor>();
             if (motor != null) KarenBootstrap.MatchPlayer(config, motor.walkSpeed, motor.sprintSpeed);
+            if (MiniStore.Active)
+            {
+                // Half speed in the mini store, walking and chasing (the owner's ask, 25 November).
+                config.walkSpeed *= 0.5f; config.sneakSpeed *= 0.5f; config.hurrySpeed *= 0.5f; config.runSpeed *= 0.5f;
+            }
             CharacterController controller = player.GetComponent<CharacterController>();
             if (controller != null)
             {

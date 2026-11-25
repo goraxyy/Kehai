@@ -130,10 +130,13 @@ namespace Kehai.Sandbox
             ("Sales_Floor_Bin_02", new Vector3(54f, 0f, -121f), 0f),
             // The staff room: the counter the coffee machine stands on, the table the torch lies on,
             // lockers you can hide in, the bin, the dining table (the fridge would stand in the counter).
-            ("Appliance_Counter_01", null, 0f), ("Uniform_Folding_Table_01", new Vector3(17f, 0f, -146.4f), 0f),
+            // The kitchen as in the store, along the west wall at its real spacing (the owner's ask,
+            // 25 November): fridge, counter (the coffee machine, the torch and the PA microphone on
+            // it), microwave, sink. No tables: they stood in the way.
+            ("Staff_Fridge_01", new Vector3(10.7f, 0f, -148.3f), 0f), ("Appliance_Counter_01", new Vector3(10.7f, 0f, -146.1f), 0f),
+            ("Microwave_01", new Vector3(10.5f, 0f, -145.3f), 0f), ("Sink_And_Soap_01", new Vector3(10.7f, 0f, -143.7f), 0f),
             ("Locker_01", new Vector3(11.5f, 0f, -137.5f), 0f), ("Locker_02", new Vector3(13.9f, 0f, -137.5f), 0f), ("Locker_03", new Vector3(16.3f, 0f, -137.5f), 0f),
             ("Staff_Room_Furnished_Recycling_01", new Vector3(21f, 0f, -149.6f), 0f),
-            ("Shared_Dining_Table_01", null, 0f),
         };
 
         // The store's own things her tricks and your chores are built beside, moved here (one of
@@ -141,20 +144,23 @@ namespace Kehai.Sandbox
         // thing it sits on or null). A thing on another keeps its place on it.
         static readonly (string name, Vector3? store, string on)[] Anchors =
         {
-            ("Electric_Box_02", null, null),                    // the power box: its EAST/WEST/BACK switches and the fog box beside it
-            ("Container_01", new Vector3(22.6f, 0f, -168f), null), // the bin bags' drop zone
-            ("Waste_Collection_Container_01", new Vector3(23.8f, 0f, -160f), null),
-            ("Paper_Collection_Container_01", new Vector3(23.8f, 0f, -169.5f), null),
+            // The power box (its EAST/WEST/BACK switches, the fog box beside it) 6 m down the yard's
+            // east wall, so the fog box beside it stays in the yard (by the staff room's wall it came
+            // through into the staff room); the containers on the west wall, out of the way.
+            ("Electric_Box_02", new Vector3(24.5f, 0f, -156f), null),
+            ("Container_01", new Vector3(11.5f, 0f, -165f), null), // the bin bags' drop zone
+            ("Waste_Collection_Container_01", new Vector3(11.2f, 0f, -160f), null),
+            ("Paper_Collection_Container_01", new Vector3(11.2f, 0f, -169.5f), null),
             ("Service_Yard_Light_01", new Vector3(24.6f, 3.4f, -154f), null), ("Service_Yard_Light_02", new Vector3(24.6f, 3.4f, -168f), null),
             ("Time_Clock_01", null, null),                      // the PA box and its microphone go up beside it
             ("Staff_Radio_01", null, null),
-            ("Coffee_Machine_01", null, "Appliance_Counter_01"),
-            ("Flashlight_01", null, "Uniform_Folding_Table_01"),
+            ("Coffee_Machine_01", new Vector3(10.6f, 1.0f, -145.4f), null),   // on the counter
+            ("Flashlight_01", new Vector3(10.7f, 1.05f, -146.7f), null),      // on the counter; the PA microphone goes beside it (MiniStoreStart)
             ("Mop_Snap_Point_01", new Vector3(24.5f, 1.0f, -147f), null),       // its rack, on the staff room's east wall
             ("Mop_01", null, "Mop_Snap_Point_01"),
             ("Stock_Snap_Point_01", new Vector3(14.6f, 0.5f, -148.7f), null),  // the stock crate: in the staff room, as in the store
             ("Stock_Test_Crate_01", null, "Stock_Snap_Point_01"),
-            ("WC_Mop_Home_01", null, null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),
+            ("WC_Mop_Home_01", new Vector3(24.3f, 1.1f, -120.5f), null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),   // off the wall a little
             ("Security workstation", null, null),               // the cameras' screens go up on it
             ("Counter_Facing_01", null, null),
             ("Storage_Rack_07", new Vector3(20f, 0f, -187.8f), null), ("Storage_Rack_08", new Vector3(32f, 0f, -187.8f), null),
@@ -253,13 +259,15 @@ namespace Kehai.Sandbox
                 Vector3 a = HalfLocal(new Vector3(store.xMin, 0f, store.yMin)), b = HalfLocal(new Vector3(store.xMax, 0f, store.yMax));
                 var centre = new Vector3((a.x + b.x) * 0.5f, 0f, (a.z + b.z) * 0.5f);
                 var size = new Vector3(b.x - a.x + Wall, 0f, b.z - a.z + Wall);
-                var floor = Slab(shell, name + " floor", centre + Vector3.down * 0.05f, size + Vector3.up * 0.12f, outdoors ? m.Yard ?? m.Floor : m.Floor);
+                // Its top 2 cm below the doorways: a door leaf swinging over the next room's floor
+                // piece took it for something in its way and swung the other way, toward you.
+                var floor = Slab(shell, name + " floor", centre + Vector3.down * 0.08f, size + Vector3.up * 0.12f, outdoors ? m.Yard ?? m.Floor : m.Floor);
                 floor.AddComponent<InteriorLightAnchor>().outdoors = outdoors;
                 if (!outdoors)
                     Slab(shell, name + " ceiling", centre + Vector3.up * (WallHeight + 0.05f), size + Vector3.up * 0.1f, m.Ceiling).AddComponent<InteriorLightAnchor>();
             }
             Vector3 p0 = HalfLocal(new Vector3(StoreBuilding.xMin, 0f, StoreBuilding.yMax)), p1 = HalfLocal(new Vector3(StoreBuilding.xMax, 0f, StoreBuilding.yMax));
-            Slab(shell, "Pavement", new Vector3((p0.x + p1.x) * 0.5f, -0.05f, p0.z + 3.5f), new Vector3(p1.x - p0.x + 1f, 0.12f, 7f), m.Yard ?? m.Floor);
+            Slab(shell, "Pavement", new Vector3((p0.x + p1.x) * 0.5f, -0.08f, p0.z + 3.5f), new Vector3(p1.x - p0.x + 1f, 0.12f, 7f), m.Yard ?? m.Floor);
 
             foreach (var (a, b, gaps) in Walls)
             {
@@ -383,7 +391,7 @@ namespace Kehai.Sandbox
             Transform cold = Group(root, "Cold room");
             float north = HalfLocal(new Vector3(0f, 0f, -175f)).z, south = HalfLocal(new Vector3(0f, 0f, -190f)).z;
             float east = HalfLocal(new Vector3(85f, 0f, 0f)).x;
-            Place(cold, m.HideChiller, new Vector3(6.5f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);
+            Place(cold, m.HideChiller, new Vector3(7.6f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);   // clear of the stockroom door's swing
             Place(cold, m.HideChiller, new Vector3(13.5f, 0f, north - 0.8f), 0f, "Chiller you can hide in", report);
             Place(cold, m.ColdChiller, new Vector3(east - 0.8f, 0f, -16.5f), 0f, "Cold chiller", report);
             Place(cold, m.ColdChiller, new Vector3(9f, 0f, south + 0.9f), 90f, "Cold chiller", report);
@@ -457,8 +465,11 @@ namespace Kehai.Sandbox
             get
             {
                 var spots = new List<StoreCameras.Spot>();
-                foreach (StoreCameras.Spot s in StoreCameras.Spots)
+                foreach (StoreCameras.Spot store in StoreCameras.Spots)
                 {
+                    StoreCameras.Spot s = store.Area == "Staff room"
+                        ? new StoreCameras.Spot(store.Name, store.Area, new Vector2(12f, -143f), new Vector2(-1f, 0f), new Vector3(22f, 0f, -140f))
+                        : store;   // halved, the staff room's hung behind the lockers: over the sink instead
                     Vector3 probe = Half(new Vector3(s.Probe.x, 0f, s.Probe.y));
                     spots.Add(new StoreCameras.Spot(s.Name, s.Area, new Vector2(probe.x, probe.z), s.Wall, Half(s.LookAt)));
                 }
@@ -661,17 +672,22 @@ namespace Kehai.Sandbox
             foreach (var paint in copy.GetComponentsInChildren<ParentMaterialController>(true)) Object.DestroyImmediate(paint);
         }
 
-        // A shelf bay's middle panel (Wall_01) shows see-through on a copy; a solid panel of the same
-        // grey in its place, so you can't see through a shelf and her eye can't either.
+        // A shelf bay's middle panel (Wall_01) and its boards (Shelf_Deck_*) show see-through on a
+        // copy; a solid one of the same grey in each place, so you can't see through a shelf, her eye
+        // can't either, and the stock stands on a board.
         static void BackPanel(GameObject copy)
         {
-            if (copy.GetComponent<ShelfUnit>() == null || copy.GetComponent<ColdFixture>() != null) return;
-            foreach (Renderer wall in copy.GetComponentsInChildren<Renderer>(true))
+            // Every shelf in the copy: a bay, or one inside other furniture (the till's sweets rack,
+            // whose sweets looked as if they floated).
+            foreach (ShelfUnit unit in copy.GetComponentsInChildren<ShelfUnit>(true))
             {
-                if (wall.name != "Wall_01") continue;
+            if (unit.GetComponent<ColdFixture>() != null) continue;
+            foreach (Renderer wall in unit.GetComponentsInChildren<Renderer>(true))
+            {
+                if (wall.name != "Wall_01" && !wall.name.StartsWith("Shelf_Deck")) continue;
                 Transform t = wall.transform;
                 GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                panel.name = "Back panel";
+                panel.name = wall.name == "Wall_01" ? "Back panel" : "Board";
                 panel.transform.SetParent(t.parent, false);
                 panel.transform.localPosition = t.localPosition;
                 panel.transform.localRotation = t.localRotation;
@@ -681,6 +697,7 @@ namespace Kehai.Sandbox
                 Physics.SyncTransforms();
                 panel.transform.position += want.center - panel.GetComponent<Renderer>().bounds.center;
                 panel.GetComponent<Renderer>().sharedMaterial = wall.sharedMaterial;
+            }
             }
         }
 
@@ -752,7 +769,37 @@ namespace Kehai.Sandbox
         public Transform player;
         int frames;
 
-        void Start() => Move();
+        void Start()
+        {
+            Move();
+            LightEveryRoom();
+            MicBesideTorch();
+        }
+
+        // Some rooms stayed dark under the store's room lighting (its rooms are the store's, not
+        // these): here every lamp lights everything (the owner's ask, 25 November).
+        void LightEveryRoom()
+        {
+            foreach (Light light in GetComponentsInChildren<Light>(true))
+            {
+                var data = light.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>()
+                           ?? light.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+                data.renderingLayers = RoomLighting.Everything;
+            }
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask = RoomLighting.Everything;
+        }
+
+        // The PA microphone, put up beside the PA box by the store (KarenFixtures), on the kitchen
+        // counter beside the torch.
+        void MicBesideTorch()
+        {
+            ClosingMic mic = FindAnyObjectByType<ClosingMic>();
+            Item torch = null;
+            foreach (Item i in FindObjectsByType<Item>()) if (i.type == ItemType.Flashlight && MiniStore.Contains(i.transform.position)) { torch = i; break; }
+            if (mic == null || torch == null) return;
+            mic.transform.position = torch.transform.position + new Vector3(0f, 0.05f, 0.4f);
+            Physics.SyncTransforms();
+        }
 
         void Update()
         {

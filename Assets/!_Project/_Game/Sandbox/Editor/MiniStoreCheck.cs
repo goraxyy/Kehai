@@ -128,6 +128,25 @@ public static class MiniStoreCheck
         yield return Wait(2f);
         KeyThings();
 
+        // What floats or sits in a wall (the owner saw a sweet floating by the till, and something
+        // in the staff room's wall right of the camera controls): logged with where it is.
+        foreach (Renderer r in UnityEngine.Object.FindObjectsByType<Renderer>())
+        {
+            if (r == null || !MiniStore.Contains(r.bounds.center) || r.bounds.size.magnitude > 0.6f || r.bounds.min.y < 0.3f) continue;
+            if (r.GetComponentInParent<Light>() != null || r.name.StartsWith("Lamp")) continue;
+            bool held = Physics.Raycast(r.bounds.center, Vector3.down, out RaycastHit below, r.bounds.extents.y + 0.12f, ~0, QueryTriggerInteraction.Ignore);
+            bool onWall = Physics.CheckBox(r.bounds.center, r.bounds.extents * 0.9f, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            if (!held && !onWall) Debug.Log($"MiniStoreCheck: floating {PathOf(r.transform)} at {r.bounds.center:F2} in the {StoreMap.AreaAt(r.bounds.center)}");
+        }
+        foreach (Transform shellPart in MiniStore.Root.transform.Find("Shell"))
+        {
+            if (!shellPart.name.StartsWith("Wall") || shellPart.name.Contains("plinth")) continue;
+            Bounds w = shellPart.GetComponent<Renderer>().bounds;
+            foreach (Collider c in Physics.OverlapBox(w.center, w.extents * 0.98f, Quaternion.identity, ~0, QueryTriggerInteraction.Collide))
+                if (c != null && !c.transform.IsChildOf(MiniStore.Root.transform.Find("Shell")) && c.GetComponentInParent<HingeDoor>() == null && c.GetComponentInParent<AutoDoubleDoor>() == null)
+                    Debug.Log($"MiniStoreCheck: in a wall: {PathOf(c.transform)} at {c.bounds.center:F2} ({StoreMap.AreaAt(c.bounds.center)})");
+        }
+
         // Every hinged door opens with E from where you'd stand, on one side or the other.
         var interact = player != null ? player.GetComponent<PlayerInteract>() : null;
         foreach (HingeDoor door in root.GetComponentsInChildren<HingeDoor>())
@@ -149,6 +168,21 @@ public static class MiniStoreCheck
             target.Interact(interact);
             yield return Wait(1f);
             Expect(door.IsOpen, $"{label}: E opens it");
+            // Away from you, and E again while it swings reverses it. You stand where you'd use it.
+            Vector3 eye = Stand(player, b, alongZ);
+            target.Interact(interact);
+            yield return Wait(0.15f);
+            Expect(!door.IsOpen, $"{label}: E while it moves turns it back");
+            // Shut all the way before the next try (a door turned back mid-swing keeps its side).
+            for (float t = 0f; t < 5f && door.IsMoving; t += Time.deltaTime) yield return null;
+            yield return Wait(0.3f);
+            target.Interact(interact);
+            float near = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
+            yield return Wait(0.4f);
+            float after = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
+            Expect(after >= near - 0.02f, $"{label}: opens away from you (leaf {near:0.00} m, then {after:0.00} m)");
+            target.Interact(interact);   // and shut again
+            yield return Wait(1.2f);
         }
 
         yield return Shots("built");
@@ -380,6 +414,25 @@ public static class MiniStoreCheck
         }
         UnityEngine.Object.Destroy(go);
         Debug.Log($"MiniStoreCheck: screenshots ({tag}) in {dir}");
+    }
+
+    // The player put 1.2 m in front of a door, on the side the check aimed from.
+    static Vector3 Stand(GameObject player, Bounds door, bool alongZ)
+    {
+        Vector3 at = new Vector3(door.center.x, 0.1f, door.center.z) + (alongZ ? Vector3.left : Vector3.forward) * 1.2f;
+        var cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        player.transform.position = at;
+        if (cc != null) cc.enabled = true;
+        Physics.SyncTransforms();
+        return at;
+    }
+
+    static string PathOf(Transform t)
+    {
+        string path = t.name;
+        for (Transform p = t.parent; p != null && p.parent != null; p = p.parent) path = p.name + "/" + path;
+        return path;
     }
 
     // The run's folder: the one its log is written to.
