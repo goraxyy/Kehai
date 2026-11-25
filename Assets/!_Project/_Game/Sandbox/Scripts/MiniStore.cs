@@ -358,7 +358,8 @@ namespace Kehai.Sandbox
         }
 
         // The sales floor here is 30 × 27.5 m: three runs of the store's tall and short bays with
-        // two cross aisles, and its chillers along the back wall between the doors.
+        // two cross aisles, a fourth run of short bays in front (the owner's ask, 25 November; none
+        // in front of the till), and its chillers along the back wall between the doors.
         static void SalesFloor(Transform root, Models m, List<string> report)
         {
             Transform sales = Group(root, "Sales floor");
@@ -368,6 +369,7 @@ namespace Kehai.Sandbox
                 Place(sales, m.TallBay, new Vector3(x, 0f, 2.5f), 0f, "Tall shelf", report);
                 Place(sales, m.LowBay, new Vector3(x, 0f, -2.5f), 90f, "Short shelf", report);
                 Place(sales, m.TallBay, new Vector3(x, 0f, -7.5f), 0f, "Tall shelf", report);
+                if (x != -4f) Place(sales, m.LowBay, new Vector3(x, 0f, 7.5f), 90f, "Short shelf", report);   // -4: the till stands there
             }
             float back = HalfLocal(new Vector3(0f, 0f, -175f)).z;
             foreach (float x in new[] { -10.2f, -8.2f, -6.2f, 0.5f, 2.5f, 4.5f, 6.5f, 13f, 15f, 17f })
@@ -442,7 +444,7 @@ namespace Kehai.Sandbox
             spawner.cashierPoint = Point("Till", HalfLocal(new Vector3(41.5f, 0f, -132.5f)), 0f);
             var stands = new List<Transform>();
             foreach (float x in new[] { -8f, -4f, 2f, 6f, 12f, 16f })
-                foreach (float z in new[] { 0f, -5f, -10f })
+                foreach (float z in new[] { 5f, 0f, -5f, -10f })
                     stands.Add(Point("Browse", new Vector3(x, 0f, z), z < -9f ? 0f : 180f));
             spawner.shelfPoints = stands.ToArray();
             report.Add($"shoppers come in at the front: {stands.Count} browsing spots");

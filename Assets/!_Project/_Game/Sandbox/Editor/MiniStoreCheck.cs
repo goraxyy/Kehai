@@ -336,6 +336,7 @@ public static class MiniStoreCheck
         var bays = MiniStore.Root.GetComponentsInChildren<ShelfUnit>().Where(u => u.GetComponent<ColdFixture>() == null && u.name.Contains("shelf")).ToArray();
         Expect(bays.Length > 0 && bays.All(b => b.transform.Find("Back panel") != null || b.GetComponentsInChildren<Transform>().Any(t => t.name == "Back panel")),
             $"every shelf bay has a solid back ({bays.Length} bays)");
+        Expect(bays.Length == 23, $"four runs of shelves: 18 behind, 5 in front ({bays.Length})");
     }
 
     // Screenshots from where you'd stand in each room, when Unity renders.

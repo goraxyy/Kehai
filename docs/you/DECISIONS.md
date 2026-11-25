@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-25 | Karen does her tricks at the thing: she walks to it, faces it for 3 s (every trick), then it happens; Blackout and Fog at the power box, Camera break at the cameras' box, Flash sale, the understudy and Phantom chime at the PA, Block door at the door; if she sees you within about 4 m in those 3 s she gives it up and comes for you; a sound and a visible action show she's at it. Planned, not built | [tricks at things](plans/0.5.2/tricks-at-things.md) |
 | 2026-11-25 | The time clock shows the shift's time itself and blinks red when Karen stops it (The overtime) until you hold E there; the wall clock above it goes. In the mini store only functional furniture stays (one till, the staff room's table, the security desk), and the stock crate is in the staff room as in the store | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-25 | Merge the whole-store mini store without the full test suite again (the mini store check passed); the suite still waits for the next merge | [mini store](plans/0.5.2/mini-store.md) |
 | 2026-11-25 | The mini store becomes the whole store at half size: lobby, sales floor, WC, office, staff room, backstreet, stockroom, cold room (not the parking lot), with every thing the tricks and interactions need; the plan's Phase 11 is the mini store only | [mini store](plans/0.5.2/mini-store.md) |
