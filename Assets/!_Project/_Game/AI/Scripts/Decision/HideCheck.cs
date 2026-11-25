@@ -229,6 +229,7 @@ namespace Kehai.Karen
         protected override Status Tick(KarenContext c, float dt)
         {
             if (skipped) { c.Think("SEARCH", $"skips {Label}: no reason left"); return Status.Success; }
+            if (place == null) return Status.Failure;   // gone (a sandbox restart) while she was on her way
             t += dt;
             Vector3 centre = HideCheck.Centre(place);
             switch (phase)
@@ -292,7 +293,7 @@ namespace Kehai.Karen
 
         bool DoorOpen() => leaf != null ? leaf.OpenFraction >= OpenEnough : hinge == null || hinge.IsOpen && !hinge.IsMoving;
 
-        void Done(KarenContext c) => c.HideChecked[place] = c.Now;
+        void Done(KarenContext c) { if (place != null) c.HideChecked[place] = c.Now; }
 
         protected override void End(KarenContext c, bool aborted)
         {

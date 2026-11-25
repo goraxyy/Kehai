@@ -19,34 +19,44 @@ using UnityEngine;
 //   swinging door: a door you went through, seen moving → her belief goes past it; traces off → less
 public static partial class MiniStoreCheck
 {
+    // Looked up again after every restart: a fresh shift rebuilds what the old places stood in.
+    // The racks stay in the store's rack group, moved into the mini stockroom, so the search is
+    // every hiding place inside the mini store, not under its root.
+    static HidingPlace[] Chillers() => HidingPlace.All
+        .Where(p => p != null && p.Usable && !p.requiresCrouch && MiniStore.Contains(HideCheck.Centre(p)) &&
+                    StoreMap.AreaAt(HideCheck.Centre(p)) == "Cold storage" && HideCheck.DoorOf(p) != null)
+        .OrderBy(p => HideCheck.Centre(p).x).ThenBy(p => HideCheck.Centre(p).z).ToArray();
+
+    static HidingPlace Rack() => HidingPlace.All
+        .Where(p => p != null && p.Usable && p.requiresCrouch && MiniStore.Contains(HideCheck.Centre(p)) &&
+                    StoreMap.AreaAt(HideCheck.Centre(p)) == "Stockroom")
+        .OrderByDescending(p => Mathf.Max(p.interior.size.x * p.transform.lossyScale.x, p.interior.size.z * p.transform.lossyScale.z))
+        .ThenBy(p => HideCheck.Centre(p).x).FirstOrDefault();
+
     static IEnumerator Interactions()
     {
         var before = MiniStoreSettings.Allowed;
         MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.None;
-        HidingPlace[] chillers = MiniStore.Root.GetComponentsInChildren<HidingPlace>()
-            .Where(p => p.Usable && !p.requiresCrouch && StoreMap.AreaAt(HideCheck.Centre(p)) == "Cold storage" && HideCheck.DoorOf(p) != null)
-            .OrderBy(p => HideCheck.Centre(p).x).ToArray();
-        HidingPlace rack = MiniStore.Root.GetComponentsInChildren<HidingPlace>()
-            .Where(p => p.Usable && p.requiresCrouch && StoreMap.AreaAt(HideCheck.Centre(p)) == "Stockroom")
-            .OrderByDescending(p => p.interior.size.x * p.transform.lossyScale.x).FirstOrDefault();
-        Expect(chillers.Length >= 2, $"two chillers you can hide in, with doors she can open ({chillers.Length})");
-        Expect(rack != null, "a stockroom rack you can crouch under");
-        if (chillers.Length >= 2)
+        int chillers = Chillers().Length;
+        bool rack = Rack() != null;
+        Expect(chillers >= 2, $"two chillers you can hide in, with doors she can open ({chillers})");
+        Expect(rack, "a stockroom rack you can crouch under");
+        if (chillers >= 2)
         {
-            yield return FridgeCheck(chillers[0], chillers[0], true);
-            yield return FridgeCheck(chillers[0], chillers[1], false);
+            yield return FridgeCheck(0, 0, true);
+            yield return FridgeCheck(0, 1, false);
         }
-        if (rack != null)
+        if (rack)
         {
-            yield return KneelCheck(rack, true);
-            yield return KneelCheck(rack, false);
+            yield return KneelCheck(true);
+            yield return KneelCheck(false);
         }
-        if (chillers.Length >= 2)
+        if (chillers >= 2)
         {
-            yield return Decoy(chillers[1], true);
-            yield return Decoy(chillers[1], false);
-            yield return SwingingDoor(chillers[1], true);
-            yield return SwingingDoor(chillers[1], false);
+            yield return Decoy(1, true);
+            yield return Decoy(1, false);
+            yield return SwingingDoor(1, true);
+            yield return SwingingDoor(1, false);
         }
         MiniStoreSettings.Allowed = before;
         MiniStoreSettings.Traces = true;
@@ -130,11 +140,14 @@ public static partial class MiniStoreCheck
         doorOpenBeforeCatch(openSeen);
     }
 
-    static IEnumerator FridgeCheck(HidingPlace checks, HidingPlace youIn, bool expectCatch)
+    static IEnumerator FridgeCheck(int checksAt, int youAt, bool expectCatch)
     {
         string row = expectCatch ? "fridge check, you inside" : "fridge check, you in the next one";
         yield return Fresh();
         if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        HidingPlace[] all = Chillers();
+        if (all.Length <= Mathf.Max(checksAt, youAt)) { Expect(false, row + ": the chillers after the restart"); yield break; }
+        HidingPlace checks = all[checksAt], youIn = all[youAt];
         IHidingDoor yours = HideCheck.DoorOf(youIn);
         yours.SetOpenForCheck(false);
         yield return Wait(1f);
@@ -158,11 +171,13 @@ public static partial class MiniStoreCheck
             Expect(check.Looked && !her.KilledThisShift && after < beside * 0.5f, $"{row}: she opens {checks.name}, nobody, and her belief beside it drops ({beside:P0} → {after:P0})");
     }
 
-    static IEnumerator KneelCheck(HidingPlace rack, bool expectCatch)
+    static IEnumerator KneelCheck(bool expectCatch)
     {
         string row = expectCatch ? "kneel check, you under where she kneels" : "kneel check, you past her reach";
         yield return Fresh();
         if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        HidingPlace rack = Rack();
+        if (rack == null) { Expect(false, row + ": the rack after the restart"); yield break; }
         // Along the rack's length (its longer side): one end and the other.
         Vector3 size = Vector3.Scale(rack.interior.size, rack.transform.lossyScale);
         bool alongX = size.x >= size.z;
@@ -196,11 +211,13 @@ public static partial class MiniStoreCheck
     }
 
     // A thrown item lands 8 m from her in her room: by your hand, or nobody's.
-    static IEnumerator Decoy(HidingPlace youIn, bool yours)
+    static IEnumerator Decoy(int youAt, bool yours)
     {
         string row = yours ? "decoy throw" : "decoy, an item nobody threw";
         yield return Fresh();
         if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        HidingPlace youIn = Chillers().ElementAtOrDefault(youAt);
+        if (youIn == null) { Expect(false, row + ": the chiller after the restart"); yield break; }
         PutPlayer(Floor(youIn));
         yield return Wait(0.3f);
         StoreMap map = her.Ctx.Map;
@@ -229,12 +246,14 @@ public static partial class MiniStoreCheck
     }
 
     // A staff door she can see: you go through it as she looks, with her traces on or off.
-    static IEnumerator SwingingDoor(HidingPlace youIn, bool traces)
+    static IEnumerator SwingingDoor(int youAt, bool traces)
     {
         string row = traces ? "swinging door" : "swinging door, traces off";
         MiniStoreSettings.Traces = traces;
         yield return Fresh();
         if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        HidingPlace youIn = Chillers().ElementAtOrDefault(youAt);
+        if (youIn == null) { Expect(false, row + ": the chiller after the restart"); yield break; }
         PutPlayer(Floor(youIn));
         HingeDoor door = UnityEngine.Object.FindObjectsByType<HingeDoor>()
             .Where(d => MiniStore.Contains(d.transform.position) && !d.Locked && d.Panel != null && !d.IsOpen)
