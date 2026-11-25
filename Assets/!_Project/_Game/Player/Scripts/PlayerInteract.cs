@@ -265,11 +265,31 @@ public class PlayerInteract : MonoBehaviour
 
         // Start it clear of the player so it doesn't immediately collide with them.
         body.position = rayOrigin.position + rayOrigin.forward * 0.6f;
+        dropped.transform.position = body.position;
+        // And it can't clip you on the way out for its first moments: that thud at your feet was
+        // the first thing she heard of every throw (0.5.2, the decoy row: an impact 0.4 m from you).
+        IgnoreOwnBody(dropped, true);
+        StartCoroutine(RestoreOwnBody(dropped));
 
         // Set the velocity rather than adding a force: AddForce waits for the next
         // physics step, and the item has only just stopped being kinematic.
         body.linearVelocity = rayOrigin.forward * throwSpeed;
         body.angularVelocity = rayOrigin.right * throwSpin * charge;
+    }
+
+    void IgnoreOwnBody(Item item, bool ignore)
+    {
+        if (item == null) return;
+        Collider[] mine = transform.root.GetComponentsInChildren<Collider>();
+        foreach (Collider c in item.GetComponentsInChildren<Collider>())
+            foreach (Collider m in mine)
+                if (c != null && m != null && c != m) Physics.IgnoreCollision(c, m, ignore);
+    }
+
+    System.Collections.IEnumerator RestoreOwnBody(Item item)
+    {
+        yield return new WaitForSeconds(0.5f);
+        IgnoreOwnBody(item, false);
     }
 
     // Returns true while a hold-to-use action (mopping) is running.
