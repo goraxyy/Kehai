@@ -168,9 +168,8 @@ public static class MiniStoreCheck
             target.Interact(interact);
             yield return Wait(1f);
             Expect(door.IsOpen, $"{label}: E opens it");
-            // Away from you, and E again while it swings reverses it.
-            Transform leaf = door.transform;
-            Vector3 eye = interact.transform.position;
+            // Away from you, and E again while it swings reverses it. You stand where you'd use it.
+            Vector3 eye = Stand(player, b, alongZ);
             target.Interact(interact);
             yield return Wait(0.15f);
             Expect(!door.IsOpen, $"{label}: E while it moves turns it back");
@@ -179,7 +178,7 @@ public static class MiniStoreCheck
             float near = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
             yield return Wait(0.4f);
             float after = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
-            Debug.Log($"MiniStoreCheck: {label} opening: leaf {near:0.00} m from you, then {after:0.00} m");
+            Expect(after >= near - 0.02f, $"{label}: opens away from you (leaf {near:0.00} m, then {after:0.00} m)");
             target.Interact(interact);   // and shut again
             yield return Wait(1.2f);
         }
@@ -413,6 +412,18 @@ public static class MiniStoreCheck
         }
         UnityEngine.Object.Destroy(go);
         Debug.Log($"MiniStoreCheck: screenshots ({tag}) in {dir}");
+    }
+
+    // The player put 1.2 m in front of a door, on the side the check aimed from.
+    static Vector3 Stand(GameObject player, Bounds door, bool alongZ)
+    {
+        Vector3 at = new Vector3(door.center.x, 0.1f, door.center.z) + (alongZ ? Vector3.left : Vector3.forward) * 1.2f;
+        var cc = player.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        player.transform.position = at;
+        if (cc != null) cc.enabled = true;
+        Physics.SyncTransforms();
+        return at;
     }
 
     static string PathOf(Transform t)

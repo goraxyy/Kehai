@@ -144,10 +144,13 @@ namespace Kehai.Sandbox
         // thing it sits on or null). A thing on another keeps its place on it.
         static readonly (string name, Vector3? store, string on)[] Anchors =
         {
-            ("Electric_Box_02", null, null),                    // the power box: its EAST/WEST/BACK switches and the fog box beside it
-            ("Container_01", new Vector3(22.6f, 0f, -168f), null), // the bin bags' drop zone
-            ("Waste_Collection_Container_01", new Vector3(23.8f, 0f, -160f), null),
-            ("Paper_Collection_Container_01", new Vector3(23.8f, 0f, -169.5f), null),
+            // The power box (its EAST/WEST/BACK switches, the fog box beside it) 6 m down the yard's
+            // east wall, so the fog box beside it stays in the yard (by the staff room's wall it came
+            // through into the staff room); the containers on the west wall, out of the way.
+            ("Electric_Box_02", new Vector3(24.5f, 0f, -156f), null),
+            ("Container_01", new Vector3(11.5f, 0f, -165f), null), // the bin bags' drop zone
+            ("Waste_Collection_Container_01", new Vector3(11.2f, 0f, -160f), null),
+            ("Paper_Collection_Container_01", new Vector3(11.2f, 0f, -169.5f), null),
             ("Service_Yard_Light_01", new Vector3(24.6f, 3.4f, -154f), null), ("Service_Yard_Light_02", new Vector3(24.6f, 3.4f, -168f), null),
             ("Time_Clock_01", null, null),                      // the PA box and its microphone go up beside it
             ("Staff_Radio_01", null, null),
@@ -157,7 +160,7 @@ namespace Kehai.Sandbox
             ("Mop_01", null, "Mop_Snap_Point_01"),
             ("Stock_Snap_Point_01", new Vector3(14.6f, 0.5f, -148.7f), null),  // the stock crate: in the staff room, as in the store
             ("Stock_Test_Crate_01", null, "Stock_Snap_Point_01"),
-            ("WC_Mop_Home_01", null, null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),
+            ("WC_Mop_Home_01", new Vector3(24.3f, 1.1f, -120.5f), null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),   // off the wall a little
             ("Security workstation", null, null),               // the cameras' screens go up on it
             ("Counter_Facing_01", null, null),
             ("Storage_Rack_07", new Vector3(20f, 0f, -187.8f), null), ("Storage_Rack_08", new Vector3(32f, 0f, -187.8f), null),
@@ -672,8 +675,12 @@ namespace Kehai.Sandbox
         // can't either, and the stock stands on a board.
         static void BackPanel(GameObject copy)
         {
-            if (copy.GetComponent<ShelfUnit>() == null || copy.GetComponent<ColdFixture>() != null) return;
-            foreach (Renderer wall in copy.GetComponentsInChildren<Renderer>(true))
+            // Every shelf in the copy: a bay, or one inside other furniture (the till's sweets rack,
+            // whose sweets looked as if they floated).
+            foreach (ShelfUnit unit in copy.GetComponentsInChildren<ShelfUnit>(true))
+            {
+            if (unit.GetComponent<ColdFixture>() != null) continue;
+            foreach (Renderer wall in unit.GetComponentsInChildren<Renderer>(true))
             {
                 if (wall.name != "Wall_01" && !wall.name.StartsWith("Shelf_Deck")) continue;
                 Transform t = wall.transform;
@@ -688,6 +695,7 @@ namespace Kehai.Sandbox
                 Physics.SyncTransforms();
                 panel.transform.position += want.center - panel.GetComponent<Renderer>().bounds.center;
                 panel.GetComponent<Renderer>().sharedMaterial = wall.sharedMaterial;
+            }
             }
         }
 
