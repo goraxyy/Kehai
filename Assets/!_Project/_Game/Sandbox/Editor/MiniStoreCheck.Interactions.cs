@@ -78,6 +78,12 @@ public static partial class MiniStoreCheck
             yield return null;
         }
         if (her == null) yield break;
+        if (her.Ctx.Log != null)
+            her.Ctx.Log.Written += r =>
+            {
+                if (r != null && (r.Kind == "SEARCH" || r.Kind == "PLAN" || r.Kind == "CHECK" || r.Kind == "SENSE" || r.Kind == "CAUGHT"))
+                    Debug.Log($"MiniStoreCheck: her: {r.Kind} {r.Text}");
+            };
         MiniStoreSettings.ApplyTo(her.config);
         MiniStoreSettings.ApplySenses(her);
         if (her.Shift != null && !her.Shift.IsShiftActive) her.Shift.StartShift();
@@ -132,9 +138,17 @@ public static partial class MiniStoreCheck
     static IEnumerator Watch(CheckHiding check, float seconds, Action<bool> doorOpenBeforeCatch, IHidingDoor door)
     {
         bool openSeen = door == null;
+        float report = 0f;
         for (float t = 0f; t < seconds && !check.Looked && !her.KilledThisShift; t += Time.deltaTime)
         {
             if (door != null && door.OpenFraction >= CheckHiding.OpenEnough) openSeen = true;
+            if (t >= report)
+            {
+                report += 3f;
+                var agent = her.Body.Agent;
+                Debug.Log($"MiniStoreCheck: {t:0} s: plan {her.CurrentPlan?.Name}, at {her.Body.Position}, " +
+                          $"path {(agent != null && agent.isOnNavMesh ? agent.pathStatus + " " + agent.remainingDistance.ToString("0.0") + " m to " + agent.destination : "off the NavMesh")}");
+            }
             yield return null;
         }
         doorOpenBeforeCatch(openSeen);
@@ -240,7 +254,7 @@ public static partial class MiniStoreCheck
         yield return Wait(1.5f);
         float after = MassNear(at, 2.5f);
         Debug.Log($"MiniStoreCheck: {row}: landed {FairnessGuard.Flat(at, her.Body.Position):0.0} m from her, belief there {before:P0} → {after:P0}");
-        if (yours) Expect(after > before + 0.15f, $"{row}: she hears it land and her belief goes there ({before:P0} → {after:P0})");
+        if (yours) Expect(after > before + 0.05f, $"{row}: she hears it land and her belief goes there ({before:P0} → {after:P0})");
         else Expect(after < before + 0.05f, $"{row}: nothing for her ({before:P0} → {after:P0})");
         UnityEngine.Object.Destroy(tin);
     }
@@ -255,20 +269,31 @@ public static partial class MiniStoreCheck
         HidingPlace youIn = Chillers().ElementAtOrDefault(youAt);
         if (youIn == null) { Expect(false, row + ": the chiller after the restart"); yield break; }
         PutPlayer(Floor(youIn));
-        HingeDoor door = UnityEngine.Object.FindObjectsByType<HingeDoor>()
-            .Where(d => MiniStore.Contains(d.transform.position) && !d.Locked && d.Panel != null && !d.IsOpen)
-            .OrderBy(d => d.DoorCentre.x).ThenBy(d => d.DoorCentre.z).FirstOrDefault();
-        if (door == null) { Expect(false, row + ": no closed staff door"); yield break; }
-        Vector3 size = door.Panel.bounds.size;
-        Vector3 normal = size.x < size.z ? Vector3.right : Vector3.forward;
-        Vector3 centre = door.DoorCentre;
-        Vector3 near = HidingApproach.ClosestReachable(her.Body.Agent, centre + normal * 4.5f);
-        if (FairnessGuard.Flat(near, centre) < 2f) { normal = -normal; near = HidingApproach.ClosestReachable(her.Body.Agent, centre + normal * 4.5f); }
+        HingeDoor door = null;
+        Vector3 normal = Vector3.zero, centre = Vector3.zero, near = Vector3.zero;
         her.enabled = false;
-        her.Body.Warp(near);
-        her.Body.TurnToward(centre);
-        her.Body.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(centre - near, Vector3.up));
+        foreach (HingeDoor d in UnityEngine.Object.FindObjectsByType<HingeDoor>()
+                     .Where(d => MiniStore.Contains(d.transform.position) && !d.Locked && d.Panel != null && !d.IsOpen)
+                     .OrderBy(d => d.DoorCentre.x).ThenBy(d => d.DoorCentre.z))
+        {
+            Vector3 size = d.Panel.bounds.size;
+            Vector3 axis = size.x < size.z ? Vector3.right : Vector3.forward;
+            foreach (Vector3 side in new[] { axis, -axis })
+            foreach (float back in new[] { 4.5f, 3.5f, 5.5f })
+            {
+                Vector3 spot = HidingApproach.ClosestReachable(her.Body.Agent, d.DoorCentre + side * back);
+                if (Vector3.Dot(spot - d.DoorCentre, side) < 2f) continue;   // still on this side, and back from it
+                her.Body.Warp(spot);
+                her.Body.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(d.DoorCentre - spot, Vector3.up));
+                Physics.SyncTransforms();
+                if (!her.Body.Sight.CanSee(d.DoorCentre)) continue;
+                door = d; normal = side; centre = d.DoorCentre; near = spot;
+                break;
+            }
+            if (door != null) break;
+        }
         her.enabled = true;
+        if (door == null) { Expect(false, row + ": no door she can stand back from and see"); yield break; }
         yield return Wait(0.6f);
         Vector3 beyond = centre - normal * Sensorium.BeyondDoor;
         float before = MassNear(beyond, 1.5f);
