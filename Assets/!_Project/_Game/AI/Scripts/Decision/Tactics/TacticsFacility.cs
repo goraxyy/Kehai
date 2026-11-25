@@ -50,7 +50,8 @@ namespace Kehai.Karen
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
             // Escalation by career: one wing first, the whole store later.
-            bool full = c.ShiftNumber >= 5;
+            // In a sandbox (the mini store) always the whole place: the owner's call of 25 November.
+            bool full = c.ShiftNumber >= 5 || StoreFrame.Active;
             Vector3 believed = TacticHelpers.Believed(c);
             LightCircuit wing = LightControl.CircuitOf(believed);
             plan.Target = full ? "the whole store" : wing + " circuit";
