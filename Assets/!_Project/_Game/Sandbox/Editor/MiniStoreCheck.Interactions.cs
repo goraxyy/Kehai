@@ -319,15 +319,22 @@ public static partial class MiniStoreCheck
         if (slot == null || hands == null || !slot.TryPickup(item)) { Expect(false, row + ": the tester can't hold it"); UnityEngine.Object.Destroy(tin); yield break; }
         yield return Wait(0.3f);
         float atYouBefore = MassNear(from, 1.5f);
+        long cursor = NoiseBus.Latest;
         hands.DropNow(Kehai.Eval.SimulatedPlayer.DecoyThrowSpeed);
         yield return Wait(0.3f);
         float atYouSoon = MassNear(from, 1.5f);
         yield return Wait(1.2f);
-        Vector3 landed = tin.transform.position;
+        // Where she heard it: its first landing, not where it rolled to.
+        var heard = new List<NoiseEvent>();
+        NoiseBus.ReadSince(ref cursor, heard);
+        NoiseEvent first = heard.FirstOrDefault(n => n.Author == NoiseAuthor.Player && n.Kind == NoiseKind.Impact);
+        bool heardIt = heard.Any(n => n.Author == NoiseAuthor.Player && n.Kind == NoiseKind.Impact);
+        Vector3 landed = heardIt ? first.Position : tin.transform.position;
+        string others = string.Join(", ", heard.Where(n => n.Author == NoiseAuthor.Player).Select(n => $"{n.Kind} {FairnessGuard.Flat(n.Position, from):0.0} m off"));
         float atYou = MassNear(from, 1.5f), atLanding = MassNear(landed, 1.5f);
         bool threw = !slot.Contains(item) && FairnessGuard.Flat(landed, from) > 2.5f;
         Debug.Log($"MiniStoreCheck: {row}: thrown {FairnessGuard.Flat(landed, from):0.0} m, she stood {FairnessGuard.Flat(from, her.Body.Position):0.0} m off; " +
-                  $"her belief where you threw from {atYouBefore:P0} → {atYouSoon:P0} (before it lands) → {atYou:P0}, where it landed {atLanding:P0}");
+                  $"her belief where you threw from {atYouBefore:P0} → {atYouSoon:P0} (before it lands) → {atYou:P0}, where it landed {atLanding:P0}; your noises: {others}");
         Expect(threw, $"{row}: it left the hand and flew ({FairnessGuard.Flat(landed, from):0.0} m)");
         Expect(atLanding > 0.03f, $"{row}: she hears it land ({atLanding:P0} of her belief there)");
         Expect(atLanding > atYou, $"{row}: it lures her: more of her belief where it landed than where you threw it from ({atLanding:P0} vs {atYou:P0})");
