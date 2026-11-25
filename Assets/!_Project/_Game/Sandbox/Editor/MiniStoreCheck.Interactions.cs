@@ -208,11 +208,9 @@ public static partial class MiniStoreCheck
         Vector3 you = endA;
         if (expectCatch)
         {
-            you = rack.transform.TransformPoint(rack.interior.ClosestPoint(rack.transform.InverseTransformPoint(aisle)));
-            Vector3 inward = centre - you; inward.y = 0f;
-            Vector3 across = inward - axis * Vector3.Dot(inward, axis);   // to the rack's middle line, not along it
-            you += across;
-            you.y = centre.y;
+            // On the rack's middle line, level with the clank, kept 0.9 m inside its ends.
+            float along = Mathf.Clamp(Vector3.Dot(aisle - centre, axis), -(length * 0.5f - 0.9f), length * 0.5f - 0.9f);
+            you = centre + axis * along;
         }
         var bot = new SandboxBot(Player().GetComponent<PlayerMotor>());
         PutPlayer(you);
