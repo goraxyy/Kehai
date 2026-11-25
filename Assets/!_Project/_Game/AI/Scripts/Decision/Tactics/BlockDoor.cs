@@ -152,6 +152,7 @@ namespace Kehai.Karen
                 if (target.IsOpen) { target.Use(k.Body.Position, NoiseAuthor.Karen); return false; }
                 return true;
             }, 6f));
+            plan.Add(new AtThing("wedge the box against " + plan.Target, this, _ => target != null ? target.DoorCentre : c.Body.Position));
             plan.Add(new Tell(TellKind.Clunk, _ => target != null ? target.DoorCentre : Vector3.zero, 0.9f));
             plan.Add(new PlaceBox(target, stock, o.Region, o.Side, o.BoxAt, "block " + plan.Target, o.Key, this));
         }

@@ -155,7 +155,7 @@ namespace Kehai.Karen
             CustomerMemory w = witness;
             plan.Target = w.name;
             plan.Add(new MoveTo(_ => w != null ? w.transform.position : c.Body.Position, KarenBody.Pace.Hurry, "ask " + w.name, 1.8f, 30f, follow: true));
-            plan.Add(new Wait(1.5f, "listen"));
+            plan.Add(new AtThing("ask " + w.name + " what they saw", this, k => w != null ? w.transform.position : k.Body.Position));   // 3 s, as every trick (25 November)
         }
     }
 

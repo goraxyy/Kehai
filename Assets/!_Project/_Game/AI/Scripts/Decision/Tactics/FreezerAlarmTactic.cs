@@ -41,7 +41,8 @@ namespace Kehai.Karen
             Vector3 at = alarm.transform.position;
             plan.Target = "freezer door, cold storage";
             plan.Go(TacticHelpers.OnHerFloor(at, 2.5f), KarenBody.Pace.Walk, "walk to the cold-room freezer", .35f);
-            plan.Add(new HandsOn("prop open the freezer: alarm masks both sets of footsteps", _ => at, k =>
+            TacticHelpers.AtThing(plan, this, at, "prop open the freezer");
+        plan.Add(new HandsOn("prop open the freezer: alarm masks both sets of footsteps", _ => at, k =>
             {
                 if (FairnessGuard.DoorsClosed(k) || alarm == null) return;
                 // The alarm itself is the tell, made right here at her hands.

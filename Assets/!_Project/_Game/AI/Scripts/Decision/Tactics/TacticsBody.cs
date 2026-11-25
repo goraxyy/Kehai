@@ -248,6 +248,12 @@ namespace Kehai.Karen
             Landmark? door = c.Map.FindLandmark(LandmarkKind.AutoDoor);
             Vector3 at = door.HasValue ? door.Value.Position : c.Body.Position;
             plan.Target = "Kenji";
+            // At the PA first (25 November): she announces the new hire through it.
+            if (TacticHelpers.PaBoxAt(out Vector3 pa))
+            {
+                TacticHelpers.GoToThing(plan, pa, "the PA microphone in the staff room");
+                TacticHelpers.AtThing(plan, this, pa, "announce the new hire");
+            }
             if (c.World.Pa.Powered)
                 plan.Add(new Speak(k => $"Please welcome our new hire, Kenji! Kenji will be shadowing {TacticHelpers.PlayerName(k)} today.", false));
             else

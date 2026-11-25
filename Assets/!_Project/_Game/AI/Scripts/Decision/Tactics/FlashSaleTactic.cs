@@ -32,6 +32,12 @@ namespace Kehai.Karen
         public override void Plan(KarenContext c, PlanBuilder plan)
         {
             plan.Target = "the PA microphone, staff room";
+            // At the PA first (25 November): the sale is announced through it.
+            if (TacticHelpers.PaBoxAt(out Vector3 pa))
+            {
+                TacticHelpers.GoToThing(plan, pa, "the PA microphone in the staff room");
+                TacticHelpers.AtThing(plan, this, pa, "announce a flash sale");
+            }
             plan.Add(new SaleAnnouncement());
         }
         // Apply only when the actual speech starts, after the real chime. Queuing, a jam,
