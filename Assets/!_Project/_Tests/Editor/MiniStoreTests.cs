@@ -50,6 +50,15 @@ public sealed class MiniStoreTests
         Assert.AreEqual(LightCircuit.Back, LightControl.CircuitOf(MiniStore.Half(new Vector3(17f, 5f, -130f))));
     }
 
+    // The time clock shows the night's time (25 November): 22:00 at the start, 06:00 at the end.
+    [Test]
+    public void TheTimeClock_ShowsTheNightsTime()
+    {
+        Assert.AreEqual("22:00", TimeClockDisplay.Format(WallClockHands.NightTime(300f, 300f, true)));
+        Assert.AreEqual("02:00", TimeClockDisplay.Format(WallClockHands.NightTime(300f, 150f, true)));
+        Assert.AreEqual("05:59", TimeClockDisplay.Format(WallClockHands.NightTime(300f, 0.5f, true)));
+    }
+
     [Test]
     public void ThePanelsChoices_BecomeHerLimits()
     {

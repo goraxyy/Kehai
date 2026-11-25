@@ -176,6 +176,26 @@ public static class MiniStoreCheck
             yield return null;
         }
         Debug.Log($"MiniStoreCheck: Karen walked {moved:0.0} m through [{string.Join(", ", seen)}]; plan {brain.CurrentPlan?.Name}");
+
+        // Shoppers: in by the front, around its shelves, to its till; none heads for the store's.
+        int shoppers = 0, atTill = 0, wandered = 0;
+        CustomerSpawner shop = UnityEngine.Object.FindAnyObjectByType<CustomerSpawner>();
+        var seenShoppers = new HashSet<CustomerNPC>();
+        for (float t = 0f; t < 90f; t += Time.deltaTime)
+        {
+            foreach (CustomerNPC npc in UnityEngine.Object.FindObjectsByType<CustomerNPC>())
+            {
+                if (npc == null || npc.GetComponent<Understudy>() != null) continue;
+                if (seenShoppers.Add(npc)) shoppers++;
+                var agent = npc.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (agent != null && agent.hasPath && !MiniStore.Contains(agent.destination)) wandered++;
+                if (shop != null && shop.cashierPoint != null && Vector3.Distance(npc.transform.position, shop.cashierPoint.position) < 2.5f) atTill++;
+            }
+            yield return null;
+        }
+        Debug.Log($"MiniStoreCheck: shoppers {shoppers}, frames at the till {atTill}, frames heading outside it {wandered}");
+        Expect(shoppers > 0, $"shoppers come in ({shoppers} in 90 s)");
+        Expect(wandered == 0, "no shopper heads for the store's own shelves");
         Expect(moved > 8f, $"she walks when started ({moved:0.0} m in 45 s)");
         Expect(outside == 0f, $"she stays inside ({outside:0.0} s outside)");
         yield return Shots("karen");
@@ -306,6 +326,16 @@ public static class MiniStoreCheck
         CustomerSpawner spawner = UnityEngine.Object.FindAnyObjectByType<CustomerSpawner>();
         Expect(spawner != null && In(spawner.entrancePoint) && In(spawner.cashierPoint), "shoppers come in at its front and pay at its till (Ask the customers, Flash sale, The complaint)");
         Expect(Count<AutoDoubleDoor>() == 4, "both pairs of automatic doors (Phantom chime)");
+        TimeClockDisplay clock = UnityEngine.Object.FindObjectsByType<TimeClockDisplay>().FirstOrDefault(In);
+        Expect(clock != null && clock.Shown.Contains(":"), $"the time clock shows the time ({clock?.Shown})");
+        Expect(SceneObjectNames.Find(TimeClockDisplay.WallClockAbove) == null, "the wall clock above the store's time clock is gone");
+        // The copied doors keep the store's paint; the bays have a solid back.
+        var doors = MiniStore.Root.GetComponentsInChildren<HingeDoor>();
+        Expect(doors.All(d => d.GetComponentsInChildren<Renderer>().All(r => r.sharedMaterials.All(m => m == null || !m.name.Contains("Prototype")))),
+            "the doors wear the store's paint, not the placeholder grid");
+        var bays = MiniStore.Root.GetComponentsInChildren<ShelfUnit>().Where(u => u.GetComponent<ColdFixture>() == null && u.name.Contains("shelf")).ToArray();
+        Expect(bays.Length > 0 && bays.All(b => b.transform.Find("Back panel") != null || b.GetComponentsInChildren<Transform>().Any(t => t.name == "Back panel")),
+            $"every shelf bay has a solid back ({bays.Length} bays)");
     }
 
     // Screenshots from where you'd stand in each room, when Unity renders.

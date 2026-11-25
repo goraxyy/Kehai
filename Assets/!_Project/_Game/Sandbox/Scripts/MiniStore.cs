@@ -123,15 +123,11 @@ namespace Kehai.Sandbox
         {
             // The lobby.
             ("Lobby_Furnished_Recycling_01", null, 0f), ("Lobby_Furnished_Recycling_02", null, 0f), ("Lobby_Furnished_Recycling_03", null, 0f),
-            ("Drinks_Vending_01", null, 0f), ("Customer_Service_Counter_01", null, 0f),
-            // The sales floor's tills and bins (its shelves and chillers are laid out below).
-            ("Checkout_01", null, 0f), ("Checkout_03", null, 0f),
+            // The sales floor's till (one) and a bin (its shelves and chillers are laid out below).
+            // Only what's used: the lobby's service counter and vending machine, the WC's cabins,
+            // the office's filing cabinet and the second till stood in the way and did nothing.
+            ("Checkout_03", null, 0f),
             ("Sales_Floor_Bin_02", new Vector3(54f, 0f, -121f), 0f),
-            // The WC: two cabins, the basins.
-            ("WC_Cabin_01", new Vector3(13.6f, 0f, -111.8f), 0f), ("WC_Cabin_02", new Vector3(19f, 0f, -111.8f), 0f),
-            // The office: the security desk is moved (anchors); a filing cabinet. (At half the
-            // distance the manager's desk and the chairs would stand in the security desk.)
-            ("Filing_Cabinet_01", null, 0f),
             // The staff room: the counter the coffee machine stands on, the table the torch lies on,
             // lockers you can hide in, the bin, the dining table (the fridge would stand in the counter).
             ("Appliance_Counter_01", null, 0f), ("Uniform_Folding_Table_01", new Vector3(17f, 0f, -146.4f), 0f),
@@ -156,7 +152,7 @@ namespace Kehai.Sandbox
             ("Flashlight_01", null, "Uniform_Folding_Table_01"),
             ("Mop_Snap_Point_01", new Vector3(24.5f, 1.0f, -147f), null),       // its rack, on the staff room's east wall
             ("Mop_01", null, "Mop_Snap_Point_01"),
-            ("Stock_Snap_Point_01", new Vector3(40f, 0.5f, -180f), null),      // the stock crate, in the stockroom
+            ("Stock_Snap_Point_01", new Vector3(14.6f, 0.5f, -148.7f), null),  // the stock crate: in the staff room, as in the store
             ("Stock_Test_Crate_01", null, "Stock_Snap_Point_01"),
             ("WC_Mop_Home_01", null, null), ("WC_Cleaning_Mop_01", null, "WC_Mop_Home_01"),
             ("Security workstation", null, null),               // the cameras' screens go up on it
@@ -646,10 +642,37 @@ namespace Kehai.Sandbox
         // The parts the store's fixtures add to themselves in Play: a door's NavMesh obstacles.
         static void StripRuntimeParts(GameObject copy)
         {
+            BackPanel(copy);
             bool door = copy.GetComponentInChildren<HingeDoor>(true) != null || copy.GetComponentInChildren<FurnitureDoor>(true) != null ||
                         copy.GetComponentInChildren<AutoDoubleDoor>(true) != null;
             if (!door) return;
             foreach (var obstacle in copy.GetComponentsInChildren<UnityEngine.AI.NavMeshObstacle>(true)) Object.DestroyImmediate(obstacle);
+            // A door's ParentMaterialController paints it with its own material when it starts: on the
+            // store's doors a placeholder grid. The copy keeps the paint it was copied with.
+            foreach (var paint in copy.GetComponentsInChildren<ParentMaterialController>(true)) Object.DestroyImmediate(paint);
+        }
+
+        // A shelf bay's middle panel (Wall_01) shows see-through on a copy; a solid panel of the same
+        // grey in its place, so you can't see through a shelf and her eye can't either.
+        static void BackPanel(GameObject copy)
+        {
+            if (copy.GetComponent<ShelfUnit>() == null || copy.GetComponent<ColdFixture>() != null) return;
+            foreach (Renderer wall in copy.GetComponentsInChildren<Renderer>(true))
+            {
+                if (wall.name != "Wall_01") continue;
+                Transform t = wall.transform;
+                GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                panel.name = "Back panel";
+                panel.transform.SetParent(t.parent, false);
+                panel.transform.localPosition = t.localPosition;
+                panel.transform.localRotation = t.localRotation;
+                Vector3 local = t.InverseTransformVector(wall.bounds.size);
+                panel.transform.localScale = Vector3.Scale(t.localScale, new Vector3(Mathf.Abs(local.x), Mathf.Abs(local.y), Mathf.Max(Mathf.Abs(local.z), 0.05f)));
+                Bounds want = wall.bounds;
+                Physics.SyncTransforms();
+                panel.transform.position += want.center - panel.GetComponent<Renderer>().bounds.center;
+                panel.GetComponent<Renderer>().sharedMaterial = wall.sharedMaterial;
+            }
         }
 
         public static Bounds Footprint(GameObject go)

@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 //   - the fridge control box on the backstreet wall beside the breaker box (B2.1);
 //   - the PA box on the staff room wall beside the time clock (B2.2);
 //   - every hinged door swings both ways, away from whoever opens it (B4.1);
-//   - the fog's look (FogVisuals), and wall clocks whose hands run and stop (WallClockHands).
+//   - the fog's look (FogVisuals), and wall clocks whose hands run and stop (WallClockHands);
+//   - the time clock's own display of the shift's time, which stops with it (TimeClockDisplay).
 //
 // Each step skips what's already there, and quietly does nothing in a scene without it.
 public static class KarenFixtures
@@ -45,6 +46,7 @@ public static class KarenFixtures
         TwoWayDoors();
         FogVisuals.Ensure();
         WallClockHands.Ensure();
+        TimeClockDisplay.Ensure();   // the time clock shows the time; the wall clock above it goes (25 November)
     }
 
     // The yellow outline the store's own props use.

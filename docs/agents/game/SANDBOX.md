@@ -36,7 +36,14 @@ everything). You start on the sales floor by the tills.
   The yard's things get outdoor `InteriorLightAnchor`s so the yard's lamps light them.
 - **Per-room fixtures go up on its own doors:** `StoreFrame.Covers` keeps `PhaseOneFixtures`'s light
   switches to the sandbox's doors and lamps while it runs.
-- **Shoppers** come in by the front's automatic doors from the pavement and pay at its till.
+- **Shoppers** come in by the front's automatic doors from the pavement and pay at its till. While
+  it runs they shop its shelves only (`Planogram.Nearest` and `ShoppingList.Pick` skip what
+  `StoreFrame.Covers` doesn't): before that, most of a shopping list was on the store's own shelves,
+  out of reach, and shoppers stood stuck until their timer ran out.
+- **Only what's used** (25 November): one till, the staff room's table, the security desk; the
+  lobby's service counter and vending machine, the WC's cabins, the office's filing cabinet and the
+  second till are out. Copied doors drop their `ParentMaterialController` (it repainted them with a
+  placeholder grid); copied bays get a solid "Back panel" where their middle panel showed see-through.
 
 **The panel** (`MiniStorePanel.cs`, drawn by `TricksSandbox` in mini store mode): Tab opens it and
 pauses the game (`GamePause`, the mouse free); Tab closes it. Start, Freeze, Restart; **tricks she
