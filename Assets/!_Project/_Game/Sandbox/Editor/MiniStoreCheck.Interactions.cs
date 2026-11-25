@@ -281,8 +281,8 @@ public static partial class MiniStoreCheck
     }
 
     // The real throw, from your hand, where she can't see you: the test players' decoy counter
-    // (SimulatedPlayer.ThrowDecoy) throws the same way. A throw also says "something dropped"
-    // where you stand (PlayerInteract.DropHeld), so the row reports her belief at both spots.
+    // (SimulatedPlayer.ThrowDecoy) throws the same way. Her belief where it lands must beat her
+    // belief where you threw it from (until 0.5.2 the hand said "something dropped": 54% vs 4%).
     static IEnumerator DecoyFromHand()
     {
         const string row = "decoy thrown from your hand";
@@ -330,6 +330,7 @@ public static partial class MiniStoreCheck
                   $"her belief where you threw from {atYouBefore:P0} → {atYouSoon:P0} (before it lands) → {atYou:P0}, where it landed {atLanding:P0}");
         Expect(threw, $"{row}: it left the hand and flew ({FairnessGuard.Flat(landed, from):0.0} m)");
         Expect(atLanding > 0.03f, $"{row}: she hears it land ({atLanding:P0} of her belief there)");
+        Expect(atLanding > atYou, $"{row}: it lures her: more of her belief where it landed than where you threw it from ({atLanding:P0} vs {atYou:P0})");
         UnityEngine.Object.Destroy(tin);
     }
 

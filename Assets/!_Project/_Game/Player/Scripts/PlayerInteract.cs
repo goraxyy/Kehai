@@ -254,10 +254,14 @@ public class PlayerInteract : MonoBehaviour
 
         dropped.lastAuthor = Kehai.Karen.NoiseAuthor.Player;
         GameEvents.RaisePlayerDroppedItem(dropped, dropped.transform.position);
-        Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
 
+        // Put down, it's heard where you put it. Thrown, it's heard only where it lands
+        // (Item.OnCollisionEnter): your hand makes no "something dropped", or every decoy would
+        // say where you threw it from (0.5.2, the decoy throw: 54% of her belief at the thrower).
         var body = dropped.GetComponent<Rigidbody>();
-        if (body == null || throwSpeed <= 0f) return;
+        bool thrown = body != null && throwSpeed > 0f;
+        if (!thrown) Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
+        if (!thrown) return;
 
         // Start it clear of the player so it doesn't immediately collide with them.
         body.position = rayOrigin.position + rayOrigin.forward * 0.6f;
