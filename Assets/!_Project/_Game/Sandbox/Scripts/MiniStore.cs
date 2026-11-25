@@ -415,6 +415,10 @@ namespace Kehai.Sandbox
                     go.transform.position = new Vector3(target.x - offset.x, store.HasValue && store.Value.y > 0f ? store.Value.y : before.y, target.z - offset.z);
                     KeepInside(go);
                 }
+                // The yard's things are outdoor fixtures: the store lights them by the yard's lamps.
+                if (StoreMap.AreaAt(go.transform.position) == "Backstreet")
+                    foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+                        if (r.GetComponentInParent<InteriorLightAnchor>() == null) r.gameObject.AddComponent<InteriorLightAnchor>().outdoors = true;
                 placed[name] = (before, go.transform.position);
                 report.Add($"moved {name} into the {StoreMap.AreaAt(go.transform.position)}");
             }

@@ -14,6 +14,10 @@ public static class StoreFrame
 
     public static Vector3 ToStore(Vector3 p) => Map != null ? Map(p) : p;
 
+    // Whether a point is on the sandbox's floor (the map moves it); with no map, everywhere is.
+    // While a sandbox runs, the fixtures put up per room (light switches) go up only there.
+    public static bool Covers(Vector3 p) => Map == null || (Map(p) - p).sqrMagnitude > 0.0001f;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Map = null;
 }
