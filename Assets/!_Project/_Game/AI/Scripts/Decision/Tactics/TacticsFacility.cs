@@ -55,7 +55,11 @@ namespace Kehai.Karen
             LightCircuit wing = LightControl.CircuitOf(believed);
             plan.Target = full ? "the whole store" : wing + " circuit";
 
+            // At the power box first (25 November): its breakers are where the lights go out.
+            bool atBox = TacticHelpers.PowerBox(out Vector3 box);
+            if (atBox) TacticHelpers.GoToThing(plan, box, "the power box in the backstreet");
             plan.Add(new Tell(TellKind.BallastWhine, _ => believed, TellLead));
+            if (atBox) TacticHelpers.AtThing(plan, this, box, "trip the breakers");
             plan.Add(new Effect(full ? "blackout (full)" : $"blackout ({wing})", k =>
             {
                 if (full) k.World.Blackout(k.Rng);
@@ -154,7 +158,11 @@ namespace Kehai.Karen
             }
 
             plan.Target = room;
+            // At the fog box first (25 November), beside the power box.
+            bool atBox = TacticHelpers.FogBoxAt(out Vector3 box);
+            if (atBox) TacticHelpers.GoToThing(plan, box, "the fog box in the backstreet");
             plan.Add(new Tell(TellKind.FreezerHiss, _ => hiss, 1f));
+            if (atBox) TacticHelpers.AtThing(plan, this, box, "set the fog going in " + room);
             plan.Add(new Effect("flood " + room + " with fog", k =>
             {
                 k.World.FogRoom(room, k.Config.fogVisibility);
@@ -834,6 +842,12 @@ namespace Kehai.Karen
             AutoDoubleDoor door = doors[pick];
             LastDoor = door;
             plan.Target = candidates[pick].Key;
+            // At the PA box first (25 November): the chime goes out through it.
+            if (TacticHelpers.PaBoxAt(out Vector3 pa))
+            {
+                TacticHelpers.GoToThing(plan, pa, "the PA box in the staff room");
+                TacticHelpers.AtThing(plan, this, pa, "set the door chime going");
+            }
             plan.Add(new Tell(TellKind.DoorMotor, _ => door.transform.position, TellLead));
             string key = candidates[pick].Key;
             plan.Add(new Effect("cycle " + plan.Target + " for 20 s with nobody there", k =>
