@@ -74,7 +74,8 @@ Restart gives a fresh Karen, frozen; Start starts her shift; a sense switched of
 starts; Freeze stops her; Tab opens the panel and pauses the game; Fire now starts the picked
 trick) and **Phase 9's interactions with the real Karen** (`MiniStoreCheck.Interactions.cs`: the
 fridge check with you inside and in the next chiller, the kneel check within and past 1.5 m, the
-decoy throw yours and nobody's, the swinging door with traces on and off; one picture each,
+decoy throw yours and nobody's and thrown from your hand (the real throw: it must pull more of her
+belief to where it lands than to where you stood), the swinging door with traces on and off; one picture each,
 `mini_interaction_*.png`). `-mini-tricks` adds each trick alone (only it allowed, 60 s); a trick
 she doesn't use herself is then fired with Fire now, so the run says whether every trick can start
 here at all. Screenshots of every

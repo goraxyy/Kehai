@@ -254,18 +254,42 @@ public class PlayerInteract : MonoBehaviour
 
         dropped.lastAuthor = Kehai.Karen.NoiseAuthor.Player;
         GameEvents.RaisePlayerDroppedItem(dropped, dropped.transform.position);
-        Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
 
+        // Put down, it's heard where you put it. Thrown, it's heard only where it lands
+        // (Item.OnCollisionEnter): your hand makes no "something dropped", or every decoy would
+        // say where you threw it from (0.5.2, the decoy throw: 54% of her belief at the thrower).
         var body = dropped.GetComponent<Rigidbody>();
-        if (body == null || throwSpeed <= 0f) return;
+        bool thrown = body != null && throwSpeed > 0f;
+        if (!thrown) Kehai.Karen.NoiseBus.Emit(dropped.transform.position, 0.7f, Kehai.Karen.NoiseKind.DroppedItem, Kehai.Karen.NoiseAuthor.Player);
+        if (!thrown) return;
 
         // Start it clear of the player so it doesn't immediately collide with them.
         body.position = rayOrigin.position + rayOrigin.forward * 0.6f;
+        dropped.transform.position = body.position;
+        // And it can't clip you on the way out for its first moments: that thud at your feet was
+        // the first thing she heard of every throw (0.5.2, the decoy row: an impact 0.4 m from you).
+        IgnoreOwnBody(dropped, true);
+        StartCoroutine(RestoreOwnBody(dropped));
 
         // Set the velocity rather than adding a force: AddForce waits for the next
         // physics step, and the item has only just stopped being kinematic.
         body.linearVelocity = rayOrigin.forward * throwSpeed;
         body.angularVelocity = rayOrigin.right * throwSpin * charge;
+    }
+
+    void IgnoreOwnBody(Item item, bool ignore)
+    {
+        if (item == null) return;
+        Collider[] mine = transform.root.GetComponentsInChildren<Collider>();
+        foreach (Collider c in item.GetComponentsInChildren<Collider>())
+            foreach (Collider m in mine)
+                if (c != null && m != null && c != m) Physics.IgnoreCollision(c, m, ignore);
+    }
+
+    System.Collections.IEnumerator RestoreOwnBody(Item item)
+    {
+        yield return new WaitForSeconds(0.5f);
+        IgnoreOwnBody(item, false);
     }
 
     // Returns true while a hold-to-use action (mopping) is running.

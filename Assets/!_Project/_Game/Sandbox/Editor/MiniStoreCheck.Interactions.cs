@@ -17,6 +17,8 @@ using UnityEngine;
 //   kneel check:   you under the rack where she kneels → caught; past 1.5 m → nobody
 //   decoy throw:   an item you threw lands → her belief moves there; one nobody threw → nothing
 //   swinging door: a door you went through, seen moving → her belief goes past it; traces off → less
+//   decoy from the hand: the real throw (PlayerInteract), out of her sight → what she hears at the
+//                  landing and what she hears where you threw it from (the test players' counter)
 public static partial class MiniStoreCheck
 {
     // Looked up again after every restart: a fresh shift rebuilds what the old places stood in.
@@ -55,6 +57,7 @@ public static partial class MiniStoreCheck
         {
             yield return Decoy(1, true);
             yield return Decoy(1, false);
+            yield return DecoyFromHand();
             yield return SwingingDoor(1, true);
             yield return SwingingDoor(1, false);
         }
@@ -276,6 +279,71 @@ public static partial class MiniStoreCheck
         else Expect(after < before + 0.05f, $"{row}: nothing for her ({before:P0} → {after:P0})");
         UnityEngine.Object.Destroy(tin);
     }
+
+    // The real throw, from your hand, where she can't see you: the test players' decoy counter
+    // (SimulatedPlayer.ThrowDecoy) throws the same way. Her belief where it lands must beat her
+    // belief where you threw it from (until 0.5.2 the hand said "something dropped": 54% vs 4%).
+    static IEnumerator DecoyFromHand()
+    {
+        const string row = "decoy thrown from your hand";
+        yield return Fresh();
+        if (her == null) { Expect(false, row + ": no Karen"); yield break; }
+        StoreMap map = her.Ctx.Map;
+        int hers = map.CellAt(her.Body.Position);
+        Vector3 from = default, way = default;
+        bool found = false;
+        foreach (int c in Enumerable.Range(0, map.CellCount)
+                     .Where(c => hers >= 0 && map.IsKarens(c) && map.CellRoom[c] != map.CellRoom[hers] && MiniStore.Contains(map.CellPosition[c]))
+                     .OrderBy(c => Mathf.Abs(FairnessGuard.Flat(map.CellPosition[c], her.Body.Position) - 7f)))
+        {
+            Vector3 spot = map.CellPosition[c];
+            if (her.Body.Sight.CanSee(spot + Vector3.up * 1.2f)) continue;
+            Vector3 hand = spot + Vector3.up * 1.4f;
+            if (!SimulatedPlayerAim(spot, hand, out way)) continue;
+            from = spot;
+            found = true;
+            break;
+        }
+        if (!found) { Expect(false, row + ": no spot out of her sight with room to throw"); yield break; }
+        GameObject player = Player();
+        PutPlayer(from);
+        player.transform.rotation = Quaternion.LookRotation(way);
+        GameObject tin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        tin.name = "Check decoy (hand)";
+        tin.transform.localScale = Vector3.one * 0.15f;
+        tin.AddComponent<Rigidbody>().mass = 0.4f;
+        var item = tin.AddComponent<Item>();
+        item.type = ItemType.Stock;
+        CarrySlot slot = player.GetComponent<CarrySlot>();
+        PlayerInteract hands = player.GetComponent<PlayerInteract>();
+        if (slot == null || hands == null || !slot.TryPickup(item)) { Expect(false, row + ": the tester can't hold it"); UnityEngine.Object.Destroy(tin); yield break; }
+        yield return Wait(0.3f);
+        float atYouBefore = MassNear(from, 1.5f);
+        long cursor = NoiseBus.Latest;
+        hands.DropNow(Kehai.Eval.SimulatedPlayer.DecoyThrowSpeed);
+        yield return Wait(0.3f);
+        float atYouSoon = MassNear(from, 1.5f);
+        yield return Wait(1.2f);
+        // Where she heard it: its first landing, not where it rolled to.
+        var heard = new List<NoiseEvent>();
+        NoiseBus.ReadSince(ref cursor, heard);
+        NoiseEvent first = heard.FirstOrDefault(n => n.Author == NoiseAuthor.Player && n.Kind == NoiseKind.Impact);
+        bool heardIt = heard.Any(n => n.Author == NoiseAuthor.Player && n.Kind == NoiseKind.Impact);
+        Vector3 landed = heardIt ? first.Position : tin.transform.position;
+        string others = string.Join(", ", heard.Where(n => n.Author == NoiseAuthor.Player).Select(n => $"{n.Kind} {FairnessGuard.Flat(n.Position, from):0.0} m off"));
+        float atYou = MassNear(from, 1.5f), atLanding = MassNear(landed, 1.5f);
+        bool threw = !slot.Contains(item) && FairnessGuard.Flat(landed, from) > 2.5f;
+        Debug.Log($"MiniStoreCheck: {row}: thrown {FairnessGuard.Flat(landed, from):0.0} m, she stood {FairnessGuard.Flat(from, her.Body.Position):0.0} m off; " +
+                  $"her belief where you threw from {atYouBefore:P0} → {atYouSoon:P0} (before it lands) → {atYou:P0}, where it landed {atLanding:P0}; your noises: {others}");
+        Expect(threw, $"{row}: it left the hand and flew ({FairnessGuard.Flat(landed, from):0.0} m)");
+        Expect(atLanding > 0.03f, $"{row}: she hears it land ({atLanding:P0} of her belief there)");
+        Expect(atLanding > atYou, $"{row}: it lures her: more of her belief where it landed than where you threw it from ({atLanding:P0} vs {atYou:P0})");
+        UnityEngine.Object.Destroy(tin);
+    }
+
+    // The test players' aim (SimulatedPlayer.DecoyAim): the clearest way that lands it furthest off.
+    static bool SimulatedPlayerAim(Vector3 at, Vector3 hand, out Vector3 way) =>
+        Kehai.Eval.SimulatedPlayer.DecoyAim(at, at, d => Physics.Raycast(hand, d, out RaycastHit hit, 6f, ~0, QueryTriggerInteraction.Ignore) ? hit.distance : 6f, out way);
 
     // A staff door she can see: you go through it as she looks, with her traces on or off.
     static IEnumerator SwingingDoor(int youAt, bool traces)

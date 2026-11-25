@@ -3,8 +3,9 @@
 - **2026-11-25 — 0.5.2 branch, not released.** How Karen finds you when you hide (Phase 9).
   - **She checks hiding places:** when something tells her you might be there (a noise from it, a customer's word, where you usually hide), she may walk up to a fridge or locker, open it and look, or kneel at a stockroom rack and look under it. If you're inside, and under a rack within 1.5 m of her, you're caught. She's never certain to check, and leaves a place she just checked alone for a while.
   - **Who saw you hide:** a store camera while she watches the screens, or a shopper she then asks, can tell her where you went in. A torch left on gives away its light, not you.
-  - **Decoys:** anything you throw lands with a noise she goes to.
-  - **Doors:** a door she sees still swinging sends her through it. Close doors gently, or wait.
+  - **Decoys:** anything you throw lands with a noise she goes to. Throwing no longer gives you away: your hand makes no "something dropped" noise, and the item can't thud against you on the way out.
+  - **Doors:** a door she sees still swinging sends her through it. Wait until she can't see it, or shut it behind you (a shut door gives her only its swing).
+  - **The test players** know both: they throw a product away from where they'll hide before going there, and wait at a door she can see.
 
 - **2026-11-17 — 0.5.1 branch, not released.** The owner's fourteen 0.5.0 playtest fixes.
   - **Karen's eyes:** a short shelf no longer slows her down if she can see your eyes over it. Inside a fridge cabinet, locker, toilet stall, changing cabin or the empty WC cupboard, or crouched under a stockroom rack, you're hidden even with the door open. Shoppers can't see you there either.

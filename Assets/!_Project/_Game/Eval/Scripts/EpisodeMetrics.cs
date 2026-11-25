@@ -44,6 +44,7 @@ namespace Kehai.Eval
         public float BotMeanFear, BotPeakFear;
         public int BotStartles, BotHides, BotBackOffs;
         public int BotTurnBacks, BotThrowsSeen, BotDodges;   // 0.2.0: from her Cut and her Throw
+        public int BotDecoys, BotDoorWaits;                  // 0.5.2 Phase 9: the counters to the decoy throw and the swinging door
         public bool BotReactive = true;
         public float TacticEntropy;
         public float MeanPanic, PanicSetpointRmse;
@@ -361,6 +362,7 @@ namespace Kehai.Eval
                 ["bot_reactive"] = BotReactive, ["bot_mean_fear"] = BotMeanFear, ["bot_peak_fear"] = BotPeakFear,
                 ["bot_startles"] = BotStartles, ["bot_hides"] = BotHides, ["bot_back_offs"] = BotBackOffs,
                 ["bot_turn_backs"] = BotTurnBacks, ["bot_throws_seen"] = BotThrowsSeen, ["bot_dodges"] = BotDodges,
+                ["bot_decoys"] = BotDecoys, ["bot_door_waits"] = BotDoorWaits,
                 ["karen_tactics_used"] = TacticsUsed, ["karen_top_tactics"] = TopTactics,
                 ["mean_panic"] = MeanPanic, ["panic_setpoint_rmse"] = PanicSetpointRmse,
                 ["karen_fairness_violations"] = FairnessViolations,

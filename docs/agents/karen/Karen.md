@@ -2144,8 +2144,21 @@ Q24 is still open; it's built with the suggestion (A, 1.5 m). The sandbox forces
 
 - **Decoy throw:** an item you threw or dropped lands with a noise she hears, now with or without
   an impact clip of its own (`Item.OnCollisionEnter`). Only your items count (`NoiseAuthor.Player`);
-  one nobody threw says nothing.
+  one nobody threw says nothing. A throw is heard only where it lands: your hand makes no
+  "something dropped" (that stays for putting a thing down), and the item can't clip your own
+  body for its first 0.5 s (`PlayerInteract.DropHeld`). Before both, the real throw put 54% of
+  her belief where you threw from and 4% at the landing; after, 2% and 26% (`MiniStoreCheck`,
+  "decoy thrown from your hand").
 - **Swinging door:** a door trace she sees while the door is still moving (`Sensorium.SwingingDoor`)
   goes 2 m past the door, away from her, heading through it. A door you shut leaves a trace that
   lasts only its swing (1.2 s); a door you opened, 8 s, read where the door is once it's still, as
   before.
+- **The test players' counters** (point 3, `SimulatedPlayer`, inside `Flee`, so the learned Hide
+  uses them too; no new random draws, so a shift with no hiding plays as before):
+  - *Decoy:* with a product in hand (never the torch, a tool or a crate) and her out of sight, it
+    throws it at 9 m/s the way that lands it furthest from the hide (`DecoyAim`: eight ways, a
+    wall within 3 m rules a way out, it must land 2 m further off than it stands), then goes.
+  - *Door:* on the run to the hide, at a closed door she can see (in its view, a clear line from
+    her to the door, within 12 m: `DoorInHerView`), it stands still for up to 5 s rather than open
+    it in front of her (`AgentDriver.WaitAtDoor`), then goes anyway.
+  - Counted per shift as `bot_decoys` and `bot_door_waits`.
