@@ -205,8 +205,12 @@ public static partial class MiniStoreCheck
         yield return bot.SetCrouch(true);
         yield return Wait(0.3f);
         bool hidden = Concealed();
-        Vector3 aisle = HidingApproach.ClosestReachable(her.Body.Agent, clankAt);
+        // On her map's cell beside the rack nearest that end: a clank from under it, heard in the aisle.
+        List<int> beside = HideCheck.CellsBeside(her.Ctx.Map, rack);
+        if (beside.Count == 0) { Expect(false, row + ": her map has no cells beside the rack"); yield break; }
+        Vector3 aisle = her.Ctx.Map.CellPosition[beside.OrderBy(c => (her.Ctx.Map.CellPosition[c] - clankAt).sqrMagnitude).First()];
         Clank(aisle);
+        Debug.Log($"MiniStoreCheck: {row}: clank at {aisle}, {FairnessGuard.Flat(aisle, you):0.0} m from you; reason {HideCheck.Reason(her.Ctx, rack):P0}");
         CheckHiding check = her.ForceHideCheck(rack, true, out string why);
         Expect(check != null, $"{row}: she sets out ({why})");
         if (check == null) { bot.Crouch = false; yield break; }
