@@ -17,7 +17,7 @@ Use the merged revision for the outstanding played checks from 0.5.0, 0.5.1 and 
 
 | Order | Check | Additional evidence |
 |---|---|---|
-| 1 | Sight, lost-sight pursuit, tricks and interactions in their sandboxes | Expected and observed result for each case, replay and silent clip. Include witnessed and unseen hiding, leaving before arrival, torch on/off and hit stun. |
+| 1 | Sight, lost-sight pursuit, tricks and interactions in their sandboxes | Expected and observed result for each case, replay and silent clip. Include witnessed and unseen hiding, leaving before arrival, torch on/off and hit stun. Since Phase 9, `MiniStoreCheck`'s interaction rows: the fridge check (you inside, you next door), the kneel check (within and past 1.5 m), the decoy throw (yours, nobody's) and the swinging door (traces on, off). |
 | 2 | Store fixtures across layouts and the in-store trick checks | Layout and fixture reports, and each trick's start, effect and counter. Record the owner's walkthrough findings. |
 | 3 | The Stage 1 baseline, bots on the layouts, the guided shift, flash sale and normal human shifts | Seed, player, layout, rung, edition and outcome beside the shift files. Keep held-out groups separate. |
 | 4 | Stages 2–6 below | Training checkpoints for training jobs. For evaluations keep the frozen model versions, paired seeds, shifts and result tables. Real-player sessions require consent and the working upload pipeline. |

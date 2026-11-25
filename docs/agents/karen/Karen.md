@@ -2104,3 +2104,48 @@ One clock for the whole hunt, `PostSightPursuit`, with `huntMemorySeconds` = 60 
   (`KarenBody.IsHers`).
 - Checked in play mode on the clone: a 20 m/s item hits and stuns her for the 3 s cap; a wall stops
   one thrown behind it.
+
+## 22. Kehai 0.5.2: what tells her where you hid, and checking hiding places
+
+Phase 9 of the [0.5.2 plan](../../you/plans/0.5.2-plan.md) ([interactions](../../you/plans/0.5.2/interactions.md)).
+Each interaction has its sense, a fairness rule, the bots' counter, a check row seen and unseen,
+and leaves a shift where it doesn't apply as it was.
+
+### 22.1 Who told her you hid (I1, I2, I3, I7, I6)
+
+| # | You do | Her sense | Code | The bots' counter |
+|---|---|---|---|---|
+| I1 | go into a hiding place in her view | her eye remembers the entry (§21.2) | `WitnessedHide`, `KarenBrain.PursueWitnessedHide` | hide out of her view |
+| I2 | the same in a store camera's view while she watches the screens | the camera reports the entry once | `KarenBrain` camera entry → `HiddenEntry.Remember` | hide where no working camera sees (`SimulatedPlayers.Watched`) |
+| I3 | the same while a shopper watches | the shopper remembers; she learns it only by asking them (1 m, not 4 m) | `CustomerMemory.SawHidingEntry`, `Ask the customers` | hide where no shopper within 10 m sees |
+| I7 | hide with the torch on | light on a surface she can see, not you | `SightSensor.TryHiddenTorchGlow` → a `TorchGlow` trace | the torch off before hiding |
+| I6 | come out (or go in) where she sees | the Ledger's "where you hide" counts a seen hide for more (0.8 → 4.0 after one seen entry) | `KarenLedger.ObserveWitnessedHide` | vary your spots |
+
+### 22.2 The hide checks (I8 fridge, I9 kneel, the locker check)
+
+A search step, `CheckHiding` (`Decision/HideCheck.cs`), added to Check and Search (`InvestigateTactic`,
+`SweepTactic`): at most two a plan, within 6 m of where she is searching.
+
+| Rule | Value |
+|---|---|
+| Which place | only from what she sensed (Q24, rule A): her belief within 2.5 m of the place, in the room it opens into, plus 0.05 for a Ledger favourite. Never where you are; the file is under the "never reads the player" scan |
+| A reason | at least 4% of her belief beside it |
+| Never certain | a roll: 3 × the reason, at most 85%. No reason, no roll, so a shift with nothing to suspect keeps its random stream |
+| Not again at once | a place she looked in is left alone for 45 s (`KarenContext.HideChecked`) |
+| At a door (fridge, locker, cupboard, cabin) | she stands clear of the leaf's swing, opens it, waits until it's three-quarters open (2 s at most; a door that won't open is no look), steps up to the opening and looks 1.2 s |
+| At a rack | she kneels where her belief beside the rack is heaviest: her eye drops 0.95 m and tips down (a real kneel is for the redesign) and looks 1.2 s |
+| The catch | her eye's own look (`SightSensor.FindsInHiding`): you're concealed in that place and within 1.5 m (Q24's suggestion): of its inside once the door is open, of you under a rack. A yes is a catch at once (`KarenBrain.CatchInHiding` → `Kill`, held while she's stunned) |
+| Nobody | her belief beside the place keeps 10% (an open cabinet) or 40% (under a rack: past her reach) |
+
+Q24 is still open; it's built with the suggestion (A, 1.5 m). The sandbox forces one check with
+`KarenBrain.ForceHideCheck` (editor and development builds).
+
+### 22.3 The decoy throw and the swinging door
+
+- **Decoy throw:** an item you threw or dropped lands with a noise she hears, now with or without
+  an impact clip of its own (`Item.OnCollisionEnter`). Only your items count (`NoiseAuthor.Player`);
+  one nobody threw says nothing.
+- **Swinging door:** a door trace she sees while the door is still moving (`Sensorium.SwingingDoor`)
+  goes 2 m past the door, away from her, heading through it. A door you shut leaves a trace that
+  lasts only its swing (1.2 s); a door you opened, 8 s, read where the door is once it's still, as
+  before.

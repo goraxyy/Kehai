@@ -130,6 +130,11 @@ The Ledger keeps, between shifts: your routes, where you hide, how fast you fix 
 which tricks rattled you. Example: you always hide in the lockers, so she checks them first.
 What she learned fades if you change, within about two shifts.
 
+**She checks hiding places (0.5.2):** given a reason (a noise from it, a customer's word, your
+habit) she may open a fridge or locker, or kneel at a rack. Inside and within 1.5 m, you're
+caught; she's never certain to check. A thrown item draws her to where it lands, and a door she
+sees still swinging sends her through it. Details: [Karen.md §22](../agents/karen/Karen.md#22-kehai-052-what-tells-her-where-you-hid-and-checking-hiding-places).
+
 ## 9. The rules she plays by
 
 Ten rules in code, checked by tests. The ones you feel:
