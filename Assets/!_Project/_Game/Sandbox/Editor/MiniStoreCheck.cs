@@ -173,7 +173,9 @@ public static class MiniStoreCheck
             target.Interact(interact);
             yield return Wait(0.15f);
             Expect(!door.IsOpen, $"{label}: E while it moves turns it back");
-            yield return Wait(1.2f);
+            // Shut all the way before the next try (a door turned back mid-swing keeps its side).
+            for (float t = 0f; t < 5f && door.IsMoving; t += Time.deltaTime) yield return null;
+            yield return Wait(0.3f);
             target.Interact(interact);
             float near = Vector3.Distance(MiniStore.Footprint(door.gameObject).center, eye);
             yield return Wait(0.4f);
