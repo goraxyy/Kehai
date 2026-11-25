@@ -532,8 +532,15 @@ namespace Kehai.Sandbox
             float z0 = a.z - 1f, z1 = b.z + 7.5f;
             surface.center = new Vector3((a.x + b.x) * 0.5f, 2f, (z0 + z1) * 0.5f);   // the root stands at Origin
             surface.size = new Vector3(b.x - a.x + 2f, 5f, z1 - z0);
+            // The automatic doors' glass is left out, as the store's own bake leaves its doors out:
+            // baked in, it closed both doorways and shoppers stood stuck on the pavement (25 November).
+            var glass = new List<Collider>();
+            foreach (AutoDoubleDoor door in root.GetComponentsInChildren<AutoDoubleDoor>(true))
+                foreach (Collider c in door.GetComponentsInChildren<Collider>(true))
+                    if (c.enabled && !c.isTrigger) { c.enabled = false; glass.Add(c); }
             Physics.SyncTransforms();
             using (new Kehai.Karen.StoreRebake(surface)) surface.BuildNavMesh();
+            foreach (Collider c in glass) c.enabled = true;
         }
 
         // ---- helpers -----------------------------------------------------------------------
