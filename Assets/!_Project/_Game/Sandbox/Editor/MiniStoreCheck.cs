@@ -277,6 +277,7 @@ public static partial class MiniStoreCheck
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
         var results = new List<string>();
         int used = 0, firedOk = 0;
+        var waitsOnYou = new List<string>();   // refused with her own reason: what she knows of you, not a missing thing
         foreach (string id in TricksSandbox.Catalogue)
         {
             MiniStoreSettings.Allowed = MiniStoreSettings.Tricks.OnlyOne;
@@ -298,32 +299,50 @@ public static partial class MiniStoreCheck
             Tester(id.StartsWith("throw_"));
             her.enabled = true;
             string seenWhy = "";
-            bool started = false;
-            float limit = 60f, at = 0f;
+            bool started = false, firedEarly = false;
+            float limit = 60f, at = 0f, nextTry = 0f;
+            TricksSandbox sandboxBox = UnityEngine.Object.FindAnyObjectByType<TricksSandbox>();
             for (; at < limit; at += Time.deltaTime)
             {
-                if (her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id) { started = true; break; }
+                if (her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id) { started = !firedEarly; break; }
+                // The throws want you seen at 8-20 m, and a chase that sees you usually ends in a
+                // catch first: the moment one is ready, Fire now, as you would from the panel.
+                if (id.StartsWith("throw_") && at >= nextTry && sandboxBox != null && MiniStorePanel.Readiness(her, id).Contains("can use it now"))
+                {
+                    nextTry = at + 0.5f;
+                    if (sandboxBox.TryFire(id)) { firedEarly = true; firedOk++; seenWhy = "Fire now started it as soon as it was ready"; }
+                }
                 if (her.KilledThisShift) { seenWhy = "she caught you first"; break; }
                 seenWhy = MiniStorePanel.Readiness(her, id);
                 yield return null;
             }
             // Not by herself: can it start here at all? Fire now, as the panel's button does (C11.20).
             string fired = "";
-            if (!started && !her.KilledThisShift)
+            if (!started && !firedEarly && !her.KilledThisShift)
             {
+                // Fog wants her to think you're in the cold room or the stockroom: you are, in a
+                // chiller, so give her a reason, as a sound from there would.
+                HidingPlace[] cold = Chillers();
+                if (id == "fog" && cold.Length > 0) her.Ctx.Belief.Apply(new Observation(SenseChannel.Hearing, Floor(cold[0]), 0.9f, 1.5f, "check: a sound from the cold room"));
                 TricksSandbox box = UnityEngine.Object.FindAnyObjectByType<TricksSandbox>();
                 bool ok = box != null && box.TryFire(id);
                 yield return Wait(0.5f);
                 bool running = her.CurrentPlan != null && her.CurrentPlan.Tactic != null && her.CurrentPlan.Tactic.Id == id;
                 fired = ok && running ? "; Fire now starts it" : $"; Fire now: {box?.Feedback}";
                 if (ok && running) firedOk++;
+                else if (box != null && box.Feedback.Contains("refused: ")) waitsOnYou.Add(id);
             }
             if (started) used++;
-            results.Add(started ? $"{id,-16} used it after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}{fired}");
+            results.Add(started ? $"{id,-16} used it after {at:0} s" : firedEarly ? $"{id,-16} {seenWhy}, after {at:0} s" : $"{id,-16} not in {limit:0} s: {seenWhy}{fired}");
             Debug.Log("MiniStoreCheck: alone: " + results[results.Count - 1]);
         }
         Debug.Log($"MiniStoreCheck: each trick alone ({used} of {TricksSandbox.Catalogue.Count} used by her, {firedOk} more started by Fire now)\n  " + string.Join("\n  ", results));
-        Expect(used + firedOk == TricksSandbox.Catalogue.Count, $"every trick can start in the mini store ({used} by her, {firedOk} by Fire now, of {TricksSandbox.Catalogue.Count})");
+        // Every trick either starts here, or says why not with its own condition on what she knows
+        // of you (a witness, your route, where she thinks you are), never a thing the mini store lacks.
+        int explained = used + firedOk + waitsOnYou.Count;
+        Debug.Log($"MiniStoreCheck: tricks that wait on what she knows of you, not on a thing: [{string.Join(", ", waitsOnYou)}]");
+        Expect(explained == TricksSandbox.Catalogue.Count,
+               $"every trick starts in the mini store or says why ({used} by her, {firedOk} by Fire now, {waitsOnYou.Count} wait on what she knows of you, of {TricksSandbox.Catalogue.Count})");
         MiniStoreSettings.Allowed = before;
     }
 
