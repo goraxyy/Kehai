@@ -28,12 +28,13 @@ public sealed class MiniStoreTests
     public void ItsRooms_ReadAsTheStoresRooms()
     {
         StoreFrame.Use(MiniStore.ToStore);
-        Assert.AreEqual("Sales floor", StoreMap.AreaAt(MiniStore.World(new Vector3(0f, 0f, 5f))));
-        Assert.AreEqual("Stockroom", StoreMap.AreaAt(MiniStore.World(new Vector3(-8f, 0f, -7f))));
-        Assert.AreEqual("Cold storage", StoreMap.AreaAt(MiniStore.World(new Vector3(9f, 0f, -7f))));
-        // Its corners land inside the store's matching parts, not on their edges.
-        Vector3 corner = MiniStore.ToStore(MiniStore.World(new Vector3(MiniStore.West, 0f, MiniStore.Front)));
-        Assert.That(MiniStore.StoreSalesFloor.Contains(new Vector2(corner.x, corner.z)));
+        foreach (var (name, store, _) in MiniStore.Rooms)
+            Assert.AreEqual(name, StoreMap.AreaAt(MiniStore.Half(new Vector3(store.center.x, 0f, store.center.y))), name);
+        // Half size both ways.
+        var p = new Vector3(60f, 1f, -150f);
+        Vector3 back = MiniStore.ToStore(MiniStore.Half(p));
+        Assert.That(Vector3.Distance(p, back), Is.LessThan(0.001f));
+        Assert.That(MiniStore.Half(new Vector3(85f, 0f, -110f)).x - MiniStore.Half(new Vector3(10f, 0f, -110f)).x, Is.EqualTo(37.5f).Within(0.001f));
         // Elsewhere a point is itself.
         var far = new Vector3(60f, 0f, -150f);
         Assert.AreEqual(far, MiniStore.ToStore(far));
@@ -43,10 +44,10 @@ public sealed class MiniStoreTests
     public void ItsLamps_AreOnTheBreakersOfThePartsTheyStandFor()
     {
         StoreFrame.Use(MiniStore.ToStore);
-        Assert.AreEqual(LightCircuit.West, LightControl.CircuitOf(MiniStore.World(new Vector3(-10f, 5f, 5f))));
-        Assert.AreEqual(LightCircuit.East, LightControl.CircuitOf(MiniStore.World(new Vector3(10f, 5f, 5f))));
-        Assert.AreEqual(LightCircuit.Back, LightControl.CircuitOf(MiniStore.World(new Vector3(-8f, 5f, -7f))));
-        Assert.AreEqual(LightCircuit.Back, LightControl.CircuitOf(MiniStore.World(new Vector3(9f, 5f, -7f))));
+        Assert.AreEqual(LightCircuit.West, LightControl.CircuitOf(MiniStore.Half(new Vector3(40f, 5f, -150f))));
+        Assert.AreEqual(LightCircuit.East, LightControl.CircuitOf(MiniStore.Half(new Vector3(70f, 5f, -150f))));
+        Assert.AreEqual(LightCircuit.Back, LightControl.CircuitOf(MiniStore.Half(new Vector3(30f, 5f, -182f))));
+        Assert.AreEqual(LightCircuit.Back, LightControl.CircuitOf(MiniStore.Half(new Vector3(17f, 5f, -130f))));
     }
 
     [Test]
