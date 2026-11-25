@@ -313,7 +313,7 @@ public static partial class MiniStoreCheck
                     if (sandboxBox.TryFire(id)) { firedEarly = true; firedOk++; seenWhy = "Fire now started it as soon as it was ready"; }
                 }
                 if (her.KilledThisShift) { seenWhy = "she caught you first"; break; }
-                seenWhy = MiniStorePanel.Readiness(her, id);
+                if (!firedEarly) seenWhy = MiniStorePanel.Readiness(her, id);
                 yield return null;
             }
             // Not by herself: can it start here at all? Fire now, as the panel's button does (C11.20).

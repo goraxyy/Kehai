@@ -317,14 +317,26 @@ public static partial class MiniStoreCheck
         her.enabled = true;
         if (door == null) { Expect(false, row + ": no door she can stand back from and see"); yield break; }
         yield return Wait(0.6f);
-        Vector3 beyond = centre - normal * Sensorium.BeyondDoor;
-        float before = MassNear(beyond, 1.5f);
+        // The far side of the door, within 8 m: what she can see through the doorway her eye
+        // clears; the trace's spread lands in the room past it.
+        float FarSide()
+        {
+            StoreMap map = her.Ctx.Map;
+            float mass = 0f;
+            for (int cell = 0; cell < map.CellCount; cell++)
+            {
+                Vector3 to = map.CellPosition[cell] - centre;
+                if (Vector3.Dot(to, normal) < -0.5f && FairnessGuard.Flat(map.CellPosition[cell], centre) <= 8f) mass += her.Ctx.Belief[cell];
+            }
+            return mass;
+        }
+        float before = FarSide();
         door.Use(centre - normal * 0.8f, NoiseAuthor.Player);
         yield return Wait(0.4f);
-        float after = MassNear(beyond, 1.5f);
+        float after = FarSide();
         bool sees = her.Body.Sight.CanSee(Sensorium.DoorwayFacing(centre, her.Body.Sight.Eye));
         yield return Snap("door_" + (traces ? "traces" : "no_traces"), near);
-        Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief 2 m past it {before:P0} → {after:P0}");
+        Debug.Log($"MiniStoreCheck: {row}: {door.name}, she sees its leaf {sees}, belief past it (8 m) {before:P0} → {after:P0}");
         SwingMass[traces ? 1 : 0] = after - before;
         if (!traces)
             Expect(SwingMass[1] > SwingMass[0] + 0.05f, $"seen swinging, the door moves her belief past it; with traces off it doesn't ({SwingMass[1]:P0} vs {SwingMass[0]:P0})");
