@@ -2134,7 +2134,7 @@ A search step, `CheckHiding` (`Decision/HideCheck.cs`), added to Check and Searc
 | Not again at once | a place she looked in is left alone for 45 s (`KarenContext.HideChecked`) |
 | At a door (fridge, locker, cupboard, cabin) | she stands clear of the leaf's swing, opens it, waits until it's three-quarters open (2 s at most; a door that won't open is no look), steps up to the opening and looks 1.2 s |
 | At a rack | she kneels where her belief beside the rack is heaviest: her eye drops 0.95 m and tips down (a real kneel is for the redesign) and looks 1.2 s |
-| The catch | her eye's own look (`SightSensor.FindsInHiding`): you're concealed in that place and within 1.5 m (Q24's suggestion): of its inside once the door is open, of you under a rack. A yes is a catch at once (`KarenBrain.CatchInHiding` → `Kill`, held while she's stunned) |
+| The catch | her eye's own look (`SightSensor.FindsInHiding`): you're concealed in that place and within 1.5 m (Q24's suggestion): of its inside once the door is open; under a rack, from the rack's edge where she kneels to you. A yes is a catch at once (`KarenBrain.CatchInHiding` → `Kill`, held while she's stunned) |
 | Nobody | her belief beside the place keeps 10% (an open cabinet) or 40% (under a rack: past her reach) |
 
 Q24 is still open; it's built with the suggestion (A, 1.5 m). The sandbox forces one check with

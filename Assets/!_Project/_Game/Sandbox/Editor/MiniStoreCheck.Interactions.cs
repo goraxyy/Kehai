@@ -223,9 +223,10 @@ public static partial class MiniStoreCheck
         Expect(check != null, $"{row}: she sets out ({why})");
         if (check == null) { bot.Crouch = false; yield break; }
         yield return Watch(check, 40f, _ => { }, null);
-        float reach = FairnessGuard.Flat(her.Body.Position, Player().transform.position);
+        Vector3 edge = rack.transform.TransformPoint(rack.interior.ClosestPoint(rack.transform.InverseTransformPoint(her.Body.Position)));
+        float reach = FairnessGuard.Flat(edge, Player().transform.position);   // as her eye measures it
         yield return Snap("kneel_" + (expectCatch ? "within" : "beyond"), her.Body.Position);
-        Debug.Log($"MiniStoreCheck: {row}: rack {length:0.0} m, hidden {hidden}, kneels {check.Kneels}, looked {check.Looked}, caught {her.KilledThisShift}, her to you {reach:0.0} m");
+        Debug.Log($"MiniStoreCheck: {row}: rack {length:0.0} m, hidden {hidden}, kneels {check.Kneels}, looked {check.Looked}, caught {her.KilledThisShift}, the rack's edge where she kneels to you {reach:0.00} m");
         Expect(hidden, $"{row}: the tester is crouched under {rack.name}");
         if (expectCatch)
             Expect(her.KilledThisShift && check.Kneels, $"{row}: she kneels and catches you ({reach:0.0} m)");
