@@ -173,6 +173,78 @@ namespace Kehai.Karen
         }
     }
 
+    // At the thing a trick uses (the owner's calls of 25 November, tricks-at-things.md): she stands
+    // facing it for Seconds while the thing shows it (its outline pulses, or `showing` does more),
+    // then the step succeeds and the trick's effect follows. If she sees you within GiveUpRange
+    // meanwhile she gives the trick up: the step fails, the plan ends, nothing is left behind, and
+    // the trick goes back on its usual wait (a once-a-shift trick isn't spent).
+    public sealed class AtThing : Primitive
+    {
+        public const float Seconds = 3f, GiveUpRange = 4f, Pulse = 0.25f;
+        readonly Func<KarenContext, Vector3> thing;
+        readonly Action<KarenContext, float> showing;
+        readonly Action<KarenContext> done;
+        readonly Tactic tactic;
+        OutlineHighlight outline;
+        float t;
+
+        public bool GaveUp { get; private set; }
+
+        public AtThing(string label, Tactic tactic, Func<KarenContext, Vector3> thing,
+                       Action<KarenContext, float> showing = null, Action<KarenContext> done = null)
+        {
+            Label = "at the thing: " + label;
+            this.tactic = tactic;
+            this.thing = thing;
+            this.showing = showing;
+            this.done = done;
+        }
+
+        protected override void Begin(KarenContext c)
+        {
+            c.Body.Stop();
+            outline = Nearest(thing(c));
+        }
+
+        protected override Status Tick(KarenContext c, float dt)
+        {
+            t += dt;
+            Vector3 at = thing(c);
+            c.Body.TurnToward(at);
+            if (outline != null) outline.SetHighlighted(Mathf.Repeat(t, Pulse * 2f) < Pulse);
+            showing?.Invoke(c, Mathf.Clamp01(t / Seconds));
+            SightSensor eye = c.Body.Sight;
+            if (eye != null && eye.SeesNow && FairnessGuard.Flat(eye.LastSeenPosition, c.Body.Position) <= GiveUpRange)
+            {
+                GaveUp = true;
+                if (tactic != null) tactic.UsesThisShift = Mathf.Max(0, tactic.UsesThisShift - 1);   // back on its wait, not spent
+                c.Think("TRICK", $"gave up {Label}: she saw you {FairnessGuard.Flat(eye.LastSeenPosition, c.Body.Position):0.0} m away");
+                return Status.Failure;
+            }
+            return t >= Seconds ? Status.Success : Status.Running;
+        }
+
+        protected override void End(KarenContext c, bool aborted)
+        {
+            if (outline != null) outline.SetHighlighted(false);
+            done?.Invoke(c);
+        }
+
+        // The highlight of whatever stands at the spot, if it has one.
+        static OutlineHighlight Nearest(Vector3 at)
+        {
+            OutlineHighlight best = null;
+            float bestSqr = 1.5f * 1.5f;
+            foreach (OutlineHighlight o in UnityEngine.Object.FindObjectsByType<OutlineHighlight>())
+            {
+                if (o == null) continue;
+                float sqr = (o.transform.position - at).sqrMagnitude;
+                if (sqr < bestSqr) { bestSqr = sqr; best = o; }
+            }
+            return best;
+        }
+    }
+
     // ---- going quiet --------------------------------------------------------------
 
     public sealed class SetSilent : Primitive

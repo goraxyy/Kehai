@@ -9,6 +9,22 @@ namespace Kehai.Karen
     // never from where the player actually is.
     public static class TacticHelpers
     {
+        // The owner's rule of 25 November (tricks-at-things.md): she walks to the thing a trick
+        // uses, stands at it facing it for AtThing.Seconds, then the trick happens; seeing you
+        // near in those seconds, she gives it up. Steps for the plan, before the trick's effect.
+        public static void GoToThing(PlanBuilder plan, Vector3 thing, string what, float arrive = 1.2f) =>
+            plan.Go(OnFloor(thing), KarenBody.Pace.Walk, "walk to " + what, arrive);
+
+        public static void AtThing(PlanBuilder plan, Tactic tactic, Vector3 thing, string what,
+                                   System.Action<KarenContext, float> showing = null, System.Action<KarenContext> done = null) =>
+            plan.Add(new AtThing(what, tactic, _ => thing, showing, done));
+
+        // The power box (its breakers), the fog box beside it, the PA box: where they stand now.
+        public static bool PowerBox(out Vector3 at) => Where(BreakerPanel.Instance != null && BreakerPanel.Instance.box != null ? BreakerPanel.Instance.box.transform : null, out at);
+        public static bool FogBoxAt(out Vector3 at) => Where(UnityEngine.Object.FindAnyObjectByType<FogBox>()?.transform, out at);
+        public static bool PaBoxAt(out Vector3 at) => Where(UnityEngine.Object.FindAnyObjectByType<PaBox>()?.transform, out at);
+        static bool Where(Transform t, out Vector3 at) { at = t != null ? t.position : default; return t != null; }
+
         public static Vector3 Believed(KarenContext c) => c.Belief.RegionCentroid(LookRegion(c.Map, c.Belief));
 
         // Where you'll be `ahead` seconds from now, by her reckoning, for a hunt that has lost

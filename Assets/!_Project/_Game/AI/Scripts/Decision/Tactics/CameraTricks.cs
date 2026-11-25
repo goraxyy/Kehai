@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Kehai.Karen
@@ -186,12 +187,29 @@ namespace Kehai.Karen
 
             plan.Target = "the store's cameras";
             plan.Add(new Tell(TellKind.CameraFizz, _ => fizz, TellLead));
-            plan.Add(new Effect("break the store's cameras", k =>
+            // To break them all she goes to each (25 November): nearest next, 3 s facing each,
+            // and each goes dark as she leaves it. Seeing you near, she stops where she is.
+            var left = new List<StoreCamera>();
+            foreach (StoreCamera cam in cams.Cameras) if (cam != null && !cam.IsBroken) left.Add(cam);
+            Vector3 from = c.Body.Position;
+            while (left.Count > 0)
             {
-                StoreCameras now = StoreCameras.Instance;
-                if (now == null || !now.Break()) { k.Think("CHECK", "the cameras were already dark"); return; }
-                if (k.Tasks != null) k.Tasks.Hint(TaskManager.TaskKind.FixCameras, string.Empty);
-            }));
+                StoreCamera next = left[0];
+                foreach (StoreCamera cam in left)
+                    if (FairnessGuard.Flat(cam.transform.position, from) < FairnessGuard.Flat(next.transform.position, from)) next = cam;
+                left.Remove(next);
+                Vector3 at = next.transform.position;
+                from = at;
+                StoreCamera target = next;
+                TacticHelpers.GoToThing(plan, at, "the camera at " + c.Where(at));
+                TacticHelpers.AtThing(plan, this, at, "break the camera at " + c.Where(at));
+                plan.Add(new Effect("break the camera at " + c.Where(at), k =>
+                {
+                    StoreCameras now = StoreCameras.Instance;
+                    if (now == null || !now.BreakOne(target)) { k.Think("CHECK", "that camera was already dark"); return; }
+                    if (k.Tasks != null) k.Tasks.Hint(TaskManager.TaskKind.FixCameras, string.Empty);
+                }));
+            }
         }
     }
 }

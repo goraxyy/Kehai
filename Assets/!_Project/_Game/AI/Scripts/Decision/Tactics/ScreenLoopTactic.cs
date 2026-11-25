@@ -51,7 +51,8 @@ namespace Kehai.Karen
             Vector3 handSpot = screens + cams.Wall.Front * .25f;
             Vector3 stand = TacticHelpers.OnHerFloor(handSpot + cams.Wall.Front * .6f, 2.5f);
             plan.Go(stand, KarenBody.Pace.Walk, "go to the office screens", .35f);
-            plan.Add(new HandsOn("freeze the empty camera feed; its clock stops", _ => handSpot, k =>
+            TacticHelpers.AtThing(plan, this, handSpot, "freeze the camera feed");
+        plan.Add(new HandsOn("freeze the empty camera feed; its clock stops", _ => handSpot, k =>
             {
                 if (!FairnessGuard.DoorsClosed(k) && cams != null)
                 {

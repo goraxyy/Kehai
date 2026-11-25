@@ -42,6 +42,7 @@ namespace Kehai.Karen
             plan.Target = "the shopper she spoke to, then the till";
             plan.Add(new MoveTo(k => customer != null ? customer.transform.position : k.Body.Position,
                 KarenBody.Pace.Walk, "go to the shopper she spoke to", 1.3f, 30f, follow: true));
+            plan.Add(new AtThing("talk the shopper into complaining", this, k => customer != null ? customer.transform.position : k.Body.Position));
             plan.Add(new HandsOn("send the angry shopper to complain at the till", k => customer != null ? customer.transform.position : k.Body.Position, k =>
             {
                 if (customer == null || FairnessGuard.DoorsClosed(k)) return;

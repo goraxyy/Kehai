@@ -46,6 +46,14 @@ public sealed class TimeClockDisplay : MonoBehaviour
 
     void Update() => Refresh();
 
+    // While Karen stands at it to stop it (The overtime), its display flickers.
+    bool flicker;
+    public static void Flicker(Vector3 near, bool on)
+    {
+        foreach (TimeClockDisplay d in FindObjectsByType<TimeClockDisplay>())
+            if (d != null && (d.transform.position - near).sqrMagnitude < 4f) d.flicker = on;
+    }
+
     void Refresh()
     {
         if (text == null) return;
@@ -55,7 +63,8 @@ public sealed class TimeClockDisplay : MonoBehaviour
         bool stopped = shift != null && shift.IsFrozen;
         // Stopped: red, and blinking so it reads from across the room.
         text.color = stopped ? Stopped : Running;
-        text.enabled = !stopped || Mathf.Repeat(Time.unscaledTime, BlinkSeconds * 2f) < BlinkSeconds;
+        text.enabled = stopped ? Mathf.Repeat(Time.unscaledTime, BlinkSeconds * 2f) < BlinkSeconds
+                     : !flicker || Random.value > 0.35f;
     }
 
     // "03:47" for 27.78 hours past the night's midnight-before.

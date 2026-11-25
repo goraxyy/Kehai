@@ -55,7 +55,11 @@ namespace Kehai.Karen
             LightCircuit wing = LightControl.CircuitOf(believed);
             plan.Target = full ? "the whole store" : wing + " circuit";
 
+            // At the power box first (25 November): its breakers are where the lights go out.
+            bool atBox = TacticHelpers.PowerBox(out Vector3 box);
+            if (atBox) TacticHelpers.GoToThing(plan, box, "the power box in the backstreet");
             plan.Add(new Tell(TellKind.BallastWhine, _ => believed, TellLead));
+            if (atBox) TacticHelpers.AtThing(plan, this, box, "trip the breakers");
             plan.Add(new Effect(full ? "blackout (full)" : $"blackout ({wing})", k =>
             {
                 if (full) k.World.Blackout(k.Rng);
@@ -154,7 +158,11 @@ namespace Kehai.Karen
             }
 
             plan.Target = room;
+            // At the fog box first (25 November), beside the power box.
+            bool atBox = TacticHelpers.FogBoxAt(out Vector3 box);
+            if (atBox) TacticHelpers.GoToThing(plan, box, "the fog box in the backstreet");
             plan.Add(new Tell(TellKind.FreezerHiss, _ => hiss, 1f));
+            if (atBox) TacticHelpers.AtThing(plan, this, box, "set the fog going in " + room);
             plan.Add(new Effect("flood " + room + " with fog", k =>
             {
                 k.World.FogRoom(room, k.Config.fogVisibility);
@@ -242,6 +250,7 @@ namespace Kehai.Karen
             plan.Target = c.Where(slot.Position) + $" ({chosen.Heat:P0} of your usual spots)";
             plan.Go(stand, KarenBody.Pace.Walk, "walk to the shelf at " + c.Where(slot.Position), 1f);
             plan.Add(new Tell(TellKind.Drilling, k => k.Body.Position, TellLead));
+            TacticHelpers.AtThing(plan, this, slot.Position, "fit a camera at " + c.Where(slot.Position));
             plan.Add(new HandsOn("fit a camera at " + c.Where(slot.Position), _ => slot.Position, k =>
             {
                 if (slot.IsBlocked) { k.Think("CHECK", "the slot is taken"); return; }
@@ -492,6 +501,7 @@ namespace Kehai.Karen
 
             plan.Go(at, KarenBody.Pace.Walk, "go to " + plan.Target, 1f);
             plan.Add(new Tell(TellKind.BucketClank, k => k.Body.Position, 1f));
+            TacticHelpers.AtThing(plan, this, at, "kick over a bucket at " + plan.Target);
             plan.Add(new HandsOn("kick over a bucket at " + plan.Target, _ => at, k =>
             {
                 Dirt dirt = k.World.Spill(k.Config != null && k.Config.trapFences ? TacticHelpers.WhereYouCanMop(k.Body.Position) : k.Body.Position);
@@ -566,6 +576,7 @@ namespace Kehai.Karen
             if (TacticHelpers.DenyVetoed(c, TaskManager.TaskKind.Trash, target.transform.position, out string check)) { c.Think("CHECK", check); return; }
             plan.Go(TacticHelpers.OnFloor(target.transform.position), KarenBody.Pace.Walk, "go to the bin", 1.2f);
             plan.Add(new Tell(TellKind.LidClatter, _ => target.transform.position, 0.9f));
+            TacticHelpers.AtThing(plan, this, target.transform.position, "refill " + plan.Target);
             plan.Add(new HandsOn("refill " + plan.Target, _ => target.transform.position, k =>
             {
                 for (int i = 0; i < 3; i++) target.RegisterUse();
@@ -676,6 +687,7 @@ namespace Kehai.Karen
 
             plan.Go(StandAt(home), KarenBody.Pace.Walk, "go to the WC mop rack", StandArrive);
             plan.Add(new Tell(TellKind.MopRattle, _ => rackAt, 0.9f));
+            TacticHelpers.AtThing(plan, this, rackAt, "take the WC mop");
             plan.Add(new HandsOn("take the WC mop", _ => rackAt, k =>
             {
                 if (!home.IsToolHome) { k.Think("CHECK", "the WC mop is gone already"); return; }
@@ -758,6 +770,8 @@ namespace Kehai.Karen
             plan.Target = "the time clock";
             plan.Go(TacticHelpers.OnFloor(clock), KarenBody.Pace.Walk, "walk to the time clock", 1.2f);
             plan.Add(new Tell(TellKind.PunchBuzz, _ => clock, 0.9f));
+            TacticHelpers.AtThing(plan, this, clock, "stop the time clock",
+                (k, p) => TimeClockDisplay.Flicker(clock, true), k => TimeClockDisplay.Flicker(clock, false));
             plan.Add(new HandsOn("stop the time clock", _ => clock, k =>
             {
                 if (k.Shift == null || !k.Shift.Freeze()) { k.Think("CHECK", "the clock was past stopping"); return; }
@@ -834,6 +848,12 @@ namespace Kehai.Karen
             AutoDoubleDoor door = doors[pick];
             LastDoor = door;
             plan.Target = candidates[pick].Key;
+            // At the PA box first (25 November): the chime goes out through it.
+            if (TacticHelpers.PaBoxAt(out Vector3 pa))
+            {
+                TacticHelpers.GoToThing(plan, pa, "the PA box in the staff room");
+                TacticHelpers.AtThing(plan, this, pa, "set the door chime going");
+            }
             plan.Add(new Tell(TellKind.DoorMotor, _ => door.transform.position, TellLead));
             string key = candidates[pick].Key;
             plan.Add(new Effect("cycle " + plan.Target + " for 20 s with nobody there", k =>

@@ -183,6 +183,26 @@ public sealed class StoreCameras : MonoBehaviour
         return true;
     }
 
+    // Camera break, one camera at a time (the owner's call of 25 November): she goes to each. The
+    // first she breaks marks the cameras broken (the box needs a reset, and she can't watch them);
+    // the screens go dark when the last one does. False if that one was already dark.
+    public bool BreakOne(StoreCamera cam)
+    {
+        if (cam == null || cam.IsBroken) return false;
+        cam.SetBroken(true);
+        if (!Broken)
+        {
+            Broken = true;
+            BrokenAt = Time.time;
+            TimesBroken++;
+            SetWatching(false);
+            BrokenChanged?.Invoke(true);
+        }
+        if (Wall != null && cameras.TrueForAll(x => x == null || x.IsBroken)) Wall.SetSignal(false);
+        TaskManager.NotifyWorldChanged();
+        return true;
+    }
+
     // The camera box, held to the end. False if nothing was broken.
     public bool Fix()
     {

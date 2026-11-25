@@ -47,7 +47,10 @@ namespace Kehai.Karen
             var sw = Pick(c);
             if (sw == null) return;
             plan.Target = sw.Room + " light switch";
+            // At the switch first (25 November).
+            TacticHelpers.GoToThing(plan, sw.transform.position, "the " + sw.Room + " light switch", 1f);
             plan.Add(new RoomFlicker(sw));
+            TacticHelpers.AtThing(plan, this, sw.transform.position, "switch off the " + sw.Room + " lights");
             plan.Add(new Effect("switch off " + sw.Room + " lights", k =>
             {
                 if (!FairnessGuard.DoorsClosed(k) && sw != null) { sw.SetOff(true); left = sw; }
