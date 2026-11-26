@@ -105,10 +105,17 @@ public static class KehaiBuild
             if (!Path.IsPathFullyQualified(relative) && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
                 throw new ArgumentException("A build on a temporary clone must write outside the clone.");
         }
+        // A verification player (0.5.2, C6.6) gets its own product name and bundle id, so it writes
+        // its data to its own folder, never the real game's: on a Mac a player's data folder follows
+        // the bundle id (com.tokenlimit.kehai), not the name. Only on a temporary clone.
+        string verifyProduct = VerifyProduct(Arg("-kehai-product"), disposableClone);
+        var standalone = UnityEditor.Build.NamedBuildTarget.Standalone;
+        string previousId = PlayerSettings.GetApplicationIdentifier(standalone);
         BuildReport report;
         try
         {
-            if (disposableClone) PlayerSettings.productName = GameNames.Game;
+            if (disposableClone) PlayerSettings.productName = verifyProduct ?? GameNames.Game;
+            if (verifyProduct != null) PlayerSettings.SetApplicationIdentifier(standalone, VerifyBundleId(verifyProduct));
             output ??= edition == KehaiEdition.Training ? KehaiRl.TrainingPath(target) : DefaultPath(target, playtest);
             report = Build(target, output, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"),
                 playtest, edition, stamp, releaseVersion);
@@ -116,6 +123,7 @@ public static class KehaiBuild
         finally
         {
             if (disposableClone) PlayerSettings.productName = previousProduct;
+            if (verifyProduct != null) PlayerSettings.SetApplicationIdentifier(standalone, previousId);
         }
         EditorApplication.Exit(report != null && report.summary.result == BuildResult.Succeeded ? 0 : 1);
     }
@@ -350,6 +358,18 @@ public static class KehaiBuild
             throw new ArgumentException("The dev channel needs a known source commit.");
         return $"{version}-dev+{code.Replace("+changes", ".changes")}";
     }
+
+    internal static string VerifyProduct(string name, bool disposableClone)
+    {
+        if (name == null) return null;
+        if (!disposableClone) throw new ArgumentException("-kehai-product is only for a build on a temporary kehai-run clone.");
+        if (!Regex.IsMatch(name, @"\AKehai-verify(?:-[a-z0-9]+)*\z"))
+            throw new ArgumentException("-kehai-product must be Kehai-verify or Kehai-verify-<word>, so it never names the real game.");
+        return name;
+    }
+
+    // Kehai-verify-player -> com.tokenlimit.kehai-verify-player: never the game's own id.
+    internal static string VerifyBundleId(string product) => "com.tokenlimit." + product.ToLowerInvariant();
 
     internal static string ArtFromRunner(string value) =>
         value != null && Regex.IsMatch(value, @"\A(?:[0-9a-f]{7,40}|unversioned)\z") ? value : null;

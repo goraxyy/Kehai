@@ -107,7 +107,17 @@ public class PlayerInteract : MonoBehaviour
         carrySlot = GetComponent<CarrySlot>();
         tools = GetComponent<PlayerTools>();
         if (rayOrigin == null)
-            rayOrigin = Camera.main.transform;
+            rayOrigin = EyeOf(this);
+    }
+
+    // Where the aim starts: the player's own camera, even switched off. The Training build turns
+    // every camera off (nothing is drawn), and Camera.main finds only one that's on, so the aim
+    // had no origin there and nobody could punch the clock (0.5.2, C6.6).
+    public static Transform EyeOf(Component player)
+    {
+        Camera own = player.GetComponentInChildren<Camera>(true);
+        if (own != null) return own.transform;
+        return Camera.main != null ? Camera.main.transform : player.transform;
     }
 
     void Update()

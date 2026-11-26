@@ -27,9 +27,11 @@ public sealed class RoomLightSwitch : HighlightInteractable
         }
         return StoreMap.AreaAt(p);
     }
-    public static bool Allows(Vector3 at)
+    public static bool Allows(Vector3 at) => AllowsRoom(RoomOf(at));
+
+    // The same, for a room already worked out (her light sense asks for every cell she sweeps).
+    public static bool AllowsRoom(string room)
     {
-        string room = RoomOf(at);
         foreach (var sw in all) if (sw != null && sw.Room == room && sw.IsOff) return false;
         return true;
     }

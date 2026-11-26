@@ -12,7 +12,13 @@
 > **Until the training player connects** (12 November: it floods TextMeshPro errors on the null graphics
 > device and never reaches the trainer), use the editor scripts, one copy each:
 > `tools/rl/record_demos_editor.sh employee|vital|basic 20000` and
-> `tools/rl/train_editor.sh <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> `tools/rl/train_editor.sh [--dry-run] <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> Since 0.5.2 (C1.4) it runs through `kehai-run train`: a safe clone, the lock, the trainer 20 s
+> ahead of Unity, and whichever outlives the other is stopped. The league must be committed.
+> **Restarts after a crash** (C5.2): put `python3 tools/rl/supervise.py --` in front of either
+> training script. A failed run starts again with `--resume` from its last checkpoint, at most 3
+> times. It never restarts after you stop it (Ctrl-C, or an exit of 130 or 75). Each attempt is a
+> line in `tools/rl/results/<run-id>.supervise.log`.
 > With a working player:
 >
 > ```bash

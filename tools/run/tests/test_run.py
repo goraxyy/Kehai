@@ -100,6 +100,40 @@ class Fixture(unittest.TestCase):
 
 
 class ProgressTests(unittest.TestCase):
+    def test_each_job_says_which_records_it_keeps_and_why(self):
+        for job in ('ablation', 'league'):
+            self.assertEqual(('on', 'on'), tuple(kr.records_policy(job, [])[k] for k in ('shift', 'learning')))
+            off = kr.records_policy(job, ['-karen-learning', 'off'])
+            self.assertEqual(('on', 'off'), (off['shift'], off['learning']))
+            self.assertIn('Q1', off['why'])
+        self.assertEqual(('off', 'off'), tuple(kr.records_policy('demos', [])[k] for k in ('shift', 'learning')))
+        self.assertEqual('per test', kr.records_policy('tests', [])['shift'])
+        self.assertEqual('off', kr.records_policy('unity', ['-kehai-no-records'])['shift'])
+        self.assertEqual('on', kr.records_policy('unity', ['-executeMethod', 'X'])['shift'])
+        for job in ('tests', 'ablation', 'league', 'demos', 'unity', 'trick-clip', 'sandbox-clip', 'sight-clips'):
+            self.assertTrue(kr.records_policy(job, [])['why'], job)
+
+    def test_a_clone_drops_the_define_a_batch_start_removes_and_keeps_the_rest(self):
+        with tempfile.TemporaryDirectory() as d:
+            asset = Path(d) / 'ProjectSettings' / 'ProjectSettings.asset'
+            asset.parent.mkdir()
+            asset.write_text('PlayerSettings:\n  productName: Kehai\n  scriptingDefineSymbols:\n'
+                             '    Standalone: KAREN_MLAGENTS;SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY\n'
+                             '    Android: SENTIS_ANALYTICS_ENABLED\n  additionalCompilerArguments: {}\n'
+                             '  other: SENTIS_ANALYTICS_ENABLED\n')
+            kr.set_product(Path(d), 'Kehai-run-x')
+            self.assertEqual('PlayerSettings:\n  productName: Kehai-run-x\n  scriptingDefineSymbols:\n'
+                             '    Standalone: KAREN_MLAGENTS;APP_UI_EDITOR_ONLY\n    Android: \n'
+                             '  additionalCompilerArguments: {}\n  other: SENTIS_ANALYTICS_ENABLED\n', asset.read_text())
+
+    def test_compile_reasons_are_read_from_the_log(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / 'unity.log'
+            log.write_text('x\n[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes\n'
+                           'y\n[ScriptCompilation] Requested script compilation because: Define symbols changed\n')
+            self.assertEqual(['AssetDatabase observed changes', 'Define symbols changed'], kr.compile_reasons(log))
+            self.assertEqual([], kr.compile_reasons(Path(d) / 'missing.log'))
+
     def test_last_nonblank_line_and_placement_audit_markers(self):
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / 'unity.log'
@@ -388,6 +422,17 @@ class RunTests(Fixture):
         self.assertEqual(0, kr.run(self.s, 'tests', [], test_filter='Sandbox', dry_run=True, log=lines.append))
         self.assertIn('-testFilter Sandbox', lines[-1])
         self.assertIn('-batchmode -nographics', lines[-1])
+        self.assert_clean()
+
+    def test_learning_off_reaches_unity_and_the_register_says_so(self):
+        p = self.run_cli('ablation', '--learning', 'off', '--', '-ablation-careers', '1')
+        text, _ = p.communicate(timeout=60)
+        self.assertEqual(0, p.returncode, text)
+        self.assertIn('shift records on, learning records off', text)
+        running = self.events()[0]
+        self.assertEqual(['-karen-learning', 'off'], running['args'][-2:])
+        self.assertEqual('off', running['records']['learning'])
+        self.assertEqual('on', running['records']['shift'])
         self.assert_clean()
 
     def test_an_open_unity_stops_the_run(self):

@@ -9,6 +9,8 @@ tools/run/kehai-run tests                      # the whole EditMode suite on the
 tools/run/kehai-run tests --filter Sandbox     # part of it
 tools/run/kehai-run ablation -- -ablation-careers 1 -ablation-shifts 2 -ablation-rungs CE
 tools/run/kehai-run unity -- -executeMethod EvalBatch.Play -kehai-trick-check
+tools/run/kehai-run ablation --learning off -- -ablation-careers 5 -ablation-shifts 1   # a speed measure
+tools/run/kehai-run train --learn-args="--resume" basic_r2_a tools/rl/karen_basic.yaml tools/rl/leagues/basic_r2.json -- -karen-set catchDial=0.15
 tools/run/kehai-run trick-clip /path/to/out/RUN/kehai_eval/trick_check_TIME.tsv blackout --dry-run
 tools/run/kehai-run tests --dry-run            # print the Unity command, run nothing
 tools/run/kehai-run status                     # the lock, what's running, the last runs
@@ -34,6 +36,26 @@ Ctrl-C, closing the terminal or a session ending all clean up. A crash or `kill 
 run, or `doctor --clean`, finds the dead run's card, preserves its existing output, and cleans up for it. A dry run only prints the command. An unavailable process list blocks execution and recovery.
 
 For one landed trick, `trick-clip` reads the retained replay under the source run’s `shift_records` and uses the commit in its `run.jsonl`. Use a recording from a commit that includes the silent renderer. The render gets its own run folder with `clip.mp4`, the camera sidecar and the log. Each render with Unity needs a separate go.
+
+## Which records a run keeps
+
+0.5.2 plan, C6.5. Each run prints its choice at the start and writes it into the register's `records`.
+
+| Job | Shift records and replays | Learning records | Why |
+|---|---|---|---|
+| `tests` | each test's own | each test's own | EditMode tests set their own |
+| `ablation`, `league` | **on, always** | on; `--learning off` for a run that only measures | every test shift is recorded (Q1); its shifts may become training data |
+| `demos` | off | off | the demonstrations are the output, over thousands of shifts |
+| `unity` | on, unless `-kehai-no-records` | as the method sets, or `-karen-learning on/off` | a method chooses its own |
+| `trick-clip`, `sandbox-clip`, `sight-clips` | off | off | a render replays a recording |
+
+`-kehai-no-records` turns off both kinds, so it's refused on tests, ablations and leagues. Learning
+records cost about a seventh of a batch frame (7.3 against 6.4 ms, 12 November).
+
+**One compile per start** (C6.2): Unity's inference package removes `SENTIS_ANALYTICS_ENABLED`
+whenever editor analytics is off, as it is in batch mode. The clone starts without it, so the
+scripts compile once. Each run's end event lists why Unity compiled (`compiles`). Two entries mean
+something else now changes the defines.
 
 ## Releases: tags and rebuilds
 
