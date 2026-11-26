@@ -9,6 +9,8 @@ tools/run/kehai-run tests                      # the whole EditMode suite on the
 tools/run/kehai-run tests --filter Sandbox     # part of it
 tools/run/kehai-run ablation -- -ablation-careers 1 -ablation-shifts 2 -ablation-rungs CE
 tools/run/kehai-run unity -- -executeMethod EvalBatch.Play -kehai-trick-check
+tools/run/kehai-run ablation --learning off -- -ablation-careers 5 -ablation-shifts 1   # a speed measure
+tools/run/kehai-run train --learn-args="--resume" basic_r2_a tools/rl/karen_basic.yaml tools/rl/leagues/basic_r2.json -- -karen-set catchDial=0.15
 tools/run/kehai-run trick-clip /path/to/out/RUN/kehai_eval/trick_check_TIME.tsv blackout --dry-run
 tools/run/kehai-run tests --dry-run            # print the Unity command, run nothing
 tools/run/kehai-run status                     # the lock, what's running, the last runs

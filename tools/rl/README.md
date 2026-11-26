@@ -12,7 +12,9 @@
 > **Until the training player connects** (12 November: it floods TextMeshPro errors on the null graphics
 > device and never reaches the trainer), use the editor scripts, one copy each:
 > `tools/rl/record_demos_editor.sh employee|vital|basic 20000` and
-> `tools/rl/train_editor.sh <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> `tools/rl/train_editor.sh [--dry-run] <run-id> <config.yaml> <league.json> [game flags] [-- mlagents-learn flags]`.
+> Since 0.5.2 (C1.4) it runs through `kehai-run train`: a safe clone, the lock, the trainer 20 s
+> ahead of Unity, and whichever outlives the other is stopped. The league must be committed.
 > With a working player:
 >
 > ```bash

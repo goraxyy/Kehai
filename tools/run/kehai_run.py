@@ -340,6 +340,25 @@ def demo_args(mode: str, steps: str, export_dir: Path) -> list[str]:
             '-karen-record-demos', str(export_dir), '-karen-demo-steps', steps]
 
 
+@dataclass
+class Trainer:
+    """The trainer a training run starts beside Unity (tools/rl/train_editor.sh, C1.4)."""
+    command: list[str]
+    cwd: Path
+    head_start: float = 20.0    # seconds before Unity starts, so the trainer is listening
+
+
+def trainer_for(s: Settings, run_id: str, config: Path, learn: list[str]) -> Trainer:
+    """mlagents-learn as train_editor.sh started it: from tools/rl, results in tools/rl/results."""
+    rl = s.repo / 'tools' / 'rl'
+    learner = rl / '.venv' / 'bin' / 'mlagents-learn'
+    if not learner.exists():
+        learner = s.main / 'tools' / 'rl' / '.venv' / 'bin' / 'mlagents-learn'
+    config = Path(os.path.abspath(config))
+    return Trainer([str(learner), str(config), '--run-id', run_id, '--results-dir', str(rl / 'results'),
+                    '--timeout-wait', '900', *learn], cwd=rl)
+
+
 def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: str | None,
                *, league: Path | None = None, eval_timeout: str | None = None,
                export_dir: Path | None = None) -> list[str]:
@@ -349,6 +368,11 @@ def unity_args(job: str, clone: Path, out: Path, extra: list[str], test_filter: 
         return base + ['-executeMethod', 'EvalBatch.Play', '-kehai-ablation', '-ablation-interleave',
                        '-ablation-careers', '1000', '-ablation-shifts', '6', '-ablation-start', '1',
                        '-ablation-seconds', '150', '-kehai-no-records'] + logging + extra
+    if job == 'train':
+        # tools/rl/train_editor.sh's command before C1.4, with the same flags: training plays
+        # thousands of shifts, so no shift or learning records; the trainer learns from the link.
+        return base + ['-executeMethod', 'EvalBatch.Play', '-league', str(clone / league),
+                       '-kehai-no-records'] + logging + extra
     if job in ('league', 'ablation'):
         mode = ['-league', str(clone / league)] if league is not None else ['-kehai-ablation']
         eval_args = ['-executeMethod', 'EvalBatch.Play', *mode]
@@ -387,6 +411,8 @@ def records_policy(job: str, extra: list[str]) -> dict:
         return extra[extra.index(name) + 1].lower() if name in extra[:-1] else None
     if job == 'demos':
         return {'shift': 'off', 'learning': 'off', 'why': 'demonstrations are the output, over thousands of shifts'}
+    if job == 'train':
+        return {'shift': 'off', 'learning': 'off', 'why': 'training plays thousands of shifts; the trainer learns over its link'}
     if job == 'tests':
         return {'shift': 'per test', 'learning': 'per test', 'why': 'each EditMode test sets its own'}
     if job in ('trick-clip', 'sandbox-clip', 'sight-clips'):
@@ -438,9 +464,12 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         sight: SightReview | None = None, *, league: Path | None = None,
         eval_timeout: str | None = None, export_dir: Path | None = None,
         clone_root: Path | None = None, result_dir_file: Path | None = None,
-        graphics: bool = False, prepare: Callable[[Path, Path], dict] | None = None) -> int:
+        graphics: bool = False, prepare: Callable[[Path, Path], dict] | None = None,
+        trainer: Trainer | None = None) -> int:
     """`prepare(clone, out)` runs after the clone is made and before Unity (a release rebuild lays
-    the art and checks every file there); it returns extra environment for Unity, or raises."""
+    the art and checks every file there); it returns extra environment for Unity, or raises.
+    `trainer` starts before Unity (the training job, C1.4): when either ends, the other is
+    stopped, and the run's exit is the trainer's when it ended first."""
     if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
@@ -476,6 +505,8 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         for case in sight.cases
     ]
     if dry_run:
+        if trainer is not None:
+            log(f'(in {trainer.cwd}) ' + shlex.join(trainer.command))
         for _, command in commands:
             log(shlex.join(command))
         return 0
@@ -537,6 +568,7 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     code, state, note = 1, 'failed', ''
     began = time.time()
     proc = None
+    trainer_proc = trainer_log = None
     results = {}
     try:
         if sight:
@@ -566,16 +598,36 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
             if sight:
                 name = sight.cases[i].name
                 log(f'kehai-run: rendering {name}; log {unity_log}')
+            if trainer is not None:
+                trainer_log = (out / 'trainer.log').open('w')
+                trainer_proc = subprocess.Popen(trainer.command, cwd=trainer.cwd, start_new_session=True,
+                                                stdout=trainer_log, stderr=subprocess.STDOUT)
+                log(f'kehai-run: {rid}: trainer started; {out / "trainer.log"}')
+                wait_until = time.time() + trainer.head_start
+                while time.time() < wait_until and trainer_proc.poll() is None:
+                    time.sleep(0.2)
+                if trainer_proc.poll() is not None:
+                    raise RuntimeError(f'the trainer exited ({trainer_proc.returncode}) before Unity started; see trainer.log')
             proc = subprocess.Popen(command, start_new_session=True, env=env)
+            trainer_code = None
             while proc.poll() is None:
                 if time.time() > limit:
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.wait()
                     note = f'timed out after {timeout_min:g} min'
                     break
+                if trainer_proc is not None and trainer_proc.poll() is not None:
+                    # The trainer finished (or failed): Unity, its environment, has nothing left to do.
+                    trainer_code = trainer_proc.returncode
+                    os.killpg(proc.pid, signal.SIGKILL)
+                    proc.wait()
+                    break
                 (out / 'progress').write_text(f'{job} {rid} {time.time() - began:.0f}s {progress_line(unity_log)}\n')
                 time.sleep(1.0)
             code = proc.returncode if not note else 124
+            if trainer_code is not None and not note:
+                code = trainer_code
+                note = 'the trainer finished' if code == 0 else f'the trainer exited {code}'
             if export_dir is not None and code < 0:
                 code = 128 - code
             if sight:
@@ -622,6 +674,20 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         note = f'{type(err).__name__}: {err}'
         code, state = 1, 'failed'
     finally:
+        for p in (proc, trainer_proc):
+            # Whichever is still running (Unity ended first, Ctrl-C, a failure): stopped, never left.
+            if p is not None and p.poll() is None:
+                try:
+                    os.killpg(p.pid, signal.SIGTERM if p is trainer_proc else signal.SIGKILL)
+                    p.wait(timeout=30)
+                except (OSError, subprocess.TimeoutExpired):
+                    try:
+                        os.killpg(p.pid, signal.SIGKILL)
+                    except OSError:
+                        pass
+                    p.wait()
+        if trainer_log is not None:
+            trainer_log.close()
         for sig, handler in old.items():
             signal.signal(sig, handler)
         # If preservation fails, leave the source data and card for recovery.
@@ -734,6 +800,15 @@ def main(argv=None) -> int:
     offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
     offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
     offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
+    tr = sub.add_parser('train', help='train one side of the league: the trainer, and the editor as its one copy (C1.4)')
+    tr.add_argument('run_id')
+    tr.add_argument('config', type=Path, help='the mlagents-learn config (yaml)')
+    tr.add_argument('league', type=Path, help='a league file committed in the selected commit')
+    tr.add_argument('--ref', default='HEAD')
+    tr.add_argument('--timeout-min', type=float, default=float('inf'))
+    tr.add_argument('--learn-args', default='', help='more mlagents-learn flags, in one string (e.g. "--resume")')
+    tr.add_argument('--dry-run', action='store_true')
+    tr.add_argument('rest', nargs=argparse.REMAINDER, help='after --: game flags, passed to Unity')
     rel = sub.add_parser('release', help='tag a version, or check and rebuild a tagged one (C10.4)')
     rsub = rel.add_subparsers(dest='release_cmd', required=True)
     rt = rsub.add_parser('tag', help='tag HEAD of main in the code repo (and the art repo once it exists)')
@@ -777,6 +852,10 @@ def main(argv=None) -> int:
     if a.cmd == 'offline':
         from tools.run.offline import check
         return check(Path(__file__).resolve().parents[2], a.unity_app, a.references or s.main)
+    if a.cmd == 'train':
+        return run(s, 'train', a.rest[1:] if a.rest[:1] == ['--'] else a.rest, ref=a.ref,
+                   timeout_min=a.timeout_min, dry_run=a.dry_run, league=a.league,
+                   trainer=trainer_for(s, a.run_id, a.config, shlex.split(a.learn_args)))
     if a.cmd == 'release':
         from tools.run import release
         if a.release_cmd == 'tag':
