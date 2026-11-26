@@ -555,6 +555,109 @@ to run, and primary metric 2 can't be measured. How far to turn her down, and wi
 reach, her gain, the sprint, how soon a sighting becomes a hunt), is the owner's call; a playtest
 (Y5.1) would show whether people fare better than the bots.
 
+## Karen 0.5.2: the batch slowdown, found and fixed (26 November)
+
+The 0.5.2 plan's C6.3, C6.4 and C6.8, on this Mac with the editor closed, through `kehai-run`. The Mac
+was busy during the runs (the Claude app and a virtual machine), with a load average of 3–11 on 8
+cores. So absolute times run high, and the useful numbers are ratios between runs made the same way.
+
+**The measure, written down before the runs:** real seconds per simulated second over every shift
+except each run's first, which carries the warm-up. It's reported as ms a frame at 15 frames a
+simulated second. Rung E, the efficient player, base seed 1000, learning records off, which 0.2.0 didn't have.
+
+- **The first design didn't work.** One shift on seed 1000 isn't the same game on 0.2.0 (caught after
+  33 s) and on `main` (194 s). Four-shift careers didn't work either: on `main` a career stops at her
+  first catch (below). The measure became five one-shift careers, with the first shift left out.
+  That change was made after seeing the data, and the shared notes say so.
+
+**C6.3: the re-measure**
+
+| Commit | ms a frame | Runs |
+|---|---|---|
+| 0.2.0 (`d5d14f3`, PR #74's merge; there's no tag) | 9.4, 8.4, 9.6 | 3 |
+| `main` (`78a94e6`) | 17.4, 17.8, 18.5 | 3 |
+
+The gap is 2.0×, over the plan's 1.3×, so the hunt went ahead. The third number, `main` as a
+player, is in the Training player check below.
+
+**C6.4: the hunt**, splitting `main`'s merges in halves:
+
+| Commit | ms a frame | Verdict |
+|---|---|---|
+| 0.4.0 (`ec9b7a9`) | 9.7 | fast |
+| 0.4.1 (`9d0bc25`) | 11.1 | about 1.4 ms slower; likely her 72 m sight (not measured apart) |
+| 0.5.0 (`8b28d05`) | 16.5 | slow: most of the gap |
+| 0.5.1 (`7b4f3bb`) | 16.9 | slow |
+
+- **Inside 0.5.0, commits couldn't be split further.** Its commits only compile together; `35a12df`
+  is the first that builds, at 16.0 ms.
+- **The timing probe** (`-kehai-timing`), then temporary per-step timers (local commits, never
+  pushed), narrowed it down step by step:
+
+| Step | 0.4.1 | 0.5.0 / `main` |
+|---|---|---|
+| Her belief update, a call | 5.7–7.2 ms | 10.0–16.3 ms |
+| Her senses inside it | 3.9–5.0 ms | 8.2–13.7 ms |
+| The "not there" sweep inside those | 4.4–5.0 ms | 14.9–16.3 ms |
+| Sight, hearing, traces, what shoppers tell her | under 0.1 ms each | the same |
+
+**The cause.** 0.5.0's room lights trick added a room test to her light sense (`LightProbe.LevelAt`):
+- For every lamp near a point, it looked up both the lamp's room and the point's room.
+- Each lookup (`RoomLightSwitch.RoomOf`, then `StoreMap.CellAt` with a 6 m radius) searches a
+  window of hundreds of map cells.
+- Her sweep asks for the light at each of up to 120 cells a tick.
+- The cells and the code of the sweep itself were unchanged: 4,708 cells on both sides.
+
+**The fix** (`b531d28`):
+- Each lamp's room is kept, per map and per room rule.
+- The point's room is looked up once a call, and only when a lamp is in reach.
+- The answers stay the same (two new EditMode tests).
+
+| Shift's measure | `main` | the fix |
+|---|---|---|
+| ms a frame, the hunt's five seeds | 18.5 | **12.6** (−32%) |
+| shifts identical to `main`'s | — | 4 of 5 |
+
+The fifth seed, 1300, doesn't repeat on `main` either: 29, 66 and 78 steps on three runs. The fix gave
+outcomes `main` also gives.
+
+- **A second cache, of the room at every point, gained nothing:** 12.65 against 12.63 ms. It was reverted.
+- **What's left against 0.4.0's 9.7 ms**, measured on the fix:
+  - per sweep call, the light lookups take 3.4 ms;
+  - listing the cells within her 72 m sight takes 1.7 ms (0.4.1 doubled her range);
+  - the rays take 1.5 ms.
+
+  These aren't changed.
+- **What's left of the original 0.3.0 gap** against 0.2.0 isn't found. 0.4.0 measures 9.7 ms against
+  0.2.0's 9.6 here, so that gap is no longer visible.
+
+**C6.8: 10 frames a simulated second instead of 15**
+
+The design was written before the runs, then changed before them because careers end at the first
+catch. Six one-shift careers on base seed 2000 for each of the efficient, skittish and reckless
+players (never the cautious one). Rung E, the fix's commit `2b6668b`, paired by seed. Values are
+mean ± standard error over 18 pairs.
+
+| Difference in | 15 against 15 (the spread) | 10 against 15 (first run) | 10 against 15 (second run) |
+|---|---|---|---|
+| real s per simulated s | 0.194 → 0.200 | 0.194 → 0.201 | 0.200 → 0.201 |
+| her catches a shift | 0 ± 0 | −0.11 ± 0.08 | −0.11 ± 0.08 |
+| the bots' jobs a shift | −0.72 ± 0.55 | +2.06 ± 1.12 | +2.78 ± 1.27 |
+| shift length (s) | −18.7 ± 10.1 | +57.0 ± 20.6 | +75.8 ± 23.2 |
+| identical shifts | 3 of 18 | 1 of 18 | 1 of 18 |
+
+At 10 fps **it isn't faster**, and it changes the game by more than the spread between two 15-fps
+runs. Most of a frame's work runs on simulated-time timers (her belief update, the physics), so
+fewer frames save nothing. 15 stays the default.
+
+**Found on the way:**
+- **Careers stop at her first catch on `main`.** After a catch, 0.5.0 replays the same shift (its
+  retry after death), and the ablation's log refuses the replay as "already recorded". So a career
+  never passes its first caught shift: 3 of 8 rows were kept in a two-career, four-shift run.
+  Whether ablations record retries or move to the next shift is the owner's call.
+- **Most shifts don't repeat run to run.** Two identical 15-fps runs gave the same shift 3 times in
+  18. Seeds 1000, 1100 and 1200 (efficient) repeat exactly; seeds 1300 and 1400 don't (C5.4).
+
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 
 - **Her light sense ignored a second set of ceiling lamps (23 November).** `LightProbe` read only

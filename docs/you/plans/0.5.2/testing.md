@@ -147,6 +147,10 @@ and the [0.4.0 plan's C0.2](../0.4.0-build-plan.md#phase-0-before-building).
 
 **Your answer (Q10, 21 November): "hunt first":** the slowdown is found before the long runs.
 
+**Found and fixed on 26 November:** most of today's gap came with 0.5.0. Her light sense looked up
+two rooms for every lamp, for every cell her sweep checks. The fix makes batch runs about a third
+faster; the numbers are in [KAREN_RESULTS](../../../agents/results/KAREN_RESULTS.md#karen-052-the-batch-slowdown-found-and-fixed-26-november).
+
 **Where:** Windows (it can run while your Mac editor is open), or the Mac with the editor closed
 while the PC is on hold.
 **Model:** Opus 5.5: a deep bug that two sessions didn't find.
