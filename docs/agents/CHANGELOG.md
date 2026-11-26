@@ -2,7 +2,7 @@
 
 - **2026-11-26 — 0.5.2 branch, not released.** Where the usable things go (Phase 12).
   - **The staff room's mop** and its rack hang on the east wall; they stood boxed into the south-west corner, behind the counter and the stock crate.
-  - **Shelves you can't get at** stay full to look at: a slot behind one you can't reach, a chiller you can't stand at (freezers 4 and 5, whose doors now stay shut), and the till counter's mints where a shelf stands against both its sides.
+  - **Shelves you can't get at** stay full to look at: a slot behind one you can't reach, a chiller you can't stand at (freezers 4 and 5, whose doors now stay shut), and the till counter's mints where they stand among a shelf's decks (in the store's own layout).
   - **The placement check** flags nothing in the store or any layout: everything you use is at eye level or lower, with somewhere to stand in front of it.
 
 - **2026-11-25 — 0.5.2 branch, not released.** How Karen finds you when you hide (Phase 9).
