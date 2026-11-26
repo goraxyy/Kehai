@@ -53,4 +53,25 @@ public class Kehai052PlacementTests
         Assert.IsNull(player.FindAimedTarget(ray), "a shut display door isn't usable, and nothing behind it is reached");
         Assert.IsFalse(door.IsHidingDoor, "Karen doesn't wait on a door that won't open");
     }
+
+    // C6.6: the Training build turns every camera off, so the aim starts at the player's own
+    // camera even when it's off (Camera.main finds only one that's on).
+    [Test]
+    public void TheAimStartsAtThePlayersOwnCamera_EvenSwitchedOff()
+    {
+        var player = new GameObject("Player");
+        var head = new GameObject("Head").AddComponent<Camera>();
+        head.transform.SetParent(player.transform, false);
+        head.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+        head.enabled = false;
+        try
+        {
+            Assert.AreSame(head.transform, PlayerInteract.EyeOf(player.transform));
+            Object.DestroyImmediate(head.gameObject);
+            Transform fallback = PlayerInteract.EyeOf(player.transform);
+            Assert.IsTrue(fallback == player.transform || Camera.main != null && fallback == Camera.main.transform,
+                "no camera of its own: the main camera, else the player itself, never null");
+        }
+        finally { Object.DestroyImmediate(player); }
+    }
 }

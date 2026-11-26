@@ -73,6 +73,9 @@ public class BuildStampTests
         foreach (string bad in new[] { "Kehai", "Kehai-run-x", "Kehai-verify/..", "Kehai-verify-Player", "" })
             Assert.Throws<ArgumentException>(() => KehaiBuild.VerifyProduct(bad, true), bad);
         Assert.Throws<ArgumentException>(() => KehaiBuild.VerifyProduct("Kehai-verify-player", false), "not in the owner's project");
+        // On a Mac the data folder follows the bundle id, so that changes too, and never to the game's.
+        Assert.AreEqual("com.tokenlimit.kehai-verify-player", KehaiBuild.VerifyBundleId("Kehai-verify-player"));
+        Assert.AreNotEqual("com.tokenlimit.kehai", KehaiBuild.VerifyBundleId("Kehai-verify"));
     }
 
     // A release rebuild (C10.4) runs in a clone with no .git-assets: kehai-run passes the art it laid.
