@@ -54,7 +54,7 @@ tools/run/kehai-run release rebuild 0.5.2-beta.1 --platform macos  # check, then
   (`.git-assets` in the main folder, Phase 7), the art repo gets the same tag.
 - **`check`** and **`rebuild`** clone the project the way every run does, at the tag. Then they:
   1. lay the art at the tag's art commit, through a scratch index, so the main folder's index
-     isn't touched and LFS files come out as a checkout would;
+     isn't touched (LFS files should come out as a checkout would; not yet tried with LFS);
   2. remove code under `Assets/!_Project` that the tag doesn't have;
   3. compare every file with the tag, in both repos, by git's own hash.
 
@@ -63,7 +63,7 @@ tools/run/kehai-run release rebuild 0.5.2-beta.1 --platform macos  # check, then
 - **Until Phase 7** a tag has no art commit, so `check` and `rebuild` refuse unless you pass
   `--art-today`. With that flag they use today's art, and the stamp reads `art unversioned`.
 - **Not yet:** a tag from another Unity version is refused, not installed. `-rc.N` versions wait
-  until `KehaiBuild` knows them.
+  until `KehaiBuild` knows them. `kehai-assets` isn't tagged yet.
 
 ## Sight check review clips
 

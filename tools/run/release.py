@@ -162,8 +162,8 @@ def read_tag(repo: Path, ref: str) -> TagInfo:
 
 def lay_art(main: Path, clone: Path, art: str) -> None:
     """The art repo's files at `art`, through a scratch index (the main folder's index isn't
-    touched, and LFS files are smudged as a checkout would), then the art files that exist now but
-    not at `art` removed."""
+    touched, and LFS files should be smudged as a checkout would: not yet tried with LFS), then the
+    art files that exist now but not at `art` removed."""
     with tempfile.TemporaryDirectory(prefix='kehai-art-index-') as d:
         env = {**os.environ, 'GIT_INDEX_FILE': str(Path(d) / 'index')}
         art_git(main, clone, 'read-tree', art, env=env)

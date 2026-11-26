@@ -9,6 +9,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -44,7 +45,8 @@ class ReleaseTests(Fixture):
         # The art repo, as Phase 7 lays it out: a second git folder over the same project.
         sh('git', 'init', '-q', '--bare', str(main / '.git-assets'))
         art(main, 'config', 'core.bare', 'false')
-        art(main, 'add', 'Assets/art.png')
+        # Under option A the art repo carries ProjectSettings too: a rebuild must still use its own product name.
+        art(main, 'add', 'Assets/art.png', 'ProjectSettings/ProjectSettings.asset', 'ProjectSettings/ProjectVersion.txt')
         art(main, 'commit', '-q', '-m', 'art 1')
         self.art1 = art(main, 'rev-parse', 'HEAD')
         # Code the main folder has but no commit does (it must not reach a rebuild).
@@ -133,6 +135,8 @@ class ReleaseTests(Fixture):
         seen = self.seen()
         self.assertEqual(self.code1, seen['source_commit'], 'Unity stamps the tagged commit')
         self.assertEqual(self.art1[:7], seen['art_commit'], 'and the tagged art')
+        self.assertTrue(seen['product'].startswith('Kehai-run-'), "the art's ProjectSettings didn't undo the run's own name")
+        self.assertTrue(seen['art'], 'the art is laid')
         args = seen['args']
         for pair in (['-executeMethod', 'KehaiBuild.Build'], ['-channel', 'testing'], ['-release-version', '0.5.2'],
                      ['-beta', '1'], ['-kehai-build-out', str(out)], ['-platform', 'macos']):
@@ -153,6 +157,25 @@ class ReleaseTests(Fixture):
         args = seen['args']
         self.assertEqual(['-buildTarget', 'Win64'], args[args.index('-buildTarget'):][:2])
         self.assertEqual(['-channel', 'prod'], args[args.index('-channel'):][:2])
+
+    def test_a_file_that_differs_stops_the_rebuild_before_unity(self):
+        self.tag()
+        bad = rel.CheckResult(1, [], ['Assets/keep.cs: differs from the tag'])
+        with patch.object(rel, 'prepare', return_value=bad):
+            code = rel.rebuild(self.s, '0.5.2-beta.1', 'macos', out=self.t / 'b' / 'Kehai.app', log=lambda *_: None)
+        self.assertEqual(1, code)
+        run_out = next((self.s.home / 'out').iterdir())
+        self.assertFalse((run_out / 'unity.log').exists(), 'Unity never started')
+        self.assertIn('PROBLEM: Assets/keep.cs: differs from the tag', (run_out / 'release_check.txt').read_text())
+        self.assertEqual('failed', self.events()[-1]['state'])
+        self.assert_clean()
+
+    def test_push_sends_the_tag_to_the_remote(self):
+        shutil.rmtree(self.s.main / '.git-assets')   # code only: the stand-in art repo has no remote
+        self.tag('0.5.2', push=True)
+        pushed = subprocess.run(['git', '-C', str(self.s.main), 'rev-parse', 'v0.5.2^{commit}'],
+                                capture_output=True, text=True).stdout.strip()
+        self.assertEqual(self.code1, pushed)
 
     def test_a_tag_from_another_unity_is_refused(self):
         self.tag()

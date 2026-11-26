@@ -478,9 +478,10 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
             sight.write(out, results)
         log(f'kehai-run: {rid}: cloning the project')
         make_clone(s, clone, commit)
-        set_product(clone, product)
         if prepare is not None:
+            # Before the product name: the art repo may carry ProjectSettings, and must not undo it.
             env.update(prepare(clone, out))
+        set_product(clone, product)
         if export_dir is not None:
             export_dir.mkdir(parents=True, exist_ok=True)
             unity_log_file(job, export_dir).write_text('')
