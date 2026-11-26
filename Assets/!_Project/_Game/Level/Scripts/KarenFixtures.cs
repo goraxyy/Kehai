@@ -37,6 +37,7 @@ public static class KarenFixtures
         if (Object.FindAnyObjectByType<ShiftManager>() == null) return;   // not the store
         Material outline = OutlineMaterial();
         WcRack(outline);
+        PlaceStaffMop();
         if (Object.FindAnyObjectByType<FogBox>() == null) PlaceFogBox(outline);
         if (Object.FindAnyObjectByType<PaBox>() == null) PlacePaBox(outline);
         if (Object.FindAnyObjectByType<ClosingMic>() == null) PlaceClosingMic(outline);
@@ -79,6 +80,49 @@ public static class KarenFixtures
         rack.place = ToolTheftTactic.Rack;
         rack.homeRadius = 0.4f;
         return rack;
+    }
+
+    // ---- the staff room's mop (0.5.2, C12.2) ---------------------------------------------------
+
+    // The scene stands the staff room's mop and its rack in the south-west corner, boxed in by the
+    // counter, the stock crate and the walls: no spot in front to stand and reach it (the placement
+    // audit). At load the rack goes onto the staff room's east wall, where the mini store has
+    // it, the same distance off the wall, facing the room; the mop goes with it when it's home.
+    // Only a rack still standing in that corner moves, so calling this again (or in the mini
+    // store, whose rack stands elsewhere) moves nothing.
+    public static readonly Vector3 StaffMopCorner = new Vector3(11.2f, 0f, -149.7f);
+    public static readonly Vector3 StaffMopWall = new Vector3(24.5f, 0f, -147f);
+
+    public static ToolSnapPoint PlaceStaffMop()
+    {
+        foreach (ToolSnapPoint rack in Object.FindObjectsByType<ToolSnapPoint>())
+        {
+            if (rack == null || rack.tool == null || rack.tool.GetComponent<ItemHome>() == null) continue;
+            Vector3 p = rack.transform.position;
+            if (new Vector2(p.x - StaffMopCorner.x, p.z - StaffMopCorner.z).magnitude > 0.5f) continue;
+            if (!rack.tool.name.Contains("Mop")) continue;
+
+            bool home = rack.IsToolHome;
+            Vector3 toolOffset = rack.tool.transform.position - p;
+            Quaternion toolTurn = Quaternion.Inverse(rack.transform.rotation) * rack.tool.transform.rotation;
+
+            Vector3 oldFacing = TowardFloor(p);
+            Vector3 oldWall = Wall(p, oldFacing);
+            float standoff = oldWall == p ? 0.25f : Vector3.Dot(p - oldWall, oldFacing);
+            Vector3 at = new Vector3(StaffMopWall.x, p.y, StaffMopWall.z);
+            Vector3 facing = TowardFloor(at);
+            Vector3 wall = Wall(at, facing);
+            Vector3 target = wall == at ? at : wall + facing * standoff;
+            target.y = p.y;
+
+            Quaternion turn = Quaternion.FromToRotation(oldFacing, facing);
+            rack.transform.SetPositionAndRotation(target, turn * rack.transform.rotation);
+            if (home)
+                rack.tool.transform.SetPositionAndRotation(target + turn * toolOffset, rack.transform.rotation * toolTurn);
+            Physics.SyncTransforms();
+            return rack;
+        }
+        return null;
     }
 
     // ---- the fridge control box (B2.1) ---------------------------------------------------
