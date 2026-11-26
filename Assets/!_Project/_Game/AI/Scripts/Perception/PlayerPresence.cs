@@ -29,6 +29,9 @@ namespace Kehai.Karen
             all.Clear();
             builtFor = default;
             stale = false;
+            lampRooms.Clear();
+            roomsMap = null;
+            roomsRule = null;
         }
 
         static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
@@ -40,6 +43,7 @@ namespace Kehai.Karen
 
             grid.Clear();
             all.Clear();
+            lampRooms.Clear();
             builtFor = scene;
             stale = false;
 
@@ -69,6 +73,7 @@ namespace Kehai.Karen
         {
             Ensure();
             float best = 0f;
+            string here = null;
             int cx = Mathf.FloorToInt(position.x / Cell);
             int cz = Mathf.FloorToInt(position.z / Cell);
 
@@ -79,11 +84,15 @@ namespace Kehai.Karen
                 foreach (Light light in bucket)
                 {
                     if (light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
-                    if (RoomLightSwitch.RoomOf(light.transform.position) != RoomLightSwitch.RoomOf(position)) continue;
                     Vector3 d = light.transform.position - position;
                     d.y = 0f;
                     float distance = d.magnitude;
                     if (distance > Reach) continue;
+                    // The point's room once per call, the lamp's from the cache (0.5.2, C6.4): each
+                    // lookup searches the map's cells 6 m around, and her sweep asks this for every
+                    // cell it looks at, so it was most of a batch frame's extra cost since 0.5.0.
+                    here ??= RoomLightSwitch.RoomOf(position);
+                    if (RoomOfLight(light) != here) continue;
                     best = Mathf.Max(best, 1f - Mathf.Clamp01((distance - 1.5f) / (Reach - 1.5f)));
                 }
             }
@@ -91,8 +100,30 @@ namespace Kehai.Karen
             // Karen's light sense, not the rendering: kept at 0.12 / 0.02 in 0.5.1. Item 3 darkens
             // the rendered store; retuning how fast she notices you in the dim waits for a check
             // of this input against the rendered state (0.5.1 implementation notes).
-            float ambient = PowerSystem.PowerOn && RoomLightSwitch.Allows(position) ? 0.12f : 0.02f;
+            float ambient = PowerSystem.PowerOn && RoomLightSwitch.AllowsRoom(here ?? RoomLightSwitch.RoomOf(position)) ? 0.12f : 0.02f;
             return Mathf.Clamp01(best * 0.88f + ambient);
+        }
+
+        // A ceiling lamp's room, worked out once while it stays where it is, on the same map and
+        // with the same room rule (a test or a sandbox may swap RoomLightSwitch.RoomOf).
+        static readonly Dictionary<Light, (Vector3 at, string room)> lampRooms = new Dictionary<Light, (Vector3, string)>();
+        static object roomsMap;
+        static System.Func<Vector3, string> roomsRule;
+
+        static string RoomOfLight(Light light)
+        {
+            object map = Application.isPlaying ? Kehai.Store.StoreMap.Current : null;
+            if (!ReferenceEquals(map, roomsMap) || roomsRule != RoomLightSwitch.RoomOf)
+            {
+                lampRooms.Clear();
+                roomsMap = map;
+                roomsRule = RoomLightSwitch.RoomOf;
+            }
+            Vector3 at = light.transform.position;
+            if (lampRooms.TryGetValue(light, out var known) && known.at == at) return known.room;
+            string room = RoomLightSwitch.RoomOf(at);
+            lampRooms[light] = (at, room);
+            return room;
         }
 
         // The nearest working light to a point — Mirror-black kills this one.
