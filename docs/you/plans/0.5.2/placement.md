@@ -49,7 +49,7 @@ code moves it to 1.4 m on the same wall, and the next run reports nothing.
 ## 4. Where it stands (26 November)
 
 **The audit flags nothing** in the store or any of the six layouts (171,407 rows, run
-`20261126-011406-f7ae44`); it was 110 on 23 November, 29,244 before that. Every product keeps a
+`20261126-015305-f4e19a`); it was 110 on 23 November, 29,244 before that. Every product keeps a
 slot that isn't display, in every layout. The display check is cautious: of the store's 842
 display slots the audit can reach 260, and 22 to 61 more a generated layout (they just stay
 stocked).
