@@ -100,6 +100,27 @@ class Fixture(unittest.TestCase):
 
 
 class ProgressTests(unittest.TestCase):
+    def test_a_clone_drops_the_define_a_batch_start_removes_and_keeps_the_rest(self):
+        with tempfile.TemporaryDirectory() as d:
+            asset = Path(d) / 'ProjectSettings' / 'ProjectSettings.asset'
+            asset.parent.mkdir()
+            asset.write_text('PlayerSettings:\n  productName: Kehai\n  scriptingDefineSymbols:\n'
+                             '    Standalone: KAREN_MLAGENTS;SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY\n'
+                             '    Android: SENTIS_ANALYTICS_ENABLED\n  additionalCompilerArguments: {}\n'
+                             '  other: SENTIS_ANALYTICS_ENABLED\n')
+            kr.set_product(Path(d), 'Kehai-run-x')
+            self.assertEqual('PlayerSettings:\n  productName: Kehai-run-x\n  scriptingDefineSymbols:\n'
+                             '    Standalone: KAREN_MLAGENTS;APP_UI_EDITOR_ONLY\n    Android: \n'
+                             '  additionalCompilerArguments: {}\n  other: SENTIS_ANALYTICS_ENABLED\n', asset.read_text())
+
+    def test_compile_reasons_are_read_from_the_log(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / 'unity.log'
+            log.write_text('x\n[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes\n'
+                           'y\n[ScriptCompilation] Requested script compilation because: Define symbols changed\n')
+            self.assertEqual(['AssetDatabase observed changes', 'Define symbols changed'], kr.compile_reasons(log))
+            self.assertEqual([], kr.compile_reasons(Path(d) / 'missing.log'))
+
     def test_last_nonblank_line_and_placement_audit_markers(self):
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / 'unity.log'

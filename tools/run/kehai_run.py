@@ -234,12 +234,38 @@ def make_clone(s: Settings, clone: Path, ref: str) -> None:
     shutil.rmtree(clone / 'Temp', ignore_errors=True)
 
 
+# Defines a batch start removes on its own, which costs a second compile of every script (0.5.2,
+# C6.2): Unity's inference package drops its analytics define when editor analytics is off, as it
+# is in batch mode. The clone starts without it, so the first compile is the only one.
+BATCH_DROPS = ('SENTIS_ANALYTICS_ENABLED',)
+
+
+def batch_defines(line: str) -> str:
+    """'    Standalone: A;SENTIS_ANALYTICS_ENABLED;B' -> '    Standalone: A;B' (order kept)."""
+    head, sep, value = line.rstrip('\n').partition(': ')
+    if not sep:
+        return line
+    kept = [d for d in value.split(';') if d and d not in BATCH_DROPS]
+    return f'{head}: {";".join(kept)}\n'
+
+
 def set_product(clone: Path, product: str) -> None:
+    """The clone's own product name (its data and prefs stay apart), and its batch defines."""
     p = clone / 'ProjectSettings' / 'ProjectSettings.asset'
     if not p.exists():
         return
-    lines = p.read_text().splitlines(keepends=True)
-    p.write_text(''.join(f'  productName: {product}\n' if ln.startswith('  productName: ') else ln for ln in lines))
+    out, in_defines = [], False
+    for ln in p.read_text().splitlines(keepends=True):
+        if ln.startswith('  productName: '):
+            ln = f'  productName: {product}\n'
+        if ln.startswith('  scriptingDefineSymbols:'):
+            in_defines = True
+        elif in_defines and ln.startswith('    '):
+            ln = batch_defines(ln)
+        else:
+            in_defines = False
+        out.append(ln)
+    p.write_text(''.join(out))
 
 
 def cleanup(s: Settings, card: Card, log=print) -> None:
@@ -349,6 +375,18 @@ class Stopped(Exception):
 
 def _stop(signum, frame):
     raise Stopped(signal.Signals(signum).name)
+
+
+COMPILE_MARK = '[ScriptCompilation] Requested script compilation because: '
+
+
+def compile_reasons(log: Path) -> list[str]:
+    """Why Unity compiled the scripts, once per compile (C6.2: a batch start should show one)."""
+    try:
+        with log.open(errors='replace') as f:
+            return [ln.split(COMPILE_MARK, 1)[1].strip() for ln in f if COMPILE_MARK in ln]
+    except OSError:
+        return []
 
 
 def progress_line(log: Path) -> str:
@@ -567,7 +605,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
             if code == 0:
                 code, state = 1, 'failed'
     minutes = (time.time() - began) / 60
-    record(s, card, state, exit=code, minutes=round(minutes, 1), note=note)
+    compiles = compile_reasons(unity_log_file(job, export_dir or out)) if not sight else []
+    record(s, card, state, exit=code, minutes=round(minutes, 1), note=note,
+           **({'compiles': compiles} if compiles else {}))
     summary = f'{job} on {commit}: {state}' + (f' ({note})' if note else '') + f', {minutes:.0f} min. Results: {export_dir or out}'
     log('kehai-run: ' + summary)
     notify(s, summary)
