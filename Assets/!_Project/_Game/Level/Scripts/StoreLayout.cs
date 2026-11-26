@@ -394,6 +394,15 @@ public static class StoreLayout
     // placement audit, 23 November). They stay stocked to look at (ShelfSlot.Display).
     static readonly HashSet<string> DisplayBays = new HashSet<string> { "Retail_Freezer_04" };
 
+    // A slot directly behind a display one, on the same board and face, is display too.
+    public static void MarkBehindDisplay(List<ShelfSlot> slots)
+    {
+        foreach (ShelfSlot slot in slots)
+            if (!slot.Display)
+                foreach (ShelfSlot front in slots)
+                    if (front.Display && front.InFrontOf(slot) && SameColumn(front, slot)) { slot.Display = true; break; }
+    }
+
     // Directly in front: the same place along the board, only nearer the aisle.
     static bool SameColumn(ShelfSlot front, ShelfSlot behind)
     {
@@ -415,18 +424,27 @@ public static class StoreLayout
         if (!Application.isPlaying) return front;
         Physics.SyncTransforms();
         Vector3 at = marker.transform.position;
-        Collider[] own = Physics.OverlapBox(at + Vector3.down * 0.5f, new Vector3(marker.size.x, 0.5f, marker.size.y) * 0.5f,
-            marker.transform.rotation, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        float floor = FloorUnder(at, own);
-        if (ShelfSlot.FaceReachable(front, own, floor)) return front;
+        float floor = FloorUnder(at);
+        // The counter it stands on: whatever is under its footprint, from just below its top
+        // down to near the floor.
+        float top = at.y - 0.02f, bottom = floor + 0.25f;
+        Collider[] own = top > bottom
+            ? Physics.OverlapBox(new Vector3(at.x, (top + bottom) * 0.5f, at.z),
+                new Vector3(marker.size.x * 0.5f, (top - bottom) * 0.5f, marker.size.y * 0.5f),
+                marker.transform.rotation, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            : new Collider[0];
+        if (ShelfSlot.FaceReachable(front, own, floor, out string frontWhy)) return front;
         var back = new ShelfSlot(null, marker.transform, Vector3.zero, true, marker.size, height);
-        if (ShelfSlot.FaceReachable(back, own, floor)) return back;
+        bool backOk = ShelfSlot.FaceReachable(back, own, floor, out string backWhy);
+        Debug.Log($"Till counter facing {marker.name}: the shoppers' side has no room ({frontWhy}); " +
+                  (backOk ? "it faces the till." : $"nor the till's ({backWhy}): display only."));
+        if (backOk) return back;
         front.Display = true;
         return front;
     }
 
     // The lowest floor-like surface under `at`, past the counter itself: the store's floor.
-    static float FloorUnder(Vector3 at, Collider[] own)
+    static float FloorUnder(Vector3 at)
     {
         float floor = at.y;
         foreach (RaycastHit hit in Physics.RaycastAll(at + Vector3.up * 0.1f, Vector3.down, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
@@ -512,10 +530,7 @@ public static class StoreLayout
             // A slot behind a display one on the same face is display too: you'd reach it past
             // that one, and that one can't be reached (the placement audit, 26 November: the
             // check stood the deeper slot's body inside its own bay and called it reachable).
-            foreach (ShelfSlot slot in made)
-                if (!slot.Display)
-                    foreach (ShelfSlot front in made)
-                        if (front.Display && front.InFrontOf(slot) && SameColumn(front, slot)) { slot.Display = true; break; }
+            MarkBehindDisplay(made);
             // A chiller whose every slot is display keeps its glass doors shut: nobody can stand
             // at them, and nothing behind them is ever needed (freezer 5, 26 November). Nor can
             // you hide in it, so Karen never waits on a door that won't open.

@@ -215,8 +215,10 @@ public class PlayerInteract : MonoBehaviour
             (slot == null || hit.distance <= slotDistance))
         {
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-            // A switched-off one isn't usable (a display chiller's doors, StoreLayout.StockBay).
-            if (interactable != null && (interactable is not Behaviour b || b.enabled && b.gameObject.activeInHierarchy)) return interactable;
+            // A switched-off one isn't usable (a display chiller's doors, StoreLayout.StockBay),
+            // and it still stands in the way: no reaching through shut glass to the stock behind.
+            if (interactable != null)
+                return interactable is not Behaviour b || b.enabled && b.gameObject.activeInHierarchy ? interactable : null;
         }
         if (slot != null) return slot;
 

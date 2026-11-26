@@ -88,11 +88,12 @@ public static class KarenFixtures
     // The scene stands the staff room's mop and its rack in the south-west corner, boxed in by the
     // counter, the stock crate and the walls: no spot in front to stand and reach it (the placement
     // audit). At load the rack goes onto the staff room's east wall, where the mini store has
-    // it, the same distance off the wall, facing the room; the mop goes with it when it's home.
+    // it, 0.25 m off the wall, facing the room; the mop goes with it when it's home.
     // Only a rack still standing in that corner moves, so calling this again (or in the mini
     // store, whose rack stands elsewhere) moves nothing.
     public static readonly Vector3 StaffMopCorner = new Vector3(11.2f, 0f, -149.7f);
     public static readonly Vector3 StaffMopWall = new Vector3(24.5f, 0f, -147f);
+    public const float StaffMopOffWall = 0.25f;   // the rack's centre off the wall, metres
 
     public static ToolSnapPoint PlaceStaffMop()
     {
@@ -116,12 +117,10 @@ public static class KarenFixtures
             try
             {
                 oldFacing = TowardFloor(p);
-                Vector3 oldWall = Wall(p, oldFacing);
-                float standoff = Mathf.Clamp(oldWall == p ? 0.25f : Vector3.Dot(p - oldWall, oldFacing), 0.15f, 0.4f);
                 Vector3 at = new Vector3(StaffMopWall.x, p.y, StaffMopWall.z);
                 facing = TowardFloor(at);
                 Vector3 wall = Wall(at, facing);
-                target = wall == at ? at : wall + facing * standoff;
+                target = wall == at ? at : wall + facing * StaffMopOffWall;
                 target.y = p.y;
             }
             finally
@@ -133,6 +132,10 @@ public static class KarenFixtures
             rack.transform.SetPositionAndRotation(target, turn * rack.transform.rotation);
             if (home)
                 rack.tool.transform.SetPositionAndRotation(target + turn * toolOffset, rack.transform.rotation * toolTurn);
+            // Dropped, the mop goes home to its rack; without one it would go back to where it
+            // stood when the scene loaded, the old corner (ItemHome).
+            ItemHome itemHome = rack.tool.GetComponent<ItemHome>();
+            if (itemHome.snapPoint == null) itemHome.snapPoint = rack.transform;
             Physics.SyncTransforms();
             return rack;
         }

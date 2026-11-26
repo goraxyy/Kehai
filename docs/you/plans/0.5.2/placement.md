@@ -62,9 +62,9 @@ stocked).
 | The audit opens each chiller slot's own door, and a cupboard in the way | it opened the first door only, which swung across its neighbours; the WC mop sits in a cupboard | — |
 | Stock boxes behind scenery aren't used | three working boxes stood behind a wall panel or a prop; their products moved to clear spots | — |
 | The power box labelled | EAST, WEST, BACK, and the prompt names the lights | Q25, yes |
-| **26 Nov:** a slot directly behind a display one is display too | you'd reach it past the one in front; the check had stood the deeper slot's body inside its own bay (the small end caps, 8 to 12 slots a layout) | follows your 23 November call |
-| **26 Nov:** a chiller whose every slot is display keeps its doors shut | nobody can stand at freezer 5's door, and nothing behind it is needed; Karen doesn't check it for you either | follows your 23 November call |
-| **26 Nov:** the till counter's mints face a side with room | in today's layout a shelf stands against the shoppers' side and the till side has no room either, so there they're display (other mints stay buyable); in the other layouts they face the shoppers | follows your 23 November call |
+| **26 Nov:** a slot directly behind a display one is display too | you'd reach it past the one in front; the check had stood the deeper slot's body inside its own bay (the small end caps, 8 to 12 slots a layout) | — |
+| **26 Nov:** a chiller whose every slot is display keeps its doors shut | nobody can stand at freezer 5's door, and nothing behind it is needed; Karen doesn't check it for you either | — |
+| **26 Nov:** the till counter's mints face a side with room | in today's layout a shelf's deck stands against the shoppers' side; in the other layouts they face the shoppers | — |
 | **26 Nov:** the staff room's mop and rack on the east wall | they stood in the south-west corner, boxed in by the counter, the stock crate and the walls; now where the mini store has them | — |
 | **26 Nov:** things off her map checked with physics | the parking lot's six bins are off her NavMesh: the audit checks the floor, the room to stand and the aim there, but can't check a route | — |
 
