@@ -249,8 +249,7 @@ public static class StoreLayout
             Tally(slotsPerSection, counter.Category, 1);
             slots++;
             if (stock == null) continue;
-            var slot = new ShelfSlot(null, marker.transform, Vector3.zero, false, marker.size,
-                                     ShelfGrid.PackSize(counter).y + 0.04f);
+            ShelfSlot slot = CounterSlot(marker, counter);
             slot.lightMask = RoomMask(slot.Position);
             stock.Add(slot);
             slot.Stock(counter.Category, counter.Id, filled: true);
@@ -395,6 +394,64 @@ public static class StoreLayout
     // placement audit, 23 November). They stay stocked to look at (ShelfSlot.Display).
     static readonly HashSet<string> DisplayBays = new HashSet<string> { "Retail_Freezer_04" };
 
+    // A slot directly behind a display one, on the same board and face, is display too.
+    public static void MarkBehindDisplay(List<ShelfSlot> slots)
+    {
+        foreach (ShelfSlot slot in slots)
+            if (!slot.Display)
+                foreach (ShelfSlot front in slots)
+                    if (front.Display && front.InFrontOf(slot) && SameColumn(front, slot)) { slot.Display = true; break; }
+    }
+
+    // Directly in front: the same place along the board, only nearer the aisle.
+    static bool SameColumn(ShelfSlot front, ShelfSlot behind)
+    {
+        Vector3 d = front.Position - behind.Position;
+        Vector3 outward = behind.Outward;
+        Vector3 along = d - outward * Vector3.Dot(d, outward);
+        along.y = 0f;
+        return along.magnitude < 0.05f;
+    }
+
+    // The till counter's facing stands on the counter top, so it can be taken from either side.
+    // It faces the shoppers unless something stands against that side (today's layout puts a
+    // shelf's deck against it, the placement audit, 26 November); then it faces the till, and if
+    // neither side has room it's display. Measured from the floor under the counter, not its top.
+    static ShelfSlot CounterSlot(CounterFacing marker, ProductDef counter)
+    {
+        float height = ShelfGrid.PackSize(counter).y + 0.04f;
+        var front = new ShelfSlot(null, marker.transform, Vector3.zero, false, marker.size, height);
+        if (!Application.isPlaying) return front;
+        Physics.SyncTransforms();
+        Vector3 at = marker.transform.position;
+        float floor = FloorUnder(at);
+        // The counter it stands on: whatever is under its footprint, from just below its top
+        // down to near the floor.
+        float top = at.y - 0.02f, bottom = floor + 0.25f;
+        Collider[] own = top > bottom
+            ? Physics.OverlapBox(new Vector3(at.x, (top + bottom) * 0.5f, at.z),
+                new Vector3(marker.size.x * 0.5f, (top - bottom) * 0.5f, marker.size.y * 0.5f),
+                marker.transform.rotation, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            : new Collider[0];
+        if (ShelfSlot.FaceReachable(front, own, floor, out string frontWhy)) return front;
+        var back = new ShelfSlot(null, marker.transform, Vector3.zero, true, marker.size, height);
+        bool backOk = ShelfSlot.FaceReachable(back, own, floor, out string backWhy);
+        Debug.Log($"Till counter facing {marker.name}: the shoppers' side has no room ({frontWhy}); " +
+                  (backOk ? "it faces the till." : $"nor the till's ({backWhy}): display only."));
+        if (backOk) return back;
+        front.Display = true;
+        return front;
+    }
+
+    // The lowest floor-like surface under `at`, past the counter itself: the store's floor.
+    static float FloorUnder(Vector3 at)
+    {
+        float floor = at.y;
+        foreach (RaycastHit hit in Physics.RaycastAll(at + Vector3.up * 0.1f, Vector3.down, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (hit.normal.y > 0.5f && hit.point.y < floor) floor = hit.point.y;
+        return floor;
+    }
+
     // By its name in the hierarchy today, or the one it had before the scene's names were tidied.
     public static bool DisplayOnly(Transform bay) => bay != null &&
         (DisplayBays.Contains(bay.name) || DisplayBays.Contains(SceneObjectNames.Original(bay)));
@@ -466,6 +523,25 @@ public static class StoreLayout
                 stock.Add(slot);
                 slot.Stock(section, id, filled: true);
                 made.Add(slot);
+            }
+        }
+        if (own != null)
+        {
+            // A slot behind a display one on the same face is display too: you'd reach it past
+            // that one, and that one can't be reached (the placement audit, 26 November: the
+            // check stood the deeper slot's body inside its own bay and called it reachable).
+            MarkBehindDisplay(made);
+            // A chiller whose every slot is display keeps its glass doors shut: nobody can stand
+            // at them, and nothing behind them is ever needed (freezer 5, 26 November). Nor can
+            // you hide in it, so Karen never waits on a door that won't open.
+            ColdFixture cold = bay.GetComponent<ColdFixture>();
+            if (cold != null && cold.retail)
+            {
+                bool usable = made.Exists(slot => !slot.Display);
+                foreach (FurnitureDoor door in bay.GetComponentsInChildren<FurnitureDoor>(true))
+                    if (door.roomDoor == null) door.enabled = usable;
+                foreach (Kehai.Karen.HidingPlace place in bay.GetComponentsInChildren<Kehai.Karen.HidingPlace>(true))
+                    place.enabled = usable;
             }
         }
         if (made != null) unit.SetSlots(made);

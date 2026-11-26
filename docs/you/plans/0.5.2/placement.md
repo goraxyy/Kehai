@@ -46,29 +46,29 @@ box having 3 buttons that idk what each does." The tasks are the plan's
 **Example:** the check reports "Radio: centre 2.1 m, above eye level". The radio's placement in
 code moves it to 1.4 m on the same wall, and the next run reports nothing.
 
-## 4. Where it stands (23 November)
+## 4. Where it stands (26 November)
 
-The audit's flags across the store and the six layouts went from **29,244 to 110**, the store
-alone **10** (run `20261123-024134-9aa72c`). Every product keeps a slot that isn't display, in
-every layout. The display check is cautious: of the store's 826 display slots, the audit can
-reach 260 (they just stay stocked).
+**The audit flags nothing** in the store or any of the six layouts (171,407 rows, run
+`20261126-015305-f4e19a`); it was 110 on 23 November, 29,244 before that. Every product keeps a
+slot that isn't display, in every layout. The display check is cautious: of the store's 842
+display slots the audit can reach 260, and 22 to 61 more a generated layout (they just stay
+stocked).
 
 | What changed | Why | Your call |
 |---|---|---|
 | Shelves measured at the board | a tall pack on a 1.5 m board is in reach; ~2,400 store slots were flagged for the pack's middle | yes, 23 November |
-| Blocked faces are **display only** | ~950 store slots face a wall, a chiller or another bay: they stay stocked, and shoppers, her knock-offs, her bolt-on camera and old sabotage never empty them, so no task asks for them (826 in the store) | yes, 23 November |
-| A slot restocked through its bay counts | a product's box fills every empty slot of it on the bay, the crate the whole bay, so a slot behind a reachable one is restocked from it (383 in the store) | how the game already works |
+| Blocked faces are **display only** | ~950 store slots face a wall, a chiller or another bay: they stay stocked, and shoppers, her knock-offs, her bolt-on camera and old sabotage never empty them, so no task asks for them | yes, 23 November |
+| A slot restocked through its bay counts | a product's box fills every empty slot of it on the bay, the crate the whole bay, so a slot behind a reachable one is restocked from it | how the game already works |
 | The audit opens each chiller slot's own door, and a cupboard in the way | it opened the first door only, which swung across its neighbours; the WC mop sits in a cupboard | — |
 | Stock boxes behind scenery aren't used | three working boxes stood behind a wall panel or a prop; their products moved to clear spots | — |
 | The power box labelled | EAST, WEST, BACK, and the prompt names the lights | Q25, yes |
+| **26 Nov:** a slot directly behind a display one is display too | you'd reach it past the one in front; the check had stood the deeper slot's body inside its own bay (the small end caps, 8 to 12 slots a layout) | — |
+| **26 Nov:** a chiller whose every slot is display keeps its doors shut | nobody can stand at freezer 5's door, and nothing behind it is needed; Karen doesn't check it for you either | — |
+| **26 Nov:** the till counter's mints face a side with room, else display | in today's layout the facing stands among a shelf bay's decks, with no room on either side, so there it's display (mints stay buyable on their shelves); in the other layouts it faces the shoppers | — |
+| **26 Nov:** the staff room's mop and rack on the east wall | they stood in the south-west corner, boxed in by the counter, the stock crate and the walls; now where the mini store has them | — |
+| **26 Nov:** things off her map checked with physics | the parking lot's six bins are off her NavMesh: the audit checks the floor, the room to stand and the aim there, but can't check a route | — |
 
-**Still flagged, for your walk (Y12.1):**
-- **Freezer 4** (30 slots) is display only by name (`StoreLayout.DisplayBays`): its door stops
-  against the scenery beside it. Freezer 5 is display only as its face is blocked; its door is
-  still flagged (1).
-- **One slot on the till counter** facing the shoppers' side (1): no floor in the audit's sampling.
-- **The six bins in the parking lot:** the audit measures on her NavMesh, which doesn't reach the
-  parking lot. Shoppers never use them and no chore asks for them; check you can walk to them.
-- **The staff room's mop and its rack:** a partition stands in front. Say if it's awkward to grab.
-- **Small end caps in the generated layouts** (`Shelf_Pillar_B_Low`, 4 to 12 slots a layout): no
-  floor in front in the audit's sampling.
+**For your walk (Y12.1):**
+- **The parking lot's bins:** walk out to them once; the audit couldn't check the way there.
+- **The staff room's mop** on the east wall: say if it's in a bad spot.
+- **Freezer 4 and 5** are shut displays; **the till counter's mints** are display in today's layout.

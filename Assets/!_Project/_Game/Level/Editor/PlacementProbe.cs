@@ -107,7 +107,7 @@ public sealed class PlacementProbe
             Vector3[] sides = SidesOf(component, bounds, ref centre);
             float range = component is CustomerNPC && player != null ? player.customerInteractRange :
                 player != null ? player.interactRange : 0f;
-            CheckApproach(result, centre, sides, range, target, colliders);
+            CheckApproach(result, centre, sides, range, target, colliders, explain: true);
             return result;
         }
         finally
@@ -193,50 +193,100 @@ public sealed class PlacementProbe
     }
 
     void CheckApproach(Result result, Vector3 centre, Vector3[] sides, float range,
-        IInteractable target, Collider[] colliders = null, Vector3? nearbyDoor = null)
+        IInteractable target, Collider[] colliders = null, Vector3? nearbyDoor = null, bool explain = false)
     {
         if (!HasNavigation) return;
 
-        // The furthest any sampled spot got, so an unreachable row says what stopped it.
-        int furthest = -1;
-        string stopped = null;
+        // The furthest any sampled spot got, so an unreachable row says what stopped it, and
+        // the same for each side, so a row says which way it was tried and what stopped that.
+        int furthest = -1, sideFurthest = -1;
+        string stopped = null, sideStopped = null;
+        var bySide = new System.Collections.Generic.List<string>();
         void Stopped(int stage, string why)
         {
             if (stage > furthest) { furthest = stage; stopped = why; }
+            if (stage > sideFurthest) { sideFurthest = stage; sideStopped = why; }
         }
+
+        // Off her map (the parking lot's bins: her NavMesh is the store's): the floor, the room
+        // to stand and the aim are checked with physics alone, and there's no route to check.
+        bool offMap = !NavMesh.SamplePosition(centre, out _, OffMapDistance, filter);
+
+        // A shelf slot takes the first spot that works (there are a great many). A thing tries
+        // every side and keeps the nearest spot, so its row says where you'd really stand.
+        float bestStep = float.MaxValue;
+        Vector3 bestFeet = default, bestForward = default;
+        bool bestCleared = false;
+        string bestNearer = null;
 
         foreach (Vector3 side in sides)
         {
             Vector3 forward = Vector3.ProjectOnPlane(side, Vector3.up).normalized;
             if (forward.sqrMagnitude < .5f) continue;
+            sideFurthest = -1;
+            sideStopped = null;
+            bool found = false;
             Vector3 lateral = Vector3.Cross(Vector3.up, forward);
             foreach (float step in Steps)
-            foreach (float offset in Offsets)
             {
-                Vector3 horizontal = centre + forward * step + lateral * offset;
-                if (!TryFloor(horizontal, out Vector3 feet)) { Stopped(0, "no floor in front"); continue; }
-                result.Height ??= centre.y - feet.y;
-                if (!CanStand(feet)) { Stopped(1, "no room to stand in front"); continue; }
-                Vector3 eye = feet + Vector3.up * eyeHeight;
-                if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) { Stopped(2, "too far from the door"); continue; }
-                if (!CanAimAt(eye, centre, range, target, colliders, out string aim, out bool frontCleared)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
-                if (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete) { Stopped(4, "no route from the spawn"); continue; }
+                if (found || step >= bestStep) break;
+                foreach (float offset in Offsets)
+                {
+                    Vector3 horizontal = centre + forward * step + lateral * offset;
+                    if (!TryFloor(horizontal, offMap, out Vector3 feet, out string under)) { Stopped(0, "no floor in front, " + under); continue; }
+                    result.Height ??= centre.y - feet.y;
+                    if (!CanStand(feet)) { Stopped(1, "no room to stand in front"); continue; }
+                    Vector3 eye = feet + Vector3.up * eyeHeight;
+                    if (nearbyDoor is Vector3 hinge && Vector3.Distance(feet + playerOriginAboveFeet, hinge) > range) { Stopped(2, "too far from the door"); continue; }
+                    if (!CanAimAt(eye, centre, range, target, colliders, out string aim, out bool frontCleared)) { Stopped(3, $"aim from {step:0.##} m: {aim}"); continue; }
+                    if (!offMap && (!NavMesh.CalculatePath(spawn, feet, filter, path) || path.status != NavMeshPathStatus.PathComplete)) { Stopped(4, "no route from the spawn"); continue; }
 
-                result.Approach = "reachable";
-                result.Standing = feet;
-                result.Height = centre.y - feet.y;
-                if (frontCleared) result.Evidence = Add(result.Evidence, "Reachable after taking the stock in front on the same shelf and face");
-                return;
+                    bestStep = step;
+                    bestFeet = feet;
+                    bestForward = forward;
+                    bestCleared = frontCleared;
+                    bestNearer = sideStopped;
+                    found = true;
+                    break;
+                }
             }
+            if (found && !explain) break;
+            if (!found) bySide.Add($"{Way(forward)}: {sideStopped ?? "not sampled"}");
+        }
+
+        if (bestStep < float.MaxValue)
+        {
+            result.Approach = offMap ? OffMap : "reachable";
+            result.Standing = bestFeet;
+            result.Height = centre.y - bestFeet.y;
+            if (offMap) result.Evidence = Add(result.Evidence, $"More than {OffMapDistance:0} m off her map: floor, room to stand and aim checked with physics; no route checked");
+            if (bestCleared) result.Evidence = Add(result.Evidence, "Reachable after taking the stock in front on the same shelf and face");
+            // A thing (not a shelf slot) reached only from further off says where it is and
+            // what stopped the nearer spots.
+            if (explain && bestStep > 1.05f)
+                result.Evidence = Add(result.Evidence, $"Centre at {centre.ToString("F2")}, reached from {bestStep:0.##} m {Way(bestForward)}" +
+                    (bestNearer != null ? $" (nearer: {bestNearer})" : "") + (bySide.Count > 0 ? $" (other sides: {string.Join("; ", bySide)})" : ""));
+            return;
         }
         result.Approach = "unreachable";
         result.Evidence = Add(result.Evidence, "No sampled front position with floor, standing clearance, aim and a complete NavMesh route from spawn" +
-            (stopped != null ? $" (furthest: {stopped})" : ""));
+            (stopped != null ? $" (furthest: {stopped})" : "") +
+            (bySide.Count > 1 ? $" (by side: {string.Join("; ", bySide)})" : ""));
     }
 
-    bool TryFloor(Vector3 horizontal, out Vector3 feet)
+    static string Way(Vector3 side)
+    {
+        Vector3 d = Vector3.ProjectOnPlane(side, Vector3.up).normalized;
+        return Mathf.Abs(d.x) >= Mathf.Abs(d.z) ? (d.x > 0 ? "+x" : "-x") : (d.z > 0 ? "+z" : "-z");
+    }
+
+    public const string OffMap = "reachable off her map";
+    const float OffMapDistance = 3f;
+
+    bool TryFloor(Vector3 horizontal, bool offMap, out Vector3 feet, out string under)
     {
         feet = default;
+        under = "nothing below";
         // The first floor-like surface could be a table. Check its height against the NavMesh
         // at this XZ so a tabletop won't masquerade as floor or get snapped to a nearby aisle.
         // Looks past a tabletop, a lid or a box lip to the floor under it; whether there's room to
@@ -244,8 +294,20 @@ public sealed class PlacementProbe
         Vector3 from = horizontal + Vector3.up * .2f;
         var hits = Physics.RaycastAll(from, Vector3.down, 5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        if (hits.Length > 0)
+        {
+            var first = hits[0];
+            under = NavMesh.SamplePosition(first.point, out var near, 3f, filter)
+                ? $"{first.collider.name} at {first.point.y:0.00} m, her map {Vector3.Distance(near.position, first.point):0.00} m off"
+                : $"{first.collider.name} at {first.point.y:0.00} m, her map over 3 m off";
+        }
         foreach (var floor in hits)
         {
+            if (offMap && floor.normal.y >= .5f)
+            {
+                feet = floor.point;
+                return true;
+            }
             if (floor.normal.y < .5f || !NavMesh.SamplePosition(floor.point, out var nav, .2f, filter)) continue;
             Vector3 delta = nav.position - floor.point;
             if (Mathf.Abs(delta.y) > EdgeTolerance || new Vector2(delta.x, delta.z).magnitude > EdgeTolerance) continue;

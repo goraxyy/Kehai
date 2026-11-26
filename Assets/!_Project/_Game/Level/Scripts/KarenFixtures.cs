@@ -1,3 +1,4 @@
+using System.Linq;
 using Kehai.Karen;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -37,6 +38,7 @@ public static class KarenFixtures
         if (Object.FindAnyObjectByType<ShiftManager>() == null) return;   // not the store
         Material outline = OutlineMaterial();
         WcRack(outline);
+        PlaceStaffMop();
         if (Object.FindAnyObjectByType<FogBox>() == null) PlaceFogBox(outline);
         if (Object.FindAnyObjectByType<PaBox>() == null) PlacePaBox(outline);
         if (Object.FindAnyObjectByType<ClosingMic>() == null) PlaceClosingMic(outline);
@@ -79,6 +81,65 @@ public static class KarenFixtures
         rack.place = ToolTheftTactic.Rack;
         rack.homeRadius = 0.4f;
         return rack;
+    }
+
+    // ---- the staff room's mop (0.5.2, C12.2) ---------------------------------------------------
+
+    // The scene stands the staff room's mop and its rack in the south-west corner, boxed in by the
+    // counter, the stock crate and the walls: no spot in front to stand and reach it (the placement
+    // audit). At load the rack goes onto the staff room's east wall, where the mini store has
+    // it, 0.25 m off the wall, facing the room; the mop goes with it when it's home.
+    // Only a rack still standing in that corner moves, so calling this again (or in the mini
+    // store, whose rack stands elsewhere) moves nothing.
+    public static readonly Vector3 StaffMopCorner = new Vector3(11.2f, 0f, -149.7f);
+    public static readonly Vector3 StaffMopWall = new Vector3(24.5f, 0f, -147f);
+    public const float StaffMopOffWall = 0.25f;   // the rack's centre off the wall, metres
+
+    public static ToolSnapPoint PlaceStaffMop()
+    {
+        foreach (ToolSnapPoint rack in Object.FindObjectsByType<ToolSnapPoint>())
+        {
+            if (rack == null || rack.tool == null || rack.tool.GetComponent<ItemHome>() == null) continue;
+            Vector3 p = rack.transform.position;
+            if (new Vector2(p.x - StaffMopCorner.x, p.z - StaffMopCorner.z).magnitude > 0.5f) continue;
+            if (!rack.tool.name.Contains("Mop")) continue;
+
+            bool home = rack.IsToolHome;
+            Vector3 toolOffset = rack.tool.transform.position - p;
+            Quaternion toolTurn = Quaternion.Inverse(rack.transform.rotation) * rack.tool.transform.rotation;
+
+            // The rack's and the mop's own colliders out of the rays while they look for the walls.
+            Collider[] own = rack.GetComponentsInChildren<Collider>().Concat(rack.tool.GetComponentsInChildren<Collider>()).ToArray();
+            var wasOn = new bool[own.Length];
+            for (int i = 0; i < own.Length; i++) { wasOn[i] = own[i].enabled; own[i].enabled = false; }
+            Physics.SyncTransforms();
+            Vector3 oldFacing, facing, target;
+            try
+            {
+                oldFacing = TowardFloor(p);
+                Vector3 at = new Vector3(StaffMopWall.x, p.y, StaffMopWall.z);
+                facing = TowardFloor(at);
+                Vector3 wall = Wall(at, facing);
+                target = wall == at ? at : wall + facing * StaffMopOffWall;
+                target.y = p.y;
+            }
+            finally
+            {
+                for (int i = 0; i < own.Length; i++) own[i].enabled = wasOn[i];
+            }
+
+            Quaternion turn = Quaternion.FromToRotation(oldFacing, facing);
+            rack.transform.SetPositionAndRotation(target, turn * rack.transform.rotation);
+            if (home)
+                rack.tool.transform.SetPositionAndRotation(target + turn * toolOffset, rack.transform.rotation * toolTurn);
+            // Dropped, the mop goes home to its rack; without one it would go back to where it
+            // stood when the scene loaded, the old corner (ItemHome).
+            ItemHome itemHome = rack.tool.GetComponent<ItemHome>();
+            if (itemHome.snapPoint == null) itemHome.snapPoint = rack.transform;
+            Physics.SyncTransforms();
+            return rack;
+        }
+        return null;
     }
 
     // ---- the fridge control box (B2.1) ---------------------------------------------------

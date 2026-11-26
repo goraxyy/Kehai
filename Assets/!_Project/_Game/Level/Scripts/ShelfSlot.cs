@@ -78,15 +78,22 @@ public sealed class ShelfSlot : IInteractable
 
     // Whether this slot's face has somewhere to stand: a step out from it there's room for a
     // body and a clear look at it. Its own bay, cupboard doors and triggers don't count.
-    public static bool FaceReachable(ShelfSlot slot, Collider[] own)
+    // `floor`: where you'd stand, if not where the bay stands (the till counter's facing stands
+    // on the counter's top).
+    public static bool FaceReachable(ShelfSlot slot, Collider[] own, float? floorY = null) =>
+        FaceReachable(slot, own, floorY, out _);
+
+    // `why`: what stood in the way at the last step tried, when there's no room.
+    public static bool FaceReachable(ShelfSlot slot, Collider[] own, float? floorY, out string why)
     {
+        why = null;
         if (slot.frame == null) return true;
         Vector3 outward = slot.Outward;
         outward.y = 0f;
         if (outward.sqrMagnitude < 1e-4f) return true;
         outward.Normalize();
         Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * 0.5f);
-        float floor = slot.frame.position.y;
+        float floor = floorY ?? slot.frame.position.y;
         foreach (float step in ReachSteps)
         {
             Vector3 feet = centre + outward * step;
@@ -94,14 +101,16 @@ public sealed class ShelfSlot : IInteractable
             // The player's body, as the placement audit stands it: 2 m tall, from just over the floor.
             int n = Physics.OverlapCapsuleNonAlloc(feet + Vector3.up * (BodyRadius + 0.06f), feet + Vector3.up * (2f - BodyRadius),
                 BodyRadius, overlaps, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            if (AnyOther(overlaps, n, own, feet.y)) continue;
+            Collider body = FirstOther(overlaps, n, own, feet.y);
+            if (body != null) { why = $"{body.name} where you'd stand {step:0.0} m out"; continue; }
             Vector3 eye = feet + Vector3.up * 1.6f;
             Vector3 d = centre - eye;
             n = Physics.RaycastNonAlloc(eye, d.normalized, hits, Mathf.Max(0f, d.magnitude - 0.05f),
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            bool seen = true;
-            for (int i = 0; i < n && seen; i++) seen = Ignored(hits[i].collider, own);
-            if (seen) return true;
+            Collider inTheWay = null;
+            for (int i = 0; i < n && inTheWay == null; i++) if (!Ignored(hits[i].collider, own)) inTheWay = hits[i].collider;
+            if (inTheWay == null) return true;
+            why = $"{inTheWay.name} in the way of the look from {step:0.0} m out";
         }
         return false;
     }
@@ -112,11 +121,11 @@ public sealed class ShelfSlot : IInteractable
     static readonly RaycastHit[] hits = new RaycastHit[16];
 
     // The floor, a mat or a step under the feet isn't in the way: only what rises past the ankles.
-    static bool AnyOther(Collider[] found, int n, Collider[] own, float floor)
+    static Collider FirstOther(Collider[] found, int n, Collider[] own, float floor)
     {
         for (int i = 0; i < n; i++)
-            if (!Ignored(found[i], own) && found[i].bounds.max.y > floor + 0.2f) return true;
-        return false;
+            if (!Ignored(found[i], own) && found[i].bounds.max.y > floor + 0.2f) return found[i];
+        return null;
     }
 
     static bool Ignored(Collider c, Collider[] own) => c == null || c is CharacterController || System.Array.IndexOf(own, c) >= 0 ||

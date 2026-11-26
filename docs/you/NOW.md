@@ -21,7 +21,7 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 | 0.5.1, after it merges: in `~/Developer/Kehai`, with the store scene open, run **Kehai → Cold Storage → Move Existing Islands Closer** and **Kehai → Store Finish → Apply Door, Locker and Exterior Fit**, save the scene, then make a new `kehai-assets` release for the Windows PC | they move the cold-room islands, delete the dead office camera and save the door fix into the scene |
 | 0.5.1: turn webcam blinking on, consent, calibrate | the camera helper is built and found, but nobody has started your camera |
 | 0.5.1: coffee machine on the kitchen counter (now) or the dining table? | one line to change |
-| **Walk the store** (Y12.1): the store's last placement flags are on the [placement page](plans/0.5.2/placement.md#4-where-it-stands-23-november); **try the mini store** (Y11.1) once its whole-store version is merged | the checks passed in batch runs; nobody has played them |
+| **Walk the store** (Y12.1): the audit flags nothing now; what to look at is on the [placement page](plans/0.5.2/placement.md#4-where-it-stands-26-november); **try the mini store** (Y11.1) once its whole-store version is merged | the checks passed in batch runs; nobody has played them |
 | After the 0.5.2 merge, play the recorded shift covering 0.5.1 | witnessed hiding, the 60 s pursuit, the stun and the new light are tested in code, not played |
 | Import the four new models: **Kehai → Props → Import Karen's Props** | until then the PA microphone, the camera box, the cameras and the screens are plain boxes |
 | Play a shift on 0.4.1 | her eyes are twice as far and twice as quick, and no test has measured that |

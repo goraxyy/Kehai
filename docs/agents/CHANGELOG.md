@@ -1,5 +1,10 @@
 # Changelog
 
+- **2026-11-26 — 0.5.2 branch, not released.** Where the usable things go (Phase 12).
+  - **The staff room's mop** and its rack hang on the east wall; they stood boxed into the south-west corner, behind the counter and the stock crate.
+  - **Shelves you can't get at** stay full to look at: a slot behind one you can't reach, a chiller you can't stand at (freezers 4 and 5, whose doors now stay shut), and the till counter's mints where they stand among a shelf's decks (in the store's own layout).
+  - **The placement check** flags nothing in the store or any layout: everything you use is at eye level or lower, with somewhere to stand in front of it.
+
 - **2026-11-25 — 0.5.2 branch, not released.** How Karen finds you when you hide (Phase 9).
   - **She checks hiding places:** when something tells her you might be there (a noise from it, a customer's word, where you usually hide), she may walk up to a fridge or locker, open it and look, or kneel at a stockroom rack and look under it. If you're inside, and under a rack within 1.5 m of her, you're caught. She's never certain to check, and leaves a place she just checked alone for a while.
   - **Who saw you hide:** a store camera while she watches the screens, or a shopper she then asks, can tell her where you went in. A torch left on gives away its light, not you.
