@@ -1,3 +1,4 @@
+using System.Linq;
 using Kehai.Karen;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -106,14 +107,27 @@ public static class KarenFixtures
             Vector3 toolOffset = rack.tool.transform.position - p;
             Quaternion toolTurn = Quaternion.Inverse(rack.transform.rotation) * rack.tool.transform.rotation;
 
-            Vector3 oldFacing = TowardFloor(p);
-            Vector3 oldWall = Wall(p, oldFacing);
-            float standoff = oldWall == p ? 0.25f : Vector3.Dot(p - oldWall, oldFacing);
-            Vector3 at = new Vector3(StaffMopWall.x, p.y, StaffMopWall.z);
-            Vector3 facing = TowardFloor(at);
-            Vector3 wall = Wall(at, facing);
-            Vector3 target = wall == at ? at : wall + facing * standoff;
-            target.y = p.y;
+            // The rack's and the mop's own colliders out of the rays while they look for the walls.
+            Collider[] own = rack.GetComponentsInChildren<Collider>().Concat(rack.tool.GetComponentsInChildren<Collider>()).ToArray();
+            var wasOn = new bool[own.Length];
+            for (int i = 0; i < own.Length; i++) { wasOn[i] = own[i].enabled; own[i].enabled = false; }
+            Physics.SyncTransforms();
+            Vector3 oldFacing, facing, target;
+            try
+            {
+                oldFacing = TowardFloor(p);
+                Vector3 oldWall = Wall(p, oldFacing);
+                float standoff = Mathf.Clamp(oldWall == p ? 0.25f : Vector3.Dot(p - oldWall, oldFacing), 0.15f, 0.4f);
+                Vector3 at = new Vector3(StaffMopWall.x, p.y, StaffMopWall.z);
+                facing = TowardFloor(at);
+                Vector3 wall = Wall(at, facing);
+                target = wall == at ? at : wall + facing * standoff;
+                target.y = p.y;
+            }
+            finally
+            {
+                for (int i = 0; i < own.Length; i++) own[i].enabled = wasOn[i];
+            }
 
             Quaternion turn = Quaternion.FromToRotation(oldFacing, facing);
             rack.transform.SetPositionAndRotation(target, turn * rack.transform.rotation);

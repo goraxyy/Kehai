@@ -78,7 +78,9 @@ public sealed class ShelfSlot : IInteractable
 
     // Whether this slot's face has somewhere to stand: a step out from it there's room for a
     // body and a clear look at it. Its own bay, cupboard doors and triggers don't count.
-    public static bool FaceReachable(ShelfSlot slot, Collider[] own)
+    // `floor`: where you'd stand, if not where the bay stands (the till counter's facing stands
+    // on the counter's top).
+    public static bool FaceReachable(ShelfSlot slot, Collider[] own, float? floorY = null)
     {
         if (slot.frame == null) return true;
         Vector3 outward = slot.Outward;
@@ -86,7 +88,7 @@ public sealed class ShelfSlot : IInteractable
         if (outward.sqrMagnitude < 1e-4f) return true;
         outward.Normalize();
         Vector3 centre = slot.frame.TransformPoint(slot.local + Vector3.up * slot.height * 0.5f);
-        float floor = slot.frame.position.y;
+        float floor = floorY ?? slot.frame.position.y;
         foreach (float step in ReachSteps)
         {
             Vector3 feet = centre + outward * step;
