@@ -35,6 +35,26 @@ run, or `doctor --clean`, finds the dead run's card, preserves its existing outp
 
 For one landed trick, `trick-clip` reads the retained replay under the source run’s `shift_records` and uses the commit in its `run.jsonl`. Use a recording from a commit that includes the silent renderer. The render gets its own run folder with `clip.mp4`, the camera sidecar and the log. Each render with Unity needs a separate go.
 
+## Which records a run keeps
+
+0.5.2 plan, C6.5. Each run prints its choice at the start and writes it into the register's `records`.
+
+| Job | Shift records and replays | Learning records | Why |
+|---|---|---|---|
+| `tests` | each test's own | each test's own | EditMode tests set their own |
+| `ablation`, `league` | **on, always** | on; `--learning off` for a run that only measures | every test shift is recorded (Q1); its shifts may become training data |
+| `demos` | off | off | the demonstrations are the output, over thousands of shifts |
+| `unity` | on, unless `-kehai-no-records` | as the method sets, or `-karen-learning on/off` | a method chooses its own |
+| `trick-clip`, `sandbox-clip`, `sight-clips` | off | off | a render replays a recording |
+
+`-kehai-no-records` turns off both kinds, so it's refused on tests, ablations and leagues. Learning
+records cost about a seventh of a batch frame (7.3 against 6.4 ms, 12 November).
+
+**One compile per start** (C6.2): Unity's inference package removes `SENTIS_ANALYTICS_ENABLED`
+whenever editor analytics is off, as it is in batch mode. The clone starts without it, so the
+scripts compile once. Each run's end event lists why Unity compiled (`compiles`). Two entries mean
+something else now changes the defines.
+
 ## Releases: tags and rebuilds
 
 0.5.2 plan, C10.4 ([the versions page, §3](../../docs/you/plans/0.5.2/versions.md#3-rebuilding-any-version)).
