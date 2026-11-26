@@ -377,7 +377,32 @@ def _stop(signum, frame):
     raise Stopped(signal.Signals(signum).name)
 
 
-COMPILE_MARK = '[ScriptCompilation] Requested script compilation because: '
+# Which records a job keeps, and why (0.5.2, C6.5). Shift records and replays: every test shift
+# keeps them (Q1), so -kehai-no-records is refused there. Learning records (one per decision) feed
+# Karen's dataset (tools/learn/dataset.py) and cost about a seventh of a batch frame (6.4 against
+# 7.3 ms, 12 November): on by default where a shift may become data, off with --learning off for
+# a run that only measures. Demonstrations are their own output, over thousands of shifts.
+def records_policy(job: str, extra: list[str]) -> dict:
+    def switch(name: str) -> str | None:
+        return extra[extra.index(name) + 1].lower() if name in extra[:-1] else None
+    if job == 'demos':
+        return {'shift': 'off', 'learning': 'off', 'why': 'demonstrations are the output, over thousands of shifts'}
+    if job == 'tests':
+        return {'shift': 'per test', 'learning': 'per test', 'why': 'each EditMode test sets its own'}
+    if job in ('trick-clip', 'sandbox-clip', 'sight-clips'):
+        return {'shift': 'off', 'learning': 'off', 'why': 'a render replays a recording; it plays no new shift'}
+    learning = switch('-karen-learning')
+    if job in ('ablation', 'league'):
+        on = learning != 'off'
+        return {'shift': 'on', 'learning': 'on' if on else 'off',
+                'why': 'every test shift is recorded (Q1); learning records ' +
+                       ('kept, as the shifts may become training data' if on else 'off: a run that only measures')}
+    shift = 'off' if '-kehai-no-records' in extra else 'on'
+    return {'shift': shift, 'learning': learning or ('off' if shift == 'off' else 'as the method sets'),
+            'why': 'a Unity method chooses its own; -kehai-no-records and -karen-learning say otherwise'}
+
+
+COMPILE_MARK ='[ScriptCompilation] Requested script compilation because: '
 
 
 def compile_reasons(log: Path) -> list[str]:
@@ -505,7 +530,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
     if sight:
         record(s, card, 'running', source=str(sight.source), shots=[cmd[1:] for _, cmd in commands])
     else:
-        record(s, card, 'running', args=args[1:])
+        records = records_policy(job, extra)
+        log(f"kehai-run: {rid}: shift records {records['shift']}, learning records {records['learning']} ({records['why']})")
+        record(s, card, 'running', args=args[1:], records=records)
     old = {sig: signal.signal(sig, _stop) for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     code, state, note = 1, 'failed', ''
     began = time.time()
@@ -679,6 +706,8 @@ def main(argv=None) -> int:
         if name == 'league':
             r.add_argument('--league', type=Path, required=True, help='a league file in the selected commit')
         if name in ('league', 'ablation'):
+            r.add_argument('--learning', choices=('on', 'off'), default='on',
+                           help='learning records (default on); off for a run that only measures (C6.5)')
             r.add_argument('--eval-timeout-min', help='EvalBatch timeout, with a five-minute runner grace period')
             r.add_argument('--export-dir', type=Path, help='write the live log and export eval and shift output here')
         if name == 'demos':
@@ -772,6 +801,8 @@ def main(argv=None) -> int:
         rest = demo_args(a.mode, a.steps, export_dir)
     else:
         rest = a.rest[1:] if a.rest[:1] == ['--'] else a.rest
+    if getattr(a, 'learning', 'on') == 'off' and '-karen-learning' not in rest:
+        rest = rest + ['-karen-learning', 'off']
     eval_timeout = getattr(a, 'eval_timeout_min', None)
     timeout = a.timeout_min
     if timeout is None:

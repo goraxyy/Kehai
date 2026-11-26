@@ -100,6 +100,19 @@ class Fixture(unittest.TestCase):
 
 
 class ProgressTests(unittest.TestCase):
+    def test_each_job_says_which_records_it_keeps_and_why(self):
+        for job in ('ablation', 'league'):
+            self.assertEqual(('on', 'on'), tuple(kr.records_policy(job, [])[k] for k in ('shift', 'learning')))
+            off = kr.records_policy(job, ['-karen-learning', 'off'])
+            self.assertEqual(('on', 'off'), (off['shift'], off['learning']))
+            self.assertIn('Q1', off['why'])
+        self.assertEqual(('off', 'off'), tuple(kr.records_policy('demos', [])[k] for k in ('shift', 'learning')))
+        self.assertEqual('per test', kr.records_policy('tests', [])['shift'])
+        self.assertEqual('off', kr.records_policy('unity', ['-kehai-no-records'])['shift'])
+        self.assertEqual('on', kr.records_policy('unity', ['-executeMethod', 'X'])['shift'])
+        for job in ('tests', 'ablation', 'league', 'demos', 'unity', 'trick-clip', 'sandbox-clip', 'sight-clips'):
+            self.assertTrue(kr.records_policy(job, [])['why'], job)
+
     def test_a_clone_drops_the_define_a_batch_start_removes_and_keeps_the_rest(self):
         with tempfile.TemporaryDirectory() as d:
             asset = Path(d) / 'ProjectSettings' / 'ProjectSettings.asset'
@@ -409,6 +422,17 @@ class RunTests(Fixture):
         self.assertEqual(0, kr.run(self.s, 'tests', [], test_filter='Sandbox', dry_run=True, log=lines.append))
         self.assertIn('-testFilter Sandbox', lines[-1])
         self.assertIn('-batchmode -nographics', lines[-1])
+        self.assert_clean()
+
+    def test_learning_off_reaches_unity_and_the_register_says_so(self):
+        p = self.run_cli('ablation', '--learning', 'off', '--', '-ablation-careers', '1')
+        text, _ = p.communicate(timeout=60)
+        self.assertEqual(0, p.returncode, text)
+        self.assertIn('shift records on, learning records off', text)
+        running = self.events()[0]
+        self.assertEqual(['-karen-learning', 'off'], running['args'][-2:])
+        self.assertEqual('off', running['records']['learning'])
+        self.assertEqual('on', running['records']['shift'])
         self.assert_clean()
 
     def test_an_open_unity_stops_the_run(self):
