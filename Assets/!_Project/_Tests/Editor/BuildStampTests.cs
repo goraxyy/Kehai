@@ -63,6 +63,18 @@ public class BuildStampTests
     public void IncompleteOrConflictingChannelLabelsAreRejected(string channel, string version, string beta, string commit) =>
         Assert.Throws<ArgumentException>(() => KehaiBuild.ChannelLabel(channel, version, beta, commit));
 
+    // A verification player (C6.6) never takes the real game's name, so it never writes into its data.
+    [Test]
+    public void AVerificationPlayersNameSaysSo_AndOnlyOnATemporaryClone()
+    {
+        Assert.IsNull(KehaiBuild.VerifyProduct(null, true));
+        Assert.AreEqual("Kehai-verify-player", KehaiBuild.VerifyProduct("Kehai-verify-player", true));
+        Assert.AreEqual("Kehai-verify", KehaiBuild.VerifyProduct("Kehai-verify", true));
+        foreach (string bad in new[] { "Kehai", "Kehai-run-x", "Kehai-verify/..", "Kehai-verify-Player", "" })
+            Assert.Throws<ArgumentException>(() => KehaiBuild.VerifyProduct(bad, true), bad);
+        Assert.Throws<ArgumentException>(() => KehaiBuild.VerifyProduct("Kehai-verify-player", false), "not in the owner's project");
+    }
+
     // A release rebuild (C10.4) runs in a clone with no .git-assets: kehai-run passes the art it laid.
     [TestCase("9f8e7d6", "9f8e7d6")]
     [TestCase("unversioned", "unversioned")]

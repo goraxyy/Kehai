@@ -105,10 +105,13 @@ public static class KehaiBuild
             if (!Path.IsPathFullyQualified(relative) && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
                 throw new ArgumentException("A build on a temporary clone must write outside the clone.");
         }
+        // A verification player (0.5.2, C6.6) gets its own product name, so it writes its data to its
+        // own folder, never the real game's. Only on a temporary clone, and only names that say so.
+        string verifyProduct = VerifyProduct(Arg("-kehai-product"), disposableClone);
         BuildReport report;
         try
         {
-            if (disposableClone) PlayerSettings.productName = GameNames.Game;
+            if (disposableClone) PlayerSettings.productName = verifyProduct ?? GameNames.Game;
             output ??= edition == KehaiEdition.Training ? KehaiRl.TrainingPath(target) : DefaultPath(target, playtest);
             report = Build(target, output, Environment.GetCommandLineArgs().Contains("-kehai-build-dev"),
                 playtest, edition, stamp, releaseVersion);
@@ -349,6 +352,15 @@ public static class KehaiBuild
         if (!Regex.IsMatch(code ?? "", @"\A[0-9a-f]{7,40}(?:\+changes)?\z"))
             throw new ArgumentException("The dev channel needs a known source commit.");
         return $"{version}-dev+{code.Replace("+changes", ".changes")}";
+    }
+
+    internal static string VerifyProduct(string name, bool disposableClone)
+    {
+        if (name == null) return null;
+        if (!disposableClone) throw new ArgumentException("-kehai-product is only for a build on a temporary kehai-run clone.");
+        if (!Regex.IsMatch(name, @"\AKehai-verify(?:-[a-z0-9]+)*\z"))
+            throw new ArgumentException("-kehai-product must be Kehai-verify or Kehai-verify-<word>, so it never names the real game.");
+        return name;
     }
 
     internal static string ArtFromRunner(string value) =>
