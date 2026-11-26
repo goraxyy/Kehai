@@ -63,6 +63,16 @@ public class BuildStampTests
     public void IncompleteOrConflictingChannelLabelsAreRejected(string channel, string version, string beta, string commit) =>
         Assert.Throws<ArgumentException>(() => KehaiBuild.ChannelLabel(channel, version, beta, commit));
 
+    // A release rebuild (C10.4) runs in a clone with no .git-assets: kehai-run passes the art it laid.
+    [TestCase("9f8e7d6", "9f8e7d6")]
+    [TestCase("unversioned", "unversioned")]
+    [TestCase(null, null)]
+    [TestCase("", null)]
+    [TestCase("9f8e7d6; rm -rf", null)]
+    [TestCase("UNVERSIONED", null)]
+    public void ARebuildsArtCommitComesFromTheRunnerWhenWellFormed(string value, string expected) =>
+        Assert.AreEqual(expected, KehaiBuild.ArtFromRunner(value));
+
     [Test]
     public void EveryShiftRecord_CarriesTheStamp()
     {

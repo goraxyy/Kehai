@@ -35,6 +35,36 @@ run, or `doctor --clean`, finds the dead run's card, preserves its existing outp
 
 For one landed trick, `trick-clip` reads the retained replay under the source run’s `shift_records` and uses the commit in its `run.jsonl`. Use a recording from a commit that includes the silent renderer. The render gets its own run folder with `clip.mp4`, the camera sidecar and the log. Each render with Unity needs a separate go.
 
+## Releases: tags and rebuilds
+
+0.5.2 plan, C10.4 ([the versions page, §3](../../docs/you/plans/0.5.2/versions.md#3-rebuilding-any-version)).
+
+```bash
+tools/run/kehai-run release tag 0.5.2-beta.1                       # tag HEAD of main, locally
+tools/run/kehai-run release tag 0.5.2-beta.1 --push                # and push the tags (the owner's go)
+tools/run/kehai-run release check v0.5.2-beta.1                    # lay it into a scratch folder and compare; no Unity
+tools/run/kehai-run release rebuild 0.5.2-beta.1 --platform macos  # check, then build it (editor closed)
+```
+
+- **Versions** are `MAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH-beta.N`, tagged `v0.5.2` and `v0.5.2-beta.1`.
+  A beta builds on the testing channel, a plain version on prod. Dev builds aren't tagged.
+- **`tag`** refuses uncommitted changes, a commit that isn't on `origin/main`, and a version
+  that is already tagged. The tag is annotated. Its message records the code commit, the art
+  commit and the Unity version (`ProjectSettings` isn't in git). Once the art has its repo
+  (`.git-assets` in the main folder, Phase 7), the art repo gets the same tag.
+- **`check`** and **`rebuild`** clone the project the way every run does, at the tag. Then they:
+  1. lay the art at the tag's art commit, through a scratch index, so the main folder's index
+     isn't touched and LFS files come out as a checkout would;
+  2. remove code under `Assets/!_Project` that the tag doesn't have;
+  3. compare every file with the tag, in both repos, by git's own hash.
+
+  A single difference stops a rebuild before Unity starts. `release_check.txt` in the run folder
+  lists what was compared.
+- **Until Phase 7** a tag has no art commit, so `check` and `rebuild` refuse unless you pass
+  `--art-today`. With that flag they use today's art, and the stamp reads `art unversioned`.
+- **Not yet:** a tag from another Unity version is refused, not installed. `-rc.N` versions wait
+  until `KehaiBuild` knows them.
+
 ## Sight check review clips
 
 Use the JSON report from a retained `SandboxChecks.Sight` run with all eight `.krec` files,

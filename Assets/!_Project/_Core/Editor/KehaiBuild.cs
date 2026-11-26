@@ -351,6 +351,9 @@ public static class KehaiBuild
         return $"{version}-dev+{code.Replace("+changes", ".changes")}";
     }
 
+    internal static string ArtFromRunner(string value) =>
+        value != null && Regex.IsMatch(value, @"\A(?:[0-9a-f]{7,40}|unversioned)\z") ? value : null;
+
     static string FullCodeCommit => Run("git", $"-C \"{ProjectRoot}\" rev-parse HEAD", null)?.Trim()
         ?? Environment.GetEnvironmentVariable("KEHAI_RUN_CODE_COMMIT");
 
@@ -363,6 +366,8 @@ public static class KehaiBuild
         string dirty = Run("git", $"-C \"{root}\" status --porcelain --untracked-files=no", null)?.Trim();
         string assets = Path.Combine(root, ".git-assets");
         string art = Directory.Exists(assets) ? Run("git", $"--git-dir=\"{assets}\" --work-tree=\"{root}\" rev-parse --short HEAD", null)?.Trim() : null;
+        // A release rebuild in a kehai-run clone (no .git-assets there): the art it laid, or "unversioned".
+        if (string.IsNullOrEmpty(art)) art = ArtFromRunner(Environment.GetEnvironmentVariable("KEHAI_RUN_ART_COMMIT"));
         if (!string.IsNullOrEmpty(dirty)) code += "+changes";
         var stamp = new BuildStamp.Data
         {
