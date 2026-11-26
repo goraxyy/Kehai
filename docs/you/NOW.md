@@ -1,13 +1,13 @@
 # Now
 
-Updated 2026-11-23. One page: what's being built, what waits on you, what's next. Agents keep it
+Updated 2026-11-26. One page: what's being built, what waits on you, what's next. Agents keep it
 current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md).
 
 ## Being built
 
 | What | State | Where |
 |---|---|---|
-| **Kehai 0.5.2** | merged up to [PR #95](https://github.com/goraxyy/Kehai/pull/95): the placement fixes and the mini store sandbox (three rooms). Being built now (25 November): the mini store as the whole store at half size, every room and the backstreet. The recorded game-wide test pass follows the completed build | [the plan](plans/0.5.2-plan.md), [the mini store](plans/0.5.2/mini-store.md) |
+| **Kehai 0.5.2** | merged up to [PR #105](https://github.com/goraxyy/Kehai/pull/105): the mini store (the whole store at half size), the hide checks and the bots' counters, and the placement fixes (Phase 12). Being built now (26 November): Phase 10's leftovers, tagging a version and rebuilding it from scratch. The recorded game-wide test pass follows the completed build | [the plan](plans/0.5.2-plan.md), [the mini store](plans/0.5.2/mini-store.md) |
 | **Kehai 0.5.1** | merged 18 November (PR #89) | [the plan](plans/0.5.1-plan.md) |
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
 | **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | merged as PR #85 on 14 November | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |

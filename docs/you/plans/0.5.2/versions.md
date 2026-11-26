@@ -56,8 +56,15 @@ The Karens' names are Satori and Oni, with Hotaru for an easy mode later (Q21, [
 - **A release tags every repo with the same version:** `v0.6.0` on the public code repo, on the
   game's private repo (`kehai-project`, if Q17 picks option A) and on `kehai-assets`. The Unity
   version is in the project settings, so it's tagged too.
-- **One command rebuilds a version** into a scratch folder: it checks out the tag in every repo
-  and builds. Your working project isn't touched.
+- **One command rebuilds a version** into a scratch folder: it checks out the tag in every repo,
+  checks every file against the tag, and builds. Your working project isn't touched.
+- **Built (26 November):** `kehai-run release tag`, `check` and `rebuild`
+  ([the commands](../../../../tools/run/README.md#releases-tags-and-rebuilds)). Tags stay on this
+  Mac until you say to push them. The tag's message records the Unity version.
+- **Not built yet:** tagging `kehai-assets`. The command tags the code repo, and `kehai-project`
+  once it exists.
+- **Until Phase 7 makes `kehai-project`,** the art has no history. A rebuild then uses today's
+  art, and its stamp says `art unversioned`.
 
 **Example:** in March a tester reports a bug in 0.6.0-beta.2. The command checks out
 `v0.6.0-beta.2` in all three repos, builds it, and you can play exactly what the tester played.

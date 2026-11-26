@@ -21,6 +21,8 @@ seen = {
     'deleted_file': (project / 'Assets' / 'old.cs').exists(),
     'art': (project / 'Assets' / 'art.png').exists(),
     'source_commit': os.environ.get('KEHAI_RUN_CODE_COMMIT'),
+    'art_commit': os.environ.get('KEHAI_RUN_ART_COMMIT'),
+    'args': args,
     'product': next((l.split(': ', 1)[1].strip() for l in (project / 'ProjectSettings' / 'ProjectSettings.asset').read_text().splitlines() if l.startswith('  productName: ')), ''),
 }
 league = arg('-league')

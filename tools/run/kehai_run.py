@@ -37,7 +37,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 CLONES = 'clones.noindex'   # where the project copies go, under the run home
 
@@ -375,7 +375,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
         sight: SightReview | None = None, *, league: Path | None = None,
         eval_timeout: str | None = None, export_dir: Path | None = None,
         clone_root: Path | None = None, result_dir_file: Path | None = None,
-        graphics: bool = False) -> int:
+        graphics: bool = False, prepare: Callable[[Path, Path], dict] | None = None) -> int:
+    """`prepare(clone, out)` runs after the clone is made and before Unity (a release rebuild lays
+    the art and checks every file there); it returns extra environment for Unity, or raises."""
     if '-kehai-no-records' in extra and (job in ('tests', 'league', 'ablation') or 'EvalBatch.Play' in extra):
         log('kehai-run: test shifts must keep their records and replays.')
         return 2
@@ -476,6 +478,9 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
             sight.write(out, results)
         log(f'kehai-run: {rid}: cloning the project')
         make_clone(s, clone, commit)
+        if prepare is not None:
+            # Before the product name: the art repo may carry ProjectSettings, and must not undo it.
+            env.update(prepare(clone, out))
         set_product(clone, product)
         if export_dir is not None:
             export_dir.mkdir(parents=True, exist_ok=True)
@@ -660,6 +665,22 @@ def main(argv=None) -> int:
     offline = sub.add_parser('offline', help='compile this worktree and run engine-independent checks')
     offline.add_argument('--unity-app', type=Path, default=Path(UNITY).parents[2])
     offline.add_argument('--references', type=Path, help='imported Unity project (read only)')
+    rel = sub.add_parser('release', help='tag a version, or check and rebuild a tagged one (C10.4)')
+    rsub = rel.add_subparsers(dest='release_cmd', required=True)
+    rt = rsub.add_parser('tag', help='tag HEAD of main in the code repo (and the art repo once it exists)')
+    rt.add_argument('version', help='0.5.2 or 0.5.2-beta.1')
+    rt.add_argument('--push', action='store_true', help="push the tags too (only on the owner's go)")
+    rc = rsub.add_parser('check', help='lay a tag (or any commit) into a scratch folder and compare, no Unity')
+    rc.add_argument('ref', help='a tag such as v0.5.2-beta.1, or a commit')
+    rc.add_argument('--art-today', action='store_true', help="the tag has no art commit: use today's art")
+    rc.add_argument('--keep', action='store_true', help='keep the scratch folder')
+    rb = rsub.add_parser('rebuild', help='check a tagged version, then build it (editor closed)')
+    rb.add_argument('version')
+    rb.add_argument('--platform', choices=('macos', 'windows'), required=True)
+    rb.add_argument('--out', type=Path, help='the player path (default ~/TokenLimit/builds/<version>/rebuild-...)')
+    rb.add_argument('--art-today', action='store_true', help="the tag has no art commit: use today's art")
+    rb.add_argument('--timeout-min', type=float, default=60.0)
+    rb.add_argument('--dry-run', action='store_true')
     sub.add_parser('status')
     d = sub.add_parser('doctor')
     d.add_argument('--clean', action='store_true')
@@ -687,6 +708,19 @@ def main(argv=None) -> int:
     if a.cmd == 'offline':
         from tools.run.offline import check
         return check(Path(__file__).resolve().parents[2], a.unity_app, a.references or s.main)
+    if a.cmd == 'release':
+        from tools.run import release
+        if a.release_cmd == 'tag':
+            try:
+                release.tag(s.repo, s.main, a.version, push=a.push)
+                return 0
+            except release.ReleaseError as err:
+                print(f'kehai-run: {err}', file=sys.stderr)
+                return 2
+        if a.release_cmd == 'check':
+            return release.check(s, a.ref, art_today=a.art_today, keep=a.keep)
+        return release.rebuild(s, a.version, a.platform, out=a.out, art_today=a.art_today,
+                               timeout_min=a.timeout_min, dry_run=a.dry_run)
     if a.cmd == 'status':
         status(s)
         return 0
