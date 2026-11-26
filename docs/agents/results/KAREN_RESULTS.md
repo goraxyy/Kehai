@@ -650,6 +650,30 @@ At 10 fps **it isn't faster**, and it changes the game by more than the spread b
 runs. Most of a frame's work runs on simulated-time timers (her belief update, the physics), so
 fewer frames save nothing. 15 stays the default.
 
+### The Training player (C6.6, 26 November)
+
+A dev-channel (Training edition) macOS player was built on a `kehai-run` clone at `277001a` with
+`-kehai-product Kehai-verify-player`, so it got its own data folder. The same five seeds were played
+(rung E, efficient, base 1000, learning off), then Karen Basic's smoke training was run against the player.
+
+- **First try (`8554ac8`): no shift started.** The build turns every camera off.
+  `PlayerInteract.Awake` read `Camera.main`, which is null when no camera is on, so the aim had no
+  origin and the bot never punched the clock. This is likely the old "training player doesn't
+  connect" too. Fixed: the aim starts at the player's own camera even when it's off.
+- **The player is fast:** 7.4 ms a frame over four shifts, against the editor's 12.6 ms on the same
+  seeds and code (1.7×). This is the C6.3 player number, for a release (not development) Training
+  player on the fix.
+- **The trainer connects:** "Connected to Unity environment". 300 steps ran in about 66 s and the
+  model was exported.
+- **It doesn't play the editor's game.** 0 of 5 shifts were the same: seed 1000 was 28 steps and 140 s
+  in the player, against 39 steps and 194 s in the editor. Every shift still ended in a catch. Not yet
+  explained. Candidates are what the Training build strips (audio sources, text, presentation) and
+  the edition rules; the editor's ablation runs as the editor's own edition.
+- **Data:** a Mac player's data folder follows the bundle id, not the product name. The first try
+  wrote an empty summary into the real game's `com.tokenlimit.kehai` folder; it was moved out.
+  Verification builds now get their own bundle id as well, and the second run left the game's folder
+  unchanged.
+
 **Found on the way:**
 - **Careers stop at her first catch on `main`.** After a catch, 0.5.0 replays the same shift (its
   retry after death), and the ablation's log refuses the replay as "already recorded". So a career
