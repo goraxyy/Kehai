@@ -32,6 +32,50 @@ namespace Kehai.Eval
         // 0.4.0: who chooses for the players: heuristic (the scripted profiles, default), trainer
         // (ML-Agents: demonstrations, or training), or generated (EmployeeBrain.g.cs).
         public string botMind = "heuristic";
+        // 0.5.2 (C5.1): carry on a stopped run. The run's .jsonl; finished careers (listed in its
+        // .careers file) are skipped, a half-finished one is played again from its start.
+        public string resumePath;
+    }
+
+    // Which careers of a run are finished (0.5.2, C5.1): "<seed>|<rung>" lines beside the run's
+    // .jsonl, one written after each career's last shift. Resuming keeps only those careers' rows.
+    public static class AblationResume
+    {
+        public static string CareersPath(string jsonl) => jsonl + ".careers";
+        public static string Key(int seed, string rung) => $"{seed}|{rung}";
+
+        public static HashSet<string> Finished(string jsonl)
+        {
+            string path = CareersPath(jsonl);
+            return File.Exists(path)
+                ? new HashSet<string>(File.ReadAllLines(path).Select(l => l.Trim()).Where(l => l.Length > 0))
+                : new HashSet<string>();
+        }
+
+        // Rewrites the .jsonl with the finished careers' rows only (a half-finished career is played
+        // again, so its rows would be there twice), and returns their keys for the log's duplicate check.
+        public static List<string> KeepFinished(string jsonl, HashSet<string> finished)
+        {
+            var kept = new List<string>();
+            var keys = new List<string>();
+            if (!File.Exists(jsonl)) return keys;
+            foreach (string line in File.ReadAllLines(jsonl))
+            {
+                if (line.Trim().Length == 0) continue;
+                Dictionary<string, object> row = MiniJson.ParseObject(line);
+                if (row == null) continue;
+                int seed = (int)row.GetNumber("seed");
+                string rung = row.GetString("rung", "");
+                if (!finished.Contains(Key(seed, rung))) continue;
+                kept.Add(line);
+                keys.Add($"{rung}|{row.GetString("agent", "")}|{seed}|{(int)row.GetNumber("shift")}");
+            }
+            string temp = jsonl + ".resume";
+            File.WriteAllText(temp, kept.Count == 0 ? "" : string.Join("\n", kept) + "\n");
+            File.Copy(temp, jsonl, overwrite: true);
+            File.Delete(temp);
+            return keys;
+        }
     }
 
     // The ablation ladder (IDEAS.md, Ablation), run end to end with simulated players.
@@ -68,12 +112,18 @@ namespace Kehai.Eval
             string dir = Plan.outDirectory ?? KehaiEnv.EvalDirectory;
             Directory.CreateDirectory(dir);
             string stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-            JsonlPath = Path.Combine(dir, $"ablation_{stamp}.jsonl");
-            MarkdownPath = Path.Combine(dir, $"ablation_{stamp}.md");
+            JsonlPath = string.IsNullOrEmpty(Plan.resumePath) ? Path.Combine(dir, $"ablation_{stamp}.jsonl") : Plan.resumePath;
+            MarkdownPath = Path.ChangeExtension(JsonlPath, ".md");
 
             int total = Plan.rungs.Length * Plan.profiles.Length * Plan.careers * Plan.shiftsPerCareer;
             int done = 0;
+            var finished = string.IsNullOrEmpty(Plan.resumePath) ? new HashSet<string>() : AblationResume.Finished(JsonlPath);
             var log = new EpisodeLog(JsonlPath);
+            if (!string.IsNullOrEmpty(Plan.resumePath))
+            {
+                foreach (string key in AblationResume.KeepFinished(JsonlPath, finished)) log.Remember(key);
+                Debug.Log($"Ablation: resuming {JsonlPath}: {finished.Count} finished career(s) kept, {log.Count} shift row(s)");
+            }
             IEmployeeMind mind = null;
 
             foreach ((PlayerProfile profile, int career) in Order())
@@ -81,6 +131,12 @@ namespace Kehai.Eval
                 int seed = Plan.baseSeed + career * 100 + (int)profile * 10;
                 foreach (KarenRung rung in Plan.rungs)
                 {
+                    string careerKey = AblationResume.Key(seed, ((char)('A' + (int)rung)).ToString());
+                    if (finished.Contains(careerKey))
+                    {
+                        done += Plan.shiftsPerCareer;
+                        continue;
+                    }
                     var config = new EnvConfig
                     {
                         seed = seed,
@@ -134,6 +190,8 @@ namespace Kehai.Eval
 
                         if (s < Plan.shiftsPerCareer - 1) yield return env.ClockIn();
                     }
+                    // This career is done: a resumed run skips it (C5.1).
+                    File.AppendAllText(AblationResume.CareersPath(JsonlPath), careerKey + "\n");
                 }
             }
 
@@ -327,6 +385,9 @@ namespace Kehai.Eval
 
         public int Count => written.Count;
 
+        // A row already in the file (a resumed run's finished careers): never written twice.
+        public void Remember(string key) => written.Add(key);
+
         public static string Key(EpisodeMetrics m) => $"{m.Rung}|{m.Agent}|{m.Seed}|{m.Shift}";
 
         // Why `m` can't be recorded, or null if it can.
@@ -421,6 +482,7 @@ namespace Kehai.Eval
                         // RL training's parallel copies (one trainer port each) play different shifts.
                         baseSeed = Int(args, "-ablation-seed", 1000) + KehaiEnv.TrainerPort % 100 * 10000000,
                         outDirectory = Str(args, "-ablation-out", null),
+                        resumePath = Str(args, "-ablation-resume", null),
                         verbose = System.Array.IndexOf(args, "-ablation-verbose") >= 0,
                         interleave = System.Array.IndexOf(args, "-ablation-interleave") >= 0,
                         staticBots = System.Array.IndexOf(args, "-ablation-static-bots") >= 0,

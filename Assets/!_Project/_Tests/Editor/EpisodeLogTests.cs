@@ -73,4 +73,37 @@ public class EpisodeLogTests
         Assert.AreEqual(4, Lines().Length);
         Assert.AreEqual(4, log.Count);
     }
+
+    // C5.1: a stopped run resumed keeps its finished careers' rows once, drops a half-finished
+    // career's rows (that career is played again from its start), and never writes a kept row twice.
+    [Test]
+    public void AResumedRun_KeepsFinishedCareersOnce_AndDropsAHalfFinishedOne()
+    {
+        var log = new EpisodeLog(path);
+        Assert.IsTrue(log.TryAppend(Started("E", 3, seed: 1000), out _));
+        Assert.IsTrue(log.TryAppend(Started("E", 4, seed: 1000), out _));
+        File.AppendAllText(AblationResume.CareersPath(path), AblationResume.Key(1000, "E") + "\n");
+        Assert.IsTrue(log.TryAppend(Started("E", 3, seed: 1100), out _), "the next career, stopped after one shift");
+        Assert.AreEqual(3, Lines().Length);
+
+        var finished = AblationResume.Finished(path);
+        CollectionAssert.AreEquivalent(new[] { "1000|E" }, finished);
+        var resumed = new EpisodeLog(path);
+        foreach (string key in AblationResume.KeepFinished(path, finished)) resumed.Remember(key);
+        Assert.AreEqual(2, Lines().Length, "the half-finished career's row is gone");
+        Assert.AreEqual(2, resumed.Count);
+
+        Assert.IsFalse(resumed.TryAppend(Started("E", 4, seed: 1000), out string refusal), "a kept row is never written twice");
+        StringAssert.Contains("already recorded", refusal);
+        Assert.IsTrue(resumed.TryAppend(Started("E", 3, seed: 1100), out _), "the half-finished career, played again");
+        Assert.AreEqual(3, Lines().Length);
+        File.Delete(AblationResume.CareersPath(path));
+    }
+
+    [Test]
+    public void ANewRun_HasNoFinishedCareers()
+    {
+        CollectionAssert.IsEmpty(AblationResume.Finished(path));
+        CollectionAssert.IsEmpty(AblationResume.KeepFinished(path, new HashSet<string>()));
+    }
 }
