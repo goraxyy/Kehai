@@ -107,7 +107,7 @@ public sealed class PlacementProbe
             Vector3[] sides = SidesOf(component, bounds, ref centre);
             float range = component is CustomerNPC && player != null ? player.customerInteractRange :
                 player != null ? player.interactRange : 0f;
-            CheckApproach(result, centre, sides, range, target, colliders);
+            CheckApproach(result, centre, sides, range, target, colliders, explain: true);
             return result;
         }
         finally
@@ -193,7 +193,7 @@ public sealed class PlacementProbe
     }
 
     void CheckApproach(Result result, Vector3 centre, Vector3[] sides, float range,
-        IInteractable target, Collider[] colliders = null, Vector3? nearbyDoor = null)
+        IInteractable target, Collider[] colliders = null, Vector3? nearbyDoor = null, bool explain = false)
     {
         if (!HasNavigation) return;
 
@@ -236,6 +236,11 @@ public sealed class PlacementProbe
                 result.Standing = feet;
                 result.Height = centre.y - feet.y;
                 if (frontCleared) result.Evidence = Add(result.Evidence, "Reachable after taking the stock in front on the same shelf and face");
+                // A thing (not a shelf slot) reached only from further off says where it is and
+                // what stopped the nearer spots.
+                if (explain && (step > 1.05f || bySide.Count > 0))
+                    result.Evidence = Add(result.Evidence, $"Centre at {centre.ToString("F2")}, reached from {step:0.##} m {Way(forward)}" +
+                        (sideStopped != null ? $" (nearer: {sideStopped})" : "") + (bySide.Count > 0 ? $" (other sides: {string.Join("; ", bySide)})" : ""));
                 return;
             }
             bySide.Add($"{Way(forward)}: {sideStopped ?? "not sampled"}");
