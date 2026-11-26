@@ -517,13 +517,16 @@ public static class StoreLayout
                     foreach (ShelfSlot front in made)
                         if (front.Display && front.InFrontOf(slot) && SameColumn(front, slot)) { slot.Display = true; break; }
             // A chiller whose every slot is display keeps its glass doors shut: nobody can stand
-            // at them, and nothing behind them is ever needed (freezer 5, 26 November).
+            // at them, and nothing behind them is ever needed (freezer 5, 26 November). Nor can
+            // you hide in it, so Karen never waits on a door that won't open.
             ColdFixture cold = bay.GetComponent<ColdFixture>();
             if (cold != null && cold.retail)
             {
                 bool usable = made.Exists(slot => !slot.Display);
                 foreach (FurnitureDoor door in bay.GetComponentsInChildren<FurnitureDoor>(true))
                     if (door.roomDoor == null) door.enabled = usable;
+                foreach (Kehai.Karen.HidingPlace place in bay.GetComponentsInChildren<Kehai.Karen.HidingPlace>(true))
+                    place.enabled = usable;
             }
         }
         if (made != null) unit.SetSlots(made);

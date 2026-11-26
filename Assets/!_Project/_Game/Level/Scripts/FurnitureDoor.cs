@@ -13,8 +13,9 @@ public sealed class FurnitureDoor : HighlightInteractable, IHidingDoor
     public HingeDoor roomDoor;
     public bool IsOpen => roomDoor != null ? roomDoor.IsOpen : wantsOpen;
     public bool IsFullyOpen => roomDoor != null ? roomDoor.IsOpen : Mathf.Abs(angle - chosenOpenAngle) < 2f;
-    // Karen's hide checks open it to look inside (0.5.2).
-    public bool IsHidingDoor => roomDoor == null;
+    // Karen's hide checks open it to look inside (0.5.2); not one switched off (a display
+    // chiller's, StoreLayout.StockBay), which doesn't move.
+    public bool IsHidingDoor => roomDoor == null && enabled && gameObject.activeInHierarchy;
     public Vector3 DoorPoint => panel != null ? panel.bounds.center : transform.position;
     public float LeafWidth => panel != null ? Mathf.Max(panel.bounds.size.x, panel.bounds.size.z) : 0.6f;
     public float OpenFraction => roomDoor != null ? (roomDoor.IsOpen ? 1f : 0f)
