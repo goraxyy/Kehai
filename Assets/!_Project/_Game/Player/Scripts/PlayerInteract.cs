@@ -215,7 +215,8 @@ public class PlayerInteract : MonoBehaviour
             (slot == null || hit.distance <= slotDistance))
         {
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-            if (interactable != null) return interactable;
+            // A switched-off one isn't usable (a display chiller's doors, StoreLayout.StockBay).
+            if (interactable != null && (interactable is not Behaviour b || b.isActiveAndEnabled)) return interactable;
         }
         if (slot != null) return slot;
 
