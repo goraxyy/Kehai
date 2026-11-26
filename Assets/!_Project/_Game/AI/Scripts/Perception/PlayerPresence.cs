@@ -29,7 +29,7 @@ namespace Kehai.Karen
             all.Clear();
             builtFor = default;
             stale = false;
-            lampRooms.Clear();
+            pointRooms.Clear();
             roomsMap = null;
             roomsRule = null;
         }
@@ -43,7 +43,7 @@ namespace Kehai.Karen
 
             grid.Clear();
             all.Clear();
-            lampRooms.Clear();
+            pointRooms.Clear();
             builtFor = scene;
             stale = false;
 
@@ -88,11 +88,11 @@ namespace Kehai.Karen
                     d.y = 0f;
                     float distance = d.magnitude;
                     if (distance > Reach) continue;
-                    // The point's room once per call, the lamp's from the cache (0.5.2, C6.4): each
-                    // lookup searches the map's cells 6 m around, and her sweep asks this for every
-                    // cell it looks at, so it was most of a batch frame's extra cost since 0.5.0.
-                    here ??= RoomLightSwitch.RoomOf(position);
-                    if (RoomOfLight(light) != here) continue;
+                    // Rooms from the cache (0.5.2, C6.4): each lookup searches the map's cells 6 m
+                    // around, and her sweep asks this for every cell it looks at, twice for each
+                    // lamp near it, which was most of a batch frame's extra cost since 0.5.0.
+                    here ??= RoomAt(position);
+                    if (RoomAt(light.transform.position) != here) continue;
                     best = Mathf.Max(best, 1f - Mathf.Clamp01((distance - 1.5f) / (Reach - 1.5f)));
                 }
             }
@@ -100,29 +100,32 @@ namespace Kehai.Karen
             // Karen's light sense, not the rendering: kept at 0.12 / 0.02 in 0.5.1. Item 3 darkens
             // the rendered store; retuning how fast she notices you in the dim waits for a check
             // of this input against the rendered state (0.5.1 implementation notes).
-            float ambient = PowerSystem.PowerOn && RoomLightSwitch.AllowsRoom(here ?? RoomLightSwitch.RoomOf(position)) ? 0.12f : 0.02f;
+            float ambient = PowerSystem.PowerOn && RoomLightSwitch.AllowsRoom(here ?? RoomAt(position)) ? 0.12f : 0.02f;
             return Mathf.Clamp01(best * 0.88f + ambient);
         }
 
-        // A ceiling lamp's room, worked out once while it stays where it is, on the same map and
-        // with the same room rule (a test or a sandbox may swap RoomLightSwitch.RoomOf).
-        static readonly Dictionary<Light, (Vector3 at, string room)> lampRooms = new Dictionary<Light, (Vector3, string)>();
+        // The room at a point, worked out once per point on the same map and with the same room
+        // rule (a test or a sandbox may swap RoomLightSwitch.RoomOf). The rule gives one answer
+        // for a point on one map, so the cache changes nothing but the time. Her sweep asks about
+        // the same map cells over and over, and the lamps don't move; a moved lamp is a new point.
+        // Capped, since the player's own position is a new point nearly every frame.
+        const int MaxCachedPoints = 16384;
+        static readonly Dictionary<Vector3, string> pointRooms = new Dictionary<Vector3, string>();
         static object roomsMap;
         static System.Func<Vector3, string> roomsRule;
 
-        static string RoomOfLight(Light light)
+        static string RoomAt(Vector3 point)
         {
             object map = Application.isPlaying ? Kehai.Store.StoreMap.Current : null;
-            if (!ReferenceEquals(map, roomsMap) || roomsRule != RoomLightSwitch.RoomOf)
+            if (!ReferenceEquals(map, roomsMap) || roomsRule != RoomLightSwitch.RoomOf || pointRooms.Count >= MaxCachedPoints)
             {
-                lampRooms.Clear();
+                pointRooms.Clear();
                 roomsMap = map;
                 roomsRule = RoomLightSwitch.RoomOf;
             }
-            Vector3 at = light.transform.position;
-            if (lampRooms.TryGetValue(light, out var known) && known.at == at) return known.room;
-            string room = RoomLightSwitch.RoomOf(at);
-            lampRooms[light] = (at, room);
+            if (pointRooms.TryGetValue(point, out string room)) return room;
+            room = RoomLightSwitch.RoomOf(point);
+            pointRooms[point] = room;
             return room;
         }
 
