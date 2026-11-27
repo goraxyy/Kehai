@@ -58,7 +58,7 @@ export function validate(d) {
   const shifts = Array.isArray(d.shifts) ? d.shifts : [];
   const moments = Array.isArray(d.moments) ? d.moments : [];
   if (shifts.length > MAX_SHIFTS || moments.length > MAX_MOMENTS) throw new HttpError(413, "too many rows");
-  const taps = Array.isArray(d.answers?.taps) ? d.answers.taps.slice(0, 4).map(t => clip(String(t), 40)) : null;
+  const taps = Array.isArray(d.answers?.taps) ? d.answers.taps.slice(0, 4).map(t => (typeof t === "string" ? clip(t, 40) : null)) : null;
   const answers = {
     taps: taps && taps.some(Boolean) ? JSON.stringify(taps) : null,
     a1: clip(d.answers?.a1, 4000), a2: clip(d.answers?.a2, 4000), a3: clip(d.answers?.a3, 4000),

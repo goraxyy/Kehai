@@ -16,7 +16,6 @@ namespace Kehai.Playtest
         public string round = "";
         public string uploadUrl = "";     // the upload service; empty keeps sessions on this computer
         public string uploadKey = "";     // lets the build upload, nothing else
-        public string formUrl = "";       // the longer questions; {code} becomes the tester code
         public string build = "";         // version and commit
         public int suggestFinishAfter = 3;
 
@@ -63,9 +62,6 @@ namespace Kehai.Playtest
         }
 
         public bool Uploads => !string.IsNullOrEmpty(uploadUrl);
-
-        public string FormFor(string code) =>
-            string.IsNullOrEmpty(formUrl) ? null : formUrl.Replace("{code}", Uri.EscapeDataString(code ?? ""));
 
         public static string Arg(string key)
         {
@@ -121,6 +117,7 @@ namespace Kehai.Playtest
     {
         const string CodeKey = "Kehai.Playtest.Code";
         const string ConsentKey = "Kehai.Playtest.Consent";       // 1 send, 2 keep here
+        const string ConsentVersionKey = "Kehai.Playtest.ConsentVersion";   // the text they answered (v2: training too)
         const string CareerKey = "Kehai.Playtest.CareerOf";       // whose career Karen's ledger holds
         const string AnsweredKey = "Kehai.Playtest.Answered";     // the code that answered the questions
         const string SuggestedKey = "Kehai.Playtest.Suggested";   // the code we suggested stopping to
@@ -141,9 +138,19 @@ namespace Kehai.Playtest
             return id;
         }
 
-        public static bool ConsentAsked => PlayerPrefs.GetInt(ConsentKey, 0) != 0;
-        public static bool Sends => PlayerPrefs.GetInt(ConsentKey, 0) == 1;
-        public static void SetConsent(bool send) { PlayerPrefs.SetInt(ConsentKey, send ? 1 : 2); PlayerPrefs.Save(); }
+        // Answered for this version of the consent: a tester who agreed to v1 (no training line)
+        // is asked again, and sends nothing new until they answer (C2.2).
+        public static bool ConsentAsked => PlayerPrefs.GetInt(ConsentKey, 0) != 0 && ConsentVersion == PlaytestConsent.Version;
+        public static bool Sends => ConsentAsked && PlayerPrefs.GetInt(ConsentKey, 0) == 1;
+        public static string ConsentVersion => PlayerPrefs.GetString(ConsentVersionKey, PlayerPrefs.GetInt(ConsentKey, 0) != 0 ? "v1" : "");
+        // null while the consent page waits, else whether they agreed.
+        public static bool? Agreed => ConsentAsked ? Sends : (bool?)null;
+        public static void SetConsent(bool send)
+        {
+            PlayerPrefs.SetInt(ConsentKey, send ? 1 : 2);
+            PlayerPrefs.SetString(ConsentVersionKey, PlaytestConsent.Version);
+            PlayerPrefs.Save();
+        }
 
         public static string CareerOf
         {
@@ -168,7 +175,7 @@ namespace Kehai.Playtest
 
         public static void Forget()
         {
-            foreach (string key in new[] { CodeKey, ConsentKey, CareerKey, AnsweredKey, SuggestedKey, RunningKey }) PlayerPrefs.DeleteKey(key);
+            foreach (string key in new[] { CodeKey, ConsentKey, ConsentVersionKey, CareerKey, AnsweredKey, SuggestedKey, RunningKey }) PlayerPrefs.DeleteKey(key);
             PlayerPrefs.Save();
         }
     }

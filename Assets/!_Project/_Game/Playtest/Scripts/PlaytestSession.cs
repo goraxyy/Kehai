@@ -29,6 +29,11 @@ namespace Kehai.Playtest
         public string LastPackage { get; private set; }
 
         SessionLog log;
+        PlaytestSummary summary;          // this session's numbers, for POST /summaries (C2.6)
+        bool firstShiftSeen;
+        ShiftRecording analysed;          // the last finished shift already in the summary
+        double fpsSum;
+        int fpsCount;
         DateTime startedUtc;
         float startedAt;
         bool wrappingUp;
@@ -79,6 +84,7 @@ namespace Kehai.Playtest
             string id = TesterState.EnsureId();
             if (TesterState.NeedsFreshCareer(id)) pendingFreshCareer = id;
             BeginSession();
+            Event("launch");
             if (Application.isBatchMode && !TesterState.ConsentAsked)
                 SetConsent(PlaytestConfig.Arg("-playtest-consent") == "send");
         }
@@ -102,7 +108,26 @@ namespace Kehai.Playtest
         void Start()
         {
             if (TesterState.Sends) StartCoroutine(PlaytestUploader.SendAll(Config));   // anything left from last time
+            if (Config.Uploads && !Application.isBatchMode) StartCoroutine(CheckForNewBuild());
         }
+
+        // C2.7 (Q6): the main menu says so when a newer build is out (PlaytestScreens draws it).
+        System.Collections.IEnumerator CheckForNewBuild()
+        {
+            using var request = UnityEngine.Networking.UnityWebRequest.Get(Config.uploadUrl + "/latest");
+            request.timeout = 10;
+            yield return request.SendWebRequest();
+            if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success) yield break;
+            BuildStamp.Data stamp = BuildStamp.Current;
+            string ours = stamp.channel == null ? Application.version : stamp.version;
+            PlaytestUpdate.Saw(request.downloadHandler.text, ours, Config.uploadUrl, Application.platform);
+            if (PlaytestUpdate.Latest != null) Note("new build", new Dictionary<string, object> { ["latest"] = PlaytestUpdate.Latest, ["ours"] = ours });
+        }
+
+        // C2.5: one step of the funnel. Before the consent page is answered it waits in memory;
+        // a tester who doesn't agree sends none.
+        public void Event(string kind) =>
+            PlaytestEvents.Record(kind, TesterState.Agreed, TesterState.Code, Stamp, Config.round, Config.build);
 
         void OnDestroy()
         {
@@ -123,6 +148,15 @@ namespace Kehai.Playtest
             errorsSeen.Clear();
             log = new SessionLog(Path.Combine(Folder, PlaytestPaths.LogName));
             TesterState.Running = Stamp;
+            firstShiftSeen = false;
+            fpsSum = 0;
+            fpsCount = 0;
+            analysed = ShiftRecorder.Instance != null ? ShiftRecorder.Instance.Last : null;   // a shift before this session isn't its
+            summary = new PlaytestSummary
+            {
+                Round = Config.round, Tester = TesterState.Code, Launch = Stamp, Build = Config.build,
+                Computer = $"{SystemInfo.deviceModel}; {SystemInfo.operatingSystem}; {SystemInfo.processorType}; {SystemInfo.systemMemorySize} MB; {SystemInfo.graphicsDeviceName}",
+            };
 
             Resolution screen = Screen.currentResolution;
             BuildStamp.Data buildStamp = BuildStamp.Current;
@@ -150,6 +184,16 @@ namespace Kehai.Playtest
             });
         }
 
+        // A shift that just finished goes into the summary once (C2.6).
+        void AnalyseFinishedShift()
+        {
+            ShiftRecording last = ShiftRecorder.Instance != null ? ShiftRecorder.Instance.Last : null;
+            if (last == null || last == analysed || summary == null) return;
+            analysed = last;
+            try { summary.Shifts.Add(PlaytestSummary.ShiftRow(last.ShiftNumber, ShiftAnalysis.Of(last))); }
+            catch (Exception e) { Debug.LogWarning("Playtest: couldn't read the shift for the summary: " + e.Message); }
+        }
+
         // Writes one line to the session's log.
         public void Note(string kind, Dictionary<string, object> fields = null)
         {
@@ -167,22 +211,36 @@ namespace Kehai.Playtest
             // stretch since the last clock-out (a new one starts if they keep playing).
             if (ShiftRecorder.Instance != null) ShiftRecorder.Instance.FinishNow();
             if (ReplayRecorder.Instance != null) ReplayRecorder.Instance.Cut();
+            AnalyseFinishedShift();
+            Event("end");
             log.Dispose();
             log = null;
-            LastPackage = Pack(Folder, startedUtc, Stamp, crashed: false);
+            summary.Ended = reason;
+            summary.Minutes = (Time.realtimeSinceStartup - startedAt) / 60f;
+            summary.Fps = fpsCount > 0 ? (float)(fpsSum / fpsCount) : 0f;
+            summary.Training = TesterState.Sends;
+            LastPackage = Pack(Folder, startedUtc, Stamp, crashed: false, summary);
             TesterState.Running = "";
             return LastPackage;
         }
 
-        string Pack(string folder, DateTime since, string stamp, bool crashed)
+        // Into the outbox with its sidecars when the tester agreed to send; otherwise into the local
+        // folder, which is never sent (C2.2).
+        string Pack(string folder, DateTime since, string stamp, bool crashed, PlaytestSummary numbers = null)
         {
             try
             {
                 var files = PlaytestPackage.Collect(folder, since, ShiftRecorder.Folder,
                     Path.Combine(Application.persistentDataPath, "karen_logs"), KarenLedger.DefaultPath,
                     Application.consoleLogPath, previousLogToo: crashed);
-                string zip = Path.Combine(PlaytestPaths.Outbox, PlaytestPackage.ZipName(Config.round, TesterState.Code, stamp));
+                bool sends = TesterState.Sends;
+                string zip = Path.Combine(sends ? PlaytestPaths.Outbox : PlaytestPaths.Local, PlaytestPackage.ZipName(Config.round, TesterState.Code, stamp));
                 PlaytestPackage.Pack(zip, files);
+                if (sends)
+                {
+                    new OutboxMeta { consent = PlaytestConsent.Version, training = true, build = Config.build }.Write(zip);
+                    if (numbers != null) File.WriteAllText(OutboxMeta.SummaryPathFor(zip), numbers.ToJson());
+                }
                 Debug.Log($"Playtest: packed {files.Count} files into {zip} ({new FileInfo(zip).Length / 1024} KB)");
                 return zip;
             }
@@ -211,7 +269,9 @@ namespace Kehai.Playtest
         public void SetConsent(bool send)
         {
             TesterState.SetConsent(send);
-            Note("consent", new Dictionary<string, object> { ["sends"] = send });
+            PlaytestEvents.Answered(send);   // what waited for the answer: kept, or thrown away
+            Note("consent", new Dictionary<string, object> { ["sends"] = send, ["version"] = PlaytestConsent.Version });
+            Event("consent");
         }
 
         // A new tester is a new employee. Karen starts with a fresh Ledger.
@@ -234,6 +294,7 @@ namespace Kehai.Playtest
         public void Answers(Dictionary<string, object> answers)
         {
             Note("answers", answers);
+            foreach (KeyValuePair<string, object> a in answers) summary.Answers[a.Key] = a.Value;
             TesterState.MarkAnswered();
         }
 
@@ -245,6 +306,8 @@ namespace Kehai.Playtest
             AddWhere(fields, recorder, replay);
             Note("bug", fields);
             log?.Flush();
+            summary?.Moment(shiftActive && shiftManager != null ? shiftManager.ShiftNumber : 0,
+                recorder != null && recorder.Recording ? recorder.ShiftTime : replay != null && replay.Recording ? replay.RecordingTime : 0f, note);
         }
 
         // ---- quitting ---------------------------------------------------------------------
@@ -316,6 +379,7 @@ namespace Kehai.Playtest
                 }
             }
             if (pendingFreshCareer != null) StartFreshCareer();
+            AnalyseFinishedShift();
 
             while (errors.TryDequeue(out var error))
             {
@@ -349,6 +413,8 @@ namespace Kehai.Playtest
             if (recorder != null && !string.IsNullOrEmpty(recorder.Stem)) fields["stem"] = Path.GetFileName(recorder.Stem);
             if (!shiftActive) ShiftsThisSession++;
             Note("shift", fields);
+            if (shiftActive && !firstShiftSeen) { firstShiftSeen = true; Event("first_shift"); }
+            if (!shiftActive) Event("shift");
         }
 
         // The panels, menus and screens a tester can have open, as they open and close.
@@ -419,11 +485,14 @@ namespace Kehai.Playtest
             float now = Time.realtimeSinceStartup;
             if (fpsSince <= 0f) fpsSince = now;
             if (now - fpsSince < FpsSeconds) return;
+            float avg = fpsFrames / (now - fpsSince);
             Note("fps", new Dictionary<string, object>
             {
-                ["avg"] = fpsFrames / (now - fpsSince),
+                ["avg"] = avg,
                 ["worstMs"] = fpsWorst * 1000f,
             });
+            fpsSum += avg;
+            fpsCount++;
             fpsFrames = 0;
             fpsWorst = 0f;
             fpsSince = now;

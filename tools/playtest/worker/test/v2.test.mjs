@@ -62,6 +62,7 @@ test("the zip and its summary make one session, in either order, and retries cha
     assert.equal(e.DB.rows("SELECT * FROM answers").length, 1);
     assert.equal(e.DB.rows("SELECT * FROM sessions").length, 1);
     assert.equal(e.DB.rows("SELECT nickname FROM testers")[0].nickname, "Rin");
+    assert.equal(e.DB.rows("SELECT taps FROM answers")[0].taps, '["fair","scary","clear","again"]');
 
     assert.equal((await postSummary(e, summaryOf(ID, { minutes: 99 }))).status, 409, "a different summary is refused");
     assert.equal((await putZip(e, ID, consented, zip(64, 7))).status, 409, "different bytes are refused");
@@ -90,6 +91,10 @@ test("consent: v1 builds and a narrowed consent never train her; only consented 
   assert.equal((await call(e, "GET", `/dataset/sessions/${ID}.zip`, { headers: data })).status, 200);
 
   assert.equal((await postSummary(e, { ...summaryOf(), consent: undefined })).status, 400, "a summary must say its consent");
+
+  const skipped = `round1/${TESTER}/20261127_130000-${"aa".repeat(16)}`;
+  await postSummary(e, summaryOf(skipped, { answers: { taps: ["Scary", null, null, "Yes"] } }));
+  assert.equal(e.DB.rows("SELECT taps FROM answers WHERE session = ?", skipped)[0].taps, '["Scary",null,null,"Yes"]', "an unanswered tap is null, not \"null\"");
 });
 
 test("the dataset key reads and nothing more; without a key nothing private shows", async () => {

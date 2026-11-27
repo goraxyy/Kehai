@@ -30,7 +30,7 @@ using Debug = UnityEngine.Debug;
 //
 // Playtest builds (PLAYTEST.md): add -playtest <round>, or Kehai → Build → Playtest, which
 // takes the round from tools/playtest/.env. They go to Builds/playtest-<round>/, carry
-// StreamingAssets/playtest.json (the round, where to send sessions and the form link, from
+// StreamingAssets/playtest.json (the round and where to send sessions, from
 // tools/playtest/.env or the environment), and come zipped for testers beside that folder.
 public static class KehaiBuild
 {
@@ -315,7 +315,6 @@ public static class KehaiBuild
             round = round ?? (Get("KEHAI_PLAYTEST_ROUND") is string r && r.Length > 0 ? r : "round1"),
             uploadUrl = Get("KEHAI_PLAYTEST_UPLOAD_URL").TrimEnd('/'),
             uploadKey = Get("KEHAI_PLAYTEST_UPLOAD_KEY"),
-            formUrl = Get("KEHAI_PLAYTEST_FORM_URL"),
             suggestFinishAfter = int.TryParse(Get("KEHAI_PLAYTEST_SUGGEST_AFTER"), out int n) && n > 0 ? n : 3,
         };
     }
@@ -414,8 +413,7 @@ public static class KehaiBuild
         string folder = StreamingAssetsOf(target, appPath);
         Directory.CreateDirectory(folder);
         File.WriteAllText(Path.Combine(folder, Kehai.Playtest.PlaytestConfig.FileName), UnityEngine.JsonUtility.ToJson(config, true));
-        Debug.Log($"Kehai build: playtest {config.round}, " + (config.Uploads ? "sending sessions to " + config.uploadUrl : "keeping sessions on the tester's computer (no KEHAI_PLAYTEST_UPLOAD_URL)") +
-                  (string.IsNullOrEmpty(config.formUrl) ? ", no form link" : ", form " + config.formUrl));
+        Debug.Log($"Kehai build: playtest {config.round}, " + (config.Uploads ? "sending sessions to " + config.uploadUrl : "keeping sessions on the tester's computer (no KEHAI_PLAYTEST_UPLOAD_URL)"));
         return config;
     }
 

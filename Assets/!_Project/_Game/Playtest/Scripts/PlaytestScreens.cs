@@ -8,12 +8,13 @@ using UnityEngine.UI;
 
 namespace Kehai.Playtest
 {
-    // The playtest's screens, over everything else (PLAYTEST.md):
-    //   first launch      whether to send sessions
+    // The playtest's screens, over everything else (PLAYTEST.md, playtest v2):
+    //   first launch      Play and send, or Play without sending (the consent, C2.2)
     //   after shift 3     a suggestion to stop here (once per tester)
-    //   finishing         four one-tap questions and one optional line (once per tester),
-    //                     sending, thanks, and the link to the longer questions
+    //   finishing         four one-tap questions, three optional typed answers and an optional
+    //                     nickname (once per tester, C2.3), sending, and what became of it (C2.10)
     //   Shift+F7          a one-line note for the bug just marked
+    //   the main menu     a line when a newer build is out (C2.7)
     // Built in code, in the main menu's style. The game is paused while one is open.
     public sealed class PlaytestScreens : MonoBehaviour
     {
@@ -24,7 +25,14 @@ namespace Kehai.Playtest
             ("lost", "Did you get lost in the store?", new[] { "Never", "Sometimes", "Often" }),
             ("more", "Would you play more?", new[] { "Yes", "Maybe", "No" }),
         };
-        public const string FreeQuestion = "Anything break or confuse you?";
+        // Q2's wording (the owner's 12 November answer), each optional; then Q3's nickname.
+        public static readonly string[] TypedQuestions =
+        {
+            "What were you trying to do, and what was confusing?",
+            "When did " + GameNames.Antagonist + " feel scary, unfair or annoying? Describe a moment.",
+            "What would you change first?",
+        };
+        public const string NicknameQuestion = "A nickname?";
 
         // Any playtest screen is up (the main menu stops answering underneath).
         public static bool Covering { get; private set; }
@@ -47,6 +55,8 @@ namespace Kehai.Playtest
         readonly List<MenuButton> buttons = new List<MenuButton>();
         TMP_InputField input;
         EventSystem ownEvents;
+        GameObject banner;
+        TextMeshProUGUI bannerText;
         bool pausedByUs, quitAfter;
         float top;   // where this page's controls start: under its text
         int question;
@@ -69,6 +79,7 @@ namespace Kehai.Playtest
         void Update()
         {
             Covering = Showing;
+            UpdateBanner();
             if (!Showing)
             {
                 if (!Ready) return;
@@ -104,9 +115,10 @@ namespace Kehai.Playtest
             Open("consent", "BEFORE YOU PLAY", "What gets sent",
                 "This build records what happens in the game while you play: where you go, what you press, what " + GameNames.Antagonist +
                 " does, and how smoothly it runs. Not your camera, microphone or screen. When you finish, it sends that to the developer, " +
-                "who watches your session as a 3D replay to see what was confusing.\n\nYou can play either way.");
-            AddButton("Send my sessions", top, () => { session.SetConsent(true); Close(); });
-            AddButton("Keep them on this computer", top - Row, () => { session.SetConsent(false); Close(); });
+                "who watches your session as a 3D replay to see what was confusing, " + PlaytestConsent.TrainingLine +
+                "\n\nYou can play either way. Nothing is sent if you choose not to.");
+            AddButton("Play and send", top, () => { session.SetConsent(true); Close(); });
+            AddButton("Play without sending", top - Row, () => { session.SetConsent(false); Close(); });
             Link();
             SelectFirst();
         }
@@ -135,7 +147,7 @@ namespace Kehai.Playtest
         void ShowQuestion(int index)
         {
             question = index;
-            int total = Questions.Length + 1;
+            int total = Questions.Length + TypedQuestions.Length + 1;
             if (index < Questions.Length)
             {
                 (string id, string text, string[] options) q = Questions[index];
@@ -150,17 +162,35 @@ namespace Kehai.Playtest
                 SelectFirst();
                 return;
             }
-            Open("question broke", $"QUESTION {total} OF {total}", FreeQuestion, "Optional. One line is plenty; Enter sends it.");
-            input = MakeInput(top, "Nothing, it was fine", 300);
+            int typed = index - Questions.Length;
+            if (typed < TypedQuestions.Length)
+            {
+                string key = "a" + (typed + 1);
+                Open("question " + key, $"QUESTION {index + 1} OF {total}", TypedQuestions[typed], "Optional. A sentence or two is plenty; Enter goes on.");
+                input = MakeInput(top, "", 1000);
+                input.onSubmit.AddListener(_ => Typed(key, input.text, index));
+                AddButton("Next", top - 100f, () => Typed(key, input.text, index));
+                AddButton("<color=#8A8A93>Skip</color>", top - 100f - Row, () => Typed(key, "", index));
+                Select(input.gameObject);
+                return;
+            }
+            Open("question nickname", $"QUESTION {total} OF {total}", NicknameQuestion, "Optional. Leave it empty to stay anonymous.");
+            input = MakeInput(top, "", 40);
             input.onSubmit.AddListener(_ => AnswerLast(input.text));
             AddButton("Send", top - 100f, () => AnswerLast(input.text));
             AddButton("<color=#8A8A93>Skip</color>", top - 100f - Row, () => AnswerLast(""));
             Select(input.gameObject);
         }
 
+        void Typed(string key, string text, int index)
+        {
+            answers[key] = (text ?? "").Trim();
+            ShowQuestion(index + 1);
+        }
+
         void AnswerLast(string text)
         {
-            answers["broke"] = (text ?? "").Trim();
+            answers["nickname"] = (text ?? "").Trim();
             session.Answers(answers);
             Send();
         }
@@ -185,18 +215,20 @@ namespace Kehai.Playtest
             body.text = $"{PlaytestUploader.Progress * 100f:0}%";
         }
 
+        // Says only what happened (C2.10): received means the service said so.
+        public static string Outcome(bool agreed, bool uploads, bool received, int queued, int kept) =>
+            !agreed ? "Your session is saved on this computer only. Nothing was sent."
+            : !uploads ? "Your session is saved on this computer; this build doesn't send."
+            : kept > 0 ? "Part of it couldn't be accepted (too big, most likely), so that part is kept on this computer. There's nothing more to do."
+            : received && queued == 0 ? "Your session was received."
+            : "It isn't sent yet (no connection, maybe). It's kept safe, and the game sends it the next time you open it.";
+
         void ShowThanks(bool sent)
         {
-            string code = TesterState.Code;
-            string where = !TesterState.Sends ? "Your session is saved on this computer."
-                : !session.Config.Uploads ? "Your session is saved on this computer; this build doesn't send."
-                : sent ? "Your session is on its way."
-                : "It couldn't be sent just now; the game will send it the next time you open it.";
-            string form = session.Config.FormFor(code);
-            Open("thanks", "PLAYTEST", "Thank you.",
-                where + (form != null ? "\n\nThe longer questions take about five minutes." : ""));
+            string where = Outcome(TesterState.Sends, session.Config.Uploads, sent, PlaytestUploader.Waiting().Length, PlaytestUploader.LastRejected);
+            string id = $"\n\nYour ID is {TesterState.Code}. To have your data deleted, email {PlaytestConsent.DeletionEmail} with it.";
+            Open("thanks", "PLAYTEST", "Thank you.", where + id);
             float y = top;
-            if (form != null) { AddButton("Open the longer questions", y, () => Application.OpenURL(form)); y -= Row; }
             if (!quitAfter) { AddButton("Keep playing", y, KeepPlaying); y -= Row; }
             AddButton(Application.isEditor ? "Stop playing" : "Quit", y, () => session.QuitNow());
             Link();
@@ -232,6 +264,7 @@ namespace Kehai.Playtest
             else if (Page == "suggest stopping") Close();
             else if (Page.StartsWith("question") && quitAfter && question == 0) { session.CancelQuit(); Close(); }
             else if (Page.StartsWith("question") && question < Questions.Length) { answers[Questions[question].id] = "skipped"; ShowQuestion(question + 1); }
+            else if (Page.StartsWith("question a")) Typed("a" + (question - Questions.Length + 1), "", question);
         }
 
         // ---- opening and closing ----------------------------------------------------------
@@ -348,6 +381,41 @@ namespace Kehai.Playtest
             overline.characterSpacing = 6f;
             title = MainMenu.MakeText(column, "Title", GameFonts.Heading, 64f, Paper, new Vector2(-2f, -84f), new Vector2(Width, 90f));
             body = MainMenu.MakeText(column, "Body", GameFonts.Body, 28f, Grey, new Vector2(0f, -190f), new Vector2(Width, 200f));
+            BuildBanner();
+        }
+
+        // C2.7: "a newer build is out", under the main menu's buttons, with a way to get it.
+        void BuildBanner()
+        {
+            banner = new GameObject("Playtest new build", typeof(RectTransform));
+            banner.transform.SetParent(transform, false);
+            var c = banner.AddComponent<Canvas>();
+            c.renderMode = RenderMode.ScreenSpaceOverlay;
+            c.sortingOrder = 1050;   // over the main menu (1000), under the playtest pages (1100)
+            var scaler = banner.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 1f;
+            banner.AddComponent<GraphicRaycaster>();
+            var box = (RectTransform)new GameObject("Line", typeof(RectTransform)).transform;
+            box.SetParent(banner.transform, false);
+            box.anchorMin = box.anchorMax = box.pivot = new Vector2(0f, 0f);
+            box.anchoredPosition = new Vector2(120f, 70f);
+            box.sizeDelta = new Vector2(Width, 110f);
+            bannerText = MainMenu.MakeText(box, "Text", GameFonts.Body, 26f, Paper, new Vector2(0f, 0f), new Vector2(Width, 40f));
+            MenuButton.Make(box, "Get the new build", new Vector2(0f, -44f), new Vector2(520f, 58f), () =>
+            {
+                if (PlaytestUpdate.DownloadUrl != null) Application.OpenURL(PlaytestUpdate.DownloadUrl);
+            });
+            banner.SetActive(false);
+        }
+
+        void UpdateBanner()
+        {
+            bool show = PlaytestUpdate.Latest != null && MainMenu.Visible && !Showing;
+            if (banner == null || banner.activeSelf == show) return;
+            if (show) bannerText.text = $"<color=#DC143C>New:</color> build {PlaytestUpdate.Latest} is out. This one keeps working.";
+            banner.SetActive(show);
         }
 
         TMP_InputField MakeInput(float y, string placeholder, int limit)
