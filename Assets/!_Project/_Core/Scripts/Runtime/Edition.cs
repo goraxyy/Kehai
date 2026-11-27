@@ -23,7 +23,9 @@ public static class Edition
 #if UNITY_EDITOR
     public static KehaiEdition? EditorOverride { get; set; }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() => EditorOverride = null;
+    // An editor batch run may play as another edition (0.5.2, C6.6), to compare it with a built
+    // player: -kehai-edition training|testing|gameplay. Editor only; players keep their stamp.
+    static void Reset() => EditorOverride = EditionRules.FromCommandLine(Environment.GetCommandLineArgs());
 #endif
     public static bool Training => Current == KehaiEdition.Training;
     public static bool Testing => Current == KehaiEdition.Testing;

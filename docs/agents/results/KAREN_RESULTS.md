@@ -666,9 +666,37 @@ A dev-channel (Training edition) macOS player was built on a `kehai-run` clone a
 - **The trainer connects:** "Connected to Unity environment". 300 steps ran in about 66 s and the
   model was exported.
 - **It doesn't play the editor's game.** 0 of 5 shifts were the same: seed 1000 was 28 steps and 140 s
-  in the player, against 39 steps and 194 s in the editor. Every shift still ended in a catch. Not yet
-  explained. Candidates are what the Training build strips (audio sources, text, presentation) and
-  the edition rules; the editor's ablation runs as the editor's own edition.
+  in the player, against 39 steps and 194 s in the editor. Every shift still ended in a catch.
+  What the follow-up found (branch `0.5.2-player`), step by step:
+  - **Part of it is by design.** In the Training edition an ablation draws its layout from the
+    training schedule (`StoreLayouts.ForTraining`, by seed). The editor runs as Testing and plays
+    `ForShift(3)`, the labyrinth. With the layout forced (`-kehai-layout labyrinth`) the gap stays:
+    0 of 5.
+  - **The player repeats itself:** 3 of 3 and 4 of 5 on two pairs of runs. Seed 1300 drifts, as
+    it does in the editor.
+  - **The edition's rules change the game too.** The editor playing as Training
+    (`-kehai-edition training`, new) against Testing: 0 of 5 the same. Unpaired, it was faster
+    (10.8 against 13.7 ms), which hints that Testing-only work (the replay recorder, the debug
+    overlay) is part of what's left of the gap to 0.4.0.
+  - **The player builds a different map of the same layout.** Its outdoor area is bigger.
+    Per belief-trace `map.json`, labyrinth, seed 1000:
+
+    | | Editor | Player |
+    |---|---|---|
+    | Indoor cells | 2,438 | 2,428 |
+    | Outdoor cells | 995 | 2,349 |
+    | Map's extent in z | −199 to −97 | −193 to −54 |
+
+    The grid starts at the NavMesh's edge, so every cell centre moves (0.17 m in z), and her belief
+    and distances differ everywhere. On every layout the player's map has about 4,780 cells.
+  - **A lead, not a cause.** At scene load an eval's layout is applied by
+    `StoreLayoutRuntime.EnsureInitial` without a NavMesh rebuild. `Prepare` then sees nothing
+    changed, so `-kehai-navmesh-report` (which reports from `RebuildNavigation`) wrote nothing in
+    either run. Her map then comes from the NavMesh the scene loaded with, not one baked for the layout.
+  - **Stopped there:** two rounds were the time box. The rest is the owner's call (below).
+- **The layout isn't the gap to 0.4.0:** the fix runs at 12.5 ms on `-kehai-layout today`, against
+  12.6 on the labyrinth. Today's store has 3,350 cells against 0.4.0's 4,708, because the store
+  itself changed.
 - **Data:** a Mac player's data folder follows the bundle id, not the product name. The first try
   wrote an empty summary into the real game's `com.tokenlimit.kehai` folder; it was moved out.
   Verification builds now get their own bundle id as well, and the second run left the game's folder

@@ -78,7 +78,43 @@ public static class StoreLayoutRuntime
     {
         Physics.SyncTransforms();
         var surface = KarenWorld.StoreSurface();
-        if (surface != null) using (new StoreRebake(surface)) surface.BuildNavMesh();
+        if (surface == null) return;
+        using (new StoreRebake(surface))
+        {
+            surface.BuildNavMesh();
+            NavigationReport(surface);
+        }
+    }
+
+    static string PathOf(Transform t)
+    {
+        string path = t.name;
+        for (Transform p = t.parent; p != null; p = p.parent) path = p.name + "/" + path;
+        return path;
+    }
+
+    // -kehai-navmesh-report <file> (0.5.2, C6.6): what one rebake used, to compare an editor's bake
+    // with a player's: the NavMesh's extent, then every collider the bake could read (layer, kind,
+    // enabled, bounds), sorted, one per line. Off unless asked; appends one block per rebake.
+    static void NavigationReport(Unity.AI.Navigation.NavMeshSurface surface)
+    {
+        string path = Argument("-kehai-navmesh-report");
+        if (string.IsNullOrEmpty(path)) return;
+        var tri = UnityEngine.AI.NavMesh.CalculateTriangulation();
+        var b = tri.vertices.Length > 0 ? new Bounds(tri.vertices[0], Vector3.zero) : new Bounds();
+        foreach (Vector3 v in tri.vertices) b.Encapsulate(v);
+        var lines = new List<string>();
+        foreach (Collider c in UnityEngine.Object.FindObjectsByType<Collider>(FindObjectsInactive.Exclude))
+        {
+            if ((surface.layerMask & (1 << c.gameObject.layer)) == 0 || c.isTrigger) continue;
+            Bounds cb = c.bounds;
+            lines.Add($"{PathOf(c.transform)}\t{c.GetType().Name}\t{(c.enabled ? "on" : "off")}\t" +
+                      $"{cb.min.x:0.0},{cb.min.y:0.0},{cb.min.z:0.0}\t{cb.max.x:0.0},{cb.max.y:0.0},{cb.max.z:0.0}");
+        }
+        lines.Sort(string.CompareOrdinal);
+        System.IO.File.AppendAllText(path, $"# rebake {CurrentId}: navmesh {tri.vertices.Length} vertices, " +
+            $"min {b.min.x:0.00},{b.min.y:0.00},{b.min.z:0.00} max {b.max.x:0.00},{b.max.y:0.00},{b.max.z:0.00}; {lines.Count} colliders\n" +
+            string.Join("\n", lines) + "\n");
     }
 
 #if UNITY_EDITOR
