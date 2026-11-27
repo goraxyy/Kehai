@@ -326,6 +326,13 @@ Unity while the owner's editor is open.
   - Done when: on a real Windows PC, PowerShell can list/select/download a snapshot with the
     read-only key, stop/restart it, and re-run without duplication. It needs no Unity, `open`,
     launchd, Telegram or Claude for downloading. It never deletes cloud sessions or starts training.
+    **Built 27 November** (`tools/playtest/dataset.py`): `list`, `fetch` and `reconcile`, standard library only.
+    - A fixed `snapshot.json` with consent, schema, build, sizes and SHA-256.
+    - Every zip is hash-checked, and one with an unsafe path inside is refused whole. A stopped or
+      cut-short download is fetched again on the next run; nothing done is fetched twice.
+    - Deleted and expired sessions are removed locally before the folder is used again.
+    - Six tests against a local stand-in for the service; it only ever sends GETs.
+    - The PowerShell check on the real PC waits for next week.
 - [ ] **C3.8 Training handoff and deletion.** Integrate with 0.4.0's `tools/learn/dataset.py`
   after that branch lands; it already has add/split/forget/table locally, not a cloud downloader.
   Preserve player grouping and held-out splits, exclude incompatible/unconsented sessions, and

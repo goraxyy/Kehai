@@ -7,6 +7,7 @@ Everything outside the game for running playtests. The design and the loop are i
 |---|---|
 | `.env.example` | The settings, copied to `.env` (git ignores it): the round, the upload service's address and keys, the form and download links |
 | `worker/` | The upload service (playtest v2): a Cloudflare Worker in front of a private R2 bucket (session zips, builds) and a D1 database (rows). A file per route in `src/` (the list is at the top of `src/index.js`), the tables in `migrations/`, tests in `test/`, `wrangler.toml` |
+| `dataset.py` | For the Windows training PC (any computer with Python 3.10+, nothing to install): `list`, `fetch <folder>` and `reconcile <folder>`, a fixed snapshot of the sessions that may train Karen, with the read-only key. It checks each zip's hash and paths, carries on after a stop, removes what the cloud removed, and never trains or deletes anything in the cloud. Tests: `python -m unittest discover -s tools/playtest/tests` |
 | `make_codes.py` | Legacy v1 tester-code and invitation generator. New builds create tester IDs on first launch |
 | `TESTER_MESSAGE.md` | The legacy v1 invitation |
 | `ITCH_PAGE.md` | What to put on the itch.io page |
