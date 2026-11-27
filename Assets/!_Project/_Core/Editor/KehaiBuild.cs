@@ -166,6 +166,7 @@ public static class KehaiBuild
             Debug.LogError("Kehai build: no scenes in the build list (File → Build Profiles).");
             return null;
         }
+        DevLayers.RefuseInBuild(scenes);   // before any work; DevLayerBuildGuard catches other builds (C8.5)
         if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone, target))
         {
             Debug.LogError($"Kehai build: this editor can't build for {PlatformName(target)}. Add its Build Support module in Unity Hub (Installs → ⚙ → Add modules).");

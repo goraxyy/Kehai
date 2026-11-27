@@ -10,6 +10,8 @@
 /[Bb]uilds/
 /Assets/KehaiGeneratedTraining/
 /Assets/KehaiGeneratedTraining.meta
+/Assets/KehaiDevLayers/
+/Assets/KehaiDevLayers.meta
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 *.log
