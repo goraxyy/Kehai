@@ -121,6 +121,7 @@ public static class Controls
         new Section("In a sandbox",
             K("F5", "Start her, or freeze her where she is"),
             K("F6", "Restart: back to her spot, frozen"),
+            K("P", "Mini store: start her, or freeze her (F5 without the Fn key)"),
             K("F4", "Hide the sandbox's indicators, or show them again"),
             K("[  ]", "Tricks sandbox: choose a trick"),
             K("Return", "Tricks sandbox: fire the chosen trick")),

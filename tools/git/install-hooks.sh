@@ -7,4 +7,4 @@ set -eu
 root="$(git rev-parse --show-toplevel)"
 chmod +x "$root/tools/git/hooks/pre-commit"
 git config core.hooksPath tools/git/hooks
-echo "install-hooks: commits in $(git rev-parse --git-common-dir | sed 's|/.git$||') now refuse art (tools/git/guard.py)"
+echo "install-hooks: commits in $(dirname "$(git rev-parse --path-format=absolute --git-common-dir)") now refuse art (tools/git/guard.py)"

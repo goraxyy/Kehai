@@ -110,7 +110,7 @@ public class Karen040MeasureTests
         var c = new KarenConfig();
         Assert.AreEqual(KarenBrainKind.Planner, c.brain, "today's game by default");
         Assert.AreEqual(MirrorMode.K0, c.mirror);
-        Assert.AreEqual("s0", c.senses);
+        Assert.AreEqual("s1", c.senses, "the fitted senses by default (the owner's call, 26 November)");
         Assert.AreEqual("p0", c.motion);
         Assert.IsFalse(c.hunter);
     }

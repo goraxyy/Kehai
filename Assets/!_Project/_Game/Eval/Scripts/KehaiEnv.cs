@@ -274,6 +274,15 @@ namespace Kehai.Eval
         // can't get out of), they're put at the clock and punch from there: what's measured is
         // the shift, not the walk to it. A punch that still doesn't take leaves Metrics
         // unstarted, and nothing records an unstarted episode.
+        // After she catches you, the next clock-in starts the next shift, not the same one again
+        // (the owner's call, 26 November). In the game a caught shift is played again; an
+        // ablation's career moves on, or it would stop at its first catch: the replay has the
+        // same shift number, and the log refuses it as already recorded.
+        public bool MoveOnAfterACatch;
+
+        public static bool CaughtShiftToSkip(bool lastCompleted, int shiftNumber, int completedShifts) =>
+            !lastCompleted && shiftNumber > completedShifts;
+
         public IEnumerator ClockIn()
         {
             if (Shift == null || Shift.IsShiftActive)
@@ -281,6 +290,8 @@ namespace Kehai.Eval
                 Metrics = new EpisodeMetrics();
                 yield break;
             }
+            if (MoveOnAfterACatch && CaughtShiftToSkip(Shift.LastShiftCompleted, Shift.ShiftNumber, Shift.CompletedShifts))
+                Shift.SetShiftNumber(Shift.ShiftNumber);
             if (KarenBrain.Instance != null && KarenBrain.Instance.Review != null) KarenBrain.Instance.Review.Visible = false;
             yield return Act(new EnvAction { verb = "clock_in" });
             if (!Shift.IsShiftActive && WarpToClock())

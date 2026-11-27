@@ -100,6 +100,7 @@ namespace Kehai.Eval
         public static AblationRunner Run(AblationPlan plan)
         {
             KehaiEnv env = KehaiEnv.Ensure();
+            env.MoveOnAfterACatch = true;   // a career goes on past her catches (26 November)
             var runner = env.gameObject.AddComponent<AblationRunner>();
             runner.Plan = plan;
             runner.StartCoroutine(runner.Execute(env));

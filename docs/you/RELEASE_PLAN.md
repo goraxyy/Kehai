@@ -110,7 +110,7 @@ Do this alongside the slice: a page that's live earlier collects more wishlists.
 - [ ] Short description (the pitch from [MARKETING.md](../agents/marketing/MARKETING.md#pitch)) and a long one
       with GIFs
 - [ ] Trailer, 60–90 s, hook in the first 5 seconds
-- [ ] Tags, genre, system requirements (from real builds), age rating, Steam Deck yes/no
+- [ ] Tags, genre, system requirements (from real builds; today's draft is [SYSTEM_REQUIREMENTS.md](SYSTEM_REQUIREMENTS.md)), age rating, Steam Deck yes/no
 - [ ] Submit for review (3–5 business days), then **live as "Coming Soon"**
 - [ ] Count wishlists every week from day one
 - [ ] After the redesign (Milestone 7): new capsule, screenshots and trailer; a before/after

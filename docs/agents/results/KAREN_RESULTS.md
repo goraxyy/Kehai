@@ -904,6 +904,25 @@ These choose; they don't test. The §11 tests (95% intervals by career, held-out
 - **The mirror map says players notice her far less than the hand-set guess:** at 3 m 58% (hand
   89%), at 10 m 13% (73%); one of her noises 25% (80%). That's the bots' noticing, so provisional.
 
+**Played from 26 November: S1 is the default** (the owner's call, A9: "go with sharper fitted, but
+recheck how it works"). Each fitted number, checked against how the code uses it:
+
+| Number (S0 → S1) | What it does | Is it sound? |
+|---|---|---|
+| Sight spread, far 3 m → 1.1, near 0.8 m → 0.5 | how wide the circle round a sighting is; it narrows as she grows surer | Yes. A sighting is the player's real position; 0.5 m is the filter's own floor |
+| Hearing confidence 0.9 → 2.99 | how far a noise moves her belief | Yes, once clamped. The belief clamps confidence to 1 (`LikelihoodFloor`), the only place it enters the update, so a noise does at most what a sure sighting does. A test pins that |
+| Hearing spread 1 m + 0.12 m a metre → 0.5 m flat | how precisely she places a noise | Sharper by design: the game's noises carry their true spot, and their reach is already measured along the floor (through doors, not walls) |
+| Testimony spread 2.5 m + 0.25 m a second → 0.67 m + 0.016 m a second | how precisely she trusts a shopper's tip | Mostly. A tip's confidence still fades to nothing over the shopper's 75 s memory, and her predict step spreads the belief every tick. A stale tip is narrow but weak (at 60 s its weight is a fifth). The fit saw few stale tips |
+| Sweep scale 0.85 → 2.96 | how sure a look at an empty cell is | Yes, once clamped to 1 per cell (`ApplySweep`). A hidden player (in a fridge, under a rack) is unseen by design, and S0 also zeroed such a cell within a few sweeps; the hide checks don't use the belief |
+
+**Still open:**
+- The fit (C4.9's recordings, 13 November) is older than the decoy throw, the swinging door and the
+  hide checks (Phase 9).
+- A decoy's landing is a noise she now places to 0.5 m: that's what a decoy is for, but S1 has
+  never been fitted on games with decoys.
+- Refit S1 with the recorded test pass after 0.5.2 (TESTING.md's stages).
+- Its five numbers at an edge stay as reported above.
+
 **What holds:**
 
 | Check | Result |
