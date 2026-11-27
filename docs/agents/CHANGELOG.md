@@ -1,5 +1,10 @@
 # Changelog
 
+- **2026-11-27 — 0.5.2 branch, not released.** The scenes (Phase 8).
+  - **A light Training scene,** made from the store by a menu: grey, silent, no UI text. Karen's map of it is the store's, and it plays the store's game.
+  - **A dev layer each** for the owner, the sound designer and the artist: experiments on top of a scene, never shipped.
+  - **In the editor, Karen's map has the parking lot again.** From 23 November the sandbox island cut it off in every editor Play. Built games never had the problem.
+
 - **2026-11-26 — 0.5.2 branch, not released.** Sharper senses.
   - **Karen trusts what she senses more.**
     - A glimpse of you narrows to about a metre (it was up to 3 m from far away).

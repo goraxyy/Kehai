@@ -211,6 +211,10 @@ The short rules are in [`RULES.md`](RULES.md). The longer how-to:
   3. Run both clones one after the other on the same seeds, rungs and players.
   4. Pair the runs with `tools/eval/compare_builds.py main.jsonl branch.jsonl` ([`tools/eval/README.md`](../../tools/eval/README.md)).
   5. Clean up both clones, their data folders and prefs, and the editor prefs, as above.
+- **The Training scene and dev layers** (0.5.2, Phase 8).
+  - `Kehai → Training Scene → Generate` writes `Assets/KehaiGeneratedTraining/Training.unity` from the store, and `Check` flags a stale copy or anything that isn't grey and silent. A run plays it with `-executeMethod EvalBatch.PlayTraining` (through `kehai-run unity`), which generates and checks it in the clone first.
+  - `Kehai → Dev Layer → Open Mine` (or the sound designer's or the artist's) opens `Assets/KehaiDevLayers/Dev_<who>.unity` over the open scene. Both folders are gitignored, and a build with a dev layer in its list stops.
+  - Her map must come out the same on both scenes. Compare the `-belief-trace` exports. `-kehai-navmesh-report <file>` lists what each rebake read. [Results](results/KAREN_RESULTS.md#the-training-scene-c81c83-27-november)
 - **Audio.** Batch runs are silent (`SoundSettings.Audible()` returns 0 in batch mode). In the GUI editor, set `EditorUtility.audioMasterMute = true` before entering Play or running tests that do. Never change the Mac's volume.
 - **The Unity bridges.**
   - The editor has an MCP bridge (`Unity_RunCommand`).
