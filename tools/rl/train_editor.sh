@@ -16,6 +16,7 @@ game=(); learn=()
 while [ $# -gt 0 ]; do if [ "$1" = "--" ]; then shift; learn=("$@"); break; fi; game+=("$1"); shift; done
 learn_args=""
 [ ${#learn[@]} -gt 0 ] && learn_args="$(printf '%q ' "${learn[@]}")"
-# Options before the three names: everything after them goes to Unity.
-exec env KEHAI_RUN_REPO="$root" python3 "$root/tools/run/kehai_run.py" train "${dry[@]}" "--learn-args=$learn_args" \
-  "$run" "$config" "${league#$root/}" -- "${game[@]}"
+# Options before the three names: everything after them goes to Unity. ${a[@]+"${a[@]}"}: macOS's
+# bash 3.2 calls an empty array unbound under set -u.
+exec env KEHAI_RUN_REPO="$root" python3 "$root/tools/run/kehai_run.py" train ${dry[@]+"${dry[@]}"} "--learn-args=$learn_args" \
+  "$run" "$config" "${league#$root/}" -- ${game[@]+"${game[@]}"}

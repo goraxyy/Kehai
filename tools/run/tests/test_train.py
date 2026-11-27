@@ -123,6 +123,13 @@ class TrainTests(Fixture):
         self.assertTrue(args[8].endswith('tools/rl/leagues/smoke.json'))
         self.assertEqual(['-kehai-no-records', '-logFile'], args[9:11])
         self.assertEqual(['-karen-set', 'catchDial=0.15'], args[12:])
+        # No game flags and no trainer flags: macOS's bash 3.2 called the empty arrays unbound
+        # (found by the real smoke run, 26 November).
+        bare = subprocess.run(['bash', str(script), '--dry-run', 'smoke', 'karen_basic.yaml', str(self.league)],
+                              cwd=self.s.repo, env=self.cli_env(), capture_output=True, text=True)
+        self.assertEqual(0, bare.returncode, bare.stdout + bare.stderr)
+        bare_args = shlex.split(bare.stdout.strip().splitlines()[-1])
+        self.assertEqual('-logFile', bare_args[-2], 'the Unity command ends at its log: no game flags')
         self.assert_clean()
 
 
