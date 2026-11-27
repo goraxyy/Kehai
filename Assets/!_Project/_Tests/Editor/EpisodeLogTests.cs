@@ -100,6 +100,17 @@ public class EpisodeLogTests
         File.Delete(AblationResume.CareersPath(path));
     }
 
+    // The owner's call (26 November): after a catch an ablation career moves on to the next shift.
+    // The shift she caught you in is counted as done only when it wasn't completed and is still
+    // the career's newest; a completed shift, or a career just placed, is left as it is.
+    [Test]
+    public void AfterACatch_TheCareerMovesOnToTheNextShift()
+    {
+        Assert.IsTrue(KehaiEnv.CaughtShiftToSkip(lastCompleted: false, shiftNumber: 3, completedShifts: 2), "caught in shift 3");
+        Assert.IsFalse(KehaiEnv.CaughtShiftToSkip(lastCompleted: true, shiftNumber: 3, completedShifts: 3), "shift 3 was completed");
+        Assert.IsFalse(KehaiEnv.CaughtShiftToSkip(lastCompleted: false, shiftNumber: 2, completedShifts: 2), "a career placed at shift 3, not played yet");
+    }
+
     [Test]
     public void ANewRun_HasNoFinishedCareers()
     {
