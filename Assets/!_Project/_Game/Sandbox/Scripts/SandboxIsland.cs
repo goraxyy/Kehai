@@ -110,6 +110,20 @@ namespace Kehai.Sandbox
             Build(scene, Active);
         }
 
+        // The store's own NavMeshSurface sits on the models island and bakes a volume around the
+        // store. Moving the island dragged that volume 43.5 m south with it, and the parking lot
+        // fell out of her map in every editor Play of the store: 3,428 cells against the
+        // player's and the Training scene's 4,777 (0.5.2, C8.1, 27 November). Each volume stays
+        // where it was in the world.
+        public static void MoveKeepingBakeVolumes(Transform root, Vector3 shift)
+        {
+            var surfaces = root.GetComponentsInChildren<Unity.AI.Navigation.NavMeshSurface>(true);
+            var centres = new Vector3[surfaces.Length];
+            for (int i = 0; i < surfaces.Length; i++) centres[i] = surfaces[i].transform.TransformPoint(surfaces[i].center);
+            root.position += shift;
+            for (int i = 0; i < surfaces.Length; i++) surfaces[i].center = surfaces[i].transform.InverseTransformPoint(centres[i]);
+        }
+
         public static GameObject Build(Scene scene, bool withAreas)
         {
             foreach (GameObject top in scene.GetRootGameObjects())
@@ -119,7 +133,7 @@ namespace Kehai.Sandbox
 
             // The models island, down onto the road's north edge.
             foreach (GameObject top in scene.GetRootGameObjects())
-                if (top.name == ModelsIslandName) top.transform.position += ModelsShift;
+                if (top.name == ModelsIslandName) MoveKeepingBakeVolumes(top.transform, ModelsShift);
 
             SandboxKit.Box(root.transform, "Ground", GroundCentre, GroundSize, SandboxKit.Floor);
 

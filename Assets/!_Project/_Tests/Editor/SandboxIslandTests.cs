@@ -65,4 +65,21 @@ public class SandboxIslandTests
         Walkable(new Vector3(-3f, 0f, -47f), new Vector3(-3f, 0f, -30f), "road to the sandbox island");
         Walkable(new Vector3(-10f, 0f, -20f), new Vector3(10f, 0f, -20f), "sandbox island to the models island");
     }
+
+    // C8.1 (27 November): the store's NavMesh volume sits on the models island; moving the island
+    // must leave it where it was, or the parking lot falls out of her map in every editor Play.
+    [Test]
+    public void MovingTheModelsIsland_LeavesTheStoresBakeVolumeWhereItWas()
+    {
+        GameObject models = GameObject.Find(SandboxIsland.ModelsIslandName);
+        var surfaces = models.GetComponentsInChildren<Unity.AI.Navigation.NavMeshSurface>(true);
+        Assert.IsNotEmpty(surfaces, "the store's NavMeshSurface is on the models island");
+        var before = new Vector3[surfaces.Length];
+        for (int i = 0; i < surfaces.Length; i++) before[i] = surfaces[i].transform.TransformPoint(surfaces[i].center);
+
+        SandboxIsland.Build(EditorSceneManager.GetActiveScene(), withAreas: false);
+        for (int i = 0; i < surfaces.Length; i++)
+            Assert.That(Vector3.Distance(before[i], surfaces[i].transform.TransformPoint(surfaces[i].center)), Is.LessThan(0.001f),
+                $"{surfaces[i].name}'s bake volume stayed in the world");
+    }
 }
