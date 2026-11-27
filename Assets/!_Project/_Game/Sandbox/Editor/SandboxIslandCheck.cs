@@ -85,7 +85,9 @@ public static class SandboxIslandCheck
         void Expect(bool ok, string what) { Debug.Log($"SandboxIslandCheck: {(ok ? "PASS" : "FAIL")} {what}"); if (!ok) fails.Add(what); }
         Expect(island != null, "the sandbox island is built");
         GameObject models = GameObject.Find(SandboxIsland.ModelsIslandName);
-        Expect(models != null && models.transform.position.z < -37.32f - 40f, "the models island moved onto the road's edge");
+        float floor = float.MaxValue;   // its contents move; its root holds the store's NavMesh volume and stays (C8.1)
+        if (models != null) foreach (Collider c in models.GetComponentsInChildren<Collider>()) floor = Mathf.Min(floor, c.bounds.min.z);
+        Expect(models != null && floor < -40f, $"the models island moved onto the road's edge (its floor starts at z {floor:0.0})");
         int brains = 0;
         foreach (KarenBrain b in UnityEngine.Object.FindObjectsByType<KarenBrain>())
             if (island == null || !b.transform.IsChildOf(island.transform)) brains++;   // the island's own Karens don't count
