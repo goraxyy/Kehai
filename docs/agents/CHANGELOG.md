@@ -1,5 +1,15 @@
 # Changelog
 
+- **2026-11-26 — 0.5.2 branch, not released.** Sharper senses.
+  - **Karen trusts what she senses more.**
+    - A glimpse of you narrows to about a metre (it was up to 3 m from far away).
+    - A noise is placed to half a metre.
+    - A shopper's tip is placed to well under a metre, though an old tip still counts for little.
+    - So she heads straight for where she sensed you, and a quick step out of sight buys less time.
+  - **The cold room's islands** stand closer together.
+  - **The decorative office camera is gone,** and the door, locker and exterior fit is saved into the store.
+  - **Karen's props are real models:** the PA microphone, the camera box, the store's cameras and the office screens.
+
 - **2026-11-26 — 0.5.2 branch, not released.** Where the usable things go (Phase 12).
   - **The staff room's mop** and its rack hang on the east wall; they stood boxed into the south-west corner, behind the counter and the stock crate.
   - **Shelves you can't get at** stay full to look at: a slot behind one you can't reach, a chiller you can't stand at (freezers 4 and 5, whose doors now stay shut), and the till counter's mints where they stand among a shelf's decks (in the store's own layout).
