@@ -214,6 +214,25 @@ public class PlaytestV2Tests
         StringAssert.DoesNotContain("<script", html);
     }
 
+    // C2.8: every key the walkthrough teaches is one the game's Controls list has, short enough to
+    // read, and the pages never mention her tricks.
+    [Test]
+    public void TheWalkthrough_TeachesTheGamesOwnKeys_Briefly()
+    {
+        Assert.AreEqual(4, PlaytestWalkthrough.Pages.Length);
+        for (int i = 0; i < PlaytestWalkthrough.Pages.Length; i++)
+        {
+            foreach (string key in PlaytestWalkthrough.Pages[i].keys)
+                Assert.IsNotNull(PlaytestWalkthrough.Line(key), $"page {i + 1}: \"{key}\" isn't in Controls.All");
+            string body = PlaytestWalkthrough.Body(i);
+            Assert.Less(body.Length, 520, $"page {i + 1} is too long to read at a glance");
+            StringAssert.DoesNotContain("trick", body.ToLowerInvariant(), "the walkthrough doesn't reveal her tricks");
+        }
+        StringAssert.Contains("Shift + F7", PlaytestWalkthrough.Body(3));
+        Assert.AreEqual("Use what you're looking at", PlaytestWalkthrough.Short("Use what you're looking at: pick up, stock a shelf"));
+        StringAssert.EndsWith("…", PlaytestWalkthrough.Short(new string('a', 40) + ", " + new string('b', 80)));
+    }
+
     [Test]
     public void TheEndPage_AsksQ2sThreeQuestionsAndQ3sNickname_AndTheConsentSaysTraining()
     {

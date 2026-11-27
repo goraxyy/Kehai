@@ -161,6 +161,10 @@ namespace Kehai.Playtest
         public static bool Answered => Code.Length > 0 && PlayerPrefs.GetString(AnsweredKey, "") == Code;
         public static void MarkAnswered() { PlayerPrefs.SetString(AnsweredKey, Code); PlayerPrefs.Save(); }
 
+        const string WalkthroughKey = "Kehai.Playtest.Walkthrough";      // the code that saw the walkthrough (C2.8)
+        public static bool WalkthroughSeen => Code.Length > 0 && PlayerPrefs.GetString(WalkthroughKey, "") == Code;
+        public static void MarkWalkthrough() { PlayerPrefs.SetString(WalkthroughKey, Code); PlayerPrefs.Save(); }
+
         public static bool Suggested => Code.Length > 0 && PlayerPrefs.GetString(SuggestedKey, "") == Code;
         public static void MarkSuggested() { PlayerPrefs.SetString(SuggestedKey, Code); PlayerPrefs.Save(); }
 
@@ -175,7 +179,7 @@ namespace Kehai.Playtest
 
         public static void Forget()
         {
-            foreach (string key in new[] { CodeKey, ConsentKey, ConsentVersionKey, CareerKey, AnsweredKey, SuggestedKey, RunningKey }) PlayerPrefs.DeleteKey(key);
+            foreach (string key in new[] { CodeKey, ConsentKey, ConsentVersionKey, CareerKey, AnsweredKey, SuggestedKey, RunningKey, WalkthroughKey }) PlayerPrefs.DeleteKey(key);
             PlayerPrefs.Save();
         }
     }

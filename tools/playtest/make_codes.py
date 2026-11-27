@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Tester codes for a playtest round, and the message to send each tester (PLAYTEST.md).
+"""RETIRED with playtest v2 (C3.6): v2 builds make their own IDs; see tools/playtest/README.md, "Sending a round".
+Kept for v1 rounds only. Tester codes for a playtest round, and the message to send each tester (PLAYTEST.md).
 
     python3 tools/playtest/make_codes.py --round round1 --count 6               T01…T06
     python3 tools/playtest/make_codes.py --round round1 --names Ana Ben Chloe   one code per name

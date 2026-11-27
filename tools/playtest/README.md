@@ -8,9 +8,21 @@ Everything outside the game for running playtests. The design and the loop are i
 | `.env.example` | The settings, copied to `.env` (git ignores it): the round, the upload service's address and keys, the form and download links |
 | `worker/` | The upload service (playtest v2): a Cloudflare Worker in front of a private R2 bucket (session zips, builds) and a D1 database (rows). A file per route in `src/` (the list is at the top of `src/index.js`), the tables in `migrations/`, tests in `test/`, `wrangler.toml` |
 | `dataset.py` | For the Windows training PC (any computer with Python 3.10+, nothing to install): `list`, `fetch <folder>` and `reconcile <folder>`, a fixed snapshot of the sessions that may train Karen, with the read-only key. It checks each zip's hash and paths, carries on after a stop, removes what the cloud removed, and never trains or deletes anything in the cloud. Tests: `python -m unittest discover -s tools/playtest/tests` |
-| `make_codes.py` | Legacy v1 tester-code and invitation generator. New builds create tester IDs on first launch |
-| `TESTER_MESSAGE.md` | The legacy v1 invitation |
-| `ITCH_PAGE.md` | What to put on the itch.io page |
+| `guide/` | START HERE (HTML and plain text), filled in and put in every tester zip by the build |
+| `make_codes.py`, `TESTER_MESSAGE.md`, `ITCH_PAGE.md` | **Retired with v2** (C3.6): v1's tester codes, invitation and itch.io page. Kept only so v1 sessions and their codes still import; a v2 round needs none of them |
+
+## Sending a round (v2)
+
+1. Build the round on your go (`Kehai → Build → Playtest`), then `uv run playtest.py publish <round> --version <v>`
+   in `tools/marketing` (after the Cloudflare set-up below). Or just send the zips themselves.
+2. Send everyone the same message:
+
+   > Thanks for testing Kehai! Download it here: `<your website>/playtest` (or the zip I sent).
+   > Unzip it first and open **START HERE** inside: it shows the two clicks a Mac or Windows
+   > needs the first time. Nothing to sign up for, no code to type. Play up to three shifts; the
+   > game sends what happened by itself if you agree.
+
+No codes, form, invitation list or itch.io account are needed. Each install makes its own ID.
 
 Your Mac's side (pulling sessions, the report, Telegram, Claude's summaries, the issues) lives
 with the marketing pipeline it shares Telegram and Claude with:
