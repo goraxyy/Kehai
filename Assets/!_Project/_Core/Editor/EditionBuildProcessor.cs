@@ -31,7 +31,7 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
                 int removed = 0;
                 foreach (var component in root.GetComponentsInChildren<Component>(true))
                 {
-                    if (component == null) continue;
+                    if (component == null || RequiredByAnother(component)) continue;   // its turn comes next pass
                     if (IsDebugComponent(component.GetType().Name) && (edition == KehaiEdition.Gameplay || component.GetType().Name != "TrickCheck") && edition != KehaiEdition.Testing ||
                         training && (component is UnityEngine.EventSystems.UIBehaviour || component is TMP_Text ||
                         component is TMP_SubMesh || component is AudioSource || component is AudioListener ||
@@ -78,6 +78,23 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
             gate.AddComponent<EditionSceneGate>().trainingPreview = trainingPreview != null;
         }
     }
+    // True when another component on the same object requires this one ([RequireComponent]):
+    // Unity refuses to remove it, with an error, until that one is gone.
+    static bool RequiredByAnother(Component component)
+    {
+        Type type = component.GetType();
+        foreach (Component other in component.GetComponents<Component>())
+        {
+            if (other == null || other == component) continue;
+            foreach (RequireComponent need in other.GetType().GetCustomAttributes(typeof(RequireComponent), true))
+                if (need.m_Type0 != null && need.m_Type0.IsAssignableFrom(type) ||
+                    need.m_Type1 != null && need.m_Type1.IsAssignableFrom(type) ||
+                    need.m_Type2 != null && need.m_Type2.IsAssignableFrom(type))
+                    return true;
+        }
+        return false;
+    }
+
     public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "TrickCheck" || name == "VisualCheck";
     static bool IsPresentation(string name) => name == "TaskListUI" || name == "InventoryUI" || name == "BurnoutUI" ||
         name == "MainMenu" || name == "SettingsMenu" || name == "InteractHud" || name == "FirstShiftGuide" || name == "CareerCompletionScreen" ||

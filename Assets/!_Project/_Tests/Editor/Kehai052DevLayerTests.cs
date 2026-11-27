@@ -9,13 +9,14 @@ using UnityEngine.SceneManagement;
 // and never ships.
 public class Kehai052DevLayerTests
 {
-    const string Folder = "Assets/KehaiDevLayerTests";
-    const string BasePath = Folder + "/Base.unity";
+    const string Root = "Assets/KehaiDevLayerTests";
+    const string Folder = Root + "/Layers";          // the layers' own folder: the base isn't in it
+    const string BasePath = Root + "/Base.unity";
 
     [SetUp]
     public void SetUp()
     {
-        if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "KehaiDevLayerTests");
+        if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets", "KehaiDevLayerTests");
         Scene under = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         new GameObject("Shelf_01");
         Assert.IsTrue(EditorSceneManager.SaveScene(under, BasePath));
@@ -25,7 +26,7 @@ public class Kehai052DevLayerTests
     public void TearDown()
     {
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        AssetDatabase.DeleteAsset(Folder);
+        AssetDatabase.DeleteAsset(Root);
     }
 
     [Test]
