@@ -782,6 +782,34 @@ scene plays the store's game as far as the store repeats itself.
 - **Memory:** 2–9% lower, which is about 30–130 MB per copy.
 - So more copies at once on the PC is the main use, not faster shifts.
 
+### The short-map numbers, rerun on the full map (27 November)
+
+The owner's yes ("Yes, rerun them"). Same designs as before, on `main` `85f67f4` (her map 4,777 cells), editor closed.
+
+| | Short map (23–26 November) | Full map (27 November) |
+|---|---|---|
+| C6.3, ms a frame (5 one-shift careers, Testing) | 12.6 (the fix) | 14.0, 15.1, 13.1 (mean 14.1) |
+| C6.8, real s per simulated s, 15 fps against 10 | 0.194–0.200 against 0.201 | 0.200 against 0.203 |
+| C6.8, identical shifts: 15 against 15 / 10 against 15 | 3 of 18 / 1 of 18 | 7 of 18 / 0 of 18 |
+| C6.6, the player's map against the editor's | 4,777 against 3,433 cells | byte for byte the same |
+| C6.6, player shifts the same as the editor's | 0 of 5 | 3 of 5 |
+| C6.6, ms a frame: player against editor (Training) | 7.4 against 12.6 | 8.3 against 12.5 (1.5×) |
+
+- **C6.3: the full map costs about 1.5 ms a frame.** Against 0.4.0's 9.7 ms (also a full
+  map, 4,708 cells), the gap that's left is 1.45×, not 1.3×.
+- **C6.8: the same answer.** At 10 fps it isn't faster, and no shift matched. The game's
+  changes at 10 fps are smaller than before, all within 1.5 standard errors (18 pairs):
+  - jobs +2.2 ± 1.2 and +1.2 ± 1.7;
+  - shift length +17 ± 17 s and +9 ± 20 s.
+
+  15 stays (A3).
+- **C6.6: the island was most of the "player gap".** Seeds 1000, 1200 and 1300 play the same
+  shift in the player and the editor.
+  - Seed 1100 is one step apart (20 against 19, 83 against 82 s).
+  - Seed 1400 drifts, as it does on the editor against itself (C5.4).
+  - The player repeats itself on 4 of 5 seeds.
+- **Still Testing-only work:** the editor as Training runs at 12.5 ms, against 14.1 as Testing.
+
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 
 - **Her light sense ignored a second set of ceiling lamps (23 November).** `LightProbe` read only
