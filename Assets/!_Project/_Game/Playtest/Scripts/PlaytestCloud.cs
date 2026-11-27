@@ -186,7 +186,9 @@ namespace Kehai.Playtest
 
         public static void Saw(string latestJson, string ours, string uploadUrl, RuntimePlatform platform)
         {
-            Dictionary<string, object> latest = MiniJson.ParseObject(latestJson ?? "");
+            Dictionary<string, object> latest;
+            try { latest = MiniJson.ParseObject(latestJson ?? ""); }
+            catch (FormatException) { return; }   // not the service's answer: say nothing
             string version = latest?.GetString("version");
             if (string.IsNullOrEmpty(version) || !IsNewer(version, ours)) return;
             Latest = version;
