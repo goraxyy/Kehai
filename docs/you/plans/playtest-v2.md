@@ -311,9 +311,15 @@ Unity while the owner's editor is open.
   `~/TokenLimit/playtests/cache/` and shows them in Finder, ready for **Kehai → Replay → Open
   Shift…**. The cache empties itself after 7 days, or past 2 GB.
   - Files: `tools/marketing/playtest.py`, a new `km/playtest/cache.py`.
-- [ ] **C3.4 `playtest.py forget <id>`.** Deletes a tester everywhere, for privacy requests.
-- [ ] **C3.5 `playtest.py publish <round>`.** Uploads the round's Mac and Windows zips to R2
+- [x] **C3.4 `playtest.py forget <id>`.** Deletes a tester everywhere, for privacy requests.
+  **Done 27 November** (`km/playtest/admin.py`):
+  - it sends `DELETE /admin/tester/<id>` (files and rows in the cloud; later sends refused) and removes every local folder of theirs;
+  - tested against a stand-in service. The first real use needs C0.1.
+- [x] **C3.5 `playtest.py publish <round>`.** Uploads the round's Mac and Windows zips to R2
   `builds/` and sets `/latest`. Builds are made only on your go.
+  **Done 27 November:**
+  - `publish <round> --version V` finds KehaiBuild's zips (or `--mac`/`--windows`) and puts both with `wrangler r2 object put`. Only then does it call `POST /admin/latest`, so testers never see half a build.
+  - Tested against a stand-in. The first real use needs C0.1.
 - [ ] **C3.6 Replace the invitation workflow.** Retire code generation and the form/itch templates
   from the v2 path. Put one short copyable ZIP/link + opening-instructions message in the README.
   Preserve v1 import compatibility while older builds exist.
