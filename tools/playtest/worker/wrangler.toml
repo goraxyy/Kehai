@@ -1,6 +1,7 @@
 # The playtest upload service. Deploy steps: README.md. Secrets (never in this file):
-#   npx wrangler secret put UPLOAD_KEY     (the same value as KEHAI_PLAYTEST_UPLOAD_KEY)
-#   npx wrangler secret put ADMIN_KEY      (the same value as KEHAI_PLAYTEST_ADMIN_KEY)
+#   npx wrangler secret put UPLOAD_KEY     (the same value as KEHAI_PLAYTEST_UPLOAD_KEY; inside every build)
+#   npx wrangler secret put ADMIN_KEY      (the same value as KEHAI_PLAYTEST_ADMIN_KEY; the owner's machine only)
+#   npx wrangler secret put DATASET_KEY    (read-only, for the Windows training PC)
 name = "kehai-playtest"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
@@ -9,3 +10,14 @@ workers_dev = true
 [[r2_buckets]]
 binding = "SESSIONS"
 bucket_name = "kehai-playtests"
+
+# The rows (migrations/). After `npx wrangler d1 create kehai-playtest`, put its id here.
+[[d1_databases]]
+binding = "DB"
+database_name = "kehai-playtest"
+database_id = "set-after-wrangler-d1-create"
+migrations_dir = "migrations"
+
+# Q5's six-month limit, once a day (cron.js).
+[triggers]
+crons = ["17 3 * * *"]

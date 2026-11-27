@@ -178,6 +178,8 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   `events`, `summaries` and `signups`, as migrations.
   - Files: `tools/playtest/worker/migrations/`, `wrangler.toml`.
   - Done when: `wrangler d1 migrations apply` makes them locally and in the cloud.
+    **Built 27 November** (`0001_playtest_v2.sql`, plus `downloads`, `deletions` and `rate`). Every
+    worker test applies it to a real SQLite. The `wrangler` half waits for C0.1.
 - [ ] **C1.2 The routes.**
   - With the upload key (add only): `PUT /sessions/…` (as today), `POST /summaries`, `POST /events`.
   - Open: `GET /download/<mac|windows>` (sends the current build from R2 and counts a download),
@@ -189,24 +191,40 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `tools/playtest/worker/src/` (split into a file per route), `wrangler.toml`.
   - Done when: `node --test` passes against stand-ins for R2 and D1, and `wrangler dev` serves it
     on this Mac.
+    **Built 27 November:** a file per route in `src/`, and 18 of 18 tests pass against the stand-ins.
+    The delete-after-pull answers 405, and the Mac's pull no longer deletes. `wrangler dev` waits
+    for C0.1 (wrangler isn't installed here).
 - [ ] **C1.3 Keeping to Q5.** A cloud scheduled run applies Q5 to replays, rows and learning records. It requires no local computer; deletion requests override retention. Export expiry/deletion metadata for later Windows reconciliation.
   - Done when: records on either side of the cutoff are handled correctly, retained sessions remain
     downloadable, expired sessions are excluded from new manifests, and import does not extend
     their lifetime. The Windows tools remove expired local copies before subsequent dataset use.
   - Files: `tools/playtest/worker/src/cron.js`, `wrangler.toml`.
+  - **The cloud half, built 27 November:** a daily run removes a session 183 days after its first
+    receipt (zip, rows, summary; a tombstone stays). Downloads don't move the date.
+    `GET /dataset/deletions` lists what went, for the Windows copies. Tested on both sides of the
+    cutoff. The Windows half comes with C3.7 and C3.8.
 - [ ] **C1.4 Deploy and prove receipt** (after C0.1). Done when: a real consented session from
   a packaged build reaches R2 and D1 while local processing is stopped. Match its session ID,
   checksum and row counts. The current editor simulation intentionally disables uploads.
-- [ ] **C1.5 Durable, retry-safe ingestion.** Session ZIP receipt and structured-row receipt may
+- [x] **C1.5 Durable, retry-safe ingestion.** Session ZIP receipt and structured-row receipt may
   arrive in either order. Track partial completion, retry without duplicate sessions/moments,
   reject conflicting overwrites, and reconcile interrupted uploads. Enforce the existing size
   limit visibly; report oversized sessions instead of retrying forever.
   - Done when: duplicate, reordered, interrupted, rejected and offline/retry cases preserve one
     coherent session; no training or local job is invoked. No local pull deletes the cloud copy.
-- [ ] **C1.6 Dataset access.** Add authenticated read-only manifest/download access for C3.7,
+    **Done 27 November:**
+    - The zip and the summary fill one session row, in either order. The same bytes again get
+      200; different bytes get 409.
+    - A summary is written in one transaction. A deleted or expired session answers 410, so the
+      game stops retrying. Oversized sends get 413.
+    - Arrival starts nothing. The Mac's pull no longer deletes.
+- [x] **C1.6 Dataset access.** Add authenticated read-only manifest/download access for C3.7,
   including consent, hashes, schema versions, round and build; keep delete/publish admin-only.
   - Done when: the read-only key can fetch eligible sessions but cannot write, delete or publish;
     unauthenticated requests cannot list or download private data.
+    **Done 27 November:** `DATASET_KEY` reads `/dataset/manifest`, the eligible zips and
+    `/dataset/deletions`, and nothing else. Eligible means consent to training, not deleted, and
+    not expired. Tested against every admin and upload route, and with no key at all.
 
 ### Phase 2: the game [C]
 
