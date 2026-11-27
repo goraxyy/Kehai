@@ -153,6 +153,7 @@ docs/
 │   ├── IDEAS.md                      blink, the endless maze, the AI test environment, ablation, memory ideas
 │   ├── RELEASE_PLAN.md               everything left until release, in order
 │   ├── TESTING.md                    the testing and training left, in order, by stage, with Mac and Windows times
+│   ├── SYSTEM_REQUIREMENTS.md        what a Mac or Windows PC needs to play Kehai, and to work on it
 │   └── plans/
 │       ├── 0.4.0-build-plan.md       Karen 0.4.0: two trained Karens, players that feel real (built; its runs wait)
 │       ├── playtest-v2.md            finish the test build: instructions, cloud uploads, a dataset for Windows
