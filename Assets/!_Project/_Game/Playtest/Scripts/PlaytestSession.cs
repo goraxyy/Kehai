@@ -232,7 +232,8 @@ namespace Kehai.Playtest
             {
                 var files = PlaytestPackage.Collect(folder, since, ShiftRecorder.Folder,
                     Path.Combine(Application.persistentDataPath, "karen_logs"), KarenLedger.DefaultPath,
-                    Application.consoleLogPath, previousLogToo: crashed);
+                    Application.consoleLogPath, previousLogToo: crashed,
+                    learningFolder: Path.Combine(Application.persistentDataPath, "learning"));
                 bool sends = TesterState.Sends;
                 string zip = Path.Combine(sends ? PlaytestPaths.Outbox : PlaytestPaths.Local, PlaytestPackage.ZipName(Config.round, TesterState.Code, stamp));
                 PlaytestPackage.Pack(zip, files);

@@ -5,6 +5,7 @@
     python3 tools/learn/dataset.py split <dataset> [--held-out 0.2]
     python3 tools/learn/dataset.py forget <dataset> <player-id>
     python3 tools/learn/dataset.py table <dataset>
+    python3 tools/learn/dataset.py import <dataset> <snapshot folder>   (playtest v2, C3.8: tools/playtest/dataset.py fetch's folder)
 
 Layout:
     <dataset>/players/<player-id>/shifts/*.json        shift records (the game's ShiftRecording)
@@ -230,8 +231,117 @@ def shifts(dataset: str, pid: str) -> list:
 
 
 def learning(dataset: str, pid: str) -> list:
-    p = os.path.join(dataset, "players", pid, "learning.jsonl")
-    return [json.loads(x) for x in open(p) if x.strip()] if os.path.exists(p) else []
+    base = os.path.join(dataset, "players", pid)
+    paths = [os.path.join(base, "learning.jsonl")]
+    snap = os.path.join(base, "learning.sessions")   # one file per imported playtest session (C3.8)
+    if os.path.isdir(snap):
+        paths += [os.path.join(snap, f) for f in sorted(os.listdir(snap)) if f.endswith(".jsonl")]
+    return [json.loads(x) for p in paths if os.path.exists(p) for x in open(p) if x.strip()]
+
+
+# ---- playtest v2, C3.8: a downloaded snapshot (tools/playtest/dataset.py fetch) into the dataset ----
+
+SCHEMA_MIN = 2   # the summary schema the game writes since playtest v2
+
+
+def import_snapshot(dataset: str, folder: str, schema_min: int = SCHEMA_MIN) -> dict:
+    """Imports each session the snapshot fetched, under its tester's ID, so splits stay by player.
+    Refused, with the reason in the report: no consent to training, an older schema, or no
+    learning records (replays alone aren't a training set). Sessions the cloud has removed since are
+    removed here: a deletion request forgets the player; an expired session goes on its own.
+    Importing again changes nothing: each session is kept once (<dataset>/sessions.json)."""
+    snap_path = os.path.join(folder, "snapshot.json")
+    if not os.path.exists(snap_path):
+        raise SystemExit(f"{folder}: no snapshot.json (make one with tools/playtest/dataset.py fetch)")
+    snap = json.load(open(snap_path))
+    index_path = os.path.join(dataset, "sessions.json")
+    index = json.load(open(index_path)) if os.path.exists(index_path) else {}
+    report = {"imported": [], "already": [], "refused": {}, "removed": [], "forgotten": []}
+    gone_players = set()
+    for s in snap.get("sessions", []):
+        sid, tester = s.get("id", ""), s.get("tester", "")
+        flat = sid.replace("/", "_")
+        if s.get("status") == "removed":
+            if s.get("why") == "request" and tester not in gone_players:
+                forget(dataset, tester)
+                gone_players.add(tester)
+                report["forgotten"].append(tester)
+            elif flat in index:
+                _remove_session(dataset, index.pop(flat))
+                report["removed"].append(sid)
+            index.pop(flat, None)
+            continue
+        if flat in index:
+            report["already"].append(sid)
+            continue
+        why = _refusal(dataset, s, folder, schema_min)
+        if why:
+            report["refused"][sid] = why
+            continue
+        index[flat] = _import_session(dataset, s, os.path.join(folder, "zips", flat + ".zip"))
+        report["imported"].append(sid)
+    for tester in gone_players:   # a forgotten player's sessions leave the index too
+        for flat in [f for f, e in index.items() if e.get("tester") == tester]:
+            index.pop(flat)
+    os.makedirs(dataset, exist_ok=True)
+    with open(index_path, "w") as f:
+        json.dump(index, f, indent=2, sort_keys=True)
+    return report
+
+
+def _refusal(dataset: str, s: dict, folder: str, schema_min: int):
+    if s.get("status") != "done":
+        return f"not downloaded ({s.get('status')}{': ' + s['why'] if s.get('why') else ''})"
+    if s.get("consent_version") in (None, "", "v1"):
+        return "no consent to training (v1)"
+    if int(s.get("schema") or 0) < schema_min:
+        return f"summary schema {s.get('schema')} is older than {schema_min}"
+    if safe_id(s.get("tester", "")) in forgotten(dataset):
+        return "this player was forgotten"
+    zp = os.path.join(folder, "zips", s["id"].replace("/", "_") + ".zip")
+    if not os.path.exists(zp):
+        return "its zip is missing from the snapshot folder"
+    with zipfile.ZipFile(zp) as z:
+        if not any(os.path.basename(n).startswith("learning_") and n.endswith(".jsonl") and not n.endswith(".escapes.jsonl") for n in z.namelist()):
+            return "no learning records: replays alone aren't a training set"
+    return None
+
+
+def _import_session(dataset: str, s: dict, zip_path: str) -> dict:
+    tester, flat = s["tester"], s["id"].replace("/", "_")
+    base = player_dir(dataset, tester)
+    os.makedirs(os.path.join(base, "shifts"), exist_ok=True)
+    os.makedirs(os.path.join(base, "learning.sessions"), exist_ok=True)
+    with open(os.path.join(base, "player.txt"), "w") as f:
+        f.write(tester + "\n")
+    files = []
+    with zipfile.ZipFile(zip_path) as z:
+        learning_lines = b""
+        for n in z.namelist():
+            name, low = os.path.basename(n), n.lower()
+            if low.endswith(".json") and name.startswith("shift_") and not low.endswith(".markers.json"):
+                target = os.path.join(base, "shifts", f"{flat}__{name}")
+                with open(target, "wb") as f:
+                    f.write(z.read(n))
+                files.append(os.path.relpath(target, dataset))
+            elif name.startswith("learning_") and low.endswith(".jsonl") and not low.endswith(".escapes.jsonl"):
+                learning_lines += z.read(n).rstrip(b"\n") + b"\n"
+            elif name == "karen_ledger.json":
+                with open(os.path.join(base, "ledger.json"), "wb") as f:
+                    f.write(z.read(n))
+        target = os.path.join(base, "learning.sessions", flat + ".jsonl")
+        with open(target, "wb") as f:
+            f.write(learning_lines)
+        files.append(os.path.relpath(target, dataset))
+    return {"tester": tester, "files": files, "sha256": s.get("zip_sha256"), "build": s.get("build"), "schema": s.get("schema"),
+            "consent_version": s.get("consent_version"), "expires": s.get("expires")}
+
+
+def _remove_session(dataset: str, entry: dict) -> None:
+    for rel in entry.get("files", []):
+        p = os.path.join(dataset, rel)
+        if os.path.exists(p):
+            os.remove(p)
 
 
 def weights(items_by_player: dict) -> dict:
@@ -255,7 +365,15 @@ def main(argv=None):
     a2 = sub.add_parser("split"); a2.add_argument("dataset"); a2.add_argument("--held-out", type=float, default=0.2)
     a3 = sub.add_parser("forget"); a3.add_argument("dataset"); a3.add_argument("player")
     a4 = sub.add_parser("table"); a4.add_argument("dataset")
+    a5 = sub.add_parser("import"); a5.add_argument("dataset"); a5.add_argument("snapshot")
     a = ap.parse_args(argv)
+    if a.cmd == "import":
+        r = import_snapshot(a.dataset, a.snapshot)
+        print(f"imported {len(r['imported'])}, already here {len(r['already'])}, removed {len(r['removed'])}, "
+              f"players forgotten {len(r['forgotten'])}, refused {len(r['refused'])}")
+        for sid, why in sorted(r["refused"].items()):
+            print(f"  refused {sid}: {why}")
+        return 1 if r["refused"] else 0
     if a.cmd == "add":
         print(f"added {add(a.dataset, a.sources)} files")
     elif a.cmd == "split":

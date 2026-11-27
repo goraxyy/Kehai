@@ -85,7 +85,9 @@ namespace Kehai.Playtest
         static string Safe(string s) => string.IsNullOrEmpty(s) ? "none" : new string(s.Select(c => char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
 
         // The files a session made, from the folders the game writes to.
-        public static List<(string path, string entry)> Collect(string sessionFolder, DateTime startedUtc, string shiftFolder, string thoughtFolder, string ledgerPath, string playerLog, bool previousLogToo)
+        // learningFolder (playtest v2, C3.8): Karen's learning records from this session, which a
+        // training set needs; replays alone aren't one.
+        public static List<(string path, string entry)> Collect(string sessionFolder, DateTime startedUtc, string shiftFolder, string thoughtFolder, string ledgerPath, string playerLog, bool previousLogToo, string learningFolder = null)
         {
             var files = new List<(string, string)>();
             string log = Path.Combine(sessionFolder, PlaytestPaths.LogName);
@@ -104,6 +106,9 @@ namespace Kehai.Playtest
             if (thoughtFolder != null && Directory.Exists(thoughtFolder))
                 foreach (string f in Directory.GetFiles(thoughtFolder))
                     if (File.GetLastWriteTimeUtc(f) >= since) files.Add((f, "karen_logs/" + Path.GetFileName(f)));
+            if (learningFolder != null && Directory.Exists(learningFolder))
+                foreach (string f in Directory.GetFiles(learningFolder, "learning_*.jsonl"))
+                    if (File.GetLastWriteTimeUtc(f) >= since) files.Add((f, "learning/" + Path.GetFileName(f)));
             if (ledgerPath != null && File.Exists(ledgerPath)) files.Add((ledgerPath, "karen_ledger.json"));
             if (!string.IsNullOrEmpty(playerLog) && File.Exists(playerLog)) files.Add((playerLog, "Player.log"));
             if (previousLogToo && !string.IsNullOrEmpty(playerLog))

@@ -365,6 +365,13 @@ Unity while the owner's editor is open.
   - Training starts manually under the 0.4.0 plan. Publication follows its checks without a
     per-model owner approval; it is never triggered just by receiving a session.
     The handoff test is not permission to run a full training job.
+  - **Built 27 November:** `python tools/learn/dataset.py import <dataset> <snapshot folder>`.
+    - Each fetched session goes in under its tester's ID (splits stay by player), with its learning records in a file of its own.
+    - Refused, with the reason printed (and exit 1): v1 or unconsented sessions, an older schema, zips with no learning records, and players already forgotten.
+    - A deletion request forgets the player for good; an expired session is removed on its own. Importing again adds nothing.
+    - Game side: tester zips now carry this session's `learning/learning_*.jsonl` (they didn't before).
+    - Tests: `tools/learn/tests/test_snapshot_import.py` (42 pass with the rest).
+    - Left: a real import and the PowerShell commands on the PC.
 
 ### Phase 4: the website and download instructions
 
