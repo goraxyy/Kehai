@@ -33,6 +33,29 @@ public class Kehai052TrainingSceneTests
         return go;
     }
 
+    // The first generated scene kept its EventSystem: the input module requires it, so it couldn't
+    // go first. The strip goes round again until nothing more is removed.
+    [Test]
+    public void TheStrip_RemovesAnEventSystemThatAnotherComponentRequires()
+    {
+        var events = new GameObject("Event_System_01");
+        events.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        events.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        Shelf(other);
+        EditionBuildProcessor.StripScene(scene, KehaiEdition.Training, grey);
+        Assert.IsNull(events.GetComponent<UnityEngine.EventSystems.EventSystem>());
+        Assert.IsNull(KehaiTrainingScene.ContentsProblem(scene, grey), "nothing left but grey geometry");
+    }
+
+    [Test]
+    public void AnEditorPreview_ThatIsNeverSaved_DoesNotCount()
+    {
+        GameObject preview = Shelf(other);
+        preview.hideFlags = HideFlags.DontSave;
+        try { Assert.IsNull(KehaiTrainingScene.ContentsProblem(scene, grey)); }
+        finally { Object.DestroyImmediate(preview); }   // a DontSave object would outlive the scene
+    }
+
     [Test]
     public void AGreyScene_WithNoTextOrAudio_IsClean()
     {

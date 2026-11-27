@@ -88,6 +88,9 @@ public static class KehaiTrainingScene
         foreach (Component c in root.GetComponentsInChildren<Component>(true))
         {
             if (c == null) continue;
+            // Never saved: the editor's own previews (the stock-box preview rebuilds its boxes,
+            // with their materials, whenever a scene opens). They aren't in the Training scene.
+            if ((c.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0) continue;
             if (c is TMPro.TMP_Text || c is UnityEngine.EventSystems.UIBehaviour || c is Canvas)
                 found.Add($"text or UI ({c.GetType().Name}) on {c.name}");
             else if (c is AudioSource || c is AudioListener)
