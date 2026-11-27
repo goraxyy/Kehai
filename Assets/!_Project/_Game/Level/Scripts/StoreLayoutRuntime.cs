@@ -95,8 +95,9 @@ public static class StoreLayoutRuntime
 
     // -kehai-navmesh-report <file> (0.5.2, C6.6): what one rebake used, to compare an editor's bake
     // with a player's: the NavMesh's extent, then every collider the bake could read (layer, kind,
-    // enabled, bounds), sorted, one per line. Off unless asked; appends one block per rebake.
-    static void NavigationReport(Unity.AI.Navigation.NavMeshSurface surface)
+    // enabled, bounds), sorted, one per line. Off unless asked; appends one block per rebake, from
+    // RebuildNavigation and from KarenArea.Install (the one every load runs, 0.5.2 C8.1).
+    public static void NavigationReport(Unity.AI.Navigation.NavMeshSurface surface)
     {
         string path = Argument("-kehai-navmesh-report");
         if (string.IsNullOrEmpty(path)) return;

@@ -110,6 +110,24 @@ namespace Kehai.Sandbox
             Build(scene, Active);
         }
 
+        // The store's own NavMeshSurface sits on the models island and bakes a volume around the
+        // store. Moving the island dragged that volume 43.5 m south with it, and the parking lot
+        // fell out of her map in every editor Play of the store: 3,428 cells against the
+        // player's and the Training scene's 4,777 (0.5.2, C8.1, 27 November). Each volume stays
+        // where it was in the world, to the bit: the root that holds it stays put and what's under
+        // it moves (re-centring the volume through the moved root left the grid 0.00003 m off,
+        // and 20 cells came out different).
+        public static void MoveKeepingBakeVolumes(Transform root, Vector3 shift)
+        {
+            var nested = new System.Collections.Generic.List<(Unity.AI.Navigation.NavMeshSurface, Vector3)>();
+            foreach (var s in root.GetComponentsInChildren<Unity.AI.Navigation.NavMeshSurface>(true))
+                if (s.transform != root) nested.Add((s, s.transform.TransformPoint(s.center)));
+            var children = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in root) children.Add(child);
+            foreach (Transform child in children) child.position += shift;
+            foreach (var (s, centre) in nested) s.center = s.transform.InverseTransformPoint(centre);
+        }
+
         public static GameObject Build(Scene scene, bool withAreas)
         {
             foreach (GameObject top in scene.GetRootGameObjects())
@@ -119,7 +137,7 @@ namespace Kehai.Sandbox
 
             // The models island, down onto the road's north edge.
             foreach (GameObject top in scene.GetRootGameObjects())
-                if (top.name == ModelsIslandName) top.transform.position += ModelsShift;
+                if (top.name == ModelsIslandName) MoveKeepingBakeVolumes(top.transform, ModelsShift);
 
             SandboxKit.Box(root.transform, "Ground", GroundCentre, GroundSize, SandboxKit.Floor);
 

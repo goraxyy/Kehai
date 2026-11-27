@@ -64,7 +64,42 @@ public static class KehaiTrainingScene
     public static void Check()
     {
         RequireCurrent();
-        Debug.Log("Training scene is current at " + ScenePath);
+        Scene previous = SceneManager.GetActiveScene();
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+        try
+        {
+            string problem = ContentsProblem(scene, AssetDatabase.LoadAssetAtPath<Material>(MaterialPath));
+            if (problem != null) throw new InvalidOperationException("Training scene: " + problem);
+        }
+        finally
+        {
+            EditorSceneManager.CloseScene(scene, removeScene: true);
+            if (previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous);
+        }
+        Debug.Log("Training scene is current at " + ScenePath + ": no UI text, no audio, one material");
+    }
+
+    // What the Training scene must not carry (0.5.2, C8.1): UI or text, audio, or any material but
+    // its one grey. Null when it's clean, else the first few things found, by their path.
+    public static string ContentsProblem(Scene scene, Material grey)
+    {
+        var found = new System.Collections.Generic.List<string>();
+        foreach (GameObject root in scene.GetRootGameObjects())
+        foreach (Component c in root.GetComponentsInChildren<Component>(true))
+        {
+            if (c == null) continue;
+            // Never saved: the editor's own previews (the stock-box preview rebuilds its boxes,
+            // with their materials, whenever a scene opens). They aren't in the Training scene.
+            if ((c.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0) continue;
+            if (c is TMPro.TMP_Text || c is UnityEngine.EventSystems.UIBehaviour || c is Canvas)
+                found.Add($"text or UI ({c.GetType().Name}) on {c.name}");
+            else if (c is AudioSource || c is AudioListener)
+                found.Add($"audio ({c.GetType().Name}) on {c.name}");
+            else if (c is Renderer r && r.sharedMaterials.Any(m => m != null && m != grey))
+                found.Add($"a material other than the grey on {c.name}");
+            if (found.Count >= 5) break;
+        }
+        return found.Count == 0 ? null : string.Join("; ", found);
     }
 
     public static void CheckBatch() => RunBatch(Check);

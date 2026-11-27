@@ -23,15 +23,27 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
         foreach (var root in scene.GetRootGameObjects())
         {
             Component[] components = root.GetComponentsInChildren<Component>(true);
-            // Remove behaviours before their required Canvas/CanvasRenderer components.
-            foreach (var component in components)
+            // Remove behaviours before their required Canvas/CanvasRenderer components. Again until
+            // nothing more goes: a component another one requires (the EventSystem, which the
+            // input module requires) can't be removed until that one is gone (0.5.2, C8.1).
+            for (int pass = 0; pass < 4; pass++)
             {
-                if (component == null) continue;
-                if (IsDebugComponent(component.GetType().Name) && (edition == KehaiEdition.Gameplay || component.GetType().Name != "TrickCheck") && edition != KehaiEdition.Testing ||
-                    training && (component is UnityEngine.EventSystems.UIBehaviour || component is TMP_Text ||
-                    component is TMP_SubMesh || component is AudioSource || component is AudioListener ||
-                    IsPresentation(component.GetType().Name))) Object.DestroyImmediate(component);
+                int removed = 0;
+                foreach (var component in root.GetComponentsInChildren<Component>(true))
+                {
+                    if (component == null || RequiredByAnother(component)) continue;   // its turn comes next pass
+                    if (IsDebugComponent(component.GetType().Name) && (edition == KehaiEdition.Gameplay || component.GetType().Name != "TrickCheck") && edition != KehaiEdition.Testing ||
+                        training && (component is UnityEngine.EventSystems.UIBehaviour || component is TMP_Text ||
+                        component is TMP_SubMesh || component is AudioSource || component is AudioListener ||
+                        IsPresentation(component.GetType().Name)))
+                    {
+                        Object.DestroyImmediate(component);
+                        if (component == null) removed++;
+                    }
+                }
+                if (removed == 0) break;
             }
+            components = root.GetComponentsInChildren<Component>(true);
             if (!training) continue;
             foreach (var component in components)
             {
@@ -66,6 +78,23 @@ public sealed class EditionBuildProcessor : IProcessSceneWithReport
             gate.AddComponent<EditionSceneGate>().trainingPreview = trainingPreview != null;
         }
     }
+    // True when another component on the same object requires this one ([RequireComponent]):
+    // Unity refuses to remove it, with an error, until that one is gone.
+    static bool RequiredByAnother(Component component)
+    {
+        Type type = component.GetType();
+        foreach (Component other in component.GetComponents<Component>())
+        {
+            if (other == null || other == component) continue;
+            foreach (RequireComponent need in other.GetType().GetCustomAttributes(typeof(RequireComponent), true))
+                if (need.m_Type0 != null && need.m_Type0.IsAssignableFrom(type) ||
+                    need.m_Type1 != null && need.m_Type1.IsAssignableFrom(type) ||
+                    need.m_Type2 != null && need.m_Type2.IsAssignableFrom(type))
+                    return true;
+        }
+        return false;
+    }
+
     public static bool IsDebugComponent(string name) => name == "KarenDebugOverlay" || name == "TrickCheck" || name == "VisualCheck";
     static bool IsPresentation(string name) => name == "TaskListUI" || name == "InventoryUI" || name == "BurnoutUI" ||
         name == "MainMenu" || name == "SettingsMenu" || name == "InteractHud" || name == "FirstShiftGuide" || name == "CareerCompletionScreen" ||

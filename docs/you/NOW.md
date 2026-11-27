@@ -1,13 +1,13 @@
 # Now
 
-Updated 2026-11-26. One page: what's being built, what waits on you, what's next. Agents keep it
+Updated 2026-11-27. One page: what's being built, what waits on you, what's next. Agents keep it
 current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md).
 
 ## Being built
 
 | What | State | Where |
 |---|---|---|
-| **Kehai 0.5.2** | merged up to [PR #109](https://github.com/goraxyy/Kehai/pull/109): the mini store, the hide checks and the bots' counters, the placement fixes, tagging and rebuilding a version, faster runs (the batch slowdown fixed, the Training player connecting), runs that resume, and the sharper fitted senses (S1). 49 of 91 done. Next: the Training scene (Phase 8). The recorded game-wide test pass follows the completed build | [the plan](plans/0.5.2-plan.md), [the mini store](plans/0.5.2/mini-store.md) |
+| **Kehai 0.5.2** | merged up to [PR #111](https://github.com/goraxyy/Kehai/pull/111): the mini store, the hide checks and the bots' counters, the placement fixes, tagging and rebuilding a version, faster runs (the batch slowdown fixed, the Training player connecting), runs that resume, and the sharper fitted senses (S1). Then the generated Training scene, dev layers, and a fix for her map in editor runs (Phase 8, PR #111). 53 of 91 done. The recorded game-wide test pass follows the completed build | [the plan](plans/0.5.2-plan.md), [the mini store](plans/0.5.2/mini-store.md) |
 | **Kehai 0.5.1** | merged 18 November (PR #89) | [the plan](plans/0.5.1-plan.md) |
 | **Karen 0.4.0:** two trained Karens, players that feel real | **merged into `main` 14 November as code (PR #83).** 430 of 430 tests pass, and the game plays as `main` with every switch off. The belief fits (C4.10) ran on 13 November: fitted senses (S1) and P1 beat today's; P2 and P3 lost, even to today's step ([results](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november)). Nothing is trained: every training and test run comes after the building, once ([TESTING.md](TESTING.md)) | [the plan](plans/0.4.0-build-plan.md) |
 | **Kehai 0.4.1:** your 17 items of 12 November: her eyes (eye to eye, twice as far and as quick), six cameras and two camera tricks, closing on the PA, 20 s fixes, fog rooms, doors, the F1 map, the soft look, the eyelids, the trick videos tab, the docs | merged as PR #85 on 14 November | [what players notice](../agents/CHANGELOG.md), [what changed in Karen](../agents/karen/Karen.md#19-kehai-041-her-eyes-the-stores-cameras-closing-time) |
@@ -20,6 +20,8 @@ current. The rules for agents are in [`docs/agents/RULES.md`](../agents/RULES.md
 |---|---|
 | 0.5.1: turn webcam blinking on, consent, calibrate | the camera helper is built and found, but nobody has started your camera |
 | **Walk the store** (Y12.1): the audit flags nothing now; what to look at is on the [placement page](plans/0.5.2/placement.md#4-where-it-stands-26-november); **try the mini store** (Y11.1) once its whole-store version is merged | the checks passed in batch runs; nobody has played them |
+| **Try the Training scene and your dev layer** (Y8.1): `Kehai → Training Scene → Generate`, then `Kehai → Dev Layer → Open Mine` | built and checked in batch; nobody has played them |
+| **Rerun the short-map numbers?** Every editor run of the store from 23 to 27 November played her map without the parking lot (3,428 cells against 4,777): the frame-rate numbers (C6.3, C6.8), the Training player check (C6.6), the smoke runs. No test pass or training ran on it. [Details](../agents/results/KAREN_RESULTS.md#the-training-scene-c81c83-27-november) | fixed now; rerunning is your call |
 | Play a shift: 0.5.1's hiding, pursuit, stun and light, 0.4.1's eyes, and now the sharper senses (S1), the moved cold-room islands, the door fit and Karen's props as real models | they're tested in code, not played |
 | 0.5.0 scope is settled; later art review and external storage setup remain | adaptive ML bots are selected; long training remains after the build |
 | Cloudflare account/R2 and browser authorization; optional Telegram setup | [account steps](plans/playtest-v2.md#13-setting-up-the-accounts); no real-player upload connection is configured on this Mac |

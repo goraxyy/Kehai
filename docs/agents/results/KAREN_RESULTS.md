@@ -693,10 +693,14 @@ A dev-channel (Training edition) macOS player was built on a `kehai-run` clone a
     `StoreLayoutRuntime.EnsureInitial` without a NavMesh rebuild. `Prepare` then sees nothing
     changed, so `-kehai-navmesh-report` (which reports from `RebuildNavigation`) wrote nothing in
     either run. Her map then comes from the NavMesh the scene loaded with, not one baked for the layout.
+  - **Found the next day (C8.1, 27 November): the player was right, the editor wasn't.** The
+    editor-only sandbox island moved the store's NavMesh volume, and every editor Play of the
+    store lost the parking lot. See "The Training scene" below. The lead above wasn't the cause.
   - **Stopped there:** two rounds were the time box. The rest is the owner's call (below).
 - **The layout isn't the gap to 0.4.0:** the fix runs at 12.5 ms on `-kehai-layout today`, against
-  12.6 on the labyrinth. Today's store has 3,350 cells against 0.4.0's 4,708, because the store
-  itself changed.
+  12.6 on the labyrinth. Today's store had 3,350 cells in the editor against 0.4.0's 4,708. That
+  was the island's moved NavMesh volume, not a change to the store (corrected 27 November, below):
+  with the fix it has 4,777, as the player had.
 - **Data:** a Mac player's data folder follows the bundle id, not the product name. The first try
   wrote an empty summary into the real game's `com.tokenlimit.kehai` folder; it was moved out.
   Verification builds now get their own bundle id as well, and the second run left the game's folder
@@ -709,6 +713,74 @@ A dev-channel (Training edition) macOS player was built on a `kehai-run` clone a
   Whether ablations record retries or move to the next shift is the owner's call.
 - **Most shifts don't repeat run to run.** Two identical 15-fps runs gave the same shift 3 times in
   18. Seeds 1000, 1100 and 1200 (efficient) repeat exactly; seeds 1300 and 1400 don't (C5.4).
+
+### The Training scene (C8.1–C8.3, 27 November)
+
+The generated Training scene (`Kehai → Training Scene → Generate`, or `EvalBatch.PlayTraining` in a
+run's own clone) against the store scene it's made from. Both runs: Training edition, the
+labyrinth, rung E, the efficient player, five one-shift careers from seed 1000, learning off,
+through `kehai-run` with the editor closed.
+
+**The check passes:** "no UI text, no audio, one material", on every generated copy. The first
+copy kept its EventSystem (the input module requires it) and counted the editor's never-saved
+stock-box previews; both were fixed (`dde8ffa`).
+
+**Her map didn't match at first, and the Training scene was the right one.**
+
+| | Store scene, before the fix | Training scene | Store scene, after |
+|---|---|---|---|
+| Her cells | 3,428 | 4,777 | 4,777 |
+| Outdoor cells | 995 | 2,349 | 2,349 |
+| NavMesh extent in z | −199.3 to −97.0 | −193.2 to −53.5 | −193.2 to −53.5 |
+
+- **The stripping changes no collider.** A NavMesh report from her load-time rebake (`-kehai-navmesh-report`,
+  now also written by `KarenArea.Install`) listed 4,861 colliders against 4,860. Compared line by
+  line, the only ones that differ are the sandbox island's ground and the models island's floor.
+- **The cause:** `SandboxIsland` is editor-only, and it builds on every editor Play of the store
+  scene (by its path). It moves the models island 43.5 m south onto the road. The store's only
+  NavMeshSurface sits on the models island's root and bakes a box-shaped volume. The box moved 43.5 m with it, and the
+  parking lot fell outside it. The NavMesh's north edge moved by exactly 43.5 m.
+- **Who saw what.** A built player and the Training scene never get the island, so they had the
+  full map. The editor had the short one. That's the "bigger outdoor area" in the player check above.
+- **The fix** (`b270a98`): the island's contents move, its root stays. A first fix re-centred the
+  volume instead, but left the grid 0.00003 m off, and 20 cells came out different.
+  - With the root staying, the two scenes' `map.json` files are byte for byte the same.
+- **Which runs had the short map:** every editor run of the store since PR #93 (23 November):
+  - the C6.3 and C6.8 frame-rate numbers on `main`;
+  - the C6.6 editor runs;
+  - the C5.2 and A11 smoke runs;
+  - the first runs of this check.
+  - Not affected: no recorded test pass or training ran in that time, the 0.2.0–0.5.1 numbers
+    (before the island), and every player build.
+  - Not rerun (the owner's call). A smaller map can only have made her sweep cheaper, so the
+    slowdown's size, measured against 0.4.0's full map, isn't overstated by it.
+
+**The same game (C8.2).** Each seed's shift, store scene against Training scene, on her matching map:
+
+| Seed | Store scene | Training scene | |
+|---|---|---|---|
+| 1000 | 42 steps, 227.5 s, caught | 42 steps, 227.5 s, caught | the same |
+| 1100 | 20 steps, 83.2 s, caught | the same | the same |
+| 1200 | 31 steps, 207.2 s, caught | the same | the same |
+| 1300 | 41 steps, 227.0 s, caught | 41 steps, 226.9 s, caught | the same jobs and catch, 1 frame apart |
+| 1400 | 25 steps, 148.5 s, caught | 24 steps, 130.5 s, caught | differs |
+
+Seeds 1300 and 1400 don't repeat on the store scene against itself either (C5.4). So the Training
+scene plays the store's game as far as the store repeats itself.
+
+**Is it faster? (C8.3)** Barely. In batch nothing is drawn, so the art it drops costs little.
+
+| | Store scene | Training scene |
+|---|---|---|
+| ms a frame, first shift left out | 11.9, 12.8 | 11.6, 11.7 |
+| A scene reload (`[env] scene reload`, new) | 4.0–4.6 s; the first 8.6–9.9 s | 4.3–4.9 s; the first 9.7 s |
+| Unity's peak memory | 1,320, 1,349 MB | 1,293, 1,223 MB |
+
+- **Frame time:** perhaps 3–10% faster, two runs each. Runs made the same way differ by about 3%,
+  so it isn't shown.
+- **Reload:** no gain. The Training scene isn't in the build list, so the editor reloads it by path.
+- **Memory:** 2–9% lower, which is about 30–130 MB per copy.
+- So more copies at once on the PC is the main use, not faster shifts.
 
 ## Karen 0.5.2: what the sandbox checks found (21 November)
 

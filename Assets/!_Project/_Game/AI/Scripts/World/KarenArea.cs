@@ -80,7 +80,7 @@ namespace Kehai.Karen
             }
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            using (new StoreRebake(surface)) surface.BuildNavMesh();
+            using (new StoreRebake(surface)) { surface.BuildNavMesh(); StoreLayoutRuntime.NavigationReport(surface); }
             Installed = true;
             return $"her body is kept to her part of the building: NavMesh area {OutsideArea} marks the outside (rebaked in {watch.ElapsedMilliseconds} ms)";
         }

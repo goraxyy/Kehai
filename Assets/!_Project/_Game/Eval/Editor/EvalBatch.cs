@@ -52,9 +52,30 @@ public static class EvalBatch
         };
     }
 
-    public static void Play()
+    // 0.5.2, C8.2: make the Training scene in this project (a run's own clone), check it, then play
+    // on it, so a run on a fresh clone needs nothing generated beforehand.
+    //   Unity -batchmode -executeMethod EvalBatch.PlayTraining -kehai-ablation …
+    public static void PlayTraining()
     {
-        string scene = Arg("-evalScene") ?? EditorBuildSettings.scenes.FirstOrDefault(s => s.enabled)?.path;
+        try
+        {
+            KehaiTrainingScene.Generate();
+            KehaiTrainingScene.Check();
+        }
+        catch (System.Exception error) when (Application.isBatchMode)
+        {
+            Debug.LogException(error);
+            EditorApplication.Exit(1);
+            return;
+        }
+        Play(KehaiTrainingScene.ScenePath);
+    }
+
+    public static void Play() => Play(null);
+
+    static void Play(string chosen)
+    {
+        string scene = chosen ?? Arg("-evalScene") ?? EditorBuildSettings.scenes.FirstOrDefault(s => s.enabled)?.path;
         if (scene == "training") scene = KehaiTrainingScene.ScenePath;
         if (scene == KehaiTrainingScene.ScenePath)
         {

@@ -206,6 +206,7 @@ namespace Kehai.Eval
             // time — which made the same seed start the shift at different moments.
             Random.InitState(Config.seed);
             Scene active = SceneManager.GetActiveScene();
+            var reload = System.Diagnostics.Stopwatch.StartNew();   // C8.3: what a reload costs, per scene
 #if UNITY_EDITOR
             // A scene that isn't in the build list (a recovered or experimental copy of the
             // store) can still be reloaded in the editor, by path.
@@ -217,6 +218,8 @@ namespace Kehai.Eval
             yield return null;
             yield return null;
             yield return null;
+            LastReloadMs = reload.Elapsed.TotalMilliseconds;
+            if (Application.isBatchMode) Debug.Log($"[env] scene reload {LastReloadMs:0} ms ({SceneManager.GetActiveScene().name})");
 
             Random.InitState(Config.seed);
             Bind();
@@ -279,6 +282,8 @@ namespace Kehai.Eval
         // ablation's career moves on, or it would stop at its first catch: the replay has the
         // same shift number, and the log refuses it as already recorded.
         public bool MoveOnAfterACatch;
+        // The last reset's scene reload, wall time from LoadScene to three frames after (C8.3).
+        public static double LastReloadMs { get; private set; }
 
         public static bool CaughtShiftToSkip(bool lastCompleted, int shiftNumber, int completedShifts) =>
             !lastCompleted && shiftNumber > completedShifts;
