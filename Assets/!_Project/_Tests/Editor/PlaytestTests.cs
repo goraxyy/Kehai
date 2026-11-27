@@ -132,6 +132,16 @@ public class PlaytestTests
             "shifts/interlude_01_x.krec", "shifts/shift_02_y.krec.part", "karen_logs/thoughts_shift01.jsonl", "karen_ledger.json", "Player.log",
         }, files.Select(f => f.entry).ToArray());
 
+        // Playtest v2 (C3.8): this session's learning records come too (a training set needs them), older ones don't.
+        string learning = Dir("learning");
+        File.WriteAllText(Path.Combine(learning, "learning_20261004_101500.jsonl"), "{}\n");
+        File.WriteAllText(Path.Combine(learning, "learning_20261004_101500.escapes.jsonl"), "{}\n");
+        string oldLearning = Path.Combine(learning, "learning_20261001_090000.jsonl");
+        File.WriteAllText(oldLearning, "{}\n");
+        File.SetLastWriteTimeUtc(oldLearning, started.AddDays(-3));
+        CollectionAssert.AreEquivalent(new[] { "learning/learning_20261004_101500.jsonl", "learning/learning_20261004_101500.escapes.jsonl" },
+            PlaytestPackage.Collect(session, started, shifts, thoughts, ledger, playerLog, false, learning).Select(f => f.entry).Where(e => e.StartsWith("learning/")).ToArray());
+
         string zip = PlaytestPackage.Pack(Path.Combine(temp, "outbox", PlaytestPackage.ZipName("round1", "T07", "20261004_101500")), files);
         Assert.AreEqual("round1_T07_20261004_101500.zip", Path.GetFileName(zip));
         using var archive = new ZipArchive(File.OpenRead(zip), ZipArchiveMode.Read);

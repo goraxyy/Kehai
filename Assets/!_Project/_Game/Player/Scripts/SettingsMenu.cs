@@ -196,6 +196,11 @@ public sealed class SettingsMenu : MonoBehaviour
         TrickGuide.Entry[] all = TrickGuide.All;
         trick = Mathf.Clamp(trick, 0, all.Length - 1);
         float listWidth = Mathf.Min(size * 11f, width * 0.3f);
+        // C10.6: whose tricks these are, by name and version, as in About.
+        Color before = text.normal.textColor;
+        text.normal.textColor = Dim;
+        GUILayout.Label("The tricks of " + BuildStamp.DescribeKarens(BuildStamp.Current), text);
+        text.normal.textColor = before;
 
         GUILayout.BeginHorizontal();
         GUILayout.BeginVertical(GUILayout.Width(listWidth));

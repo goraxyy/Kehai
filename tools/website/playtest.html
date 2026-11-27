@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kehai playtest</title>
+<meta name="description" content="Download the Kehai playtest for Mac or Windows: two first-launch clicks, then play.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&display=swap">
+<link rel="stylesheet" href="site.css">
+<script src="config.js"></script>
+</head>
+<body>
+<main>
+  <div class="over">Playtest</div>
+  <h1>Play a night shift.</h1>
+  <p class="lede">Kehai is a horror game about a night shift in a convenience store, and the store's AI, Karen, who works out where you are. This build is for playtesters: play up to three shifts.</p>
+
+  <p><a class="pill" id="get" href="#" aria-disabled="true">Download</a></p>
+  <p class="alt" id="other"></p>
+
+  <h2>The first time you open it</h2>
+  <div class="card">
+    <h3>Unzip it first</h3>
+    <p>Mac: double-click the zip. Windows: right-click it, then <span class="path">Extract All…</span>. Don't open the game from inside the zip. The folder has a <b>START HERE</b> guide too.</p>
+  </div>
+  <div class="card" id="mac">
+    <h3>On a Mac</h3>
+    <p>macOS says it can't check the app, because it isn't from the App Store. Open <span class="path">System Settings → Privacy &amp; Security</span>, scroll down, click <span class="path">Open Anyway</span>, then open the app again.</p>
+    <img class="shot" src="assets/open-anyway.png" alt="System Settings, Privacy & Security, with the Open Anyway button" onerror="this.hidden=true">
+  </div>
+  <div class="card" id="windows">
+    <h3>On Windows</h3>
+    <p>If Windows says it protected your PC, click <span class="path">More info</span>, then <span class="path">Run anyway</span>.</p>
+    <img class="shot" src="assets/run-anyway.png" alt="The Windows SmartScreen box with More info and Run anyway" onerror="this.hidden=true">
+  </div>
+
+  <h2>What gets recorded</h2>
+  <p>In the game you choose <b>Play and send</b> or <b>Play without sending</b>. If you send, the developer gets what happened in the game: where you went, what you pressed, what Karen did, and how smoothly it ran, as a 3D replay. It may be used to train Karen. Never your camera, microphone or screen. <a href="privacy.html">More on privacy</a>.</p>
+
+  <footer>Kehai · <a href="index.html">Home</a> · <a href="privacy.html">Privacy</a></footer>
+</main>
+<script>
+(() => {
+  "use strict";
+  const api = (window.KEHAI_API || "").replace(/\/$/, "");
+  const ua = navigator.userAgent;
+  const platform = /Windows/i.test(ua) ? "windows" : /Mac/i.test(ua) ? "mac" : null;
+  const name = { mac: "Mac", windows: "Windows" };
+  const get = document.getElementById("get"), other = document.getElementById("other");
+  if (!api) {
+    get.textContent = "Download (opens with the first playtest)";
+    other.textContent = "This page is a preview: the download isn't up yet.";
+    return;
+  }
+  const link = p => `${api}/download/${p}`;
+  if (platform) {
+    get.textContent = `Download for ${name[platform]}`;
+    get.href = link(platform);
+    get.removeAttribute("aria-disabled");
+    const o = platform === "mac" ? "windows" : "mac";
+    other.innerHTML = `On ${name[o]}? <a href="${link(o)}">Download for ${name[o]}</a>.`;
+  } else {
+    get.style.display = "none";
+    other.innerHTML = `The playtest is for computers: <a href="${link("mac")}">Mac</a> or <a href="${link("windows")}">Windows</a>.`;
+  }
+  // The same instructions, theirs first.
+  if (platform === "windows") document.getElementById("mac").before(document.getElementById("windows"));
+  fetch(`${api}/latest`).then(r => r.ok ? r.json() : null).then(b => {
+    if (b && b.version) other.insertAdjacentText("beforeend", ` Build ${b.version}.`);
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -84,6 +84,7 @@ namespace Kehai.Playtest
             {
                 if (!Ready) return;
                 if (!TesterState.ConsentAsked) ShowConsent();
+                else if (!TesterState.WalkthroughSeen) ShowWalkthrough(0);
                 else if (ShouldSuggest()) ShowSuggest();
                 else if (Input.GetKeyDown(KeyCode.F7) && Input.GetKey(KeyCode.LeftShift) && !MainMenu.Visible) ShowBugNote();
                 return;
@@ -265,6 +266,7 @@ namespace Kehai.Playtest
             else if (Page.StartsWith("question") && quitAfter && question == 0) { session.CancelQuit(); Close(); }
             else if (Page.StartsWith("question") && question < Questions.Length) { answers[Questions[question].id] = "skipped"; ShowQuestion(question + 1); }
             else if (Page.StartsWith("question a")) Typed("a" + (question - Questions.Length + 1), "", question);
+            else if (Page.StartsWith("walkthrough")) EndWalkthrough(skipped: true, int.Parse(Page.Substring("walkthrough ".Length)) - 1);
         }
 
         // ---- opening and closing ----------------------------------------------------------
@@ -407,15 +409,53 @@ namespace Kehai.Playtest
             {
                 if (PlaytestUpdate.DownloadUrl != null) Application.OpenURL(PlaytestUpdate.DownloadUrl);
             });
+            newBuildLine = box.gameObject;
+            // C2.8: the walkthrough again, any time the main menu is up.
+            var help = (RectTransform)new GameObject("How to play", typeof(RectTransform)).transform;
+            help.SetParent(banner.transform, false);
+            help.anchorMin = help.anchorMax = help.pivot = new Vector2(1f, 0f);
+            help.anchoredPosition = new Vector2(-380f, 70f);
+            help.sizeDelta = new Vector2(320f, 58f);
+            MenuButton.Make(help, "How to play", Vector2.zero, new Vector2(320f, 58f), () => ShowWalkthrough(0));
             banner.SetActive(false);
         }
 
+        GameObject newBuildLine;
+
         void UpdateBanner()
         {
-            bool show = PlaytestUpdate.Latest != null && MainMenu.Visible && !Showing;
-            if (banner == null || banner.activeSelf == show) return;
-            if (show) bannerText.text = $"<color=#DC143C>New:</color> build {PlaytestUpdate.Latest} is out. This one keeps working.";
-            banner.SetActive(show);
+            if (banner == null) return;
+            bool show = MainMenu.Visible && !Showing;
+            if (banner.activeSelf != show) banner.SetActive(show);
+            bool line = show && PlaytestUpdate.Latest != null;
+            if (newBuildLine.activeSelf != line)
+            {
+                if (line) bannerText.text = $"<color=#DC143C>New:</color> build {PlaytestUpdate.Latest} is out. This one keeps working.";
+                newBuildLine.SetActive(line);
+            }
+        }
+
+        // C2.8: four short pages after the consent, once per tester; Esc or Skip ends them.
+        void ShowWalkthrough(int page)
+        {
+            int n = PlaytestWalkthrough.Pages.Length;
+            if (page >= n) { EndWalkthrough(skipped: false, page); return; }
+            Open("walkthrough " + (page + 1), $"HOW TO PLAY · {page + 1} OF {n}", PlaytestWalkthrough.Pages[page].title, PlaytestWalkthrough.Body(page));
+            AddButton(page + 1 < n ? "Next" : "Start playing", top, () => ShowWalkthrough(page + 1));
+            AddButton("<color=#8A8A93>Skip</color>", top - Row, () => EndWalkthrough(skipped: true, page));
+            Link();
+            SelectFirst();
+        }
+
+        void EndWalkthrough(bool skipped, int page)
+        {
+            if (!TesterState.WalkthroughSeen)
+            {
+                TesterState.MarkWalkthrough();
+                session.Note("walkthrough", new Dictionary<string, object> { ["skipped"] = skipped, ["page"] = page + 1 });
+                session.Event("walkthrough");
+            }
+            Close();
         }
 
         TMP_InputField MakeInput(float y, string placeholder, int limit)

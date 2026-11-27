@@ -620,15 +620,18 @@ footer .wrap > :last-child { margin-left: auto; }
     <span><span class="mono" style="letter-spacing:.3em">KEHAI</span> · <span lang="ja">気配</span>, the sense that someone is there</span>
     <span>A game by TokenLimit</span>
     <span>Karen is fictional.</span>
+    <span><a href="playtest.html">Playtest</a> · <a href="privacy.html">Privacy</a></span>
   </div>
 </footer>
 
+<script src="config.js"></script>
 <script>
 (() => {
   "use strict";
   // ---- sign-ups ---------------------------------------------------------------------------------
-  // The playtest plan's Worker takes these at /signup. Until it's deployed, the form says so.
-  const SIGNUP_URL = "";
+  // The playtest plan's Worker takes these at /signup (config.js has its address once it's
+  // deployed). Until then, the form says so.
+  const SIGNUP_URL = window.KEHAI_API ? window.KEHAI_API.replace(/\/$/, "") + "/signup" : "";
   for (const [formId, inputId, noteId] of [["signup-top", "email-top", "note-top"], ["signup-bottom", "email-bottom", "note-bottom"]]) {
     const form = document.getElementById(formId), input = document.getElementById(inputId), note = document.getElementById(noteId);
     form.addEventListener("submit", async (e) => {
