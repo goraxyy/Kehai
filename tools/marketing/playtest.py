@@ -5,6 +5,7 @@
     uv run playtest.py import <zip>…        sessions a tester sent as files (named round_code_launch.zip)
     uv run playtest.py redo <folder>…       read and summarise sessions again (after a prompt change), and the report
     uv run playtest.py report [--open]      rebuild <playtests>/report.html
+    uv run playtest.py report --cloud       the same from the cloud's rows: <playtests>/cloud.html (C3.2)
     uv run playtest.py status               what's here, and what's set up
     uv run playtest.py open <session>       one session's replays into a self-emptying cache, shown in Finder (C3.3)
     uv run playtest.py forget <id>          a deletion request: one tester, in the cloud and here (C3.4)
@@ -19,7 +20,7 @@ import sys
 from pathlib import Path
 
 from km import paths
-from km.playtest import admin, cache, cycle, inbox, notify, report, root, session, sessions, setting, summary
+from km.playtest import admin, cache, cloud, cycle, inbox, notify, report, root, session, sessions, setting, summary
 from km.store import Store
 from km.telegram import Bot
 
@@ -35,6 +36,7 @@ def main() -> int:
     p.add_argument("folders", nargs="+", type=Path)
     p = sub.add_parser("report")
     p.add_argument("--open", action="store_true")
+    p.add_argument("--cloud", action="store_true", help="from the upload service's rows, not this Mac's folders")
     sub.add_parser("status")
     p = sub.add_parser("open")
     p.add_argument("session", help="round/tester/launch, as the report and the service list it")
@@ -82,7 +84,14 @@ def main() -> int:
         print(admin.publish(service, a.round, a.version, mac, windows))
         return 0
     if a.cmd == "report":
-        out = report.write(where)
+        if a.cloud:
+            service = inbox.remote()
+            if service is None:
+                print("the upload service isn't set up (KEHAI_PLAYTEST_UPLOAD_URL and KEHAI_PLAYTEST_ADMIN_KEY)", file=sys.stderr)
+                return 2
+            out = cloud.write(service, where / "cloud.html")
+        else:
+            out = report.write(where)
         print(out)
         if a.open:
             subprocess.run(["open", str(out)])

@@ -316,9 +316,13 @@ Unity while the owner's editor is open.
     - The service keeps every session until Q5's limit; the pull never deletes (PR #112).
     - The scheduled `work` job pulls only with `KEHAI_PLAYTEST_AUTO_PULL=1`, which is off by default.
     - `playtest.py pull` catches up by hand. Nothing starts training.
-- [ ] **C3.2 The report from D1.** Every session, every round, read from D1 instead of local
+- [x] **C3.2 The report from D1.** Every session, every round, read from D1 instead of local
   folders. Each session links to its replay (C3.3).
   - Files: `km/playtest/report.py`.
+  - **Done 27 November** (`km/playtest/cloud.py`): `playtest.py report --cloud` writes `<playtests>/cloud.html` from the service's tables, read a page at a time, with nothing else downloaded.
+    - It shows the funnel, downloads by day, and each round's taps, with a row per session.
+    - Each session shows its summary, typed answers and bug notes, and its `playtest.py open <id>` line.
+    - Removed sessions are only counted. Tested against a stand-in; the first real use needs C0.1.
 - [x] **C3.3 `playtest.py open <session>`.** Downloads that session's replays into
   `~/TokenLimit/playtests/cache/` and shows them in Finder, ready for **Kehai → Replay → Open
   Shift…**. The cache empties itself after 7 days, or past 2 GB.
