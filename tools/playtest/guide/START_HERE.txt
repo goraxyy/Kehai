@@ -1,0 +1,31 @@
+{product} {version} - {round} - PLAYTEST: START HERE
+
+Thank you for testing. Five minutes to set up, then you play. Nothing to sign up for and no code to type.
+
+1. UNZIP EVERYTHING FIRST
+   Mac: double-click the zip. Windows: right-click the zip, then Extract All...
+   Don't start the game from inside the zip: it needs the files beside it.
+
+2. OPEN THE GAME
+   Mac: open {product}.app. The first time, macOS says it can't check the app (it isn't from
+   the App Store). Open System Settings > Privacy & Security, scroll down, click Open Anyway,
+   then open the app again. Keep the app in its folder.
+   Windows: open {product}.exe. If Windows says it protected your PC, click More info, then
+   Run anyway. Keep the {product}_Data folder beside the .exe.
+
+3. CHOOSE WHETHER TO SEND
+   Play and send: when you finish, what happened in the game goes to the developer as a 3D
+   replay, and may be used to train Karen. Play without sending: nothing leaves your computer.
+
+4. PLAY UP TO THREE SHIFTS
+   A short walkthrough shows the first steps. Something broke or confused you? Press
+   Shift+F7 and type a line about it.
+
+5. FINISH, ANSWER, DONE
+   A few optional questions follow, and the game sends your session by itself. Offline, it
+   sends it the next time you open the game.
+
+YOUR DATA
+   Recorded: where you go in the game, what you press, what Karen does, and how smoothly it
+   runs. Never your camera, microphone or screen. Kept for six months. To have it deleted
+   sooner, email {email} with the ID the game shows on its last screen.

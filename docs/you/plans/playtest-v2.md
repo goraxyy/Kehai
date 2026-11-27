@@ -278,6 +278,7 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `KehaiBuild.cs`, new guide source under `tools/playtest/`.
   - Done when: both freshly downloaded ZIPs include working guides with no external assets or
     broken links; the build label/round agrees with `build.txt` and `playtest.json`.
+    **Built 27 November:** `tools/playtest/guide/START_HERE.html` and `.txt`, written beside the game by `KehaiBuild.WriteStartHere` and zipped with it. They are filled in with the version and round from `playtest.json`, and the deletion email. They load nothing from outside (`TheStartHereGuide_IsFilledIn_AndLoadsNothingFromOutside`). The check of real zips comes with the first draft builds (C13.3).
 - [x] **C2.10 Honest completion and retries.** Show sent only on server acknowledgement; distinguish
   queued, rejected and local-only sessions. Preserve unsent data after a crash/restart.
   - Done when: offline, timeout, oversized upload, crash recovery and consent-declined paths are

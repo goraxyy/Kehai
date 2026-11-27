@@ -226,7 +226,11 @@ public static class KehaiBuild
             Run("codesign", $"--force --deep --sign - \"{appPath}\"", "re-signing the app after its Info.plist changed");
         }
         WriteBuildInfo(appPath, target, development, selected, stamp, config);
-        if (config != null) ZipForTesters(appPath);
+        if (config != null)
+        {
+            WriteStartHere(Path.GetDirectoryName(appPath), PlayerSettings.productName, (config.build ?? "").Split(' ')[0], config.round);
+            ZipForTesters(appPath);
+        }
         return report;
     }
 
@@ -415,6 +419,21 @@ public static class KehaiBuild
         File.WriteAllText(Path.Combine(folder, Kehai.Playtest.PlaytestConfig.FileName), UnityEngine.JsonUtility.ToJson(config, true));
         Debug.Log($"Kehai build: playtest {config.round}, " + (config.Uploads ? "sending sessions to " + config.uploadUrl : "keeping sessions on the tester's computer (no KEHAI_PLAYTEST_UPLOAD_URL)"));
         return config;
+    }
+
+    // Playtest v2 (C2.9): START HERE.html and START HERE.txt beside the game, from
+    // tools/playtest/guide/, with the product, version, round and deletion email filled in. Offline:
+    // the guide loads nothing from anywhere else.
+    internal static void WriteStartHere(string folder, string product, string version, string round)
+    {
+        string guide = Path.Combine(ProjectRoot, "tools", "playtest", "guide");
+        foreach ((string source, string name) in new[] { ("START_HERE.html", "START HERE.html"), ("START_HERE.txt", "START HERE.txt") })
+        {
+            string text = File.ReadAllText(Path.Combine(guide, source))
+                .Replace("{product}", product).Replace("{version}", version).Replace("{round}", round)
+                .Replace("{email}", Kehai.Playtest.PlaytestConsent.DeletionEmail);
+            File.WriteAllText(Path.Combine(folder, name), text);
+        }
     }
 
     // <folder>.zip beside the build's folder, without the crash-debugging symbols.

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{product}: start here</title>
+<style>
+  /* Offline on purpose: no fonts, pictures or scripts from anywhere else. */
+  :root { --ink: #f4f4f2; --dim: #a8a8b4; --red: #dc143c; --bg: #151518; --card: #1f1f24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 18px 64px; }
+  .over { color: var(--red); letter-spacing: .3em; font-size: 13px; font-weight: 600; }
+  h1 { font-size: 40px; margin: 6px 0 4px; }
+  .meta { color: var(--dim); font-size: 14px; margin-bottom: 28px; }
+  .tabs { display: flex; gap: 8px; margin: 18px 0 8px; }
+  .tabs a { flex: 1; text-align: center; padding: 12px; border-radius: 10px; background: var(--card); color: var(--ink); text-decoration: none; font-weight: 600; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 14px; background: var(--card); border-radius: 14px; padding: 18px; margin: 14px 0; }
+  .n { width: 44px; height: 44px; border-radius: 50%; background: var(--red); display: grid; place-items: center; font-weight: 700; font-size: 20px; }
+  h2 { font-size: 21px; margin: 2px 0 6px; }
+  h3 { font-size: 15px; color: var(--dim); text-transform: uppercase; letter-spacing: .12em; margin: 40px 0 6px; }
+  p { margin: 6px 0; }
+  .path { display: inline-block; background: #2a2a31; border-radius: 6px; padding: 1px 8px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 15px; }
+  .key { display: inline-block; border: 1px solid #55555f; border-bottom-width: 3px; border-radius: 6px; padding: 0 7px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; }
+  .note { color: var(--dim); font-size: 15px; }
+  .box { border: 1px solid #33333b; border-radius: 12px; padding: 14px 18px; margin-top: 10px; }
+  a { color: #ff6b81; }
+</style>
+</head>
+<body>
+<main>
+  <div class="over">PLAYTEST</div>
+  <h1>Start here</h1>
+  <div class="meta">{product} {version} · {round}</div>
+  <p>Thank you for testing. Five minutes to set up, then you play. Nothing to sign up for and no code to type.</p>
+
+  <nav class="tabs"><a href="#mac">I'm on a Mac</a><a href="#windows">I'm on Windows</a></nav>
+
+  <div class="step"><div class="n">1</div><div>
+    <h2>Unzip everything first</h2>
+    <p><b>Mac:</b> double-click the zip. <b>Windows:</b> right-click the zip, then <span class="path">Extract All…</span>.</p>
+    <p class="note">Don't start the game from inside the zip: it needs the files beside it.</p>
+  </div></div>
+
+  <h3 id="mac">On a Mac</h3>
+  <div class="step"><div class="n">2</div><div>
+    <h2>Open {product}.app</h2>
+    <p>The first time, macOS says it can't check the app. That's expected: it isn't from the App Store.</p>
+    <div class="box">Open <span class="path">System Settings → Privacy &amp; Security</span>, scroll down, click <span class="path">Open Anyway</span>, then open the app again.</div>
+    <p class="note">Keep the app in its folder: the camera helper for the optional blinking sits beside it.</p>
+  </div></div>
+
+  <h3 id="windows">On Windows</h3>
+  <div class="step"><div class="n">2</div><div>
+    <h2>Open {product}.exe</h2>
+    <p>Windows may say it protected your PC. That's expected for a new game.</p>
+    <div class="box">Click <span class="path">More info</span>, then <span class="path">Run anyway</span>.</div>
+    <p class="note">Keep the <span class="path">{product}_Data</span> folder beside the .exe.</p>
+  </div></div>
+
+  <h3>In the game</h3>
+  <div class="step"><div class="n">3</div><div>
+    <h2>Choose whether to send</h2>
+    <p><b>Play and send</b>: when you finish, what happened in the game goes to the developer as a 3D replay, and may be used to train Karen. <b>Play without sending</b>: nothing leaves your computer. You can play either way.</p>
+  </div></div>
+  <div class="step"><div class="n">4</div><div>
+    <h2>Play up to three shifts</h2>
+    <p>A short walkthrough shows the first steps. Something broke or confused you? Press <span class="key">Shift</span> + <span class="key">F7</span> and type a line about it.</p>
+  </div></div>
+  <div class="step"><div class="n">5</div><div>
+    <h2>Finish, answer, done</h2>
+    <p>Quit, or finish after shift three. A few optional questions follow, and the game sends your session by itself. If you're offline, it sends it the next time you open the game.</p>
+  </div></div>
+
+  <h3>Your data</h3>
+  <p>Recorded: where you go in the game, what you press, what Karen does, and how smoothly it runs. Never your camera, microphone or screen.</p>
+  <p>It's kept for six months. To have it deleted sooner, email <a href="mailto:{email}">{email}</a> with the ID the game shows on its last screen.</p>
+</main>
+</body>
+</html>
