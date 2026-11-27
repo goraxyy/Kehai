@@ -271,6 +271,13 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   and keyboard, and keep the consent choice explicit.
   - Done when: a new tester can reach the first task unaided; text fits at 1280×720 and the
     minimum supported window size, with legible contrast and no audio-only instructions.
+    **Built 27 November** (`PlaytestWalkthrough.cs`, `PlaytestScreens`):
+    - four pages after the consent, once per tester: the shift, moving, using things, and what to do when something's wrong;
+    - every key line comes from `Controls.All` (a test checks it), and no page mentions her tricks;
+    - Skip or Esc ends it, and **How to play** on the main menu reopens it; it's mouse and keyboard, text only;
+    - its funnel event is `walkthrough`.
+
+    Left: seeing it at 1280×720 in a packaged build, and a new tester reaching the first task (your Y13.2).
 - [ ] **C2.9 Bundle START HERE.** Add an offline illustrated HTML guide plus a plain-text fallback
   to each ZIP: extract all files, open the correct app, platform opening warnings, then the
   in-game walkthrough. Keep the Mac helper beside the app and Windows data beside the executable.
@@ -326,11 +333,12 @@ Unity while the owner's editor is open.
   **Done 27 November:**
   - `publish <round> --version V` finds KehaiBuild's zips (or `--mac`/`--windows`) and puts both with `wrangler r2 object put`. Only then does it call `POST /admin/latest`, so testers never see half a build.
   - Tested against a stand-in. The first real use needs C0.1.
-- [ ] **C3.6 Replace the invitation workflow.** Retire code generation and the form/itch templates
+- [x] **C3.6 Replace the invitation workflow.** Retire code generation and the form/itch templates
   from the v2 path. Put one short copyable ZIP/link + opening-instructions message in the README.
   Preserve v1 import compatibility while older builds exist.
   - Done when: a complete round needs no generated or sent codes, per-person code list, form or invitation account, and
     `pytest tools/marketing` passes with a stand-in Worker.
+    **Done 27 November:** `make_codes.py`, `TESTER_MESSAGE.md` and `ITCH_PAGE.md` are marked retired. They're kept only for v1 imports, and the v1 import tests still pass. `tools/playtest/README.md` "Sending a round" has the one message for everyone: a round needs no codes, form, list or itch account. The marketing suite passes (225).
 - [ ] **C3.7 Windows dataset download, on demand.** Add a cross-platform CLI outside the Mac-only
   scheduler, under `tools/playtest/`. Select round/build/session IDs and output directory; write
   a fixed manifest with consent/schema/build IDs, sizes and SHA-256 hashes. Resume interrupted
