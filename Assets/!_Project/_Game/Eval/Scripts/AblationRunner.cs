@@ -413,6 +413,19 @@ namespace Kehai.Eval
     //   Kehai -batchmode -nographics -kehai-ablation -ablation-careers 2 -ablation-shifts 4
     public static class EvalCommandLine
     {
+        // C5.4 (27 November): an ablation steps at its fixed rate from the very first frame. Before,
+        // the frames before the first career's reset ran at the computer's real speed, so Time.time
+        // started each run at a different fraction. Every later timer compares floats against it,
+        // and as the numbers grow a few compare a frame apart: careers late in a run (seeds 1300
+        // and 1400) didn't repeat, while the first three always did.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void StepFromTheFirstFrame()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            if (System.Array.IndexOf(args, "-kehai-ablation") < 0) return;
+            Time.captureDeltaTime = 1f / Mathf.Max(1, Int(args, "-ablation-fps", 15));
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Start()
         {
