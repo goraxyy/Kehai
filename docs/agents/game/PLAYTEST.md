@@ -14,8 +14,18 @@ where it goes, and the steps to run a round. Decided with the owner on 2026-10-0
 > cloud retention, and a later manual dataset download/training run on Windows. No Mac job or
 > training run is required when a session arrives. The first-launch code box is removed. Each
 > install creates its own tester ID and keeps it across launches. Existing installs keep their
-> IDs. The upload worker accepts old and new session names. The sections below describe v1,
-> including its Form/itch setup and delete-after-pull behavior. The v2 plan tracks the remaining work.
+> IDs. The upload worker accepts old and new session names.
+>
+> **Built for v2 (27 November):**
+> - the consent with its training line (below);
+> - the in-game typed answers and nickname, with no form;
+> - the funnel events, each session's summary and the new-build line;
+> - the honest send states;
+> - the upload service's rows, the six-month limit, deletion requests and the read-only dataset
+>   key ([`tools/playtest/README.md`](../../../tools/playtest/README.md)).
+>
+> The Mac's pull no longer deletes. The rest of the page still describes v1's itch, form and
+> codes, which v2's C3.6 retires.
 
 ---
 
@@ -43,18 +53,25 @@ you make tester codes ─► build a playtest round ─► testers download it (
    (like `T07`), and the form link.
 2. **They download and open it.** Mac: the first launch is blocked until **System Settings →
    Privacy & Security → Open Anyway**. Windows: SmartScreen warns, **More info → Run anyway**.
-3. **First launch:** they type their code, then answer one question:
+3. **First launch:** nothing to type (v2: the game makes their ID). One question, the consent
+   (version `v2`; a tester who agreed to v1 is asked again):
 
    > *This build records what happens in the game while you play: where you go, what you press,
    > what Karen does, and how smoothly it runs. Not your camera, microphone or screen. When you
    > finish, it sends that to the developer, who watches your session as a 3D replay to see what
-   > was confusing.* **[Send my sessions] [Keep them on this computer]**
+   > was confusing, and may be used to train Karen.* **[Play and send] [Play without sending]**
+
+   Without sending, nothing leaves the computer: no session, no answers, no funnel events.
+   Their sessions go to a `local` folder that is never sent.
 
 4. **They play.** Shift+F7 marks a bug and opens a one-line box for what went wrong.
 5. **After shift 3**, once: *"That's 3 shifts. Thank you! You can stop here and answer four quick
    questions, or keep playing as long as you like."*
 6. **Finishing** (from that, or by quitting): the questions below (once per tester), then
-   *Sending your session…*, then *Thank you, T07*, with a button to the longer questions.
+   *Sending your session…*, then *Thank you* with what became of it. It says *received* only
+   when the service said so; otherwise *not sent yet* (it goes next time), or *kept on this
+   computer* (the service won't take it, too big most likely). Then their ID and
+   tokenlimitlabs@gmail.com, for deletion requests.
    Offline, the session waits and goes the next time the game opens. After a crash, the next
    launch sends what was left: the session log up to its last two seconds, and the replay of the
    shift it crashed in as an unfinished `.krec.part`.
@@ -67,9 +84,12 @@ you make tester codes ─► build a playtest round ─► testers download it (
 | 2 | Did you know what to do? | Yes · Mostly · No |
 | 3 | Did you get lost in the store? | Never · Sometimes · Often |
 | 4 | Would you play more? | Yes · Maybe · No |
-| 5 | Anything break or confuse you? | One optional line |
+| 5 | What were you trying to do, and what was confusing? | Typed, optional |
+| 6 | When did Karen feel scary, unfair or annoying? Describe a moment. | Typed, optional |
+| 7 | What would you change first? | Typed, optional |
+| 8 | A nickname? | Typed, optional |
 
-Every one-tap question can be skipped. The game's list is `PlaytestScreens.Questions`; a test
+Every question can be skipped. Questions 5 to 7 are Q2's wording, and 8 is Q3's (playtest v2). The game's list is `PlaytestScreens.Questions`; a test
 keeps this table in step with it.
 
 ### The form (draft, for you to make in Google Forms)

@@ -1,5 +1,6 @@
-"""Getting sessions onto the Mac: from the upload service (list, download, unpack, then delete it
-there), or from <playtests>/inbox/ for zips that came another way."""
+"""Getting sessions onto the Mac: from the upload service (list, download, unpack; the cloud copy
+stays until its six-month limit, playtest v2), or from <playtests>/inbox/ for zips that came
+another way."""
 from __future__ import annotations
 
 import io
@@ -12,8 +13,9 @@ import httpx
 
 from . import setting
 
-REMOTE = re.compile(r"^([A-Za-z0-9-]+)/([A-Z0-9-]{2,16})/(\d{8}_\d{6})\.zip$")       # round/code/launch.zip
-LOCAL = re.compile(r"^([A-Za-z0-9-]+)_([A-Z0-9-]{2,16})_(\d{8}_\d{6})\.zip$")        # round_code_launch.zip
+# round/tester/launch.zip: a v1 code (T07) or v2's automatic 32-hex ID, and v2's per-launch suffix.
+REMOTE = re.compile(r"^([A-Za-z0-9-]+)/([A-Z0-9-]{2,16}|[A-F0-9]{32})/(\d{8}_\d{6}(?:-[a-f0-9]{32})?)\.zip$")
+LOCAL = re.compile(r"^([A-Za-z0-9-]+)_([A-Z0-9-]{2,16}|[A-F0-9]{32})_(\d{8}_\d{6}(?:-[a-f0-9]{32})?)\.zip$")  # round_code_launch.zip
 BIGGEST = 200 * 1024 * 1024                                                            # one file inside a zip
 
 
@@ -37,9 +39,6 @@ class Remote:
         r = self.http.get(f"{self.url}/admin/sessions/{key}")
         r.raise_for_status()
         return r.content
-
-    def remove(self, key: str) -> None:
-        self.http.delete(f"{self.url}/admin/sessions/{key}").raise_for_status()
 
 
 def remote() -> Remote | None:
@@ -92,8 +91,8 @@ def import_zip(path: Path, where: Path) -> Path:
 
 
 def pull(where: Path, service: Remote | None) -> tuple[list[Path], list[str]]:
-    """New sessions, from the inbox folder and the service. A session is deleted from the service
-    only once it's unpacked here."""
+    """New sessions, from the inbox folder and the service. Nothing is deleted from the service
+    (playtest v2, C3.1): what's already unpacked here is skipped."""
     new: list[Path] = []
     notes: list[str] = []
     inbox = where / "inbox"
@@ -114,12 +113,9 @@ def pull(where: Path, service: Remote | None) -> tuple[list[Path], list[str]]:
                 continue
             round_, code, launch = m.groups()
             if (where / round_ / code / launch / "session.jsonl").exists():
-                service.remove(s["key"])              # already here from an earlier pull
-                continue
+                continue                              # already here from an earlier pull
             try:
                 new.append(unpack(service.fetch(s["key"]), round_, code, launch, where))
             except BadSession as e:
                 notes.append(f"playtest: {e}")
-                continue
-            service.remove(s["key"])
     return new, notes

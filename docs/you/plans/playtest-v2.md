@@ -178,6 +178,8 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   `events`, `summaries` and `signups`, as migrations.
   - Files: `tools/playtest/worker/migrations/`, `wrangler.toml`.
   - Done when: `wrangler d1 migrations apply` makes them locally and in the cloud.
+    **Built 27 November** (`0001_playtest_v2.sql`, plus `downloads`, `deletions` and `rate`). Every
+    worker test applies it to a real SQLite. The `wrangler` half waits for C0.1.
 - [ ] **C1.2 The routes.**
   - With the upload key (add only): `PUT /sessions/…` (as today), `POST /summaries`, `POST /events`.
   - Open: `GET /download/<mac|windows>` (sends the current build from R2 and counts a download),
@@ -189,28 +191,44 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `tools/playtest/worker/src/` (split into a file per route), `wrangler.toml`.
   - Done when: `node --test` passes against stand-ins for R2 and D1, and `wrangler dev` serves it
     on this Mac.
+    **Built 27 November:** a file per route in `src/`, and 18 of 18 tests pass against the stand-ins.
+    The delete-after-pull answers 405, and the Mac's pull no longer deletes. `wrangler dev` waits
+    for C0.1 (wrangler isn't installed here).
 - [ ] **C1.3 Keeping to Q5.** A cloud scheduled run applies Q5 to replays, rows and learning records. It requires no local computer; deletion requests override retention. Export expiry/deletion metadata for later Windows reconciliation.
   - Done when: records on either side of the cutoff are handled correctly, retained sessions remain
     downloadable, expired sessions are excluded from new manifests, and import does not extend
     their lifetime. The Windows tools remove expired local copies before subsequent dataset use.
   - Files: `tools/playtest/worker/src/cron.js`, `wrangler.toml`.
+  - **The cloud half, built 27 November:** a daily run removes a session 183 days after its first
+    receipt (zip, rows, summary; a tombstone stays). Downloads don't move the date.
+    `GET /dataset/deletions` lists what went, for the Windows copies. Tested on both sides of the
+    cutoff. The Windows half comes with C3.7 and C3.8.
 - [ ] **C1.4 Deploy and prove receipt** (after C0.1). Done when: a real consented session from
   a packaged build reaches R2 and D1 while local processing is stopped. Match its session ID,
   checksum and row counts. The current editor simulation intentionally disables uploads.
-- [ ] **C1.5 Durable, retry-safe ingestion.** Session ZIP receipt and structured-row receipt may
+- [x] **C1.5 Durable, retry-safe ingestion.** Session ZIP receipt and structured-row receipt may
   arrive in either order. Track partial completion, retry without duplicate sessions/moments,
   reject conflicting overwrites, and reconcile interrupted uploads. Enforce the existing size
   limit visibly; report oversized sessions instead of retrying forever.
   - Done when: duplicate, reordered, interrupted, rejected and offline/retry cases preserve one
     coherent session; no training or local job is invoked. No local pull deletes the cloud copy.
-- [ ] **C1.6 Dataset access.** Add authenticated read-only manifest/download access for C3.7,
+    **Done 27 November:**
+    - The zip and the summary fill one session row, in either order. The same bytes again get
+      200; different bytes get 409.
+    - A summary is written in one transaction. A deleted or expired session answers 410, so the
+      game stops retrying. Oversized sends get 413.
+    - Arrival starts nothing. The Mac's pull no longer deletes.
+- [x] **C1.6 Dataset access.** Add authenticated read-only manifest/download access for C3.7,
   including consent, hashes, schema versions, round and build; keep delete/publish admin-only.
   - Done when: the read-only key can fetch eligible sessions but cannot write, delete or publish;
     unauthenticated requests cannot list or download private data.
+    **Done 27 November:** `DATASET_KEY` reads `/dataset/manifest`, the eligible zips and
+    `/dataset/deletions`, and nothing else. Eligible means consent to training, not deleted, and
+    not expired. Tested against every admin and upload route, and with no key at all.
 
 ### Phase 2: the game [C]
 
-- [ ] **C2.1 No code.** On first launch `TesterState` generates and persists a high-entropy random
+- [x] **C2.1 No code.** On first launch `TesterState` generates and persists a high-entropy random
   ID; nobody types it. Keep existing tester IDs compatible, and use a separate unique session ID
   per launch. Reinstallation/new computers are not silently assumed to be the same person.
   This is a grouping label, not authentication.
@@ -220,26 +238,32 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
     box or login, gets its own persistent internal ID, and uploads under that ID after consent.
     Restart keeps the ID; an existing v1 ID migrates without asking the player to type it again.
     The optional nickname is never required to start playing or upload.
-- [ ] **C2.2 Consent.** The text adds: *"…and may be used to train Karen."*
+    **Done** (`28a4522`, checked 27 November): the game makes and keeps a 32-hex ID, old codes stay, and there's no code box; `TesterId_ReusesLegacyIdOrPersistsANewOne`.
+- [x] **C2.2 Consent.** The text adds: *"…and may be used to train Karen."*
   - Files: `PlaytestScreens.cs`, `PLAYTEST.md`.
   - Done when: the consent version and permission travel with every upload; decline sends no
     session, answers or identifiable event pings. A privacy-safe download count is separate.
     Previously collected v1 data is not assumed to permit training without compatible consent.
-- [ ] **C2.3 The end page.** The 4 taps, the 3 typed answers (Q2) and the nickname (Q3), all
+    **Done 27 November:** consent `v2` (**Play and send** / **Play without sending**), with the training line. A v1 answer is asked again. Each zip carries its consent in a sidecar and goes up with it. Without consent, sessions go to a `local` folder and nothing is sent; `PlaytestV2Tests`.
+- [x] **C2.3 The end page.** The 4 taps, the 3 typed answers (Q2) and the nickname (Q3), all
   optional. The form button goes, and so does `formUrl` (from `PlaytestConfig` and `KehaiBuild`).
   - Files: `PlaytestScreens.cs`, `PlaytestConfig.cs`, `KehaiBuild.cs`, `PlaytestTests.cs`.
+    **Done 27 November:** the four taps, Q2's three typed answers and Q3's nickname, all skippable. The form link is gone from the config, the build and the screens.
 - **C2.4 Removed from scope by the owner (12 November):** no after-catch fairness prompt.
   This is not completed implementation. Keep timestamped bug notes and optional end feedback.
-- [ ] **C2.5 The funnel.** After consent, send allowed launch/consent/shift/end events; buffer
+- [x] **C2.5 The funnel.** After consent, send allowed launch/consent/shift/end events; buffer
   pre-consent session events locally and discard them on decline. Queue consented events offline.
   - Files: `PlaytestFiles.cs` (`PlaytestUploader`), `PlaytestSession.cs`.
-- [ ] **C2.6 The summary.** When the session is packed, a small JSON goes to `/summaries` with the
+    **Done 27 November:** launch, consent, first shift, each shift and the end. Before the answer they wait in memory; on a no they're dropped. After a yes they queue in `outbox/events.jsonl` and go up 100 at a time, counted once by their id.
+- [x] **C2.6 The summary.** When the session is packed, a small JSON goes to `/summaries` with the
   zip: the computer, the frame rate, the per-shift numbers (from `ShiftAnalysis`), the answers and
   the moments.
   - Files: `PlaytestSession.cs`, `PlaytestFiles.cs`.
-- [ ] **C2.7 A new build** (Q6). At launch the game asks `/latest`; if there's a newer build, the
+    **Done 27 November:** `PlaytestSummary` (computer, frame rate, a row per shift from `ShiftAnalysis`, the answers, the bug notes) is written beside the zip and sent once the zip is in.
+- [x] **C2.7 A new build** (Q6). At launch the game asks `/latest`; if there's a newer build, the
   main menu says so, with a button to the download page.
   - Files: `PlaytestSession.cs`, `MainMenu.cs`.
+    **Done 27 November:** `/latest` at launch; the main menu shows *build X is out* with a button to this platform's download (drawn by `PlaytestScreens`).
 
 - [ ] **C2.8 First-launch illustrated walkthrough.** Brief steps for opening/playing, the first
   clock-in/task, essential controls, Shift+F7, finishing and sending. Use the actual game/control
@@ -254,10 +278,15 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `KehaiBuild.cs`, new guide source under `tools/playtest/`.
   - Done when: both freshly downloaded ZIPs include working guides with no external assets or
     broken links; the build label/round agrees with `build.txt` and `playtest.json`.
-- [ ] **C2.10 Honest completion and retries.** Show sent only on server acknowledgement; distinguish
+- [x] **C2.10 Honest completion and retries.** Show sent only on server acknowledgement; distinguish
   queued, rejected and local-only sessions. Preserve unsent data after a crash/restart.
   - Done when: offline, timeout, oversized upload, crash recovery and consent-declined paths are
     tested; none claims success or asks a tester to manually upload as the normal flow.
+    **Done 27 November:**
+    - *Received* shows only on the service's 2xx.
+    - 400, 409 and 413 move the zip to `outbox/rejected` (*kept on this computer*); 410 drops it.
+    - Offline, timeouts and 5xx wait for the next launch. A crash is packed at the next launch.
+    - Tested in `PlaytestV2Tests` (`SendAnswer`, `Settle`, `Outcome`) and the worker's tests; 765 of 765 pass.
 
 **Phase 2 check:** run the EditMode suite using the repository's Unity/clone rules. No second
 Unity while the owner's editor is open.

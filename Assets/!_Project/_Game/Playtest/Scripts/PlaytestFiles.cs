@@ -12,12 +12,17 @@ namespace Kehai.Playtest
 {
     // Where a playtest keeps its files on the tester's computer:
     //   <persistent data>/playtest/sessions/<launch time>/session.jsonl   the session as it happens
-    //   <persistent data>/playtest/outbox/<round>_<code>_<launch time>.zip  packed, waiting to be sent
+    //   <persistent data>/playtest/outbox/<round>_<code>_<launch time>.zip  packed, waiting to be sent,
+    //       with <zip>.json (its consent and build) and <name>.summary.json (its numbers) beside it
+    //   <persistent data>/playtest/outbox/rejected/   what the service won't take: kept here
+    //   <persistent data>/playtest/local/             sessions of a tester who didn't agree to send
     public static class PlaytestPaths
     {
-        public static string Root => Path.Combine(Application.persistentDataPath, "playtest");
+        public static string RootOverride;   // EditMode tests: a temp folder instead of the real one
+        public static string Root => RootOverride ?? Path.Combine(Application.persistentDataPath, "playtest");
         public static string Sessions => Path.Combine(Root, "sessions");
         public static string Outbox => Path.Combine(Root, "outbox");
+        public static string Local => Path.Combine(Root, "local");     // packed without consent to send: never sent
         public static string LogName = "session.jsonl";
     }
 
@@ -140,16 +145,23 @@ namespace Kehai.Playtest
         }
     }
 
-    // Sends the outbox to the upload service, oldest first; a zip leaves the outbox once it's
-    // been received. One that can't be sent stays for the next launch.
-    //
-    //   PUT <uploadUrl>/sessions/<round>/<code>/<launch time>.zip
-    //   X-Kehai-Key: <uploadKey>        Content-Type: application/zip
+    // Sends the outbox to the upload service, oldest first (playtest v2):
+    //   each zip      PUT  <upload>/sessions/<round>/<tester>/<launch>.zip, with the consent it was packed under
+    //   its summary   POST <upload>/summaries (C2.6), once the zip is in
+    //   the funnel    POST <upload>/events, a hundred at a time (C2.5)
+    // A zip leaves the outbox only once the service has it (C2.10). One the service will never take
+    // (too big, or other bytes under its name) moves to outbox/rejected and stays on this computer;
+    // one for a deleted tester is dropped. Anything else (offline, a timeout) waits for the next launch.
+    // Nothing is sent unless the tester agreed.
     public static class PlaytestUploader
     {
         public static bool Busy { get; private set; }
         public static float Progress { get; private set; }
         public static string LastError { get; private set; }
+        public static int LastSent { get; private set; }        // the last send's: received
+        public static int LastRejected { get; private set; }    // the last send's: kept here for good
+
+        public static string RejectedFolder => Path.Combine(PlaytestPaths.Outbox, "rejected");
 
         static UnityWebRequest current;
 
@@ -166,6 +178,9 @@ namespace Kehai.Playtest
                 ? Directory.GetFiles(PlaytestPaths.Outbox, "*.zip").OrderBy(File.GetLastWriteTimeUtc).ToArray()
                 : new string[0];
 
+        public static string[] Kept() =>
+            Directory.Exists(RejectedFolder) ? Directory.GetFiles(RejectedFolder, "*.zip") : new string[0];
+
         // The last two underscore-delimited fields are the date and time, with an ID on new launches.
         public static string UrlFor(string baseUrl, string zipPath)
         {
@@ -178,48 +193,128 @@ namespace Kehai.Playtest
             return $"{baseUrl.TrimEnd('/')}/sessions/{Uri.EscapeDataString(round)}/{Uri.EscapeDataString(code)}/{stamp}.zip";
         }
 
+        // The headers a zip goes up with: its consent (none for a zip an older build packed, which
+        // the service then counts as v1, never training her), its build and its summary's schema.
+        public static Dictionary<string, string> HeadersFor(OutboxMeta meta, string uploadKey)
+        {
+            var headers = new Dictionary<string, string> { ["Content-Type"] = "application/zip", ["X-Kehai-Key"] = uploadKey ?? "" };
+            if (meta == null || string.IsNullOrEmpty(meta.consent)) return headers;
+            headers["X-Kehai-Consent"] = meta.consent;
+            headers["X-Kehai-Training"] = meta.training ? "1" : "0";
+            if (!string.IsNullOrEmpty(meta.build)) headers["X-Kehai-Build"] = meta.build;
+            headers["X-Kehai-Schema"] = meta.schema.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return headers;
+        }
+
+        // A zip and its sidecars: moved to the rejected folder, or deleted.
+        public static void Settle(string zip, SendResult result)
+        {
+            string[] files = { zip, OutboxMeta.PathFor(zip), OutboxMeta.SummaryPathFor(zip) };
+            try
+            {
+                if (result == SendResult.Rejected) Directory.CreateDirectory(RejectedFolder);
+                foreach (string f in files)
+                {
+                    if (!File.Exists(f)) continue;
+                    if (result == SendResult.Rejected)
+                    {
+                        string to = Path.Combine(RejectedFolder, Path.GetFileName(f));
+                        if (File.Exists(to)) File.Delete(to);
+                        File.Move(f, to);
+                    }
+                    else File.Delete(f);
+                }
+            }
+            catch (Exception e) { Debug.LogWarning($"Playtest: couldn't tidy {Path.GetFileName(zip)}: {e.Message}"); }
+        }
+
         public static IEnumerator SendAll(PlaytestConfig config, Action<int, int> done = null)
         {
-            if (Busy || config == null || !config.Uploads) { done?.Invoke(0, Waiting().Length); yield break; }
+            if (Busy || config == null || !config.Uploads || !TesterState.Sends) { done?.Invoke(0, Waiting().Length); yield break; }
             Busy = true;
             LastError = null;
+            LastSent = LastRejected = 0;
             string[] zips = Waiting();
-            int sent = 0;
-            for (int i = 0; i < zips.Length; i++)
+            bool offline = false;
+            for (int i = 0; i < zips.Length && !offline; i++)
             {
-                string url = UrlFor(config.uploadUrl, zips[i]);
+                string zip = zips[i], url = UrlFor(config.uploadUrl, zip);
                 if (url == null) continue;
                 byte[] body;
-                try { body = File.ReadAllBytes(zips[i]); }
+                try { body = File.ReadAllBytes(zip); }
                 catch (Exception e) { LastError = e.Message; continue; }
 
-                using UnityWebRequest request = UnityWebRequest.Put(url, body);
+                SendResult result = SendResult.Queued;
+                int index = i;
+                yield return Send(UnityWebRequest.Put(url, body), HeadersFor(OutboxMeta.Read(zip), config.uploadKey),
+                    r => result = r, p => Progress = (index + p) / zips.Length);
+                if (result == SendResult.Sent)
+                {
+                    string summary = OutboxMeta.SummaryPathFor(zip);
+                    if (File.Exists(summary))
+                    {
+                        SendResult s = SendResult.Queued;
+                        yield return Send(Post(config.uploadUrl + "/summaries", File.ReadAllBytes(summary)),
+                            new Dictionary<string, string> { ["Content-Type"] = "application/json", ["X-Kehai-Key"] = config.uploadKey ?? "" },
+                            r => s = r, null);
+                        // The zip stays until its summary is in too: sent again, the zip answers 200.
+                        if (s == SendResult.Queued) { offline = true; break; }
+                    }
+                    LastSent++;
+                    Settle(zip, SendResult.Sent);
+                }
+                else if (result == SendResult.Rejected) { LastRejected++; Settle(zip, SendResult.Rejected); }
+                else if (result == SendResult.Gone) Settle(zip, SendResult.Gone);
+                else offline = true;   // the network is probably down: try the rest next time
+            }
+            if (!offline) yield return SendEvents(config);
+            current = null;
+            Progress = 1f;
+            Busy = false;
+            done?.Invoke(LastSent, Waiting().Length);
+        }
+
+        static IEnumerator SendEvents(PlaytestConfig config)
+        {
+            while (true)
+            {
+                List<string> queued = PlaytestEvents.Queued();
+                if (queued.Count == 0) yield break;
+                List<string> batch = queued.Take(PlaytestEvents.Batch).ToList();
+                SendResult result = SendResult.Queued;
+                yield return Send(Post(config.uploadUrl + "/events", Encoding.UTF8.GetBytes(PlaytestEvents.Body(batch))),
+                    new Dictionary<string, string> { ["Content-Type"] = "application/json", ["X-Kehai-Key"] = config.uploadKey ?? "" },
+                    r => result = r, null);
+                if (result == SendResult.Queued) yield break;
+                PlaytestEvents.Drop(batch.Count);   // received, or never to be accepted
+            }
+        }
+
+        static UnityWebRequest Post(string url, byte[] body) =>
+            new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST) { uploadHandler = new UploadHandlerRaw(body), downloadHandler = new DownloadHandlerBuffer() };
+
+        static IEnumerator Send(UnityWebRequest request, Dictionary<string, string> headers, Action<SendResult> answer, Action<float> progress)
+        {
+            using (request)
+            {
                 current = request;
-                request.SetRequestHeader("Content-Type", "application/zip");
-                request.SetRequestHeader("X-Kehai-Key", config.uploadKey ?? "");
+                foreach (KeyValuePair<string, string> h in headers) request.SetRequestHeader(h.Key, h.Value);
                 request.timeout = 120;
                 UnityWebRequestAsyncOperation op = request.SendWebRequest();
                 while (!op.isDone)
                 {
-                    Progress = (i + request.uploadProgress) / zips.Length;
+                    progress?.Invoke(request.uploadProgress);
                     yield return null;
                 }
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    sent++;
-                    try { File.Delete(zips[i]); } catch (Exception) { }
-                }
-                else
+                bool network = request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.DataProcessingError;
+                SendResult result = SendAnswer.Of(request.responseCode, network);
+                if (result != SendResult.Sent)
                 {
                     LastError = $"{request.responseCode} {request.error}";
-                    Debug.LogWarning($"Playtest: couldn't send {Path.GetFileName(zips[i])}: {LastError}");
-                    break;   // the network is probably down: try the rest next time
+                    Debug.LogWarning($"Playtest: {request.method} {Path.GetFileName(request.url)}: {LastError} ({result})");
                 }
+                answer(result);
             }
-            current = null;
-            Progress = 1f;
-            Busy = false;
-            done?.Invoke(sent, Waiting().Length);
         }
     }
 }

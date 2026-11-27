@@ -37,7 +37,7 @@ const zip = (n = 32) => { const b = new Uint8Array(n); b.set([0x50, 0x4b, 0x03, 
 const call = (e, method, path, { headers = {}, body } = {}) =>
   worker.fetch(new Request("https://pt.example.dev" + path, { method, headers, body }), e);
 
-test("a build sends a session, the Mac lists, downloads and deletes it", async () => {
+test("a build sends a session, the Mac lists and downloads it, and it stays (v2: no delete after a pull)", async () => {
   const e = env();
   const put = await call(e, "PUT", "/sessions/round1/T07/20261004_101500.zip", { headers: { "X-Kehai-Key": UPLOAD }, body: zip(100) });
   assert.equal(put.status, 201);
@@ -51,8 +51,8 @@ test("a build sends a session, the Mac lists, downloads and deletes it", async (
   assert.equal((await got.arrayBuffer()).byteLength, 100);
 
   const del = await call(e, "DELETE", "/admin/sessions/round1/T07/20261004_101500.zip", { headers: { Authorization: "Bearer " + ADMIN } });
-  assert.equal(del.status, 204);
-  assert.equal(e.SESSIONS.store.size, 0);
+  assert.equal(del.status, 405);
+  assert.equal(e.SESSIONS.store.size, 1);
 });
 
 test("the upload key can't read, and nothing works without the right key", async () => {

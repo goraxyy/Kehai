@@ -42,12 +42,13 @@ public class PlaytestTests
         Assert.IsFalse(PlaytestConfig.Parse("{\"round\":\"r\"}").Uploads, "no address keeps sessions on the computer");
     }
 
+    // Playtest v2 (C2.3): the questions are all in the game; an old playtest.json's form link is ignored.
     [Test]
-    public void FormLink_CarriesTheTesterCode()
+    public void AnOldConfigsFormLink_IsIgnored()
     {
-        var c = new PlaytestConfig { round = "r", formUrl = "https://forms.example/viewform?entry.1={code}" };
-        Assert.AreEqual("https://forms.example/viewform?entry.1=T07", c.FormFor("T07"));
-        Assert.IsNull(new PlaytestConfig { round = "r" }.FormFor("T07"));
+        PlaytestConfig c = PlaytestConfig.Parse("{\"round\":\"r\",\"formUrl\":\"https://forms.example/viewform\"}");
+        Assert.IsNotNull(c);
+        StringAssert.DoesNotContain("forms.example", JsonUtility.ToJson(c));
     }
 
     [Test]
@@ -155,7 +156,9 @@ public class PlaytestTests
             StringAssert.Contains(q.text, md, "PLAYTEST.md is missing a question");
             foreach (string option in q.options) StringAssert.Contains(option, md, $"PLAYTEST.md is missing an answer to \"{q.text}\"");
         }
-        StringAssert.Contains(PlaytestScreens.FreeQuestion, md);
+        foreach (string typed in PlaytestScreens.TypedQuestions) StringAssert.Contains(typed, md, "PLAYTEST.md is missing a typed question");
+        StringAssert.Contains(PlaytestScreens.NicknameQuestion, md);
+        StringAssert.Contains(PlaytestConsent.TrainingLine, md, "PLAYTEST.md shows the consent's training line");
     }
 
     [Test]

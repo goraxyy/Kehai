@@ -117,10 +117,11 @@ def test_facts_say_how_they_got_on(world):
     assert session.plan(folder)["bounds"] == [0, 0, 100, 100]
 
 
-def test_pull_takes_from_the_service_and_deletes_only_what_it_unpacked(world):
+def test_pull_takes_from_the_service_and_never_deletes_there(world):
     _, where, _ = world
+    v2 = f"round1/{'A1' * 16}/20261004_101700-{'ab' * 16}.zip"
     blobs = {"round1/T07/20261004_101500.zip": session_zip(), "round1/T08/20261004_101600.zip": b"garbage",
-             "stray.txt": b"?"}
+             v2: session_zip(), "stray.txt": b"?"}
     deleted = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -137,11 +138,11 @@ def test_pull_takes_from_the_service_and_deletes_only_what_it_unpacked(world):
 
     service = inbox.Remote("https://pt.example.dev", "admin-key", transport=httpx.MockTransport(handler))
     new, notes = inbox.pull(where, service)
-    assert new == [where / "round1" / "T07" / "20261004_101500"]
-    assert deleted == ["round1/T07/20261004_101500.zip"], "the bad zip stays on the service to look at"
+    assert new == [where / "round1" / "T07" / "20261004_101500", where / "round1" / ("A1" * 16) / f"20261004_101700-{'ab' * 16}"]
+    assert deleted == [], "the cloud copy stays until its six-month limit"
     assert any("T08" in n for n in notes) and any("stray.txt" in n for n in notes)
     new, _ = inbox.pull(where, service)
-    assert new == [] and deleted[-1] == "round1/T07/20261004_101500.zip", "already here: just removed there"
+    assert new == [] and deleted == [], "already here: skipped, still not deleted there"
 
 
 def test_a_new_session_is_announced_and_each_bug_note_waits_for_the_owner(world):
