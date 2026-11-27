@@ -47,7 +47,7 @@ For you, the sound designer, an artist and the agents:
 |---|---|---|
 | **Unity editor** (6000.5.10f1) | macOS 13 Ventura or newer; Apple silicon (M1 or newer), or an Intel Mac; a Metal-capable GPU; Rosetta 2 installed (Unity's floor) | Windows 10 21H1 or newer, x64; or Windows 11 21H2 or newer on Arm64; a DirectX 11/12- or Vulkan-capable GPU (Unity's floor) |
 | **Memory** | 8 GB is Unity's minimum. On this M2 with 8 GB, only one Unity can run at a time (measured), hence the rule of one heavy job at a time | 16 GB or more; the training PC has 32 GB |
-| **Disk** | About 15 GB for the project, its Library cache and one clone (measured on this Mac, roughly); more for the art's history once Phase 7 is set up ([storage](plans/0.5.0/storage.md)) | The same, plus room for training runs (the PC has 2 TB free) |
+| **Disk** | About 4.5 GB for the project (measured: `Assets` 164 MB, the `Library` cache 4.2 GB), plus Unity itself. A run's clone shares its files on APFS, so it costs little. More is needed for the art's history once Phase 7 is set up ([storage](plans/0.5.0/storage.md)) | The same, plus room for training runs (the PC has 2 TB free) |
 | **Tools** | Python 3 for the tools; `tools/rl/.venv` for training (ML-Agents) | Python 3 and the same training environment ([setup](../../tools/rl/README.md)) |
 
 **Training Karen:**
