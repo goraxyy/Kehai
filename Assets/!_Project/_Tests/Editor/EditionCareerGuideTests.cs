@@ -11,6 +11,15 @@ public sealed class EditionCareerGuideTests
         Assert.AreEqual(GuideStep.Waiting, s.Step);
         return s;
     }
+    [Test] public void AnEditorRunCanPlayAsAnotherEdition()
+    {
+        Assert.AreEqual(KehaiEdition.Training, EditionRules.FromCommandLine(new[] { "Unity", "-kehai-edition", "training" }));
+        Assert.AreEqual(KehaiEdition.Gameplay, EditionRules.FromCommandLine(new[] { "-kehai-edition", "Gameplay" }));
+        Assert.IsNull(EditionRules.FromCommandLine(new[] { "Unity", "-batchmode" }));
+        Assert.IsNull(EditionRules.FromCommandLine(new[] { "-kehai-edition", "nightly" }));
+        Assert.IsNull(EditionRules.FromCommandLine(new[] { "-kehai-edition" }));
+    }
+
     [Test] public void EditionNamesAreExplicit()
     {
         Assert.IsTrue(EditionRules.TryParse(" Training ", out var e)); Assert.AreEqual(KehaiEdition.Training, e);

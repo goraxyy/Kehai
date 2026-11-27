@@ -20,6 +20,12 @@ public static class EditionRules
             default: edition = KehaiEdition.Gameplay; return false;
         }
     }
+    // -kehai-edition <name> on an editor's command line (C6.6); null when absent or unknown.
+    public static KehaiEdition? FromCommandLine(string[] args)
+    {
+        int i = System.Array.IndexOf(args, "-kehai-edition");
+        return i >= 0 && i + 1 < args.Length && TryParse(args[i + 1], out KehaiEdition edition) ? edition : (KehaiEdition?)null;
+    }
     public static string Define(KehaiEdition edition) => "KEHAI_" + edition.ToString().ToUpperInvariant();
     public static string VersionLabel(string version, KehaiEdition edition) =>
         version + (edition == KehaiEdition.Gameplay ? "" : "-" + edition.ToString().ToLowerInvariant());
