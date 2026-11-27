@@ -686,6 +686,15 @@ def run(s: Settings, job: str, extra: list[str], ref: str = 'HEAD', timeout_min:
                     except OSError:
                         pass
                     p.wait()
+        if trainer_proc is not None:
+            # The trainer's workers outlive it when it dies hard: ML-Agents' environment worker
+            # kept its port open after a kill -9, and every resume then failed with "worker 0 is
+            # still in use" (the real smoke run, 26 November). Each run starts its trainer in a
+            # process group of its own, so the whole group goes, leader or not.
+            try:
+                os.killpg(trainer_proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
         if trainer_log is not None:
             trainer_log.close()
         for sig, handler in old.items():

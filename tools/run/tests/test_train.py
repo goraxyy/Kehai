@@ -17,10 +17,16 @@ from tools.run import kehai_run as kr  # noqa: E402
 from tools.run.tests.test_run import Fixture, sh  # noqa: E402
 
 GIT = ('git', '-c', 'user.email=t@t', '-c', 'user.name=t')
-TRAINER = '''import json, os, sys, time
+TRAINER = '''import json, os, signal, subprocess, sys, time
 from pathlib import Path
-Path(os.environ["TRAINER_SEEN"]).write_text(json.dumps({"args": sys.argv[1:], "cwd": os.getcwd(), "pid": os.getpid()}))
+worker = None
+if os.environ.get("TRAINER_WORKER"):
+    # Like ML-Agents' environment worker: a child in the trainer's process group.
+    worker = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+Path(os.environ["TRAINER_SEEN"]).write_text(json.dumps({"args": sys.argv[1:], "cwd": os.getcwd(), "pid": os.getpid(),
+                                                        "worker": worker.pid if worker else None}))
 time.sleep(float(os.environ.get("TRAINER_SLEEP", "0")))
+if os.environ.get("TRAINER_CRASH"): os.kill(os.getpid(), signal.SIGKILL)
 sys.exit(int(os.environ.get("TRAINER_EXIT", "0")))
 '''
 
@@ -82,6 +88,19 @@ class TrainTests(Fixture):
         code, lines = self.train()
         self.assertEqual(3, code, lines)
         self.assertEqual('failed', self.events()[-1]['state'])
+        self.assert_clean()
+
+    def test_a_trainer_that_dies_hard_leaves_no_worker_behind(self):
+        # The real smoke run (26 November): after a kill -9 the trainer's environment worker kept
+        # its port, and every resume failed with "worker 0 is still in use".
+        os.environ.update(TRAINER_SLEEP='2', TRAINER_CRASH='1', TRAINER_WORKER='1', STANDIN_SLEEP='60')
+        code, lines = self.train()
+        self.assertNotEqual(0, code, lines)
+        worker = json.loads(self.seen.read_text())['worker']
+        deadline = time.time() + 5
+        while alive(worker) and time.time() < deadline:
+            time.sleep(0.1)
+        self.assertFalse(alive(worker), "the trainer's worker is gone with it")
         self.assert_clean()
 
     def test_unity_ending_first_stops_the_trainer(self):
