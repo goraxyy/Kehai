@@ -297,20 +297,25 @@ Unity while the owner's editor is open.
 
 ### Phase 3: optional review and later Windows training handoff
 
-- [ ] **C3.1 Decouple receipt from analysis.** Disable v1's automatic pull/delete behavior for
+- [x] **C3.1 Decouple receipt from analysis.** Disable v1's automatic pull/delete behavior for
   the v2 service. Default to manual analysis; any periodic summary/Telegram job is explicitly
   opt-in and independent of collection. Process in temporary storage and retain raw cloud data.
   - Files: `tools/marketing/km/playtest/inbox.py`, `summary.py`, `notify.py`, a new `cloud.py`,
     the `run_job.py work` hook and settings.
   - Done when: uploads work with both owner computers off; starting the existing scheduled job
     neither drains cloud storage nor starts training. An explicit later analysis can catch up.
+    **Done 27 November:**
+    - The service keeps every session until Q5's limit; the pull never deletes (PR #112).
+    - The scheduled `work` job pulls only with `KEHAI_PLAYTEST_AUTO_PULL=1`, which is off by default.
+    - `playtest.py pull` catches up by hand. Nothing starts training.
 - [ ] **C3.2 The report from D1.** Every session, every round, read from D1 instead of local
   folders. Each session links to its replay (C3.3).
   - Files: `km/playtest/report.py`.
-- [ ] **C3.3 `playtest.py open <session>`.** Downloads that session's replays into
+- [x] **C3.3 `playtest.py open <session>`.** Downloads that session's replays into
   `~/TokenLimit/playtests/cache/` and shows them in Finder, ready for **Kehai → Replay → Open
   Shift…**. The cache empties itself after 7 days, or past 2 GB.
   - Files: `tools/marketing/playtest.py`, a new `km/playtest/cache.py`.
+  - **Done 27 November:** fetched once into the cache (the inbox's safe unpack), marked as opened, and shown in Finder. Past 7 days, or past 2 GB with the least recently opened first, sessions go (never the one being opened). The cloud copy is only read. Tests in `tests/test_playtest_cache.py`.
 - [x] **C3.4 `playtest.py forget <id>`.** Deletes a tester everywhere, for privacy requests.
   **Done 27 November** (`km/playtest/admin.py`):
   - it sends `DELETE /admin/tester/<id>` (files and rows in the cloud; later sends refused) and removes every local folder of theirs;

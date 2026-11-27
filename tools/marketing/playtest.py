@@ -6,6 +6,7 @@
     uv run playtest.py redo <folder>…       read and summarise sessions again (after a prompt change), and the report
     uv run playtest.py report [--open]      rebuild <playtests>/report.html
     uv run playtest.py status               what's here, and what's set up
+    uv run playtest.py open <session>       one session's replays into a self-emptying cache, shown in Finder (C3.3)
     uv run playtest.py forget <id>          a deletion request: one tester, in the cloud and here (C3.4)
     uv run playtest.py publish <round> --version V [--mac zip] [--windows zip]
                                             the build testers download, and the game's new-build line (C3.5)
@@ -18,7 +19,7 @@ import sys
 from pathlib import Path
 
 from km import paths
-from km.playtest import admin, cycle, inbox, notify, report, root, session, sessions, setting, summary
+from km.playtest import admin, cache, cycle, inbox, notify, report, root, session, sessions, setting, summary
 from km.store import Store
 from km.telegram import Bot
 
@@ -35,6 +36,8 @@ def main() -> int:
     p = sub.add_parser("report")
     p.add_argument("--open", action="store_true")
     sub.add_parser("status")
+    p = sub.add_parser("open")
+    p.add_argument("session", help="round/tester/launch, as the report and the service list it")
     p = sub.add_parser("forget")
     p.add_argument("tester")
     p = sub.add_parser("publish")
@@ -52,6 +55,15 @@ def main() -> int:
         print("upload service: " + ("set up" if inbox.remote() else "not set up (KEHAI_PLAYTEST_UPLOAD_URL and KEHAI_PLAYTEST_ADMIN_KEY in tools/playtest/.env)"))
         print("summaries: " + ("on" if summary.ready() else "off until Claude is set up (docs/agents/marketing/MARKETING.md, Setup)"))
         print("issues go to: " + (setting("KEHAI_ISSUES_REPO") or "goraxyy/Kehai") + (" (dry run)" if setting("KEHAI_DRY_RUN") == "1" else ""))
+        return 0
+    if a.cmd == "open":
+        service = inbox.remote()
+        if service is None:
+            print("the upload service isn't set up (KEHAI_PLAYTEST_UPLOAD_URL and KEHAI_PLAYTEST_ADMIN_KEY)", file=sys.stderr)
+            return 2
+        folder = cache.open_session(service, a.session)
+        print(f"{folder} (Kehai → Replay → Open Shift…; the cache empties itself after {cache.DAYS} days or past 2 GB)")
+        subprocess.run(["open", str(folder)])
         return 0
     if a.cmd == "forget":
         for line in admin.forget(where, inbox.remote(), a.tester):

@@ -40,6 +40,12 @@ def sessions(where: Path) -> list[Path]:
     return sorted(found, key=lambda p: p.name)
 
 
+def auto_pull() -> bool:
+    """Playtest v2 (C3.1): the scheduled `work` job pulls sessions only when asked to
+    (KEHAI_PLAYTEST_AUTO_PULL=1). Collection never needs this Mac; `playtest.py pull` catches up by hand."""
+    return (setting("KEHAI_PLAYTEST_AUTO_PULL") or "0").strip() == "1"
+
+
 def cycle(marketing: Path, bot, dry_run: bool = False) -> list[str]:
     """What the scheduled `work` job does each time: pull, read, summarise, announce, report."""
     from .. import alerts
