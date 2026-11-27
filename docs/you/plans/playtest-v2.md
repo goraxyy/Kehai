@@ -228,7 +228,7 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
 
 ### Phase 2: the game [C]
 
-- [ ] **C2.1 No code.** On first launch `TesterState` generates and persists a high-entropy random
+- [x] **C2.1 No code.** On first launch `TesterState` generates and persists a high-entropy random
   ID; nobody types it. Keep existing tester IDs compatible, and use a separate unique session ID
   per launch. Reinstallation/new computers are not silently assumed to be the same person.
   This is a grouping label, not authentication.
@@ -238,26 +238,32 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
     box or login, gets its own persistent internal ID, and uploads under that ID after consent.
     Restart keeps the ID; an existing v1 ID migrates without asking the player to type it again.
     The optional nickname is never required to start playing or upload.
-- [ ] **C2.2 Consent.** The text adds: *"…and may be used to train Karen."*
+    **Done** (`28a4522`, checked 27 November): the game makes and keeps a 32-hex ID, old codes stay, and there's no code box; `TesterId_ReusesLegacyIdOrPersistsANewOne`.
+- [x] **C2.2 Consent.** The text adds: *"…and may be used to train Karen."*
   - Files: `PlaytestScreens.cs`, `PLAYTEST.md`.
   - Done when: the consent version and permission travel with every upload; decline sends no
     session, answers or identifiable event pings. A privacy-safe download count is separate.
     Previously collected v1 data is not assumed to permit training without compatible consent.
-- [ ] **C2.3 The end page.** The 4 taps, the 3 typed answers (Q2) and the nickname (Q3), all
+    **Done 27 November:** consent `v2` (**Play and send** / **Play without sending**), with the training line. A v1 answer is asked again. Each zip carries its consent in a sidecar and goes up with it. Without consent, sessions go to a `local` folder and nothing is sent; `PlaytestV2Tests`.
+- [x] **C2.3 The end page.** The 4 taps, the 3 typed answers (Q2) and the nickname (Q3), all
   optional. The form button goes, and so does `formUrl` (from `PlaytestConfig` and `KehaiBuild`).
   - Files: `PlaytestScreens.cs`, `PlaytestConfig.cs`, `KehaiBuild.cs`, `PlaytestTests.cs`.
+    **Done 27 November:** the four taps, Q2's three typed answers and Q3's nickname, all skippable. The form link is gone from the config, the build and the screens.
 - **C2.4 Removed from scope by the owner (12 November):** no after-catch fairness prompt.
   This is not completed implementation. Keep timestamped bug notes and optional end feedback.
-- [ ] **C2.5 The funnel.** After consent, send allowed launch/consent/shift/end events; buffer
+- [x] **C2.5 The funnel.** After consent, send allowed launch/consent/shift/end events; buffer
   pre-consent session events locally and discard them on decline. Queue consented events offline.
   - Files: `PlaytestFiles.cs` (`PlaytestUploader`), `PlaytestSession.cs`.
-- [ ] **C2.6 The summary.** When the session is packed, a small JSON goes to `/summaries` with the
+    **Done 27 November:** launch, consent, first shift, each shift and the end. Before the answer they wait in memory; on a no they're dropped. After a yes they queue in `outbox/events.jsonl` and go up 100 at a time, counted once by their id.
+- [x] **C2.6 The summary.** When the session is packed, a small JSON goes to `/summaries` with the
   zip: the computer, the frame rate, the per-shift numbers (from `ShiftAnalysis`), the answers and
   the moments.
   - Files: `PlaytestSession.cs`, `PlaytestFiles.cs`.
-- [ ] **C2.7 A new build** (Q6). At launch the game asks `/latest`; if there's a newer build, the
+    **Done 27 November:** `PlaytestSummary` (computer, frame rate, a row per shift from `ShiftAnalysis`, the answers, the bug notes) is written beside the zip and sent once the zip is in.
+- [x] **C2.7 A new build** (Q6). At launch the game asks `/latest`; if there's a newer build, the
   main menu says so, with a button to the download page.
   - Files: `PlaytestSession.cs`, `MainMenu.cs`.
+    **Done 27 November:** `/latest` at launch; the main menu shows *build X is out* with a button to this platform's download (drawn by `PlaytestScreens`).
 
 - [ ] **C2.8 First-launch illustrated walkthrough.** Brief steps for opening/playing, the first
   clock-in/task, essential controls, Shift+F7, finishing and sending. Use the actual game/control
@@ -272,10 +278,15 @@ required; evaluation/compatibility checks still apply ([owner answers](../../age
   - Files: `KehaiBuild.cs`, new guide source under `tools/playtest/`.
   - Done when: both freshly downloaded ZIPs include working guides with no external assets or
     broken links; the build label/round agrees with `build.txt` and `playtest.json`.
-- [ ] **C2.10 Honest completion and retries.** Show sent only on server acknowledgement; distinguish
+- [x] **C2.10 Honest completion and retries.** Show sent only on server acknowledgement; distinguish
   queued, rejected and local-only sessions. Preserve unsent data after a crash/restart.
   - Done when: offline, timeout, oversized upload, crash recovery and consent-declined paths are
     tested; none claims success or asks a tester to manually upload as the normal flow.
+    **Done 27 November:**
+    - *Received* shows only on the service's 2xx.
+    - 400, 409 and 413 move the zip to `outbox/rejected` (*kept on this computer*); 410 drops it.
+    - Offline, timeouts and 5xx wait for the next launch. A crash is packed at the next launch.
+    - Tested in `PlaytestV2Tests` (`SendAnswer`, `Settle`, `Outcome`) and the worker's tests; 765 of 765 pass.
 
 **Phase 2 check:** run the EditMode suite using the repository's Unity/clone rules. No second
 Unity while the owner's editor is open.
