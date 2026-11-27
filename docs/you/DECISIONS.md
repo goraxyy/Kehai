@@ -6,6 +6,16 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-26 | After she catches you, an ablation career moves on to the next shift (it no longer stops at the first catch, where the replayed shift wasn't recorded) | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#karen-052-the-batch-slowdown-found-and-fixed-26-november) |
+| 2026-11-26 | The Training player needn't play exactly the editor's game for now: the same store, rules and kind of results is enough; you'll come back to it | [0.5.2 plan C6.6](plans/0.5.2-plan.md#phase-6-faster-runs-c--sonnet-55-for-the-settings-opus-55-for-the-slowdown-the-training-player-and-the-frame-rate-check--the-pc-first-else-the-mac-with-the-editor-closed) |
+| 2026-11-26 | Batch runs stay at 15 frames a simulated second (10 isn't faster and changes the game) | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#karen-052-the-batch-slowdown-found-and-fixed-26-november) |
+| 2026-11-26 | Q24: the fridge and kneel checks as built: only on a reason, within 1.5 m under a rack | [interactions](plans/0.5.2/interactions.md) |
+| 2026-11-26 | Q22: testing, training and dev are scenes in one Unity project, not separate projects | [scenes](plans/0.5.2/scenes.md) |
+| 2026-11-26 | Q27: build playtest v2's code now against a stand-in; the first draft builds are Testing for Mac and Windows | [0.5.2 plan Q27](plans/0.5.2-plan.md#q27-the-test-pipeline-and-the-draft-builds) |
+| 2026-11-26 | Q8: reach the PC through Tailscale and SSH; it may stay on overnight. Q19: the PC is ready next week | [testing](plans/0.5.2/testing.md) |
+| 2026-11-26 | Q5: the old 480 MB belief dataset goes (moved to the Trash) | [0.4.0 plan Q5](plans/0.4.0-build-plan.md#42-questions-only-you-can-answer) |
+| 2026-11-26 | The coffee machine stays on the staff room's kitchen counter | [0.5.1 plan](plans/0.5.1-plan.md) |
+| 2026-11-26 | Go for the real smoke training of C5.2 (a crashed training resumes from its checkpoint) | [0.5.2 plan C5.2](plans/0.5.2-plan.md#phase-5-runs-that-survive-interruption-c--opus-55-for-c51-and-c54-sonnet-55-for-c52c53--the-mac-to-build-checks-on-the-pc) |
 | 2026-11-25 | Q26: build all three new interactions: the locker check, the decoy throw, the swinging door | [interactions](plans/0.5.2/interactions.md) |
 | 2026-11-25 | Karen does her tricks at the thing: she walks to it, faces it for 3 s (every trick), then it happens; Blackout and Fog at the power box, Camera break at the cameras' box, Flash sale, the understudy and Phantom chime at the PA, Block door at the door; if she sees you within about 4 m in those 3 s she gives it up and comes for you; a sound and a visible action show she's at it. Planned, not built | [tricks at things](plans/0.5.2/tricks-at-things.md) |
 | 2026-11-25 | The time clock shows the shift's time itself and blinks red when Karen stops it (The overtime) until you hold E there; the wall clock above it goes. In the mini store only functional furniture stays (one till, the staff room's table, the security desk), and the stock crate is in the staff room as in the store | [mini store](plans/0.5.2/mini-store.md) |
