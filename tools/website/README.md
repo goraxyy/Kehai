@@ -1,6 +1,6 @@
 # The website
 
-One page, `index.html`: plain HTML, CSS and JavaScript, no framework and no build step. Fonts come
+Three pages, `index.html`, `playtest.html` and `privacy.html`: plain HTML, CSS and JavaScript, no framework and no build step. Fonts come
 from Google Fonts; there are no images, so nothing binary goes in git.
 
 **The idea:** a clean product page in the store's own corporate voice, with Karen as the product.
@@ -23,8 +23,15 @@ only where she does.
 **Every claim on the page** comes from `tools/marketing/facts.json` and avoids its banned phrases.
 Change the game, then the facts, then this page.
 
-**Sign-ups:** `SIGNUP_URL` in the script is empty until the playtest v2 Worker has its `/signup`
-route (`docs/you/plans/playtest-v2.md`, C1.2). Until then the form says it's a preview and sends nothing.
+**The other pages** (playtest v2, B4.1, 27 November):
+- `playtest.html`: one button for the visitor's Mac or Windows build (the Worker's `/download/<mac|windows>`), the other platform's link, the build from `/latest`, the Open Anyway / Run anyway steps, and what's recorded.
+- `privacy.html`: Q5's six months, Q7's deletion email, what is and isn't recorded, downloads, page visits and sign-ups.
+- `site.css` is their shared style.
+- Pictures (`assets/open-anyway.png`, `assets/run-anyway.png`) aren't in git: they live in `~/TokenLimit/website/assets/` and go up with each deploy. Without them the pages hide the picture and keep the words.
+
+**The service's address:** `config.js` sets `window.KEHAI_API`, empty in git. The deploy writes the
+Worker's address (`KEHAI_PLAYTEST_UPLOAD_URL`) into the copy it uploads. Until then, the sign-up and
+the download button say they're a preview and send nothing.
 
 **Previewing:** open `index.html` in a browser. It's written to work both as a whole page and as a
 Claude artifact (no `<html>`, `<head>` or `<body>` tags; the browser adds them).
