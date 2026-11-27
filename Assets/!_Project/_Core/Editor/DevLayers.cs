@@ -71,6 +71,10 @@ public static class DevLayers
         return layer;
     }
 
+    // The scene a shift plays and reloads: the first open one that isn't a dev layer.
+    public static Scene SceneToPlay(string folder = Folder) => Enumerable.Range(0, SceneManager.sceneCount)
+        .Select(SceneManager.GetSceneAt).FirstOrDefault(s => s.isLoaded && !IsDevLayer(s.path, folder));
+
     // Closes every open dev layer; the scene underneath becomes active again.
     public static void CloseAll(bool askToSave = false, string folder = Folder)
     {
@@ -110,6 +114,50 @@ public static class DevLayers
             return;
         }
         EditorApplication.Exit(0);
+    }
+}
+
+// Play with a dev layer open. A shift reloads the active scene (KehaiEnv, ShiftRestart), so the
+// scene underneath is made active as Play starts, and every open layer is loaded again on top
+// after each reload. Back in edit mode, the layer that was active is active again.
+[InitializeOnLoad]
+static class DevLayerPlay
+{
+    const string OpenKey = "Kehai.DevLayers.Open", ActiveKey = "Kehai.DevLayers.Active";
+
+    static DevLayerPlay()
+    {
+        EditorApplication.playModeStateChanged += Changed;
+        SceneManager.sceneLoaded += Loaded;
+    }
+
+    static void Changed(PlayModeStateChange state)
+    {
+        if (state == PlayModeStateChange.ExitingEditMode)
+        {
+            var layers = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt)
+                .Where(s => s.isLoaded && DevLayers.IsDevLayer(s.path)).Select(s => s.path).ToArray();
+            SessionState.SetString(OpenKey, string.Join("\n", layers));   // survives Play's domain reload
+            Scene active = SceneManager.GetActiveScene();
+            Scene under = DevLayers.SceneToPlay();
+            SessionState.SetString(ActiveKey, DevLayers.IsDevLayer(active.path) ? active.path : "");
+            if (DevLayers.IsDevLayer(active.path) && under.IsValid()) SceneManager.SetActiveScene(under);
+        }
+        else if (state == PlayModeStateChange.EnteredEditMode)
+        {
+            Scene layer = SceneManager.GetSceneByPath(SessionState.GetString(ActiveKey, ""));
+            if (layer.IsValid() && layer.isLoaded) SceneManager.SetActiveScene(layer);
+            SessionState.EraseString(OpenKey);
+            SessionState.EraseString(ActiveKey);
+        }
+    }
+
+    static void Loaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!Application.isPlaying || mode != LoadSceneMode.Single || DevLayers.IsDevLayer(scene.path)) return;
+        foreach (string path in SessionState.GetString(OpenKey, "").Split('\n'))
+            if (path.Length > 0 && !SceneManager.GetSceneByPath(path).isLoaded)
+                EditorSceneManager.LoadSceneInPlayMode(path, new LoadSceneParameters(LoadSceneMode.Additive));
     }
 }
 

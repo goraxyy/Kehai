@@ -37,6 +37,7 @@ public class Kehai052DevLayerTests
         Assert.AreEqual(layer, new GameObject("Experiment").scene);
         Assert.IsTrue(System.IO.File.Exists(Folder + "/Dev_Owner.unity"));
         Assert.IsTrue(SceneManager.GetSceneByPath(BasePath).isLoaded, "the scene underneath stays open");
+        Assert.AreEqual(BasePath, DevLayers.SceneToPlay(Folder).path, "a shift plays and reloads the scene underneath");
 
         DevLayers.CloseAll(folder: Folder);
         Assert.AreEqual(1, SceneManager.sceneCount);
