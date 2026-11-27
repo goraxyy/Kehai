@@ -164,8 +164,9 @@ def work(root, store, bot, approvals, most: int) -> None:
                 store.update_ref(vid, status="failed", error=text)
         say(f"job {job['id']} {job['kind']} {vid or ''}: {what}: {text}")
     from km import playtest                         # PLAYTEST.md: sessions from the upload service
-    for line in playtest.cycle(root, bot):
-        say(line)
+    if playtest.auto_pull():                        # opt-in (playtest v2, C3.1): off unless KEHAI_PLAYTEST_AUTO_PULL=1
+        for line in playtest.cycle(root, bot):
+            say(line)
 
 
 # ---- the rest -------------------------------------------------------------------------------
