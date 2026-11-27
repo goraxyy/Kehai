@@ -192,8 +192,8 @@ namespace Kehai.Karen
         public KarenBrainKind brain = KarenBrainKind.Planner;
         [Tooltip("What she assumes you know of her: K0 where she is (today), K1 where you last sensed her, K2 the mirror map.")]
         public MirrorMode mirror = MirrorMode.K0;
-        [Tooltip("Her senses' numbers: s0 today's hand-set ones, s1 fitted, s2 fitted with walls and lights.")]
-        public string senses = "s0";
+        [Tooltip("Her senses' numbers: s1 fitted (the default since 26 November, the owner's call), s0 the old hand-set ones, s2 fitted with walls and lights.")]
+        public string senses = "s1";
         [Tooltip("Her belief's predict step: p0 today's, p1 fitted, p2 destinations, p3 destinations reading your Ledger.")]
         public string motion = "p0";
         [Tooltip("The hunter: the planner with pacing and the Director's hint off, every fairness rule on (Vital's baseline).")]

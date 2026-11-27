@@ -19,7 +19,7 @@ namespace Kehai.Karen
     // 0.4.0 (build plan §5–§8):
     //   -karen-brain planner|basic|vital   which brain picks her action and trick (default planner)
     //   -karen-mirror k0|k1|k2   what she assumes you know of where she is (default k0)
-    //   -karen-senses s0|s1|s2   her senses' numbers (default s0, today's)
+    //   -karen-senses s0|s1|s2   her senses' numbers (default s1, fitted; s0 the old hand-set ones)
     //   -belief-motion p0|p1|p2|p3   her belief's predict step (default p0, today's)
     //   -karen-hunter on|off     the planner with pacing and the hint off (Vital's baseline)
     //   -karen-learning on|off   one learning record per decision
