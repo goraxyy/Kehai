@@ -194,6 +194,26 @@ public class PlaytestV2Tests
         StringAssert.Contains("kept on this computer", PlaytestScreens.Outcome(true, true, received: true, queued: 0, kept: 1), "too big");
     }
 
+    // C2.9: the START HERE guide in every tester zip: filled in, offline, with the deletion email.
+    [Test]
+    public void TheStartHereGuide_IsFilledIn_AndLoadsNothingFromOutside()
+    {
+        KehaiBuild.WriteStartHere(temp, "Kehai", "0.5.2-beta.1", "round1");
+        foreach (string name in new[] { "START HERE.html", "START HERE.txt" })
+        {
+            string text = File.ReadAllText(Path.Combine(temp, name));
+            StringAssert.Contains("0.5.2-beta.1", text, name);
+            StringAssert.Contains("round1", text, name);
+            StringAssert.Contains(PlaytestConsent.DeletionEmail, text, name);
+            StringAssert.Contains("Open Anyway", text, name);
+            StringAssert.Contains("Run anyway", text, name);
+            StringAssert.DoesNotMatch(@"\{(product|version|round|email)\}", text, name + ": every blank is filled");
+        }
+        string html = File.ReadAllText(Path.Combine(temp, "START HERE.html"));
+        StringAssert.DoesNotMatch(@"(src|href)\s*=\s*""(https?:)?//", html, "nothing loads from the web");
+        StringAssert.DoesNotContain("<script", html);
+    }
+
     [Test]
     public void TheEndPage_AsksQ2sThreeQuestionsAndQ3sNickname_AndTheConsentSaysTraining()
     {
