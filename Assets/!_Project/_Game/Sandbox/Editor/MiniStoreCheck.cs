@@ -272,6 +272,7 @@ public static partial class MiniStoreCheck
         // The panel's controls, as you'd use them (C11.19), then Phase 9's interactions with the
         // real Karen (MiniStoreCheck.Interactions.cs).
         yield return PanelControls();
+        yield return Doorways();
         yield return Interactions();
 
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-mini-tricks") < 0) yield break;
