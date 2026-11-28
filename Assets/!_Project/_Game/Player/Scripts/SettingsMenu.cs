@@ -337,6 +337,10 @@ public sealed class SettingsMenu : MonoBehaviour
         int quality = (int)DisplaySettings.Current + Stepper("Quality", DisplaySettings.Current.ToString());
         quality = Mathf.Clamp(quality, 0, 2);
         if (quality != (int)DisplaySettings.Current) DisplaySettings.SetQuality((DisplaySettings.Quality)quality);
+        bool filmLook = Switch("Film grain and vignette", Kehai.Look.ScreenExtras.FilmLook);
+        if (filmLook != Kehai.Look.ScreenExtras.FilmLook) Kehai.Look.ScreenExtras.FilmLook = filmLook;
+        bool fps = Switch("Show FPS", Kehai.Look.ScreenExtras.ShowFps);
+        if (fps != Kehai.Look.ScreenExtras.ShowFps) Kehai.Look.ScreenExtras.ShowFps = fps;
         if (Application.isEditor) GUILayout.Label("Resolution and full screen change in the built game.", dim);
 
         Heading("MOUSE");

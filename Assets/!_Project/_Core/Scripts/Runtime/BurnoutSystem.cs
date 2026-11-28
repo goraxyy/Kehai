@@ -74,7 +74,11 @@ public class BurnoutSystem : MonoBehaviour
 
     void Awake()
     {
-        if (globalVolume == null) globalVolume = FindAnyObjectByType<Volume>();
+        // The scene's own volume, never the film look's (Settings → Display): its vignette sits
+        // under the scene's, and fading it would do nothing.
+        if (globalVolume == null)
+            foreach (Volume v in FindObjectsByType<Volume>())
+                if (!Kehai.Look.ScreenExtras.IsFilmVolume(v)) { globalVolume = v; break; }
         shiftManager = FindAnyObjectByType<ShiftManager>();
         playerMotor = FindAnyObjectByType<PlayerMotor>();
 
