@@ -42,7 +42,23 @@ public static class ProductLook
     static readonly Dictionary<string, Look?> cache = new Dictionary<string, Look?>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetCache() => cache.Clear();
+    static void ResetCache() => SetVisualLayer(null);
+
+    // An art layer over the products' looks (28 November, the roadside art in the mini store):
+    // given a product and its own look, it gives the look to draw instead (another mesh and
+    // materials; the mass and the box stay the game's). `shelf` dresses each stock template the
+    // ShelfDrawer makes. Null puts the game's own looks back.
+    static System.Func<string, Look, Look> visualLayer;
+    static System.Action<MeshRenderer> shelfPresentation;
+
+    public static void SetVisualLayer(System.Func<string, Look, Look> layer, System.Action<MeshRenderer> shelf = null)
+    {
+        visualLayer = layer;
+        shelfPresentation = shelf;
+        cache.Clear();
+    }
+
+    public static void DressShelfRenderer(MeshRenderer renderer) => shelfPresentation?.Invoke(renderer);
 
     // The product's prefab, or null when it hasn't been imported.
     public static GameObject Prefab(string productId) =>
@@ -63,6 +79,7 @@ public static class ProductLook
             if (filter != null && filter.sharedMesh != null && renderer != null)
                 look = new Look(filter.sharedMesh, renderer.sharedMaterials, body != null ? body.mass : 0.3f);
         }
+        if (look.HasValue && visualLayer != null) look = visualLayer(productId, look.Value);
         cache[productId] = look;
         return look;
     }

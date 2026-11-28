@@ -317,6 +317,7 @@ public class ShelfDrawer : MonoBehaviour
         r.reflectionProbeUsage = like != null ? like.reflectionProbeUsage : ReflectionProbeUsage.Off;
         r.motionVectorGenerationMode = like != null ? like.motionVectorGenerationMode : MotionVectorGenerationMode.ForceNoMotion;
         r.renderingLayerMask = key.mask;
+        ProductLook.DressShelfRenderer(r);   // an art layer's say (ProductLook.SetVisualLayer)
         templates[key] = template;
         return template;
     }

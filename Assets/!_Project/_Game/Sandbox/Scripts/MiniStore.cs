@@ -238,6 +238,9 @@ namespace Kehai.Sandbox
             Physics.SyncTransforms();
             Bake(root);
             StoreMap.Rebuild();
+            // Art imported over the mini store (MiniStoreRoadside), if there is any: after the bake,
+            // so it never changes her map.
+            if (MiniStoreRoadside.Attach(root)) report.Add("roadside art attached");
             report.Add($"her map: {StoreMap.Current.CellCount} cells, rooms {string.Join(", ", StoreMap.Current.Rooms)}; " +
                        $"{root.GetComponentsInChildren<HingeDoor>(true).Length} hinged doors");
 
@@ -597,6 +600,7 @@ namespace Kehai.Sandbox
                         light.shadows = LightShadows.None;
                     }
             }
+            MiniStoreRoadside.LightCanopy(lights);   // the art's canopy lamps, on the store's breakers
             Kehai.Karen.LightProbe.Refresh();
         }
 
@@ -686,6 +690,7 @@ namespace Kehai.Sandbox
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true)) t.gameObject.isStatic = false;
             if (keepInside) KeepInside(copy);
             copy.transform.SetParent(parent, true);   // wakes here
+            MiniStoreRoadside.Record(parent, name, at, copy.transform);   // which fixture art may dress
             return copy;
         }
 
