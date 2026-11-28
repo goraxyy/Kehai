@@ -25,6 +25,19 @@ public sealed class MiniStoreTests
     }
 
     [Test]
+    public void TheThirdBin_MovesOutOfTheDoorway_TheArtsBinsOnlyWithTheArt()
+    {
+        Assert.AreEqual(2.03f, MiniStore.LobbyShift("Lobby_Furnished_Recycling_03", false), 1e-4f);
+        Assert.AreEqual(0f, MiniStore.LobbyShift("Lobby_Furnished_Recycling_01", false));
+        Assert.AreEqual(-2.28f, MiniStore.LobbyShift("Lobby_Furnished_Recycling_01", true), 1e-4f);
+        Assert.AreEqual(1.46f, MiniStore.LobbyShift("Lobby_Furnished_Recycling_02", true), 1e-4f);
+        Assert.AreEqual(0f, MiniStore.LobbyShift("Counter_Facing_01", true));
+        Assert.AreEqual("Bay_-40_25", MiniStoreRoadside.KeyFor("Tall shelf", new Vector3(-4f, 0f, 2.5f)));
+        Assert.AreEqual("Checkout_Art", MiniStoreRoadside.KeyFor("Checkout_03", Vector3.zero));
+        Assert.IsNull(MiniStoreRoadside.KeyFor("Lobby_Furnished_Recycling_01", Vector3.zero));
+    }
+
+    [Test]
     public void ADoorway_IsFilledUpToItsDoor()
     {
         // A 3 m automatic pair in a 3.2 m doorway: 10 cm of jamb each side.

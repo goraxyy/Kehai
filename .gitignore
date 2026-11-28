@@ -12,6 +12,9 @@
 /Assets/KehaiGeneratedTraining.meta
 /Assets/KehaiDevLayers/
 /Assets/KehaiDevLayers.meta
+# The roadside art: private, never in this repository (MiniStoreRoadside reads it if it's there)
+/Assets/KehaiRoadsideArt/
+/Assets/KehaiRoadsideArt.meta
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 *.log

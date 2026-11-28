@@ -238,6 +238,9 @@ namespace Kehai.Sandbox
             Physics.SyncTransforms();
             Bake(root);
             StoreMap.Rebuild();
+            // Art imported over the mini store (MiniStoreRoadside), if there is any: after the bake,
+            // so it never changes her map.
+            if (MiniStoreRoadside.Attach(root)) report.Add("roadside art attached");
             report.Add($"her map: {StoreMap.Current.CellCount} cells, rooms {string.Join(", ", StoreMap.Current.Rooms)}; " +
                        $"{root.GetComponentsInChildren<HingeDoor>(true).Length} hinged doors");
 
@@ -430,8 +433,22 @@ namespace Kehai.Sandbox
                 GameObject original = Find(name);
                 if (original == null) { report.Add($"MISSING furniture {name}"); continue; }
                 Vector3 at = HalfLocal(store ?? Footprint(original).center);
+                at.x += LobbyShift(name, MiniStoreRoadside.HasArt);
                 Place(group, original, at, turn, name, report);
             }
+        }
+
+        // Along the lobby, in metres, before the bake (28 November). Halving the store's spots put
+        // the third recycling bin 11 cm off the front wall inside automatic doors 3 and 4's width
+        // (the doorways keep their real width); it moves clear. The roadside art's lobby has its
+        // own places for the first two (Codex's measures), so they move only when it's there.
+        public static float LobbyShift(string name, bool art)
+        {
+            if (name == "Lobby_Furnished_Recycling_03") return 2.03f;
+            if (!art) return 0f;
+            if (name == "Lobby_Furnished_Recycling_01") return -2.28f;
+            if (name == "Lobby_Furnished_Recycling_02") return 1.46f;
+            return 0f;
         }
 
         // The sales floor here is 30 × 27.5 m: three runs of the store's tall and short bays with
@@ -597,6 +614,7 @@ namespace Kehai.Sandbox
                         light.shadows = LightShadows.None;
                     }
             }
+            MiniStoreRoadside.LightCanopy(lights);   // the art's canopy lamps, on the store's breakers
             Kehai.Karen.LightProbe.Refresh();
         }
 
@@ -686,6 +704,7 @@ namespace Kehai.Sandbox
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true)) t.gameObject.isStatic = false;
             if (keepInside) KeepInside(copy);
             copy.transform.SetParent(parent, true);   // wakes here
+            MiniStoreRoadside.Record(parent, name, at, copy.transform);   // which fixture art may dress
             return copy;
         }
 

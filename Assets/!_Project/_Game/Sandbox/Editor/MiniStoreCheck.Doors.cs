@@ -35,6 +35,28 @@ public static partial class MiniStoreCheck
         }
         Expect(edges > 0 && open == 0, $"every door fills its doorway: wall at each side and over the top ({edges - open} of {edges})");
 
+        // Approaches: nothing solid stands in front of an automatic door, within its width and
+        // from 0.2 to 1.3 m out, on either side (people walking through aside).
+        int approaches = 0, blocked = 0;
+        foreach (AutoDoubleDoor auto in root.GetComponentsInChildren<AutoDoubleDoor>())
+        {
+            Transform t = auto.transform;
+            foreach (float side in new[] { 1f, -1f })
+            {
+                approaches++;
+                Vector3 centre = t.position + t.forward * side * 0.75f + Vector3.up * 0.8f;
+                foreach (Collider c in Physics.OverlapBox(centre, new Vector3(1.4f, 0.6f, 0.55f), t.rotation, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (c.transform.IsChildOf(t) || c.GetComponentInParent<CharacterController>() != null ||
+                        c.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null || KarenBody.IsHers(c)) continue;
+                    blocked++;
+                    Debug.Log($"MiniStoreCheck: {c.name} stands in front of {auto.name} (side {side})");
+                    break;
+                }
+            }
+        }
+        Expect(approaches > 0 && blocked == 0, $"nothing stands in front of an automatic door ({approaches - blocked} of {approaches} approaches clear)");
+
         // Swings: from each side the leaf moves away from you; a second E mid-swing turns it round.
         int doorsTried = 0, away = 0, turned = 0;
         foreach (HingeDoor door in root.GetComponentsInChildren<HingeDoor>())

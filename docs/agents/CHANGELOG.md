@@ -1,5 +1,11 @@
 # Changelog
 
+- **2026-11-28 — 0.5.2 branch, not released.** Codex's roadside art, taken into the game (the owner: "do the fixes yourself").
+  - **The art's game side is the game's own code now:** the mini store attaches the art if it's in the project (`MiniStoreRoadside`), product looks can be swapped by an art layer (`ProductLook.SetVisualLayer`), and `Kehai → Art → Import roadside exchange` turns the Blender exporter's output into the art. No installer patches scripts any more. The art itself stays private (`Assets/KehaiRoadsideArt`, ignored by git).
+  - **No build carries the art:** it is read from its folder by path, never from a Resources folder (one ships in every edition). An older package is moved out of Resources by itself when the editor opens, and its materials move to the game's copy of the shader.
+  - **The art fogs** like the rest of the store (the replays turn fog on).
+  - **The third lobby recycling bin moves out of automatic doors 3 and 4.** Halving the store's spots had put it 11 cm off the wall, inside the doorway's width. The art's lobby moves the other two bins as well, only when the art is there. A new check: nothing stands in front of an automatic door.
+
 - **2026-11-28 — 0.5.2 branch, not released.** The owner's look and door fixes, from trying Codex's roadside art in the mini store.
   - **No light round the mini store's doors.** Each doorway was cut 5 to 10 cm wider than its door each side, and 10 cm taller; a frame of wall now fills it up to the door.
   - **The mini store's doors open away from you, from either side,** as the store's do. The staff door only ever opened one way: the PA microphone's empty table stood in its swing (the microphone moves to the kitchen counter, and now the table goes too).

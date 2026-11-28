@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-28 | Codex's art problems are fixed by Claude, not sent back to Codex: the art's game-side code becomes the game's own; the art stays private | [CHANGELOG](../agents/CHANGELOG.md) |
 | 2026-11-28 | Picture quality is fine as it is. Anti-aliasing goes on; the film look (grain and vignette) and an FPS counter get switches in Settings; shelf stock stands a little off true | [CHANGELOG](../agents/CHANGELOG.md) |
 | 2026-11-26 | Karen plays with the fitted senses, S1 (sharper: she trusts a sighting, a noise or a tip more), after a check that its numbers hold together; refit after the recorded test pass | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november) |
 | 2026-11-26 | After she catches you, an ablation career moves on to the next shift (it no longer stops at the first catch, where the replayed shift wasn't recorded) | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#karen-052-the-batch-slowdown-found-and-fixed-26-november) |
