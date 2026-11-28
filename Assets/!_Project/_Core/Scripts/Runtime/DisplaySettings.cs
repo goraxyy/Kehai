@@ -88,8 +88,9 @@ public static class DisplaySettings
     // Again when the window or screen size changes (ScreenExtras asks each frame; cheap).
     public static void Refresh()
     {
-        if (Application.isBatchMode || asset == null) return;
-        if (appliedFor.x != Screen.width || appliedFor.y != Screen.height) Apply();
+        if (Application.isBatchMode) return;
+        // The pipeline may not have existed yet when quality was first set, before the first scene.
+        if (asset == null || appliedFor.x != Screen.width || appliedFor.y != Screen.height) Apply();
     }
 
 #if UNITY_EDITOR

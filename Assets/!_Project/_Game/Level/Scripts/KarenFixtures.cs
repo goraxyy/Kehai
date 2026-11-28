@@ -325,7 +325,7 @@ public static class KarenFixtures
 
     static void AddTrim(HingeDoor door)
     {
-        BoxCollider panel = door.Panel;
+        BoxCollider panel = door.Panel != null ? door.Panel : door.FindPanel();   // this runs before the door's Start
         var leaf = panel != null ? panel.GetComponent<MeshRenderer>() : null;
         if (leaf == null) return;
         // The leaf's frame: x along it, y up, z through it (its scale is thickness, height, width
