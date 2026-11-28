@@ -77,6 +77,7 @@ namespace Kehai.Look
         static void BeforeCamera(ScriptableRenderContext context, Camera camera)
         {
             if (camera.cameraType != CameraType.Game || camera != Camera.main) return;
+            DisplaySettings.Refresh();   // the window or screen changed size: the pixel cap follows
             if (!camera.TryGetComponent(out UniversalAdditionalCameraData data)) return;
             AntialiasingMode mode = AntialiasingFor(DisplaySettings.Current);
             if (data.antialiasing != mode) data.antialiasing = mode;

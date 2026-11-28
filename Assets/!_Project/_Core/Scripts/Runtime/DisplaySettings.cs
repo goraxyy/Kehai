@@ -26,6 +26,8 @@ public static class DisplaySettings
     static UniversalRenderPipelineAsset asset;
     static float renderScale;
     static int msaa, sunShadow;
+    static UpscalingFilterSelection upscaling;
+    static Vector2Int appliedFor;
 
     public static Quality Current { get; private set; } = Quality.High;
 
@@ -58,12 +60,36 @@ public static class DisplaySettings
             renderScale = asset.renderScale;
             msaa = asset.msaaSampleCount;
             sunShadow = asset.mainLightShadowmapResolution;
+            upscaling = asset.upscalingFilter;
         }
 
         bool low = Current == Quality.Low, high = Current == Quality.High;
-        asset.renderScale = high ? renderScale : renderScale * (low ? 0.7f : 0.85f);
+        float scale = renderScale * Mathf.Min(high ? 1f : low ? 0.7f : 0.85f, PixelCapScale(Screen.width, Screen.height, Current));
+        appliedFor = new Vector2Int(Screen.width, Screen.height);
+        asset.renderScale = scale;
+        // Drawn smaller than the screen: AMD's FSR scales it up sharper than plain stretching.
+        asset.upscalingFilter = scale < 0.99f ? UpscalingFilterSelection.FSR : upscaling;
         asset.msaaSampleCount = high ? msaa : low ? 1 : Mathf.Min(msaa, 2);
         asset.mainLightShadowmapResolution = high ? sunShadow : Mathf.Min(sunShadow, low ? 1024 : 2048);
+    }
+
+    // The most pixels each quality draws a frame (28 November). A Retina screen (2880 × 1688 on
+    // the owner's Mac) is 2.3 times a 1080p one, and the frame's GPU time grows with it; past
+    // these the game draws fewer pixels and scales up, so High looks like a sharp 1440p and holds
+    // its frame rate. 1 when the screen is smaller.
+    public static readonly float[] MaxPixels = { 1.3e6f, 1.9e6f, 2.6e6f };   // Low, Medium, High
+
+    public static float PixelCapScale(int width, int height, Quality quality)
+    {
+        float pixels = Mathf.Max(1f, (float)width * height);
+        return Mathf.Min(1f, Mathf.Sqrt(MaxPixels[(int)quality] / pixels));
+    }
+
+    // Again when the window or screen size changes (ScreenExtras asks each frame; cheap).
+    public static void Refresh()
+    {
+        if (Application.isBatchMode || asset == null) return;
+        if (appliedFor.x != Screen.width || appliedFor.y != Screen.height) Apply();
     }
 
 #if UNITY_EDITOR
@@ -74,6 +100,7 @@ public static class DisplaySettings
         asset.renderScale = renderScale;
         asset.msaaSampleCount = msaa;
         asset.mainLightShadowmapResolution = sunShadow;
+        asset.upscalingFilter = upscaling;
         asset = null;
     }
 #endif

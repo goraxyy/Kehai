@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Kehai.Karen;
 using UnityEngine;
@@ -46,6 +47,7 @@ public static class KarenFixtures
         StoreCameras.Install(outline);
         PhaseOneFixtures.Install(outline);
         TwoWayDoors();
+        DoorTrims();
         FogVisuals.Ensure();
         WallClockHands.Ensure();
         TimeClockDisplay.Ensure();   // the time clock shows the time; the wall clock above it goes (25 November)
@@ -292,6 +294,80 @@ public static class KarenFixtures
     {
         foreach (HingeDoor door in Object.FindObjectsByType<HingeDoor>())
             if (door != null) door.fixedSwingDirection = false;
+    }
+
+    // The store's hinged doors are a 1.84 m leaf in a 2 m opening (the model's own 2 m panel is
+    // switched off), so light showed down both sides and over the top (28 November). A trim of the
+    // leaf's own finish fills the gap: a strip each side and one over the top, fixed beside the
+    // leaf (not on it, so it doesn't swing), visual only (no collider: nothing about who can pass
+    // or see changes). The mini store's copies get wall frames instead (MiniStore.FillDoorways).
+    public const string TrimName = "Door trim";
+
+    static void DoorTrims()
+    {
+        foreach (HingeDoor door in Object.FindObjectsByType<HingeDoor>())
+            if (door != null && !door.name.StartsWith("Mini ") && door.transform.parent != null && door.transform.parent.Find(door.name + " " + TrimName) == null)
+                AddTrim(door);
+    }
+
+    // The pieces between a shut leaf and its door's whole opening, along the leaf (x) and up (y),
+    // in the leaf's own frame: {centre, size} pairs. Empty when the leaf fills the opening.
+    public static List<(Vector2 centre, Vector2 size)> TrimPieces(float leafHalf, float leafBottom, float leafTop, float openMin, float openMax, float openTop)
+    {
+        var pieces = new List<(Vector2, Vector2)>();
+        const float Sliver = 0.005f;
+        float top = Mathf.Max(leafTop, openTop);
+        if (-leafHalf - openMin > Sliver) pieces.Add((new Vector2((openMin - leafHalf) * 0.5f, (leafBottom + top) * 0.5f), new Vector2(-leafHalf - openMin, top - leafBottom)));
+        if (openMax - leafHalf > Sliver) pieces.Add((new Vector2((openMax + leafHalf) * 0.5f, (leafBottom + top) * 0.5f), new Vector2(openMax - leafHalf, top - leafBottom)));
+        if (openTop - leafTop > Sliver) pieces.Add((new Vector2((openMin + openMax) * 0.5f, (leafTop + openTop) * 0.5f), new Vector2(openMax - openMin, openTop - leafTop)));
+        return pieces;
+    }
+
+    static void AddTrim(HingeDoor door)
+    {
+        BoxCollider panel = door.Panel;
+        var leaf = panel != null ? panel.GetComponent<MeshRenderer>() : null;
+        if (leaf == null) return;
+        // The leaf's frame: x along it, y up, z through it (its scale is thickness, height, width
+        // on these models, so measure by axis, not by name).
+        Transform t = panel.transform;
+        Vector3 along = t.forward, up = Vector3.up;
+        Vector3 c = panel.bounds.center;
+        float half = HalfAlong(panel.bounds, along);
+        float bottom = panel.bounds.min.y - c.y, top = panel.bounds.max.y - c.y;
+        // The whole opening: every mesh of the door, drawn or not (the switched-off panel).
+        bool any = false; float oMin = 0f, oMax = 0f, oTop = top;
+        foreach (MeshFilter f in door.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (f.sharedMesh == null) continue;
+            Bounds mb = f.sharedMesh.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = f.transform.TransformPoint(mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1)));
+                float a = Vector3.Dot(corner - c, along), h = corner.y - c.y;
+                if (!any) { oMin = oMax = a; any = true; }
+                oMin = Mathf.Min(oMin, a); oMax = Mathf.Max(oMax, a); oTop = Mathf.Max(oTop, h);
+            }
+        }
+        if (!any) return;
+        // A little thicker than the leaf, so it reads as a frame round it.
+        float depth = Mathf.Clamp(HalfAlong(panel.bounds, Vector3.Cross(up, along)) * 2f + 0.02f, 0.04f, 0.12f);
+        foreach (var (pc, ps) in TrimPieces(half, bottom, top, oMin, oMax, oTop))
+        {
+            GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            piece.name = door.name + " " + TrimName;
+            Object.Destroy(piece.GetComponent<Collider>());
+            piece.transform.SetPositionAndRotation(c + along * pc.x + up * pc.y, Quaternion.LookRotation(along, up));
+            piece.transform.localScale = new Vector3(depth, ps.y, ps.x);   // sized in the world, then parented
+            piece.transform.SetParent(door.transform.parent, true);
+            piece.GetComponent<MeshRenderer>().sharedMaterial = leaf.sharedMaterial;
+        }
+    }
+
+    static float HalfAlong(Bounds b, Vector3 along)
+    {
+        Vector3 e = b.extents, a = along.normalized;
+        return Mathf.Abs(e.x * a.x) + Mathf.Abs(e.y * a.y) + Mathf.Abs(e.z * a.z);
     }
 
     // ---- where things go ---------------------------------------------------------------------

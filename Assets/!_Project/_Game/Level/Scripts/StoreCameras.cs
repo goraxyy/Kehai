@@ -4,6 +4,7 @@ using Kehai.Karen;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 // The store's own cameras (0.4.1), put in at load as data, like the rest of KarenFixtures,
 // since scenes aren't in git.
@@ -292,18 +293,44 @@ public sealed class StoreCameras : MonoBehaviour
     {
         if (Wall == null || !CanDraw || Time.unscaledTime < nextFeedAt || cameras.Count == 0) return;
         Camera view = Camera.main;
-        // In a sandbox (the mini store) the feeds are always live and smooth: every feed every
-        // frame, wherever you are (the owner's call of 25 November).
+        // Only while the screens are in view: six extra views of the store, each as dear as the
+        // player's own, were most of the mini store's frame (47 of 73 ms, 28 November).
+        if (view == null || !WallInView(view)) return;
+        // In a sandbox (the mini store) the feeds stay live and smooth (the owner's call of 25
+        // November): two a frame in turn, each screen about 20 times a second at 60 frames.
         bool sandbox = StoreFrame.Active;
-        if (!sandbox && (view == null || (view.transform.position - Wall.transform.position).sqrMagnitude > FeedRange * FeedRange)) return;
+        if (!sandbox && (view.transform.position - Wall.transform.position).sqrMagnitude > FeedRange * FeedRange) return;
         if (sandbox)
         {
-            foreach (StoreCamera cam in cameras) if (cam != null) cam.RenderFeed();
+            for (int i = 0; i < SandboxFeedsAFrame; i++)
+            {
+                nextFeed = (nextFeed + 1) % cameras.Count;
+                if (cameras[nextFeed] != null) cameras[nextFeed].RenderFeed();
+            }
             return;
         }
         nextFeedAt = Time.unscaledTime + FeedInterval;
         nextFeed = (nextFeed + 1) % cameras.Count;
         if (cameras[nextFeed] != null) cameras[nextFeed].RenderFeed();
+    }
+
+    public const int SandboxFeedsAFrame = 2;
+
+    // Whether any of the screens' wall is inside the view's frustum (walls between don't count:
+    // a frustum test is cheap, and the store-side range test covers the rest).
+    Bounds wallBounds;
+    Vector3 wallBoundsAt;
+    bool wallBoundsKnown;
+    bool WallInView(Camera view)
+    {
+        if (!wallBoundsKnown || Wall.transform.position != wallBoundsAt)
+        {
+            wallBoundsKnown = true;
+            wallBoundsAt = Wall.transform.position;
+            wallBounds = new Bounds(Wall.transform.position, Vector3.one);
+            foreach (Renderer r in Wall.GetComponentsInChildren<Renderer>()) wallBounds.Encapsulate(r.bounds);
+        }
+        return GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(view), wallBounds);
     }
 
     // Every feed now: for a screenshot, or the first look at the wall.
@@ -399,6 +426,11 @@ public sealed class StoreCamera : MonoBehaviour
         cam.Feed.allowMSAA = false;
         cam.Feed.clearFlags = CameraClearFlags.SolidColor;
         cam.Feed.backgroundColor = new Color(0.02f, 0.02f, 0.03f);
+        // A small grey security picture: no shadows, no post-processing, no smoothing (28 November).
+        var feedData = cam.Feed.GetUniversalAdditionalCameraData();
+        feedData.renderShadows = false;
+        feedData.renderPostProcessing = false;
+        feedData.antialiasing = UnityEngine.Rendering.Universal.AntialiasingMode.None;
 
         var ledGo = new GameObject("Led");
         ledGo.transform.SetParent(root.transform, false);
