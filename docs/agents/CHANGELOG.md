@@ -1,5 +1,10 @@
 # Changelog
 
+- **2026-11-28 — 0.5.2 branch, not released.** Frame rate and the back-room doors.
+  - **The mini store ran at about 10 frames a second; most of it was the security cameras.** All six feeds re-drew the whole store every frame wherever you stood (47 of 73 ms). They now draw only while the office screens are in view, two a frame in turn (each screen about 20 times a second at 60 fps), without shadows or post-processing. The store side keeps its rule (near the screens, one feed at a time) and gains the same in-view test. Measured in the editor: the main thread went from about 80 ms to about 15–20 ms.
+  - **Big screens draw fewer pixels and scale up with FSR.** A Retina Mac's 2880 × 1688 is 2.3 times 1080p, and the frame's GPU time grows with it. High now draws at most 2.6 million pixels (about 1440p), Medium 1.9 and Low 1.3; smaller screens are unchanged.
+  - **No light down the sides of the stockroom and cold room doors.** Those doors are a 1.84 m leaf in a 2 m opening (the model's 2 m panel is switched off). The mini store's frames now fit the visible leaf, and the store gets a trim of the leaf's own finish round each such leaf (visual only).
+
 - **2026-11-28 — 0.5.2 branch, not released.** Codex's roadside art, taken into the game (the owner: "do the fixes yourself").
   - **The art's game side is the game's own code now:** the mini store attaches the art if it's in the project (`MiniStoreRoadside`), product looks can be swapped by an art layer (`ProductLook.SetVisualLayer`), and `Kehai → Art → Import roadside exchange` turns the Blender exporter's output into the art. No installer patches scripts any more. The art itself stays private (`Assets/KehaiRoadsideArt`, ignored by git).
   - **No build carries the art:** it is read from its folder by path, never from a Resources folder (one ships in every edition). An older package is moved out of Resources by itself when the editor opens, and its materials move to the game's copy of the shader.

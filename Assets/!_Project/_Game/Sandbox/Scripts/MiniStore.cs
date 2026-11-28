@@ -335,7 +335,7 @@ namespace Kehai.Sandbox
             int pieces = 0;
             foreach (Transform door in doors)
             {
-                Bounds b = Footprint(door.gameObject);
+                Bounds b = VisibleFootprint(door.gameObject);
                 if (b.size == Vector3.zero) continue;
                 Vector3 c = Local(b.center), lo = Local(b.min), hi = Local(b.max);
                 foreach (var (alongX, line, centre, width) in doorways)
@@ -795,6 +795,21 @@ namespace Kehai.Sandbox
             if (renderers.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
             Bounds b = renderers[0].bounds;
             foreach (Renderer r in renderers) b.Encapsulate(r.bounds);
+            return b;
+        }
+
+        // What of it you can see: drawn renderers only. The store's hinged doors carry a 2 m panel
+        // the store switches off, round a 1.84 m leaf; a frame fitted to the panel left 8 cm of
+        // light each side of the leaf (28 November).
+        public static Bounds VisibleFootprint(GameObject go)
+        {
+            bool any = false;
+            Bounds b = new Bounds(go.transform.position, Vector3.zero);
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled) continue;
+                if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+            }
             return b;
         }
 

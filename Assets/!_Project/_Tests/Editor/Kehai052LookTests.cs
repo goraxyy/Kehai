@@ -26,6 +26,29 @@ public sealed class Kehai052LookTests
     }
 
     [Test]
+    public void ARetinaScreen_IsDrawnSmallerAndScaledUp_ASmallOneIsnt()
+    {
+        // 2880 x 1688 on High: drawn at about 1440p's pixel count.
+        float s = DisplaySettings.PixelCapScale(2880, 1688, DisplaySettings.Quality.High);
+        Assert.That(2880f * 1688f * s * s, Is.EqualTo(DisplaySettings.MaxPixels[2]).Within(1e3f));
+        Assert.AreEqual(1f, DisplaySettings.PixelCapScale(1920, 1080, DisplaySettings.Quality.High));
+        Assert.Less(DisplaySettings.PixelCapScale(1920, 1080, DisplaySettings.Quality.Low), 1f);
+    }
+
+    [Test]
+    public void AStoreDoor_GetsTrimRoundItsLeaf_UpToItsOpening()
+    {
+        // A 1.84 m leaf (0.03 to 2.43 m) in a 2 m opening 2.5 m tall: a strip each side, one on top.
+        var pieces = KarenFixtures.TrimPieces(0.92f, -1.2f, 1.2f, -1f, 1f, 1.27f);
+        Assert.AreEqual(3, pieces.Count);
+        Assert.That(pieces[0].size.x, Is.EqualTo(0.08f).Within(1e-4f));
+        Assert.That(pieces[0].centre.x, Is.EqualTo(-0.96f).Within(1e-4f));
+        Assert.That(pieces[1].centre.x, Is.EqualTo(0.96f).Within(1e-4f));
+        Assert.That(pieces[2].size.y, Is.EqualTo(0.07f).Within(1e-4f));
+        Assert.AreEqual(0, KarenFixtures.TrimPieces(1f, -1f, 1f, -1f, 1f, 1f).Count, "a leaf that fills its opening: nothing");
+    }
+
+    [Test]
     public void Stock_StandsALittleOffTrue_TheSameEveryTime()
     {
         var yaws = new HashSet<int>();

@@ -19,7 +19,7 @@ public static partial class MiniStoreCheck
         int edges = 0, open = 0;
         foreach (Transform door in doors)
         {
-            Bounds b = MiniStore.Footprint(door.gameObject);
+            Bounds b = MiniStore.VisibleFootprint(door.gameObject);
             if (b.size == Vector3.zero) continue;
             Vector3 along = b.size.x >= b.size.z ? Vector3.right : Vector3.forward;
             float half = Vector3.Dot(b.extents, along);
