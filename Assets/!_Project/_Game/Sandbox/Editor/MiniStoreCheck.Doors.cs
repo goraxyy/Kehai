@@ -48,8 +48,11 @@ public static partial class MiniStoreCheck
             {
                 Vector3 from = c + normal * side * 0.8f;
                 from.y = c.y;
+                Quaternion shut = door.transform.rotation;
                 door.Use(from, NoiseAuthor.Player);
-                yield return Wait(0.25f);
+                // The second E goes in once the leaf is 15° on its way: some doors swing fully
+                // open in a quarter of a second.
+                for (float t = 0f; t < 1f && Quaternion.Angle(shut, door.transform.rotation) < 15f; t += Time.deltaTime) yield return null;
                 Physics.SyncTransforms();
                 float along = Vector3.Dot(door.Panel.bounds.center - c, normal * side);
                 if (along >= -0.02f) { bothAway = false; Debug.Log($"MiniStoreCheck: {door.name} opened toward you from side {side} ({along:0.00} m)"); }
