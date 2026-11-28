@@ -180,13 +180,15 @@ public class DoorBlockTests
         var block=Block();
         try
         {
+            // The screen outline (28 November): both are shown, each tracing its own meshes.
+            var slotOutline=block.GetComponent<OutlineHighlight>();
             block.OnHoverEnter();
-            var boxShell=stock.transform.Find("__Outline");
-            var slotShell=block.transform.Find("__Outline");
-            Assert.IsNotNull(boxShell); Assert.IsNotNull(slotShell);
-            Assert.IsTrue(boxShell.gameObject.activeSelf); Assert.IsTrue(slotShell.gameObject.activeSelf);
+            Assert.IsTrue(outline.Showing); Assert.IsNotNull(slotOutline); Assert.IsTrue(slotOutline.Showing);
+            Assert.IsTrue(HighlightOutlines.IsShown(outline)); Assert.IsTrue(HighlightOutlines.IsShown(slotOutline));
+            CollectionAssert.Contains(outline.Targets, mesh.GetComponent<MeshRenderer>());
             block.OnHoverExit();
-            Assert.IsFalse(boxShell.gameObject.activeSelf); Assert.IsFalse(slotShell.gameObject.activeSelf);
+            Assert.IsFalse(outline.Showing); Assert.IsFalse(slotOutline.Showing);
+            Assert.IsFalse(HighlightOutlines.IsShown(outline)); Assert.IsFalse(HighlightOutlines.IsShown(slotOutline));
         }
         finally { Object.DestroyImmediate(material); }
     }
