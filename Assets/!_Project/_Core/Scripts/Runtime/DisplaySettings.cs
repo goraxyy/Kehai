@@ -28,6 +28,7 @@ public static class DisplaySettings
     static int msaa, sunShadow;
     static UpscalingFilterSelection upscaling;
     static Vector2Int appliedFor;
+    static float appliedScale = -1f;
 
     public static Quality Current { get; private set; } = Quality.High;
 
@@ -67,6 +68,7 @@ public static class DisplaySettings
         float scale = renderScale * Mathf.Min(high ? 1f : low ? 0.7f : 0.85f, PixelCapScale(Screen.width, Screen.height, Current));
         appliedFor = new Vector2Int(Screen.width, Screen.height);
         asset.renderScale = scale;
+        appliedScale = scale;
         // Drawn smaller than the screen: AMD's FSR scales it up sharper than plain stretching.
         asset.upscalingFilter = scale < 0.99f ? UpscalingFilterSelection.FSR : upscaling;
         asset.msaaSampleCount = high ? msaa : low ? 1 : Mathf.Min(msaa, 2);
@@ -90,7 +92,10 @@ public static class DisplaySettings
     {
         if (Application.isBatchMode) return;
         // The pipeline may not have existed yet when quality was first set, before the first scene.
-        if (asset == null || appliedFor.x != Screen.width || appliedFor.y != Screen.height) Apply();
+        // And when something else (entering Play in the editor, a scene's load) put the asset's own
+        // scale back.
+        if (asset == null || appliedFor.x != Screen.width || appliedFor.y != Screen.height ||
+            !Mathf.Approximately(asset.renderScale, appliedScale)) Apply();
     }
 
 #if UNITY_EDITOR
