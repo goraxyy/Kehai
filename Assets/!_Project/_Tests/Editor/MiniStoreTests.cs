@@ -25,6 +25,24 @@ public sealed class MiniStoreTests
     }
 
     [Test]
+    public void ADoorway_IsFilledUpToItsDoor()
+    {
+        // A 3 m automatic pair in a 3.2 m doorway: 10 cm of jamb each side.
+        List<Vector2> jambs = MiniStore.Jambs(0f, 3.2f, -1.5f, 1.5f);
+        Assert.AreEqual(2, jambs.Count);
+        Assert.That(jambs[0].x, Is.EqualTo(-1.6f).Within(0.001f));
+        Assert.That(jambs[0].y, Is.EqualTo(-1.5f).Within(0.001f));
+        Assert.That(jambs[1].x, Is.EqualTo(1.5f).Within(0.001f));
+        Assert.That(jambs[1].y, Is.EqualTo(1.6f).Within(0.001f));
+        // Off-centre: the whole leftover on one side.
+        jambs = MiniStore.Jambs(0f, 1.7f, -0.85f, 0.65f);
+        Assert.AreEqual(1, jambs.Count);
+        Assert.That(jambs[0].x, Is.EqualTo(0.65f).Within(0.001f));
+        // A door as wide as its doorway, or wider: nothing.
+        Assert.AreEqual(0, MiniStore.Jambs(0f, 2f, -1.002f, 1.1f).Count);
+    }
+
+    [Test]
     public void ItsRooms_ReadAsTheStoresRooms()
     {
         StoreFrame.Use(MiniStore.ToStore);
