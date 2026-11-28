@@ -9,7 +9,7 @@ using UnityEngine;
 // used mid-swing.
 public static partial class MiniStoreCheck
 {
-    static IEnumerator Doorways()
+    public static IEnumerator Doorways()
     {
         GameObject root = MiniStore.Root;
         Transform doors = root != null ? root.transform.Find("Doors") : null;
@@ -50,13 +50,15 @@ public static partial class MiniStoreCheck
                 from.y = c.y;
                 door.Use(from, NoiseAuthor.Player);
                 yield return Wait(0.25f);
-                Vector3 moved = door.Panel.bounds.center - c;
-                if (Vector3.Dot(moved, normal * side) >= -0.02f) bothAway = false;
+                Physics.SyncTransforms();
+                float along = Vector3.Dot(door.Panel.bounds.center - c, normal * side);
+                if (along >= -0.02f) { bothAway = false; Debug.Log($"MiniStoreCheck: {door.name} opened toward you from side {side} ({along:0.00} m)"); }
                 bool wasMoving = door.IsMoving;
                 door.Use(from, NoiseAuthor.Player);
-                for (float t = 0f; t < 4f && door.IsMoving; t += Time.deltaTime) yield return null;
+                for (float t = 0f; t < 6f && door.IsMoving; t += Time.deltaTime) yield return null;
                 if (wasMoving && !door.IsOpen) turned++;
-                if (door.IsOpen) { door.Use(from, NoiseAuthor.Player); for (float t = 0f; t < 4f && door.IsMoving; t += Time.deltaTime) yield return null; }
+                else Debug.Log($"MiniStoreCheck: {door.name} from side {side}: moving at the second E {wasMoving}, open after {door.IsOpen}");
+                if (door.IsOpen) { door.Use(from, NoiseAuthor.Player); for (float t = 0f; t < 6f && door.IsMoving; t += Time.deltaTime) yield return null; }
                 yield return Wait(0.1f);
             }
             if (bothAway) away++;

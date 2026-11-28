@@ -867,6 +867,10 @@ namespace Kehai.Sandbox
             foreach (Item i in FindObjectsByType<Item>()) if (i.type == ItemType.Flashlight && MiniStore.Contains(i.transform.position)) { torch = i; break; }
             if (mic == null || torch == null) return;
             mic.transform.position = torch.transform.position + new Vector3(0f, 0.05f, 0.4f);
+            // Its little table stays empty beside the time clock, in the staff door's swing: the
+            // door could only open one way (28 November). With the microphone moved, it goes.
+            GameObject table = GameObject.Find(KarenFixtures.MicTableName);
+            if (table != null && MiniStore.Contains(table.transform.position)) Destroy(table);
             Physics.SyncTransforms();
         }
 
