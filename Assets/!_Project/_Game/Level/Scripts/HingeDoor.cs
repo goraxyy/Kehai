@@ -337,7 +337,10 @@ public class HingeDoor : MonoBehaviour
         // runs this door's Update and PlayerInteract's in no fixed order.
         if (!Application.isPlaying || Time.frameCount != playerUseFrame) steppedSinceUse = true;
         if (!isMoving || GamePause.Paused) return;
-        transform.rotation = Quaternion.Lerp(transform.rotation, swingTarget, openSpeed * dt);
+        // The same ease at any frame rate (28 November): a slow frame used to step it openSpeed ×
+        // dt of the way, all of it from a third of a second, so a hitch swung the door wide in one
+        // frame and there was no swing left to stop with E.
+        transform.rotation = Quaternion.Lerp(transform.rotation, swingTarget, 1f - Mathf.Exp(-openSpeed * dt));
         if (Quaternion.Angle(transform.rotation, swingTarget) > 0.1f) return;
         transform.rotation = swingTarget;
         isMoving = false;

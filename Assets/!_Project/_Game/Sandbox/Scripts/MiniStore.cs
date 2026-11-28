@@ -221,6 +221,7 @@ namespace Kehai.Sandbox
 
             Shell(root.transform, models);
             CopyDoors(root.transform, report);
+            FillDoorways(root.transform, models, report);
             CopyFurniture(root.transform, report);
             SalesFloor(root.transform, models, report);
             ColdRoom(root.transform, models, report);
@@ -254,6 +255,7 @@ namespace Kehai.Sandbox
         static void Shell(Transform root, Models m)
         {
             Transform shell = Group(root, "Shell");
+            doorways.Clear();
             foreach (var (name, store, outdoors) in Rooms)
             {
                 Vector3 a = HalfLocal(new Vector3(store.xMin, 0f, store.yMin)), b = HalfLocal(new Vector3(store.xMax, 0f, store.yMax));
@@ -279,6 +281,7 @@ namespace Kehai.Sandbox
                     Vector3 g = HalfLocal(alongX ? new Vector3(gaps[i], 0f, a.y) : new Vector3(a.x, 0f, gaps[i]));
                     local[i] = alongX ? g.x : g.z;
                     local[i + 1] = gaps[i + 1];
+                    doorways.Add((alongX, alongX ? la.z : la.x, local[i], gaps[i + 1]));
                 }
                 if (alongX) WallX(shell, "Wall", la.z, Mathf.Min(la.x, lb.x), Mathf.Max(la.x, lb.x), m, local);
                 else WallZ(shell, "Wall", la.x, Mathf.Min(la.z, lb.z), Mathf.Max(la.z, lb.z), m, local);
@@ -294,7 +297,7 @@ namespace Kehai.Sandbox
                 Slab(parent, name + " plinth", new Vector3(mid, 0.4f, z), new Vector3(len, 0.8f, Wall + 0.04f), m.Plinth, collide: false);
             }
             for (int i = 0; i + 1 < gaps.Length; i += 2)
-                Slab(parent, name + " over the door", new Vector3(gaps[i], (WallHeight + 2.6f) * 0.5f, z), new Vector3(gaps[i + 1], WallHeight - 2.6f, Wall), m.Wall);
+                Slab(parent, name + " over the door", new Vector3(gaps[i], (WallHeight + LintelHeight) * 0.5f, z), new Vector3(gaps[i + 1], WallHeight - LintelHeight, Wall), m.Wall);
         }
 
         static void WallZ(Transform parent, string name, float x, float z0, float z1, Models m, float[] gaps)
@@ -306,7 +309,68 @@ namespace Kehai.Sandbox
                 Slab(parent, name + " plinth", new Vector3(x, 0.4f, mid), new Vector3(Wall + 0.04f, 0.8f, len), m.Plinth, collide: false);
             }
             for (int i = 0; i + 1 < gaps.Length; i += 2)
-                Slab(parent, name + " over the door", new Vector3(x, (WallHeight + 2.6f) * 0.5f, gaps[i]), new Vector3(Wall, WallHeight - 2.6f, gaps[i + 1]), m.Wall);
+                Slab(parent, name + " over the door", new Vector3(x, (WallHeight + LintelHeight) * 0.5f, gaps[i]), new Vector3(Wall, WallHeight - LintelHeight, gaps[i + 1]), m.Wall);
+        }
+
+        // Every doorway the walls leave, in the mini store's metres: the wall's line, and the
+        // doorway's middle and width along it.
+        static readonly List<(bool alongX, float line, float centre, float width)> doorways = new List<(bool, float, float, float)>();
+
+        // The lintel's underside: the walls' "over the door" pieces start here.
+        public const float LintelHeight = 2.6f;
+
+        // The doorways were cut wider than the doors copied into them (an automatic pair 3 m in a
+        // 3.2 m opening, a staff door 1.5 m in 1.7 m) and lower than the lintel, so light showed
+        // round every door (28 November). A frame of wall fills each doorway up to its door: a jamb
+        // each side and a header over it. Not part of the Shell, so art that replaces the walls
+        // keeps the frames.
+        static void FillDoorways(Transform root, Models m, List<string> report)
+        {
+            Transform frames = Group(root, "Door frames");
+            Transform doors = root.Find("Doors");
+            if (doors == null) return;
+            int pieces = 0;
+            foreach (Transform door in doors)
+            {
+                Bounds b = Footprint(door.gameObject);
+                if (b.size == Vector3.zero) continue;
+                Vector3 c = Local(b.center), lo = Local(b.min), hi = Local(b.max);
+                foreach (var (alongX, line, centre, width) in doorways)
+                {
+                    float across = alongX ? c.z : c.x, along = alongX ? c.x : c.z;
+                    if (Mathf.Abs(across - line) > 0.4f || Mathf.Abs(along - centre) > width * 0.5f) continue;
+                    float dMin = alongX ? lo.x : lo.z, dMax = alongX ? hi.x : hi.z;
+                    foreach (Vector2 piece in Jambs(centre, width, dMin, dMax))
+                    {
+                        float mid = (piece.x + piece.y) * 0.5f, len = piece.y - piece.x;
+                        Slab(frames, door.name + " jamb", alongX ? new Vector3(mid, LintelHeight * 0.5f, line) : new Vector3(line, LintelHeight * 0.5f, mid),
+                             alongX ? new Vector3(len, LintelHeight, Wall) : new Vector3(Wall, LintelHeight, len), m.Wall);
+                        pieces++;
+                    }
+                    float top = hi.y + 0.005f;
+                    if (top < LintelHeight - 0.005f)
+                    {
+                        float h = LintelHeight - top, y = top + h * 0.5f;
+                        Slab(frames, door.name + " header", alongX ? new Vector3(centre, y, line) : new Vector3(line, y, centre),
+                             alongX ? new Vector3(width, h, Wall) : new Vector3(Wall, h, width), m.Wall);
+                        pieces++;
+                    }
+                    break;
+                }
+            }
+            report.Add($"door frames: {pieces} pieces");
+        }
+
+        // The parts of a doorway (its middle and width along the wall) a door from doorMin to
+        // doorMax leaves open: a jamb each side. Slivers under 5 mm are left; a door wider than its
+        // doorway leaves nothing on that side.
+        public static List<Vector2> Jambs(float centre, float width, float doorMin, float doorMax)
+        {
+            var jambs = new List<Vector2>();
+            float g0 = centre - width * 0.5f, g1 = centre + width * 0.5f;
+            if (doorMin - g0 > 0.005f) jambs.Add(new Vector2(g0, Mathf.Min(doorMin, g1)));
+            if (g1 - doorMax > 0.005f) jambs.Add(new Vector2(Mathf.Max(doorMax, g0), g1));
+            return jambs;
         }
 
         // The solid stretches of a wall from a to b once its doorways are cut out.
@@ -337,7 +401,12 @@ namespace Kehai.Sandbox
                 GameObject original = Find(path);
                 if (original == null) { report.Add($"MISSING door {path}"); continue; }
                 Vector3 at = HalfLocal(store ?? Footprint(original).center);
-                Place(doors, original, at, 0f, Leaf(path), report, keepInside: false);
+                GameObject copy = Place(doors, original, at, 0f, Leaf(path), report, keepInside: false);
+                // Every door here opens both ways, away from whoever opens it, as the store's do
+                // (KarenFixtures.TwoWayDoors). The scene authors the staff doors one way, and a copy
+                // made before the store cleared the flag kept it (28 November).
+                if (copy != null)
+                    foreach (HingeDoor hinge in copy.GetComponentsInChildren<HingeDoor>(true)) hinge.fixedSwingDirection = false;
             }
         }
 
@@ -798,6 +867,10 @@ namespace Kehai.Sandbox
             foreach (Item i in FindObjectsByType<Item>()) if (i.type == ItemType.Flashlight && MiniStore.Contains(i.transform.position)) { torch = i; break; }
             if (mic == null || torch == null) return;
             mic.transform.position = torch.transform.position + new Vector3(0f, 0.05f, 0.4f);
+            // Its little table stays empty beside the time clock, in the staff door's swing: the
+            // door could only open one way (28 November). With the microphone moved, it goes.
+            GameObject table = GameObject.Find(KarenFixtures.MicTableName);
+            if (table != null && MiniStore.Contains(table.transform.position)) Destroy(table);
             Physics.SyncTransforms();
         }
 

@@ -328,13 +328,45 @@ public sealed class ShelfSlot : IInteractable
     }
 
     // Where an item of `id` stands here: its origin is the middle of its box, so it's lifted
-    // by its rest height off the board.
+    // by its rest height off the board. Since 28 November it stands a little off true, as if
+    // put there by hand: up to JitterSide along the shelf, JitterDepth toward the aisle and
+    // JitterYaw turned, the same every time for the same place (from the slot's position), so
+    // the drawn stock and the item you pick up agree, and a restock looks the same.
     public void Pose(string id, out Vector3 position, out Quaternion rotation)
     {
-        rotation = Rotation;
+        Quaternion square = Rotation;
+        Vector3 at = Position;
+        Jitter(at, out Vector2 offset, out float yaw);
+        rotation = square * Quaternion.Euler(0f, yaw, 0f);
         ProductLook.Look? look = ProductLook.For(id);
         float rest = look != null ? look.Value.RestHeight : Item.SnapHeight;
-        position = Position + rotation * (Vector3.up * rest);
+        position = at + square * new Vector3(offset.x, 0f, offset.y) + rotation * (Vector3.up * rest);
+    }
+
+    public const float JitterSide = 0.008f, JitterDepth = 0.012f, JitterYaw = 4f;
+
+    // The hand-placed look for a place: an offset (along the shelf, toward the aisle) in metres
+    // and a turn in degrees, each within its limit, from the place's position to the millimetre.
+    public static void Jitter(Vector3 at, out Vector2 offset, out float yaw)
+    {
+        unchecked
+        {
+            uint h = (uint)Mathf.RoundToInt(at.x * 1000f) * 73856093u
+                   ^ (uint)Mathf.RoundToInt(at.y * 1000f) * 19349663u
+                   ^ (uint)Mathf.RoundToInt(at.z * 1000f) * 83492791u;
+            offset = new Vector2(Unit(ref h) * JitterSide, Unit(ref h) * JitterDepth);
+            yaw = Unit(ref h) * JitterYaw;
+        }
+    }
+
+    // The next number in -1..1 from a hash, which moves on.
+    static float Unit(ref uint h)
+    {
+        unchecked
+        {
+            h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15; h *= 0x846ca68bu; h ^= h >> 16;
+            return (h & 0xFFFFFF) / (float)0xFFFFFF * 2f - 1f;
+        }
     }
 
     Item Spawn(string id)

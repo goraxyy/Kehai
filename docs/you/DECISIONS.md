@@ -6,6 +6,7 @@ bring the detailed docs in line. The technical choices and their reasons are in
 
 | Date | Your call | Detail |
 |---|---|---|
+| 2026-11-28 | Picture quality is fine as it is. Anti-aliasing goes on; the film look (grain and vignette) and an FPS counter get switches in Settings; shelf stock stands a little off true | [CHANGELOG](../agents/CHANGELOG.md) |
 | 2026-11-26 | Karen plays with the fitted senses, S1 (sharper: she trusts a sighting, a noise or a tip more), after a check that its numbers hold together; refit after the recorded test pass | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#c410-the-belief-fits-13-november) |
 | 2026-11-26 | After she catches you, an ablation career moves on to the next shift (it no longer stops at the first catch, where the replayed shift wasn't recorded) | [KAREN_RESULTS](../agents/results/KAREN_RESULTS.md#karen-052-the-batch-slowdown-found-and-fixed-26-november) |
 | 2026-11-26 | The Training player needn't play exactly the editor's game for now: the same store, rules and kind of results is enough; you'll come back to it | [0.5.2 plan C6.6](plans/0.5.2-plan.md#phase-6-faster-runs-c--sonnet-55-for-the-settings-opus-55-for-the-slowdown-the-training-player-and-the-frame-rate-check--the-pc-first-else-the-mac-with-the-editor-closed) |
