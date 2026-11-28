@@ -7,7 +7,9 @@ using UnityEngine.Rendering.Universal;
 
 // The highlight outline, drawn on the screen (28 November). It replaced the inverted-hull shells,
 // which stood out from thin boards and split at sharp corners: the highlighted renderers are
-// drawn into a mask, and a line of even width is drawn just outside the mask's edge. It follows
+// drawn into a mask (what shows, and the whole shape), and a line of even width is drawn just
+// outside what shows but never inside the whole shape, so stock in front of a shelf gets no ring
+// of its own and a thing behind a wall gets no line. It follows
 // any shape exactly, costs nothing while nothing is highlighted, and needs no renderer asset
 // change: the pass is added to the player's camera from code each frame something is lit.
 public static class HighlightOutlines
@@ -100,7 +102,7 @@ public static class HighlightOutlines
             // The mask tests against the scene's depth, so what stands in front of the thing hides
             // its line; with MSAA the depth can't be shared, and the line shows through instead.
             bool depthTest = desc.msaaSamples <= 1;
-            desc.graphicsFormat = GraphicsFormat.R8_UNorm;
+            desc.graphicsFormat = GraphicsFormat.R8G8_UNorm;   // red: what shows; green: the whole shape
             desc.depthStencilFormat = GraphicsFormat.None;
             desc.msaaSamples = 1;
             TextureHandle mask = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "Highlight mask", true);
@@ -115,7 +117,11 @@ public static class HighlightOutlines
                 builder.SetRenderFunc((MaskData d, RasterGraphContext ctx) =>
                 {
                     foreach (var (renderer, submeshes, _) in d.renderers)
-                        for (int i = 0; i < submeshes; i++) ctx.cmd.DrawRenderer(renderer, d.material, i, 0);
+                        for (int i = 0; i < submeshes; i++)
+                        {
+                            ctx.cmd.DrawRenderer(renderer, d.material, i, 0);   // what shows
+                            ctx.cmd.DrawRenderer(renderer, d.material, i, 2);   // the whole shape
+                        }
                 });
             }
 

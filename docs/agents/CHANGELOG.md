@@ -1,5 +1,14 @@
 # Changelog
 
+- **2026-11-28 — 0.5.2 branch, not released.** The owner's look and door fixes, from trying Codex's roadside art in the mini store.
+  - **No light round the mini store's doors.** Each doorway was cut 5 to 10 cm wider than its door each side, and 10 cm taller; a frame of wall now fills it up to the door.
+  - **The mini store's doors open away from you, from either side,** as the store's do. The staff door only ever opened one way: the PA microphone's empty table stood in its swing (the microphone moves to the kitchen counter, and now the table goes too).
+  - **A hinged door swings the same at any frame rate.** A slow frame used to swing one wide in a single step, leaving no swing to stop with E.
+  - **The highlight is a clean line round the thing's own shape,** drawn on the screen: nothing sticks out of thin boards, sharp corners or awkward shapes, and a shelf is outlined as a shelf, not as a box round it.
+  - **Edges are smooth:** anti-aliasing is on (SMAA; FXAA on Low quality). It was off.
+  - **Settings → Display has two new switches:** the film look (a light grain and vignette, a little bloom and colour) and an FPS counter in the top right corner. Both start off.
+  - **Shelf stock stands a little off true,** up to a centimetre out and 4° turned, as if put there by hand; the same every time for the same spot, and the item you pick up starts where it stood.
+
 - **2026-11-27 — 0.5.2 branch, not released.** The scenes (Phase 8).
   - **A light Training scene,** made from the store by a menu: grey, silent, no UI text. Karen's map of it is the store's, and it plays the store's game.
   - **A dev layer each** for the owner, the sound designer and the artist: experiments on top of a scene, never shipped.
